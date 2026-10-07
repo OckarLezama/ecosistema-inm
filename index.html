@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IA-NAMI · Inteligencia migratoria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+<!-- ==================================================================
+     IA-NAMI · PÁGINA PRINCIPAL
+     ÍNDICE: [1] BARRA SUPERIOR  [2] CONTROLES  [3] INDICADORES
+             [4] MAPA Y BARRA DE TIEMPO  [5] COLUMNA DE ANÁLISIS
+             [6] FRANJA DE CAJAS  [7] OTRAS SECCIONES  [8] PROGRAMAS
+     Estilos: css/estilos.css · Lógica: js/app.js · Datos: datos/datos.js
+     ================================================================== -->
+<div class="app">
+
+  <!-- ============ [1] BARRA SUPERIOR ============ -->
+  <header class="top esc">
+    <div class="marca"><b>IA-NAMI</b><span>Inteligencia migratoria</span></div>
+    <nav class="nav" id="nav" aria-label="Secciones"></nav>
+    <div class="top-der">
+      <span id="corte"></span>
+      <button class="campana" id="campana" aria-label="Avisos de cambios" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"></path><path d="M10 20a2.2 2.2 0 0 0 4 0"></path></svg>
+        <i id="campana-n">0</i>
+      </button>
+      <div class="avisos" id="avisos" hidden></div>
+    </div>
+  </header>
+
+  <div id="vista-pulso">
+    <!-- ============ [2] CONTROLES ============ -->
+    <div class="ctl esc">
+      <div class="pil" role="group" aria-label="Periodo">
+        <button class="on" aria-pressed="true">Presidenta</button>
+        <button disabled title="Se activa cuando las bases lleguen al 20 ene 2025">Trump</button>
+        <button disabled title="Se activa con las bases completas">Personalizado</button>
+      </div>
+      <div class="rango"><b id="rango"></b><span id="rango-nota"></span></div>
+      <div class="varia"><span>Variación ▲▼:</span><div class="pil chica" id="cmp" role="group" aria-label="Ventana de comparación"></div></div>
+      <span id="chips" style="display:inline-flex;gap:6px;flex-wrap:wrap"></span>
+      <div class="busca">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <input id="buscar" type="search" autocomplete="off" placeholder="Buscar nacionalidad, estado o punto" aria-label="Buscar nacionalidad, estado o punto de ingreso">
+        <div class="res" id="res" hidden></div>
+      </div>
+    </div>
+
+    <!-- ============ [3] INDICADORES ============ -->
+    <section class="kpis esc" id="kpis" data-modo="tarjetas" aria-label="Indicadores"></section>
+
+    <main class="main">
+      <!-- ============ [4] MAPA Y BARRA DE TIEMPO ============ -->
+      <section class="mapa" id="mapa" data-m="claro" aria-label="Mapa">
+        <div class="lz" id="lz">
+          <div id="lienzo"></div>
+          <canvas id="flujo" aria-hidden="true"></canvas>
+          <div class="acop m-tit" id="m-tit"></div>
+          <div class="acop m-her" id="m-her">
+            <button data-a="mas" aria-label="Acercar" title="Acercar"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 8h10M8 3v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+            <button data-a="menos" aria-label="Alejar" title="Alejar"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 8h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+            <button data-a="mx" aria-label="Vista inicial" title="Vista inicial"><svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.4" fill="currentColor"></circle><path d="M8 1.5v2.5M8 12v2.5M1.5 8H4M12 8h2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
+            <button data-a="mundo" aria-label="Ver todo el continente" title="Ver todo el continente"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+            <hr>
+            <button data-a="flujos" class="on" aria-pressed="true" aria-label="Flujos de origen a destino" title="Flujos de origen a destino"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M2 12C5 4 10 4 13.5 6.5M13.5 6.5l-3.2-.4M13.5 6.5l-.6 3.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+            <button data-a="puntos" aria-pressed="false" aria-label="Puntos de ingreso" title="Puntos de ingreso, repatriación y estaciones"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M8 14.5s4.5-4.2 4.5-7.8a4.5 4.5 0 0 0-9 0c0 3.6 4.5 7.8 4.5 7.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="8" cy="6.6" r="1.5" fill="currentColor"></circle></svg></button>
+            <button data-a="calor" aria-pressed="false" aria-label="Mapa de calor" title="Mapa de calor de los puntos"><svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="currentColor" opacity=".25"></circle><circle cx="8" cy="8" r="3.6" fill="currentColor" opacity=".5"></circle><circle cx="8" cy="8" r="1.6" fill="currentColor"></circle></svg></button>
+            <hr>
+            <button data-a="tema" aria-label="Cambiar mapa claro u oscuro" title="Mapa claro u oscuro"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13z" fill="currentColor"></path><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"></circle></svg></button>
+          </div>
+        </div>
+        <div class="tiempo esc">
+          <button class="play" id="play" aria-label="Reproducir el periodo"></button>
+          <div class="t-cuerpo">
+            <div class="t-cab"><span id="t-tit"></span><span id="t-ley"></span></div>
+            <svg id="tgraf" role="slider" tabindex="0" aria-label="Día del periodo" aria-valuemin="1"></svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ [5] COLUMNA DE ANÁLISIS ============ -->
+      <aside class="rail-w" aria-label="Análisis">
+        <div class="rail esc">
+          <div class="caja" id="docs"></div>
+          <div class="caja" id="analisis"></div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- ============ [6] FRANJA DE CAJAS ============ -->
+    <div class="bajo-w esc"><div class="bajo" id="bajo"></div></div>
+  </div>
+
+  <!-- ============ [7] OTRAS SECCIONES ============ -->
+  <div id="vista-otra" class="otra esc" hidden></div>
+</div>
+
+<!-- ============ [8] PROGRAMAS ============ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<script src="datos/datos.js"></script>
+<script src="js/geo.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
