@@ -244,7 +244,7 @@ function mezclaRGB(rampa, t){                  // color intermedio de una rampa,
 function tri(arriba, color){ return '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="'+(arriba?'M6 2l5 8H1z':'M6 10L1 2h10z')+'" fill="'+color+'"/></svg>'; }
 
 /* ==== [4] ESTADO Y FILTRO ========================================= */
-const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, circulos:true, puntos:false, calor:false, cbp:false, modoVista:'mundo', centro:null, region:null, agr:'e', cmp:30, per:'shein', anio:fechaBase(D.dias-1).getFullYear(), mes:0, desde:D.inicio, hasta:D.corte, verAvisos:false, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
+const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, circulos:true, puntos:false, cbp:false, car:false, carSel:null, modoVista:'mundo', centro:null, region:null, agr:'e', cmp:30, per:'shein', anio:fechaBase(D.dias-1).getFullYear(), mes:0, desde:D.inicio, hasta:D.corte, verAvisos:false, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
 let E = 1;                                      // escala para pantallas muy grandes
 // Filtro que produce la selección: una lista de estados (estado, cinturón o CECO) o una nacionalidad
 // ss: estados; n: una nacionalidad; r: nacionalidades de la región elegida; nd: lo que usan los cálculos (n o r)
@@ -278,10 +278,11 @@ const cmpN = () => S.cmp==='aa' ? 30 : S.cmp;               // ventana para los 
 const etiquetaN = n => n===90 ? '3 meses' : n+' días';
 function textoCmp(){ return S.cmp==='aa' ? 'el periodo contra el mismo periodo del año anterior' : 'últimos '+etiquetaN(S.cmp)+' contra '+(S.cmp===90 ? 'los 3 meses' : 'los '+S.cmp+' días')+' anteriores'; }
 function variacion(d){
-  if (S.cmp==='aa'){ const q0 = idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))), b = q0>=0 && d.k ? sumaCompleta(d.k, d.F, q0, q0+ND) : null, a = suma(d,0,ND);
+  const U = d.k ? finDatos(d.k) : ND;            // los días pendientes no entran a la comparación
+  if (S.cmp==='aa'){ const q0 = idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))), b = q0>=0 && d.k ? sumaCompleta(d.k, d.F, q0, q0+U) : null, a = suma(d,0,U);
     return {a:a, b:b||0, dl: b ? (a/b-1)*100 : 0, ok: b!=null && b>=30}; }
-  const N = S.cmp, a = suma(d,ND-N,ND), b = suma(d,ND-2*N,ND-N);
-  return {a:a, b:b, dl: b ? (a/b-1)*100 : 0, ok: 2*N<=ND && b >= (N>=30?30:10)};
+  const N = S.cmp, a = suma(d,U-N,U), b = suma(d,U-2*N,U-N);
+  return {a:a, b:b, dl: b ? (a/b-1)*100 : 0, ok: 2*N<=U && b >= (N>=30?30:10)};
 }
 // Suma en cualquier tramo de las bases completas (para comparar con el año anterior)
 function sumaCompleta(k, F, q0, q1){
@@ -301,13 +302,13 @@ function analizar(F){
   INDS.forEach(m => {
     if (F.nd!=null && !m.nat) return;
     const d = diario(m.k, F), v = variacion(d);
-    if (v.ok && Math.abs(v.dl)>=umbral) out.push({t:'cambio', k:m.k, dl:v.dl, a:v.a, b:v.b, p: Math.min(Math.abs(v.dl),200)/4 + Math.log10(v.a+v.b+1)*3});
+    if (v.ok && Math.abs(v.dl)>=umbral) out.push({t:'cambio', k:m.k, dl:v.dl, a:v.a, b:v.b, imp:Math.abs(v.a-v.b)});
     const base = d.slice(Math.max(0,ND-70), ND-14).sort((x,y)=>x-y), mitad = base.length>>1, med = base[mitad] || 0;   // lo habitual: 8 semanas previas
     const des = base.map(x=>Math.abs(x-med)).sort((x,y)=>x-y)[mitad]*1.4826 || 1;
     let mejor = null;
     // los picos solo se buscan con 4 semanas o más de referencia
     if (ND-14 >= 28) for (let i=ND-Math.min(N,14);i<ND;i++){ const z = (d[i]-med)/des; if (d[i]>=25 && z>=4 && (!mejor || z>mejor.z)) mejor = {i:i, z:z, v:d[i], med:med}; }
-    if (mejor) out.push({t:'pico', k:m.k, i:mejor.i, v:mejor.v, med:mejor.med, p: 8 + Math.min(mejor.z,20)});
+    if (mejor) out.push({t:'pico', k:m.k, i:mejor.i, v:mejor.v, med:mejor.med, imp:mejor.v-mejor.med});
   });
   const u = NW-1, diasSem = (a,b) => D.ends[b] - (a>0 ? D.ends[a-1] : 0);
   const ws = Math.max(1, Math.round(N/7)), w = [u-ws+1, u, u-2*ws+1, u-ws];   // semanas que cubren cada ventana
@@ -316,41 +317,48 @@ function analizar(F){
     [['resc',300],['ing',4000],['rech',150]].forEach(par => { const k = par[0]; let mejor = null;
       for (let n=0;n<OT;n++){ if (F.r && D.nats[n][2]!==S.region) continue; const a = sumaSem(k,w[0],w[1],F.ss,n)/w[4], b = sumaSem(k,w[2],w[3],F.ss,n)/w[5];
         if (b*28>=par[1]){ const dl = (a/b-1)*100; if (Math.abs(dl)>=25 && (!mejor || Math.abs(dl)>Math.abs(mejor.dl))) mejor = {n:n, dl:dl, a:a, b:b}; } }
-      if (mejor) out.push({t:'nac', k:k, n:mejor.n, dl:mejor.dl, a:mejor.a, b:mejor.b, p: 10 + Math.min(Math.abs(mejor.dl),150)/5});
+      if (mejor) out.push({t:'nac', k:k, n:mejor.n, dl:mejor.dl, a:mejor.a, b:mejor.b, imp:Math.abs(mejor.a-mejor.b)*N});
     });
     const tr = topNats(n => !F.r || D.nats[n][2]===S.region ? sumaSem('rech',0,NW-1,F.ss,n) : 0, 1)[0], tot = sumaSem('rech',0,NW-1,F.ss,F.r);
-    if (tr && tot>=200 && tr[1]/tot>=0.4) out.push({t:'conc', k:'rech', n:tr[0], a:tr[1], b:tot, p:22});
+    if (tr && tot>=200 && tr[1]/tot>=0.4) out.push({t:'conc', k:'rech', n:tr[0], a:tr[1], b:tot, imp:tr[1]/4});
   }
   if (!F.ss && F.nd==null){                     // estados que más se movieron (antes eran los puntos que parpadeaban)
     const o = [];
-    INDS.forEach(m => { const a = D.ds[m.k];
+    INDS.forEach(m => { const a = D.ds[m.k], U = finDatos(m.k);
       for (let s=0;s<NS;s++){ let x = 0, y = 0;
-        for (let d=ND-N;d<ND;d++) x += a[d*NS+s]; for (let d=ND-2*N;d<ND-N;d++) y += a[d*NS+s];
-        if (2*N<=ND && y>=(N>=30?80:25)){ const dl = (x/y-1)*100; if (Math.abs(dl)>=40) o.push({t:'est', k:m.k, s:s, dl:dl, a:x, b:y, p:9+Math.min(Math.abs(dl),300)/12}); } } });
-    o.sort((x,y)=>y.p-x.p); const vistos = {}; let c = 0;
+        for (let d=U-N;d<U;d++) x += a[d*NS+s]; for (let d=U-2*N;d<U-N;d++) y += a[d*NS+s];
+        if (2*N<=U && y>=(N>=30?80:25)){ const dl = (x/y-1)*100; if (Math.abs(dl)>=40) o.push({t:'est', k:m.k, s:s, dl:dl, a:x, b:y, imp:Math.abs(x-y)}); } } });
+    o.sort((x,y)=>y.imp-x.imp); const vistos = {}; let c = 0;
     o.forEach(r => { if (!vistos[r.s] && c<3){ vistos[r.s] = 1; c++; out.push(r); } });
   }
-  return out.sort((x,y)=>y.p-x.p);
+  // caravanas que salieron en la ventana de comparación: van primero
+  if (F.n==null && !F.ss) carPeriodo().filter(c => c.i>=ND-N && c.i<ND).forEach(c => out.push({t:'car', c:c.j, imp:Infinity}));
+  return out.sort((x,y)=>y.imp-x.imp);
 }
 // Cada aviso se redacta como hallazgo: qué cambió, cuánto y contra qué
 function cuanto(a, b){ const r = a/Math.max(b,1e-9);
   return r>=2 ? 'se multiplicaron por '+r.toFixed(1) : r>=1 ? 'subieron '+((r-1)*100).toFixed(0)+'%' : 'bajaron '+((1-r)*100).toFixed(0)+'%'; }
 function textoAviso(a){
-  const N = IND[a.k].n, prev = S.cmp==='aa' ? 'el año anterior' : 'los '+etiquetaN(cmpN())+' previos';
+  const N = a.k ? IND[a.k].n : '', prev = S.cmp==='aa' ? 'el año anterior' : 'los '+etiquetaN(cmpN())+' previos';
   if (a.t==='cambio') return '<b>'+N+'</b> '+cuanto(a.a,a.b)+': '+corto(a.a)+' frente a '+corto(a.b)+' en '+prev+'.';
   if (a.t==='pico')   return '<b>'+N+'</b>: pico de '+miles(a.v)+' el '+fechaDia(a.i)+', cuando lo habitual es '+miles(a.med)+' al día.';
   if (a.t==='nac')    return '<b>'+esc(D.nats[a.n][0])+'</b>: '+N.toLowerCase()+' por día '+cuanto(a.a,a.b)+' ('+miles(a.b)+' → '+miles(a.a)+').';
   if (a.t==='est')    return '<b>'+esc(EST[a.s])+'</b>: '+N.toLowerCase()+' '+cuanto(a.a,a.b)+' ('+miles(a.b)+' → '+miles(a.a)+').';
+  if (a.t==='car'){ const c = D.caravanas[a.c];
+    return '<b>'+esc(nombreCar(c))+'</b>: salió el '+fechaISO(c.f).replace(/ \d{4}$/,'')+' de '+esc(lugarCorto(c.s))+' con unas '+miles(c.p)+' personas'+(c.d ? '; se disolvió en '+esc(lugarCorto(c.d)) : '')+'.'; }
   return '<b>'+esc(D.nats[a.n][0])+'</b> concentra '+pct(a.a,a.b)+'% de los <b>rechazos</b>.';
 }
 function filaAviso(a, i){
-  const c = colG(IND[a.k].g); let ic, ci;
-  if (a.t==='conc'){ const p = pct(a.a,a.b); ic = '<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="'+c+'" stroke-width="3" stroke-dasharray="'+(p*0.283).toFixed(1)+' 28.3" transform="rotate(-90 6 6)"/></svg>'; ci = p+'%'; }
+  const c = colG(a.t==='car' ? 'irr' : IND[a.k].g); let ic, ci;
+  if (a.t==='car'){ ic = '<svg width="12" height="12" viewBox="0 0 16 16">'+GLIFO_CAR+'</svg>'; ci = '≈'+corto(D.caravanas[a.c].p); }
+  else if (a.t==='conc'){ const p = pct(a.a,a.b); ic = '<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="'+c+'" stroke-width="3" stroke-dasharray="'+(p*0.283).toFixed(1)+' 28.3" transform="rotate(-90 6 6)"/></svg>'; ci = p+'%'; }
   else if (a.t==='pico'){ ic = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 10l3-3 2 2 5-7" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; ci = '×'+(a.v/Math.max(a.med,1)).toFixed(1); }
   else { ic = tri(a.dl>=0, c); ci = Math.abs(a.dl).toFixed(0)+'%'; }
   return '<button class="av" data-av="'+i+'"><span class="ic">'+ic+'</span><span class="ci">'+ci+'</span><span class="tx">'+textoAviso(a)+'</span></button>';
 }
-function abrirAviso(i){ const a = AVISOS[i]; if (!a) return; S.ind = a.k;
+function abrirAviso(i){ const a = AVISOS[i]; if (!a) return;
+  if (a.t==='car'){ verCaravana(a.c); return; }
+  S.ind = a.k;
   if (a.n!=null) fijarSel({t:'n', i:a.n}, true); else if (a.s!=null) fijarSel({t:'e', i:a.s}, true); else { pintarTodo(); acercarSiMundo(); } }
 
 /* ==== [6] INDICADORES ============================================= */
@@ -367,7 +375,7 @@ function pintarKpis(){
       const delta = S.dia<ND ? '<span class="kc-d">al '+fechaDia(S.dia-1)+'</span>' : (va.ok ? '<span class="kc-d'+(fuerte?' f':'')+'">'+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%</span>' : '<span class="kc-d">sin comparación</span>');
       const on = S.ind===m.k;
       return '<button class="kc'+(on?' on':'')+'" data-k="'+m.k+'" aria-pressed="'+on+'" title="Clic para verlo en el mapa; otro clic lo quita">'+
-        '<span class="kc-top">'+ic+'<span class="kc-n">'+m.n+(conAviso[m.k]?'<u title="Tiene un aviso de cambio"></u>':'')+'</span></span>'+
+        '<span class="kc-top">'+ic+(FUENTE[m.k] ? '<span class="kc-nf">' : '')+'<span class="kc-n">'+m.n+(conAviso[m.k]?'<u title="Tiene un aviso de cambio"></u>':'')+'</span>'+(FUENTE[m.k] ? '<span class="kc-f">'+FUENTE[m.k][0]+'</span></span>' : '')+'</span>'+
         '<span class="kc-v num" data-v="'+v+'">'+corto(v)+'</span>'+
         '<span class="kc-pie">'+delta+'<span class="kc-b" aria-hidden="true">'+sem.map((x,i)=>'<i class="'+(i===semAct?'h':i<semAct?'p':'')+'" style="height:'+Math.max(8,x/mx*100).toFixed(0)+'%"></i>').join('')+'</span></span></button>';
     }).join('')+'</div></div>';
@@ -386,16 +394,27 @@ const DEF_IND = {
   rep:'Personas mexicanas repatriadas desde EE. UU.'
 };
 const BASE_IND = {ing:'ing', rech:'seg', tram:'tram', resc:'resc', pres:'pres', can:'can_nna', ret:'ret', recib:'recib', rep:'rep'};
+const FUENTE = {resc:['eventos · O.R.','O.R.'], pres:['Sistema','Sistema']};     // [en la tarjeta, en el detalle]
+// Último día con datos de cada indicador dentro del periodo: los días posteriores están pendientes, no son cero
+function finDatos(k){
+  const bs = (k==='can' ? ['can_nna','can_ad'] : [BASE_IND[k]]).map(c => D.bases.find(x => x.k===c)).filter(b => b && b.hasta);
+  if (!bs.length) return ND;
+  return Math.max(0, Math.min(ND, Math.min.apply(null, bs.map(b => idxBase(b.hasta)+1)) - P0));
+}
 function tipKpi(el){
   const k = el.dataset.k, m = IND[k], F = filtro(), va = variacion(diario(k,F)), b = D.bases.find(x => x.k===BASE_IND[k]) || {};
   const tot = acum(k,F.ss,m.nat ? F.nd : null) || 1, tn = m.nat && F.n==null ? topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 3) : [];
   return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+
     (va.ok ? '<span>'+(S.cmp==='aa' ? 'Este periodo' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(S.cmp==='aa' ? 'año anterior' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
+    (k==='resc' ? (r => '<span>Eventos: <b>'+miles(r[0]+r[1])+'</b> · personas (1ra vez): <b>'+miles(r[0])+'</b> · reincidentes: '+miles(r[1])+'</span>')(comp('resc_rei',F.ss,F.nd)) : '')+
     (tn.length ? '<span>Principales: '+tn.map(r => esc(D.nats[r[0]][0])+' '+pct(r[1],tot)+'%').join(' · ')+'</span>' : '')+
-    '<small>Base: '+esc(b.archivo || '')+(b.hasta ? ' · datos al '+fechaISO(b.hasta) : '')+' · clic para verlo en el mapa</small>';
+    (finDatos(k)<ND ? '<span>Días pendientes: la base llega al '+fechaLarga(finDatos(k)-1)+'; la comparación se hace hasta ese día.</span>' : '')+
+    '<small>'+(FUENTE[k] ? 'Fuente: '+FUENTE[k][1]+' · ' : '')+'Base: '+esc(b.archivo || '')+(b.hasta ? ' · datos al '+fechaISO(b.hasta) : '')+(TACTIL ? '' : ' · clic para verlo en el mapa')+'</small>';
 }
-function mostrarTip(el){
-  const t = $('kpi-tip'); if (!el || TACTIL){ t.hidden = true; return; }
+let tipEspera = 0;
+function mostrarTip(el, tocar){                  // en pantallas táctiles aparece al tocar y se va sola
+  const t = $('kpi-tip'); clearTimeout(tipEspera); if (!el || (TACTIL && !tocar)){ t.hidden = true; return; }
+  if (tocar) tipEspera = setTimeout(() => { t.hidden = true; }, 4500);
   t.innerHTML = tipKpi(el); t.hidden = false;
   const r = el.getBoundingClientRect(), w = t.offsetWidth;
   t.style.left = Math.max(8, Math.min(r.left, window.innerWidth-w-8))+'px'; t.style.top = (r.bottom+8)+'px';
@@ -436,21 +455,22 @@ function opcionBase(){
           itemStyle:{ areaColor:t.tierra, borderColor:t.linea, borderWidth:0.5*E },
           emphasis:{ label:{show:false}, itemStyle:{ areaColor:t.tierra, borderColor:t.linea, borderWidth:0.8*E } },
           select:{ disabled:true }, label:{show:false}, tooltip:{ show:true, formatter:tarjeta }, regions:regiones() },
-    visualMap:[ { id:'vh', type:'continuous', show:false, seriesIndex:2, min:0, max:1, inRange:{color:['rgba(255,220,120,0)','#F2C14E','#E8827A','#B4472F']} } ],
     series:[
       { id:'bub', type:'scatter', coordinateSystem:'geo', data:[],
         label:Object.assign({ show:true, position:'right', distance:6*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et),
         labelLayout:{hideOverlap:true}, emphasis:{scale:1.12} },
       { id:'pts', type:'scatter', coordinateSystem:'geo', data:[],
         label:Object.assign({ show:false, position:'right', distance:5*E, formatter:p=>p.data.et, fontSize:11*E }, et), labelLayout:{hideOverlap:true} },
-      { id:'calor', type:'heatmap', coordinateSystem:'geo', data:[], pointSize:16*E, blurSize:26*E },
       { id:'cbp', type:'effectScatter', coordinateSystem:'geo', data:[], symbol:'circle', showEffectOn:'render', rippleEffect:{ brushType:'stroke', scale:2.2, period:4, number:2 },
         label:Object.assign({ show:false, position:'top', distance:4*E, formatter:p=>p.data.et, fontSize:11*E, fontWeight:600 }, et), labelLayout:{hideOverlap:true} },
       { id:'grp', type:'scatter', coordinateSystem:'geo', data:[], symbolSize:1, silent:true, itemStyle:{opacity:0},
         label:Object.assign({ show:true, position:'inside', formatter:p=>p.data.et, fontSize:13*E, fontWeight:600 }, et, {fontFamily:'Barlow Condensed, Barlow, sans-serif'}) },
       { id:'lat', type:'effectScatter', coordinateSystem:'geo', data:[], showEffectOn:'render',          // latido: dónde están, sin flujo
         rippleEffect:{ brushType:'stroke', scale:2.6, period:3.6, number:2 },
-        label:Object.assign({ show:true, position:'right', distance:6*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et), labelLayout:{hideOverlap:true} }
+        label:Object.assign({ show:true, position:'right', distance:6*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et), labelLayout:{hideOverlap:true} },
+      { id:'car', type:'effectScatter', coordinateSystem:'geo', data:[], showEffectOn:'render', zlevel:1,     // caravanas: salida que late
+        rippleEffect:{ brushType:'fill', scale:3.2, period:2.6, number:3 },
+        label:Object.assign({ show:true, position:'left', distance:7*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et), labelLayout:{hideOverlap:true} }
     ]
   };
 }
@@ -549,14 +569,13 @@ function pintarMapa(){
   });
   if (F.n!=null && !bub.concat(lat).some(x => x.nat===F.n)) burbuja(F.n, 1, 1, t.tinta, D.nats[F.n][0], 18, true);   // el país elegido siempre se ve
   if (!S.circulos) [bub, lat].forEach(a => { for (let i=a.length-1;i>=0;i--) if (a[i].nat!==F.n) a.splice(i,1); });   // círculos ocultos (menos el país elegido)
-  ponerFlujos(S.flujos ? fl : []);
+  if (!S.flujos && !S.car) ponerFlujos([]);
   // -- Puntos de ingreso, repatriación y estaciones
-  const cp = capaPuntos(kc), pts = [], calor = []; let maxP = 1;
+  const cp = capaPuntos(kc), pts = []; let maxP = 1;
   if (cp){ cp.lista.forEach(p => maxP = Math.max(maxP, suma(p.wk,0,NW)));
     const selP = S.sel && S.sel.t==='p' && S.sel.tipo===cp.tipo;
     const ver = S.puntos || (kc && cp.siempre) || (kc && S.zoom>=1.9) || selP;
     cp.lista.forEach((p,i) => { const v = suma(p.wk,0,semDe(S.dia)+1); if (v<=0) return;
-      if (S.calor) calor.push([p.x,p.y,Math.sqrt(v)]);
       if (ver) pts.push({ value:[p.x,p.y,v], pt:i, pTipo:cp.tipo, et:p.n,
         symbol: ICONO_PUNTO(cp.tipo, t[cp.tipo==='ing'?'reg':cp.tipo==='rep'?'usa':'irr'], S.tema==='oscuro' ? '#2B2926' : '#FFFFFF'),
         symbolSize: (15 + 11*Math.sqrt(v/maxP))*E,
@@ -569,8 +588,19 @@ function pintarMapa(){
     D.cbp.sectores.forEach((P,i) => { const v = fin ? P.tot : suma(P.wk,0,semDe(S.dia)+1); if (v<=0) return;
       enc.push({ value:[P.x,P.y,v], cb:i, et:P.n+' · '+corto(v), symbolSize:(8 + 20*Math.sqrt(v/mxc))*E, label:{ show:S.zoom>=0.75 },
                  itemStyle:{ color:t.usa, opacity:.9, borderColor:t.tinta, borderWidth:1.4*E } }); }); }
-  chart.setOption({ visualMap:[ {id:'vh', max:Math.sqrt(maxP)} ],
-                    series:[ {id:'bub', data:bub}, {id:'pts', data:pts}, {id:'calor', data:calor}, {id:'cbp', data:enc}, {id:'grp', data:grp}, {id:'lat', data:lat} ] });
+  // -- Caravanas: dónde salieron y, si se sabe, dónde se disolvieron
+  const car = [], rutas = [];
+  if (S.car){ const l = carPeriodo().filter(c => c.i<S.dia), mxp = Math.max.apply(null, l.map(c => c.p).concat(1)), orig = {};
+    l.forEach(c => { const C = D.caravanas[c.j]; if (!C.sx) return; const q = C.sx.join(','); (orig[q] = orig[q] || {xy:C.sx, l:[]}).l.push(c.j);
+      if (C.dx) rutas.push({ id:'car'+c.j, a:C.sx, b:C.dx, c:t.irr, w:1 + 2.6*Math.sqrt(C.p/mxp), car:C.p, sel:S.carSel===c.j }); });
+    Object.keys(orig).forEach(q => { const o = orig[q], p = o.l.reduce((x,j) => x+D.caravanas[j].p, 0);
+      car.push({ value:o.xy.concat(p), cars:o.l, et:lugarCorto(D.caravanas[o.l[0]].s)+' · '+o.l.length+(o.l.length===1?' caravana':' caravanas'),
+                 symbolSize:(11 + 9*Math.sqrt(o.l.length/Math.max(1,l.length)))*E, itemStyle:{ color:t.irr, opacity:.95, borderColor:t.halo, borderWidth:1.6*E } }); });
+    rutas.forEach(r => { const j = +r.id.slice(3);
+      car.push({ value:r.b.concat(D.caravanas[j].p), fin:j, et:'', symbol:'circle', symbolSize:(r.sel?10:7)*E, label:{show:false}, showEffectOn:'emphasis',
+                 itemStyle:{ color:t.halo, borderColor:t.irr, borderWidth:2*E } }); }); }
+  if (S.flujos || S.car) ponerFlujos((S.flujos ? fl : []).concat(rutas));
+  chart.setOption({ series:[ {id:'bub', data:bub}, {id:'pts', data:pts}, {id:'cbp', data:enc}, {id:'grp', data:grp}, {id:'lat', data:lat}, {id:'car', data:car} ] });
   // -- Rótulo acoplado: título, cifra, leyenda y selector "Ver por"
   const quien = (S.sel && S.sel.t!=='p' ? (S.sel.t==='n'?' de ':' en ')+nombreSel() : '')+(F.todo ? ' en '+(S.agr==='c' ? 'cinturones' : 'los CECO') : '')+(F.r ? ' · '+nombreRegion() : '');
   let h;
@@ -579,9 +609,13 @@ function pintarMapa(){
         '<div class="gr"><span class="num">'+corto(tot)+'</span>'+chispa(semanal(kc,F.ss,nF),88,26,col,semDe(S.dia))+'</div>'+
         '<div class="rampa"><span>menos</span><i style="background:linear-gradient(90deg,'+rampa.join(',')+')"></i><span>'+corto(maxE)+'</span></div>'; }
   else h = '<b>Panorama'+esc(quien)+'</b><span>De dónde llegan'+(fin?'':' · al '+fechaDia(S.dia-1))+'. Elige un indicador para colorear los estados.</span>'+
-           '<span class="lin"><i style="background:'+t.reg+'"></i>Ingresos (regular)</span><span class="lin"><i style="background:'+t.irr+'"></i>Rescatados (irregular)</span>';
+           '<span class="lin"><i style="background:'+t.reg+'"></i>Ingresos (regular)</span><span class="lin"><i style="background:'+t.irr+'"></i>Rescatados (irregular)</span>'+
+           '<span class="nota">Línea: del país al lugar de registro · círculo: tamaño según el total</span>';
   if (pts.length){ const cP = t[cp.tipo==='ing'?'reg':cp.tipo==='rep'?'usa':'irr'];
     h += '<span class="lin"><span style="display:inline-flex;width:14px;height:14px">'+svgPunto(cp.tipo, cP, '#FFFFFF')+'</span>'+NOMBRE_PUNTO[cp.tipo]+'</span>'; }
+  if (S.car){ const l = carPeriodo();
+    h += '<span class="lin"><span style="display:inline-flex;width:14px;height:14px;color:'+t.irr+'"><svg width="14" height="14" viewBox="0 0 16 16">'+GLIFO_CAR+'</svg></span>'+
+         (l.length ? 'Caravanas · '+l.length+' · ≈'+corto(l.reduce((x,c) => x+c.p, 0))+' personas' : 'Sin caravanas en el periodo')+'</span>'; }
   if (S.cbp && D.cbp) h += '<span class="lin"><i style="background:'+t.usa+';width:9px;height:9px;border-radius:50%"></i>Encuentros CBP · '+corto(enc.reduce((x,y)=>x+y.value[2],0))+'</span>';
   const vp = S.agr!=='e' ? S.agr : S.modoVista==='mundo' ? 'm' : S.modoVista==='mx' ? 'e' : '';   // si el usuario movió el mapa, ninguno de los dos
   h += '<div class="verpor" role="group" aria-label="Vista del mapa">'+[['m','Mundo'],['e','Estado'],['c','Cinturón'],['o','CECO']].map(x=>'<button data-agr="'+x[0]+'" class="'+(vp===x[0]?'on':'')+'" aria-pressed="'+(vp===x[0])+'">'+x[1]+'</button>').join('')+'</div>';
@@ -643,12 +677,19 @@ function tarjeta(p){
     const extra = tp==='ing' ? '<div class="g">Quién entra por aquí</div>'+P.top.slice(0,3).map(r => fila(esc(typeof r[0]==='number'?D.nats[r[0]][0]:r[0]), r[1]/P.top[0][1], corto(r[1]), col)).join('')+(P.seg?dato('Rechazos en segunda revisión', miles(P.rech)):'')
                 : tp==='rep' ? dato('Menores', miles(P.men))+dato('No acompañados', miles(P.na)) : '';
     return '<div class="tt"><b class="h">'+esc(P.n)+'</b><span class="s">'+nom+' · ubicación aproximada</span><span class="v">'+miles(p.data.value[2])+'</span>'+chispa(P.wk,232,30,col,sem)+extra+'<span class="f">'+accion('abrir su ficha', true)+'</span></div>'; }
+  if (p.seriesId==='car'){
+    if (p.data.fin!=null) return tarjetaCaravana(D.caravanas[p.data.fin], tc);
+    const l = p.data.cars.map(j => D.caravanas[j]), mx = Math.max.apply(null, l.map(c => c.p));
+    if (l.length===1) return tarjetaCaravana(l[0], tc);
+    return '<div class="tt"><b class="h">Caravanas desde '+esc(lugarCorto(l[0].s))+'</b><span class="s">'+l.length+' en el periodo · ≈'+miles(l.reduce((x,c)=>x+c.p,0))+' personas</span>'+
+      l.slice(-7).reverse().map(c => fila(esc(c.n)+' <small>'+fechaEv(c.f)+'</small>', c.p/mx, '≈'+miles(c.p), tc.irr)).join('')+
+      (l.length>7 ? '<span class="f">y '+(l.length-7)+' más</span>' : '')+'<span class="f">Personas: cifra estimada · ubicación aproximada</span></div>'; }
   if (p.seriesId==='cbp'){ const P = D.cbp.sectores[p.data.cb], tot = P.tot || 1;
     return '<div class="tt"><b class="h">'+esc(P.n)+'</b><span class="s">Encuentros de la CBP · '+esc(P.eu)+(P.mx>=0 ? ', frente a '+esc(EST[P.mx]) : '')+'</span><span class="v">'+miles(p.data.value[2])+'</span>'+chispa(P.wk,232,30,tc.usa,sem)+
       '<div class="g">Quiénes</div>'+fila('Mexicanos', P.mex/tot, pct(P.mex,tot)+'%', tc.usa)+fila('Extranjeros', P.ext/tot, pct(P.ext,tot)+'%', tc.usa)+
-      '<div class="g">Cómo ocurrió</div>'+[['Detenidos al cruzar entre garitas',0],['Rechazados en la garita',1],['Se presentaron con cita CBP One',2]].filter(x => P.ag[x[1]]).map(x => fila(x[0], P.ag[x[1]]/tot, pct(P.ag[x[1]],tot)+'%', tc.usa)).join('')+
+      '<div class="g">Agencia</div>'+[['USBP',0],['OFO',1],['CBP ONE',2]].filter(x => P.ag[x[1]]).map(x => fila(x[0], P.ag[x[1]]/tot, pct(P.ag[x[1]],tot)+'%', tc.usa)).join('')+
       (breve || !P.top.length ? '' : '<div class="g">Principales nacionalidades extranjeras</div>'+P.top.slice(0,3).map(r => fila(esc(r[0]), r[1]/P.top[0][1], corto(r[1]), tc.usa)).join(''))+
-      '<span class="f">Los detenidos al cruzar los reporta la Patrulla Fronteriza (USBP); los rechazos y las citas, la Oficina de Operaciones de Campo (OFO) en las garitas. '+cuando+' · fuente: CBP</span></div>'; }
+      '<span class="f">'+cuando+' · fuente: CBP</span></div>'; }
   return '';
 }
 let vuelo = 0;
@@ -676,9 +717,49 @@ function herramienta(a){
   else if (a==='mx'){ S.modoVista = 'mx'; volar(VISTA_MX.c, VISTA_MX.z); }
   else if (a==='mundo'){ const v = vistaMundo(); S.modoVista = 'mundo'; volar(v.c, v.z); }
   else if (a==='tema'){ S.tema = S.tema==='oscuro'?'claro':'oscuro'; $('mapa').dataset.m = S.tema; rehacerMapa(); }
-  else { S[a] = !S[a]; const b = document.querySelector('#m-her [data-a="'+a+'"]'); b.classList.toggle('on', S[a]); b.setAttribute('aria-pressed', S[a]); pintarMapa(); if (a==='cbp' && S.cbp) acercarSiMundo(); }
+  else { S[a] = !S[a]; const b = document.querySelector('#m-her [data-a="'+a+'"]'); b.classList.toggle('on', S[a]); b.setAttribute('aria-pressed', S[a]);
+    if (a==='car'){ S.carSel = null; pintarTiempo(); }
+    pintarMapa(); if (a==='cbp' && S.cbp) acercarSiMundo(); if (a==='car' && S.car) volarCaravanas(); }
 }
 function rehacerMapa(){ const g = chart.getOption().geo[0], z = g.zoom, c = g.center; COL.act = {}; chart.setOption(opcionBase(), true); chart.setOption({geo:{center:c, zoom:z}}); pintarTodo(); }
+
+// Caravanas: las del periodo elegido, con su día dentro del periodo
+const GLIFO_CAR = '<g fill="currentColor"><circle cx="3.6" cy="4.6" r="1.6"/><circle cx="8" cy="4.6" r="1.6"/><circle cx="12.4" cy="4.6" r="1.6"/></g><g stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"><path d="M3.6 7.4v4.4M8 7.4v4.4M12.4 7.4v4.4M1.5 14h13"/></g>';
+const carPeriodo = () => (D.caravanas || []).map((c,j) => ({ j:j, i:indiceDe(c.f), p:c.p })).filter(c => c.i>=0 && c.i<ND);
+const nombreCar = c => /^caravana/i.test(c.n) ? c.n : /^sin nombre$/i.test(c.n) ? 'Caravana sin nombre' : 'Caravana «'+c.n+'»';
+const lugarCorto = s => String(s).replace(/^Parque Bicentenario,\s*/i,'').split(',')[0];
+function km(a, b){ const r = Math.PI/180, x = Math.sin((b[1]-a[1])*r/2), y = Math.sin((b[0]-a[0])*r/2);
+  return 12742*Math.asin(Math.sqrt(x*x + Math.cos(a[1]*r)*Math.cos(b[1]*r)*y*y)); }
+function tarjetaCaravana(c, tc){
+  const dato = (n,tx) => '<div class="r"><span>'+n+'</span><span></span><span class="x">'+tx+'</span></div>';
+  return '<div class="tt"><b class="h">'+esc(nombreCar(c))+'</b><span class="s">Salió el '+fechaISO(c.f)+'</span><span class="v">≈'+miles(c.p)+'</span><span class="s">personas (estimadas)</span>'+
+    dato('Salida', esc(c.s))+(c.d ? dato('Disolución', esc(c.d)) : dato('Disolución', 'sin registro'))+
+    (c.sx && c.dx ? dato('Recorrido', '≈'+miles(km(c.sx,c.dx))+' km en línea recta') : '')+'<span class="f">Ubicación aproximada</span></div>';
+}
+function cajaCaravanas(l){                      // zona que cubre las caravanas indicadas
+  const xs = [], ys = []; l.forEach(c => [c.sx, c.dx].forEach(p => { if (p){ xs.push(p[0]); ys.push(p[1]); } }));
+  if (!xs.length) return null;
+  const x0 = Math.min.apply(null,xs), x1 = Math.max.apply(null,xs), y0 = Math.min.apply(null,ys), y1 = Math.max.apply(null,ys);
+  return { c:[(x0+x1)/2, (y0+y1)/2], z:Math.min(9, zoomPara(Math.max(4, (x1-x0)*1.9), Math.max(3, (y1-y0)*2.4))) };
+}
+function volarCaravanas(){
+  const l = carPeriodo().map(c => D.caravanas[c.j]), v = cajaCaravanas(l); if (!v) return;
+  S.modoVista = 'libre'; volar(v.c, v.z); mostrarSalida(1000);
+}
+function mostrarSalida(ms){                      // al llegar, se abre la tarjeta de la salida principal
+  setTimeout(() => { const o = chart.getOption(), si = o.series.findIndex(x => x.id==='car'); if (si<0 || !o.series[si].data.length) return;
+    let mejor = 0; o.series[si].data.forEach((d,i) => { if (d.cars && d.cars.length > (o.series[si].data[mejor].cars||[]).length) mejor = i; });
+    chart.dispatchAction({ type:'showTip', seriesIndex:si, dataIndex:mejor }); }, ms);
+}
+function verCaravana(j){                         // desde "Lo que cambió": activa la capa y va a esa caravana
+  const c = D.caravanas[j];
+  if (!S.car){ S.car = true; const b = document.querySelector('#m-her [data-a="car"]'); b.classList.add('on'); b.setAttribute('aria-pressed', true); }
+  S.carSel = j; S.dia = ND; pintarTodo();
+  const v = cajaCaravanas([c]); if (v){ S.modoVista = 'libre'; volar(v.c, v.z); }
+  setTimeout(() => { const o = chart.getOption(), si = o.series.findIndex(x => x.id==='car'); if (si<0) return;
+    const di = o.series[si].data.findIndex(d => d.fin===j || (d.cars && d.cars.indexOf(j)>=0 && !c.dx));
+    if (di>=0) chart.dispatchAction({ type:'showTip', seriesIndex:si, dataIndex:di }); }, 1000);
+}
 
 /* ==== [8] FLUJOS ANIMADOS Y TRANSICIÓN DE COLOR ==================== */
 // Los flujos se dibujan en un lienzo propio, cuadro por cuadro, con la posición real del mapa:
@@ -687,7 +768,7 @@ const FL = {};                                  // flujos vivos: id → {a,b,c, 
 function ponerFlujos(lista){
   Object.keys(FL).forEach(k => { FL[k].alm = 0; });
   lista.forEach(f => { const x = FL[f.id];
-    if (x){ x.a = f.a; x.b = f.b; x.c = f.c; x.wm = f.w; x.alm = 1; } else FL[f.id] = { a:f.a, b:f.b, c:f.c, w:f.w, wm:f.w, al:0, alm:1 }; });
+    if (x){ x.a = f.a; x.b = f.b; x.c = f.c; x.wm = f.w; x.alm = 1; x.car = f.car; x.sel = f.sel; } else FL[f.id] = { a:f.a, b:f.b, c:f.c, w:f.w, wm:f.w, al:0, alm:1, car:f.car, sel:f.sel }; });
 }
 let ctxF = null, cuadro = 0;
 function ajustarLienzo(){ const cv = $('flujo'), r = $('lz'), dpr = Math.min(window.devicePixelRatio||1, 2);
@@ -713,6 +794,7 @@ function animar(ahora){
     const pa = chart.convertToPixel('geo', f.a), pb = chart.convertToPixel('geo', f.b); if (!pa || !pb) return;
     const dx = pb[0]-pa[0], dy = pb[1]-pa[1], len = Math.hypot(dx,dy); if (len<6) return;
     let nx = -dy/len, ny = dx/len; if (ny>0){ nx = -nx; ny = -ny; }            // la curva siempre se arquea hacia arriba
+    if (f.car){ caminata(f, pa, pb, dx, dy, len, nx, ny, ahora, quieto); return; }
     const cx = (pa[0]+pb[0])/2 + nx*len*0.2, cy = (pa[1]+pb[1])/2 + ny*len*0.2, gw = f.w*E;
     ctxF.lineCap = 'round'; ctxF.strokeStyle = f.c; ctxF.fillStyle = f.c;
     ctxF.globalAlpha = 0.20*f.al; ctxF.lineWidth = gw; ctxF.beginPath(); ctxF.moveTo(pa[0],pa[1]); ctxF.quadraticCurveTo(cx,cy,pb[0],pb[1]); ctxF.stroke();
@@ -726,6 +808,20 @@ function animar(ahora){
     ctxF.globalAlpha = 0.5*f.al; ctxF.beginPath(); ctxF.arc(pb[0], pb[1], Math.max(2*E, gw*0.8), 0, 6.283); ctxF.fill();
   });
   ctxF.globalAlpha = 1;
+}
+// Caravana: sendero punteado y una columna de personas que avanza despacio, en grupos
+function caminata(f, pa, pb, dx, dy, len, nx, ny, ahora, quieto){
+  const cx = (pa[0]+pb[0])/2 + nx*len*0.07, cy = (pa[1]+pb[1])/2 + ny*len*0.07, pos = p => { const q = 1-p;
+    return [q*q*pa[0] + 2*q*p*cx + p*p*pb[0], q*q*pa[1] + 2*q*p*cy + p*p*pb[1]]; };
+  ctxF.strokeStyle = f.c; ctxF.fillStyle = f.c; ctxF.lineCap = 'round';
+  ctxF.globalAlpha = (f.sel ? 0.75 : 0.45)*f.al; ctxF.lineWidth = 1.6*E; ctxF.setLineDash([3*E, 4*E]);
+  ctxF.beginPath(); ctxF.moveTo(pa[0],pa[1]); ctxF.quadraticCurveTo(cx,cy,pb[0],pb[1]); ctxF.stroke(); ctxF.setLineDash([]);
+  const gente = Math.max(5, Math.min(26, Math.round(f.car/70))), paso = 7*E/len, grupo = Math.max(0.18, gente*paso*1.25),
+        cabeza = quieto ? 0.6 : ((ahora*0.000055*80*E/len) % (1+grupo));
+  for (let i=0;i<gente;i++){ const p = cabeza - i*paso*(1 + 0.35*Math.sin(i*1.7)); if (p<0 || p>1) continue;
+    const xy = pos(p), lado = Math.sin(i*2.3)*2.2*E;
+    ctxF.globalAlpha = f.al*0.9*Math.min(1, p*8, (1-p)*8);
+    ctxF.beginPath(); ctxF.arc(xy[0] - ny*lado, xy[1] + nx*lado, 1.7*E, 0, 6.283); ctxF.fill(); }
 }
 
 /* ==== [9] BARRA DE TIEMPO Y REPRODUCCIÓN ========================== */
@@ -745,6 +841,11 @@ function pintarTiempo(){
   const ma = []; for (let i=0;i<S.dia;i++){ const a = Math.max(0,i-6); ma.push(((i+0.5)*pw).toFixed(1)+','+(base-suma(d,a,i+1)/(i+1-a)/mx*alto).toFixed(1)); }
   if (ma.length>1) h += '<polyline points="'+ma.join(' ')+'" fill="none" stroke="'+t.tinta+'" stroke-width="2" stroke-linejoin="round"/>';
   CTX.reg.concat(F.n!=null ? (CTX[D.nats[F.n][1]] || []) : []).filter(e => e.f.length===10 && indiceDe(e.f)>=0 && indiceDe(e.f)<ND).forEach(e => { const x = (indiceDe(e.f)+0.5)*pw; h += '<g><title>'+esc(e.que)+'</title><line x1="'+x.toFixed(1)+'" y1="6" x2="'+x.toFixed(1)+'" y2="'+base+'" stroke="'+t.tinta+'" stroke-dasharray="2 3"/><circle cx="'+x.toFixed(1)+'" cy="6" r="3.5" fill="'+CATS[e.c][1]+'" stroke="'+t.halo+'" stroke-width="1.5"/><text x="'+(x+7).toFixed(1)+'" y="10" font-size="10.5" fill="'+t.tinta+'" fill-opacity=".8" font-family="Barlow, sans-serif">'+esc(e.que.replace('presidencial ','').slice(0,40))+'</text></g>'; });
+  const U = finDatos(k);
+  if (U<ND) h += '<rect x="'+(U*pw).toFixed(1)+'" y="0" width="'+((ND-U)*pw).toFixed(1)+'" height="'+base+'" fill="url(#pend)"><title>Pendiente: la base llega al '+fechaLarga(U-1)+'</title></rect>';
+  if (S.car) carPeriodo().forEach(c => { const C = D.caravanas[c.j], x = (c.i+0.5)*pw, a = 3.5 + 3*Math.sqrt(Math.min(1, C.p/2000));     // marca bajo la línea base, del ancho según las personas
+    h += '<path d="M'+x.toFixed(1)+' '+(base+0.5)+'l'+a.toFixed(1)+' 6.5h'+(-2*a).toFixed(1)+'z" fill="'+t.irr+'" stroke="'+t.halo+'" stroke-width="1"><title>'+esc(nombreCar(C))+' · '+fechaISO(C.f)+' · ≈'+miles(C.p)+' personas</title></path>'; });
+  h += '<defs><pattern id="pend" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="'+t.tinta+'" stroke-opacity=".18" stroke-width="2"/></pattern></defs>';
   h += '<g id="cursor"><line x1="0" y1="0" x2="0" y2="'+(base+4)+'" stroke="'+t.tinta+'" stroke-width="2"/><circle cx="0" cy="'+(base+4)+'" r="5.5" fill="'+t.tinta+'" stroke="'+t.mar+'" stroke-width="2"/></g>';
   sv.setAttribute('viewBox','0 0 '+W+' '+H); sv.innerHTML = h; moverCursor(S.play ? S.t : S.dia);
   sv.setAttribute('aria-valuenow', S.dia); sv.setAttribute('aria-valuetext','al '+fechaDia(S.dia-1));
@@ -794,7 +895,7 @@ function pintarDocs(){
   }
   $('docs').innerHTML = '<h2><span>Extranjeros con documento vigente</span></h2>'+
     '<div class="docs-f"><span class="num">'+(tot==null?'s/d':miles(tot))+'</span><span class="mini">'+esc(sub)+(hm?' · '+pct(hm[1],hm[0]+hm[1])+'% mujeres':'')+'</span></div>'+barra+
-    '<span class="mini">Corte semanal · cargado el '+fechaISO(dv.corte)+'</span>';
+    '<span class="mini">Corte: '+fechaISO(dv.corte)+'</span>';
 }
 function cuantosAvisos(){ const h = window.innerHeight/E; return window.innerWidth<=980 ? 4 : h<740 ? 2 : h<790 ? 3 : h<870 ? 4 : h<1000 ? 5 : 8; }
 function pintarAnalisis(){
@@ -1025,6 +1126,7 @@ function iniciar(){
   else { const v = vistaMundo(); S.zoom = v.z; S.centro = v.c; }        // la primera vista es el mundo completo
   chart.setOption(opcionBase());
   if (!D.cbp) $('b-cbp').hidden = true;
+  if (!(D.caravanas || []).length) $('b-car').hidden = true;
   let tocado = null;
   chart.on('click', p => {
     const clave = (p.seriesId || '')+':'+(p.dataIndex!=null ? p.dataIndex : p.name);
@@ -1032,6 +1134,7 @@ function iniciar(){
     tocado = null;
     if (p.seriesId==='bub' || p.seriesId==='lat') fijarSel({t:'n', i:p.data.nat}, false);
     else if (p.seriesId==='pts') fijarSel({t:'p', tipo:p.data.pTipo, i:p.data.pt}, false);
+    else if (p.seriesId==='car'){ S.carSel = p.data.fin!=null ? p.data.fin : null; pintarMapa(); }
     else if (p.name && p.name.indexOf('MX_')===0){ const s = ECLAVE.indexOf(p.name); if (s<0) return;
       if (S.agr!=='e' && AGR[S.agr].de[s]>=0) fijarSel({t:'g', a:S.agr, q:AGR[S.agr].de[s]}, false); else fijarSel({t:'e', i:s}, false); }
   });
@@ -1062,7 +1165,7 @@ function iniciar(){
     if (T('#plegar')){ S.kpiModo = S.kpiModo==='tarjetas'?'compacto':'tarjetas'; pintarKpis(); ajustarAlto(); return; }
     const cm = T('[data-cmp]'); if (cm){ S.cmp = cm.dataset.cmp==='aa' ? 'aa' : +cm.dataset.cmp; pintarTodo(); return; }
     const pe = T('[data-per]'); if (pe){ S.per = pe.dataset.per; cambiarPeriodo(); return; }
-    const k = T('[data-k]'); if (k){ fijarInd(k.dataset.k); return; }
+    const k = T('[data-k]'); if (k){ const kk = k.dataset.k; fijarInd(kk); if (TACTIL) mostrarTip(document.querySelector('.kc[data-k="'+kk+'"]'), true); return; }
     const ag = T('[data-agr]'); if (ag){ const v = ag.dataset.agr;      // Mundo y Estado: datos generales; Cinturón y CECO: agrupan
       S.agr = v==='m' ? 'e' : v; if (S.sel && S.sel.t==='g' && (v==='m' || v==='e' || S.sel.a!==S.agr)) S.sel = null;
       if (v==='m') herramienta('mundo'); else if (v==='e') herramienta('mx'); else acercarSiMundo();
@@ -1087,6 +1190,7 @@ function iniciar(){
   document.addEventListener('mouseover', e => { const k = e.target.closest('.kc[data-k]'); if (k) mostrarTip(k); });
   document.addEventListener('mouseout', e => { const k = e.target.closest('.kc[data-k]'); if (k && !k.contains(e.relatedTarget)) mostrarTip(null); });
   window.addEventListener('scroll', () => mostrarTip(null), {passive:true});
+  if (TACTIL) document.addEventListener('touchstart', e => { if (!e.target.closest('.kc[data-k]')) mostrarTip(null); }, {passive:true});
   $('buscar').addEventListener('input', buscar);
   $('buscar').addEventListener('keydown', e => { if (e.key==='Enter'){ elegir(0); e.preventDefault(); } if (e.key==='Escape'){ $('res').hidden = true; } });
   { const r = rangoPeriodo(); aplicarPeriodo(r[0], r[1]); }       // periodo inicial: Sheinbaum

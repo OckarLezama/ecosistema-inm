@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-08 11:53
+Generado: 2026-10-08 13:48
 Periodo de las bases: 2024-10-01 a 2024-12-31 (92 días)
 
 == Ingresos  ·  DGCVM INGRESOS.xlsx  ·  cargado 2026-10-07
@@ -65,4 +65,8 @@ Periodo de las bases: 2024-10-01 a 2024-12-31 (92 días)
 == Encuentros CBP  ·  CBP ENCUENTROS.xlsx  ·  cargado 2026-10-07
    1,564 renglones · total 288,882 · del 2024-10-01 al 2024-12-31
    Días sin datos: 0
+
+== Caravanas  ·  CARAVANAS MIGRANTES.xlsx  ·  cargado 2026-10-08
+   22 caravanas · del 2024-10-05 al 2026-09-22
+   · Lugares sin coordenadas en el catálogo (no se dibuja su recorrido): Corazones, Oaxaca
 

@@ -35,7 +35,7 @@ Reglas
   [7] COMPOSICIONES         desgloses propios de cada base
   [8] PUNTOS                internación, repatriación y estaciones
   [9] DOCUMENTOS VIGENTES
-  [10] ENCUENTROS CBP
+  [10] ENCUENTROS CBP Y CARAVANAS
   [11] REPORTE Y SALIDA
 """
 import argparse
@@ -108,6 +108,7 @@ def fecha_de_carga(ruta):
 # (clave, columnas que debe tener, columnas que no debe tener)
 FIRMAS = [
     ("cbp",        {"AGENCIA", "LOCATION"}, set()),
+    ("car",        {"NOMBRE", "INICIO", "LUGAR DE SALIDA", "PERSONAS"}, set()),
     ("tram",       {"TIPO DE TRAMITE", "PAIS / EMPLEADOR"}, set()),
     ("resc",       {"1RA VEZ", "REINCIDENTES"}, set()),
     ("can_nna",    {"FECHA DE NACIMIENTO", "CLASIFICACION"}, set()),
@@ -125,7 +126,7 @@ FIRMAS = [
 NOMBRES = {"ing": "Ingresos", "seg": "Segunda revisión", "tram": "Trámites", "resc": "Rescates",
            "pres": "Presentados", "can_nna": "Canalizados NNA", "can_ad": "Canalizados adultos",
            "ret": "Retornados", "recib": "Recibidos de EE. UU.", "rep": "Repatriados",
-           "cbp": "Encuentros CBP", "docs_est": "Documentos vigentes por estado",
+           "cbp": "Encuentros CBP", "car": "Caravanas", "docs_est": "Documentos vigentes por estado",
            "docs_nat": "Documentos vigentes por país", "docs_cruce": "Documentos vigentes estado × país"}
 
 
@@ -546,6 +547,36 @@ def encuentros(tabla, inicio, dias, cortes):
                "sectores": sectores, "estados": por_estado}
 
 
+def ubicar(lugar):
+    """Coordenadas de un lugar de caravana; se busca por la parte antes de la primera coma."""
+    texto = norm(lugar)
+    for parte in [texto.split(",")[0].strip(), texto]:
+        if parte in C.LUGARES:
+            return list(C.LUGARES[parte])
+    for clave, xy in C.LUGARES.items():
+        if clave in texto:
+            return list(xy)
+    return None
+
+
+def caravanas(tabla):
+    """Caravanas: nombre, fecha de inicio, lugar de salida y de disolución, personas (estimadas)."""
+    t = con_encabezado(tabla)
+    t["INICIO"] = fecha(t["INICIO"])
+    t = t[t["INICIO"].notna()]
+    vacio = lambda v: "" if pd.isna(v) else " ".join(str(v).split())
+    lista, sin_ubicar = [], set()
+    for _, r in t.sort_values("INICIO").iterrows():
+        salida, disol = vacio(r.get("LUGAR DE SALIDA")), vacio(r.get("LUGAR DE DISOLUCION"))
+        sx, dx = ubicar(salida) if salida else None, ubicar(disol) if disol else None
+        sin_ubicar.update(x for x, c in ((salida, sx), (disol, dx)) if x and c is None)
+        lista.append({"n": vacio(r.get("NOMBRE")) or "Sin nombre", "f": r["INICIO"].date().isoformat(),
+                      "s": salida, "sx": sx, "d": disol, "dx": dx, "p": int(pd.to_numeric(r.get("PERSONAS"), errors="coerce") or 0)})
+    if sin_ubicar:
+        avisar("car", "Lugares sin coordenadas en el catálogo (no se dibuja su recorrido): " + ", ".join(sorted(sin_ubicar)))
+    return lista
+
+
 # ==== [11] REPORTE Y SALIDA =======================================
 def dias_faltantes(t, inicio, fin):
     todos = pd.date_range(inicio, fin)
@@ -605,12 +636,13 @@ def main():
     salida["cbp"] = None
     if "cbp" in tablas:
         B["cbp"], salida["cbp"] = encuentros(tablas["cbp"], inicio, dias, cortes)
+    salida["caravanas"] = caravanas(tablas["car"]) if "car" in tablas else []
 
     # -- Estado de cada base (para la sección Bases y el reporte)
     salida["bases"] = []
     lineas = ["IA-NAMI · REPORTE DE CONVERSIÓN", f"Generado: {salida['generado']}",
               f"Periodo de las bases: {salida['inicio']} a {salida['corte']} ({dias} días)", ""]
-    for k in list(CARGAR) + ["docs_est", "docs_nat", "docs_cruce", "cbp"]:
+    for k in list(CARGAR) + ["docs_est", "docs_nat", "docs_cruce", "cbp", "car"]:
         if k not in tablas:
             continue
         info = {"k": k, "n": NOMBRES[k], "archivo": archivos[k], "cargado": cargas[k]}
@@ -625,6 +657,8 @@ def main():
             lineas.append(f"   Días sin datos: {len(falt)}" + (" → " + ", ".join(falt[:14]) + (" …" if len(falt) > 14 else "") if falt else ""))
             if k not in ("rep", "cbp"):
                 lineas.append(f"   En «Otras» nacionalidades: {otras:,} ({otras / max(int(t['v'].sum()), 1) * 100:.1f}%)")
+        if k == "car":
+            lineas.append(f"   {len(salida['caravanas'])} caravanas · del {salida['caravanas'][0]['f']} al {salida['caravanas'][-1]['f']}" if salida["caravanas"] else "   Sin caravanas")
         if ocultas.get(k):
             avisar(k, "El archivo trae hojas ocultas que no se leen: " + ", ".join(ocultas[k]))
         for x in AVISOS.get(k, []):

@@ -35,3 +35,13 @@ El periodo de la página se toma de las fechas que traen las bases.
 ## Ver la página
 
 Abrir `index.html` en el navegador, o publicar con GitHub Pages (rama `main`, carpeta raíz).
+
+## Reglas de los datos
+
+- **Documentos vigentes:** la fecha de corte es el día en que se subió el archivo al repositorio.
+- **Días pendientes:** si una base llega a una fecha anterior que las demás, los días que le faltan se marcan como pendientes en la barra de tiempo y no entran en las comparaciones.
+- **Caravanas:** columnas NO., NOMBRE, INICIO, LUGAR DE SALIDA, LUGAR DE DISOLUCIÓN (opcional) y PERSONAS (estimadas). Si llega un lugar nuevo, el reporte lo avisa y se agrega en `LUGARES` de `robot/catalogos.py`.
+
+## Pendientes
+
+- Mapa de calor: se quitó de Pulso; queda para otra sección.

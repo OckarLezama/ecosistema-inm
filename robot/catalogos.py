@@ -11,6 +11,7 @@ un nombre nuevo (el reporte de cada conversión avisa cuáles faltan).
   [3] PUNTOS          coordenadas de puntos de internación, repatriación
                       y estaciones migratorias (ubicación aproximada)
   [4] SECTORES CBP    sectores y oficinas de la CBP en la frontera sur de EE. UU.
+      LUGARES         sitios de salida y disolución de caravanas
   [5] CÓDIGOS ISO     nombre de nacionalidad (sin acentos, mayúsculas) → código ISO numérico
   [6] REGIONES        código ISO → región para el filtro del mapa
   [7] NOMBRES CORTOS  nombre para mostrar cuando el oficial es largo
@@ -209,6 +210,28 @@ SECTORES_CBP = {
     'DEL RIO': (-100.90, 29.36),
     'LAREDO': (-99.51, 27.51),
     'RIO GRANDE': (-98.23, 26.20),
+}
+
+# Lugares de salida y disolución de caravanas (ubicación aproximada de la localidad).
+# Se buscan por la primera parte del texto, antes de la coma del estado.
+# Si llega un lugar nuevo, el reporte lo avisa y se agrega aquí.
+LUGARES = {
+    'PARQUE BICENTENARIO': (-92.263, 14.905),
+    'TAPACHULA': (-92.263, 14.905),
+    'SAN PEDRO SULA': (-88.025, 15.505),
+    'CHIPEHUA': (-95.42, 16.04),
+    'CAMRON YAUTEPEC': (-95.95, 16.55),
+    'CAMARON YAUTEPEC': (-95.95, 16.55),
+    'SAN BLAS ATEMPA': (-95.22, 16.33),
+    'LA VENTOSA': (-94.95, 16.55),
+    'SANTO DOMINGO ZANATEPEC': (-94.35, 16.48),
+    'ESCUINTLA': (-92.66, 15.32),
+    'MAPASTEPEC': (-92.90, 15.43),
+    'ARRIAGA': (-93.90, 16.24),
+    'TONALA': (-93.75, 16.09),
+    'HUIXTLA': (-92.47, 15.14),
+    'PIJIJIAPAN': (-93.21, 15.69),
+    'JUCHITAN': (-95.03, 16.43),
 }
 
 # ==== [5] CÓDIGOS ISO =============================================
