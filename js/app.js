@@ -350,11 +350,12 @@ function textoAviso(a){
 }
 function filaAviso(a, i){
   const c = colG(a.t==='car' ? 'irr' : IND[a.k].g); let ic, ci;
+  const eti = a.t==='car' ? 'Caravana' : IND[a.k].n+(a.t==='pico' ? ' · pico' : a.t==='nac' ? ' · por país' : a.t==='est' ? ' · por estado' : a.t==='conc' ? ' · concentración' : '');
   if (a.t==='car'){ ic = '<svg width="12" height="12" viewBox="0 0 16 16">'+GLIFO_CAR+'</svg>'; ci = '≈'+corto(D.caravanas[a.c].p); }
   else if (a.t==='conc'){ const p = pct(a.a,a.b); ic = '<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="'+c+'" stroke-width="3" stroke-dasharray="'+(p*0.283).toFixed(1)+' 28.3" transform="rotate(-90 6 6)"/></svg>'; ci = p+'%'; }
   else if (a.t==='pico'){ ic = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 10l3-3 2 2 5-7" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; ci = '×'+(a.v/Math.max(a.med,1)).toFixed(1); }
   else { ic = tri(a.dl>=0, c); ci = Math.abs(a.dl).toFixed(0)+'%'; }
-  return '<button class="av" data-av="'+i+'"><span class="ic">'+ic+'</span><span class="ci">'+ci+'</span><span class="tx">'+textoAviso(a)+'</span></button>';
+  return '<button class="av" data-av="'+i+'" style="--c:'+c+'"><span class="av-t"><span class="av-k">'+eti+'</span><span class="av-v">'+ic+ci+'</span></span><span class="tx">'+textoAviso(a)+'</span></button>';
 }
 function abrirAviso(i){ const a = AVISOS[i]; if (!a) return;
   if (a.t==='car'){ verCaravana(a.c); return; }
@@ -937,7 +938,7 @@ function pintarDocs(){
 function pintarAnalisis(){
   const F = filtro(); AVISOS = analizar(F);
   const quien = nombreFiltro() || 'todo el país';
-  $('analisis').innerHTML = '<h2><span>Lo que cambió</span></h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
+  $('analisis').innerHTML = '<h2><span>Lo que cambió</span>'+(AVISOS.length ? '<small class="av-n">'+AVISOS.length+' hallazgos</small>' : '')+'</h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
     (AVISOS.length ? '<div class="avisos-lista">'+AVISOS.map(filaAviso).join('')+'</div>' : '<span class="mini">Sin cambios relevantes con este filtro.</span>');
 }
 const barrasNat = (l, color) => { const mx = l.length?l[0][1]:1; return l.map(r => '<button class="barra" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+color+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); };
@@ -962,26 +963,32 @@ function reparto(tit, arr, grande){
     '<div class="rep-b">'+arr.map(r => r[1] ? '<i style="flex:'+r[1]+';background:'+r[2]+'" title="'+r[0]+': '+miles(r[1])+'"></i>' : '').join('')+'</div>'+
     (grande ? '' : '<div class="ley">'+arr.map(r => '<span><i style="background:'+r[2]+'"></i>'+r[0]+' '+pct(r[1],tot)+'%</span>').join('')+'</div>')+'</div>';
 }
-// Principales nacionalidades con su reparto entre dos categorías (la categoría c en color)
-function porNac(kc, c, palabra, s, n, col, col2){
-  if (n!=null && !Array.isArray(n)) return '';
-  const l = topNats(x => enRegion(x) ? comp(kc,s,x).reduce((a,b)=>a+b,0) : 0, 6).filter(r => r[1]>=30); if (!l.length) return '';   // con menos de 30 casos el % no dice nada
-  return '<div><span class="mini"><b>Por nacionalidad</b> · % '+palabra+' · con 30 casos o más</span>'+l.map(r => { const v = comp(kc,s,r[0]), t = v[0]+v[1] || 1;
-    return '<button class="fila nac" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+'</span><span class="b dos"><i style="width:'+(v[c]/t*100).toFixed(1)+'%;background:'+col+'"></i><i style="width:'+(v[1-c]/t*100).toFixed(1)+'%;background:'+col2+'"></i></span><span class="x">'+pct(v[c],t)+'%</span></button>'; }).join('')+'</div>';
+// Dos categorías: anillo con la proporción, cifras al lado y la misma proporción mes por mes
+function anillo(kc, s, n, cats){
+  const v = comp(kc,s,n), tot = v[cats[0][1]] + v[cats[1][1]]; if (!tot) return '';
+  const p = v[cats[0][1]]/tot, R = 42, L = 2*Math.PI*R;
+  const svg = '<svg viewBox="0 0 110 110" class="ani-s" aria-hidden="true"><circle cx="55" cy="55" r="'+R+'" fill="none" stroke="'+cats[1][2]+'" stroke-width="14"/>'+
+    '<circle cx="55" cy="55" r="'+R+'" fill="none" stroke="'+cats[0][2]+'" stroke-width="14" stroke-dasharray="'+(p*L).toFixed(1)+' '+L.toFixed(1)+'" transform="rotate(-90 55 55)"/>'+
+    '<text x="55" y="58" text-anchor="middle" class="ani-p">'+pct(v[cats[0][1]],tot)+'%</text><text x="55" y="74" text-anchor="middle" class="ani-t">'+cats[0][3]+'</text></svg>';
+  const leyenda = cats.map(x => '<div class="ani-l"><i style="background:'+x[2]+'"></i><span>'+x[0]+'</span><b class="num">'+miles(v[x[1]])+'</b><em>'+pct(v[x[1]],tot)+'%</em></div>').join('');
+  // por mes, dentro del periodo
+  const meses = {}, ss = s ? new Set(s) : null, nn = n==null ? null : new Set(Array.isArray(n) ? n : [n]), a = D.comp[kc];
+  for (let i=0;i<a.length;i+=5){ const f = fraccionMes(a[i]); if (!f || (ss && !ss.has(a[i+1])) || (nn && !nn.has(a[i+2]))) continue;
+    const m = meses[a[i]] = meses[a[i]] || [0,0]; m[a[i+3]] += a[i+4]*f; }
+  const ms = Object.keys(meses).map(Number).sort((x,y)=>x-y).filter(m => meses[m][0]+meses[m][1] > 0);
+  const col = ms.length>1 ? '<div><span class="mini"><b>Mes a mes</b> · % '+cats[0][0].toLowerCase()+'</span><div class="ani-m">'+ms.map(m => { const x = meses[m], t = x[0]+x[1], q = x[cats[0][1]]/t, f = new Date(INICIO0.getFullYear(), INICIO0.getMonth()+m, 1);
+      return '<div title="'+MES12[f.getMonth()]+' '+f.getFullYear()+': '+miles(x[cats[0][1]])+' de '+miles(t)+'"><span>'+Math.round(q*100)+'%</span><i><b style="height:'+(q*100).toFixed(1)+'%;background:'+cats[0][2]+'"></b></i><small>'+MES12[f.getMonth()]+'</small></div>'; }).join('')+'</div></div>' : '';
+  return '<div class="ani">'+svg+'<div class="ani-d">'+leyenda+'<span class="mini">Total: <b>'+miles(tot)+'</b></span></div></div>'+col;
 }
 const nomEst = i => String(D.estaciones[i]).replace(/^E[MP] /,'');
 // Cuarta tarjeta: nacionalidades de una categoría (vía de ingreso, primera vez o reincidente, estación)
 function cajaCruce(k, F){
   const c = colG(IND[k].g), q = S.cruce[k] || 0, cfg = {
-    ing:{ kc:'ing_via', cats:['Aérea','Terrestre','Marítima'], tit:'Nacionalidades por vía de ingreso', de:'de sus ingresos' },
-    resc:{ kc:'resc_rei', cats:['Primera vez','Reincidente'], tit:'Nacionalidades · primera vez o reincidente', de:'de sus rescates' },
-    pres:{ kc:'pres_est', cats:D.estaciones.map((x,i)=>nomEst(i)), tit:'Nacionalidades por estación', de:'de sus presentados' } }[k];
+    ing:{ kc:'ing_via', cats:['vía aérea','vía terrestre','vía marítima'], tit:'Nacionalidades por ', de:'de sus ingresos' },
+    resc:{ kc:'resc_rei', cats:['primera vez','reincidentes'], tit:'Nacionalidades · ', de:'de sus rescates' },
+    pres:{ kc:'pres_est', cats:D.estaciones.map((x,i)=>nomEst(i)), tit:'Nacionalidades en ', de:'de sus presentados' } }[k];
   const tot = n => comp(cfg.kc,F.ss,n), l = topNats(n => enRegion(n) ? tot(n)[q] : 0, 10), mx = l.length ? l[0][1] : 1;
-  let sel;
-  if (k==='pres'){ const orden = comp('pres_est',F.ss,null).map((x,i)=>[i,x]).filter(r=>r[1]>0).sort((x,y)=>y[1]-x[1]);
-    sel = '<select id="cruce-est" class="sel" aria-label="Estación">'+orden.map(r => '<option value="'+r[0]+'"'+(r[0]===q?' selected':'')+'>'+esc(nomEst(r[0]))+' · '+corto(r[1])+'</option>').join('')+'</select>'; }
-  else sel = '<div class="pil chica">'+cfg.cats.map((x,i) => '<button data-cruce="'+k+':'+i+'" class="'+(i===q?'on':'')+'" aria-pressed="'+(i===q)+'">'+x+'</button>').join('')+'</div>';
-  return '<div class="caja"><h2><span>'+cfg.tit+'</span></h2>'+sel+'<span class="mini">'+esc(cfg.cats[q])+' · periodo completo · el % es la parte '+cfg.de+'</span>'+
+  return '<div class="caja"><h2><span>'+cfg.tit+esc(cfg.cats[q])+'</span></h2><span class="mini">Se cambia desde Composición · periodo completo · el % es la parte '+cfg.de+'</span>'+
     (l.map(r => { const t = tot(r[0]).reduce((a,b)=>a+b,0);
       return '<button class="barra pc" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+' <small>'+pct(r[1],t)+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>'; }).join('') || '<span class="mini">Sin registros.</span>')+'</div>';
 }
@@ -994,7 +1001,7 @@ function cajaInternacion(F){
 }
 // Trámites: los 10 tipos más frecuentes
 function cajaTramites(F){
-  const v = comp('tram_tipo',F.ss,F.nd).map((x,i)=>[i,x]).filter(r => r[1]>0 && D.tramTipos[r[0]]!=='Otros').sort((x,y)=>y[1]-x[1]).slice(0,10), mx = v.length ? v[0][1] : 1, tot = comp('tram_tipo',F.ss,F.nd).reduce((a,b)=>a+b,0);
+  const v = comp('tram_tipo',F.ss,F.nd).map((x,i)=>[i,x]).filter(r => r[1]>0 && D.tramTipos[r[0]]!=='Otros').sort((x,y)=>y[1]-x[1]).slice(0,7), mx = v.length ? v[0][1] : 1, tot = comp('tram_tipo',F.ss,F.nd).reduce((a,b)=>a+b,0);
   return '<div class="caja"><h2><span>Principales trámites</span></h2><span class="mini">Periodo completo · el % es la parte del total</span>'+
     (v.map(r => '<div class="barra larga" title="'+esc(D.tramTipos[r[0]])+'"><span>'+esc(D.tramTipos[r[0]])+' <small>'+pct(r[1],tot)+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+colG('reg')+'"></i></span><span class="x">'+corto(r[1])+'</span></div>').join('') || '<span class="mini">Sin registros.</span>')+'</div>';
 }
@@ -1014,8 +1021,8 @@ function htmlComp(k, F){
     h = grupo('Resultado de la segunda revisión',[['Rechazo',v[1]],['Internación',v[0],c2]]) + (ing ? '<div><span class="mini"><b>'+(v[1]/(ing+v[1])*100).toFixed(1)+'%</b> de las llegadas termina en rechazo ('+miles(v[1])+' de '+corto(ing+v[1])+').</span></div>' : ''); }
   else if (k==='tram'){ const v = comp('tram_se',s,n), r = comp('tram_res',s,n), ed = ['0–11','12–17','18–24','25–34','35–44','45–54','55–64','65+'];
     let mx = 1; v.forEach(x => mx = Math.max(mx,x)); const H = suma(v,0,8), M = suma(v,8,16); sub = 'Sexo y edad de quien tramita';
-    h = '<div class="pir-w"><div class="pir-ley"><span><i style="background:'+c2+'"></i>Hombres <b>'+pct(H,H+M)+'%</b></span><span>Mujeres <b>'+pct(M,H+M)+'%</b><i style="background:'+c+'"></i></span></div>'+
-        ed.map((e,i)=>'<div class="pir" title="'+e+' años · hombres '+miles(v[i])+' · mujeres '+miles(v[8+i])+'"><span class="l"><em>'+corto(v[i])+'</em><i style="width:'+(v[i]/mx*100).toFixed(0)+'%;background:'+c2+'"></i></span><span class="c">'+e+'</span><span class="d"><i style="width:'+(v[8+i]/mx*100).toFixed(0)+'%;background:'+c+'"></i><em>'+corto(v[8+i])+'</em></span></div>').reverse().join('')+'</div>'+
+    h = '<div class="pira"><div class="pira-c"><span><b class="num">'+pct(H,H+M)+'%</b>Hombres · '+corto(H)+'</span><span class="d"><b class="num">'+pct(M,H+M)+'%</b>Mujeres · '+corto(M)+'</span></div>'+
+        ed.map((e,i)=>'<div class="pira-f" title="'+e+' años · hombres '+miles(v[i])+' · mujeres '+miles(v[8+i])+'"><em>'+corto(v[i])+'</em><span class="l"><i style="width:'+(v[i]/mx*100).toFixed(1)+'%;background:'+c2+'"></i></span><span class="e">'+e+'</span><span><i style="width:'+(v[8+i]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><em class="d">'+corto(v[8+i])+'</em></div>').reverse().join('')+'</div>'+
         reparto('Resolución',[['Positiva',r[0],c],['Negativa',r[1],c2],['Otra',r[2],cssv('--line')]]); }
   else if (k==='resc'){ const a = comp('resc_rei',s,n), d = comp('resc_des',s,n);
     h = elegible('Primera vez o reincidente','resc',[['Primera vez',a[0],c2],['Reincidente',a[1]]]) + grupo('Destino',[['Estación migr.',d[0]],['DIF',d[1]],['Sin destino',d[2],c2]]); }
@@ -1026,9 +1033,9 @@ function htmlComp(k, F){
     h = grupo('NNA por sexo',[['Niñas',g2(i=>i>=6)],['Niños',g2(i=>i<6),c2]]) + grupo('NNA por edad',[['0 a 11 años',g2(i=>Math.floor(i/3)%2===0)],['12 a 17 años',g2(i=>Math.floor(i/3)%2===1),c2]]) +
         grupo('Condición',[['Acompañado',g2(i=>i%3===0),c2],['No acompañado',g2(i=>i%3===1)],['Separado',g2(i=>i%3===2)]]) + grupo('Adultos acompañantes',[['Mujeres',a[1]],['Hombres',a[0],c2]]); }
   else if (k==='ret'){ const v = comp('ret_tipo',s,n);
-    h = reparto('Tipo de retorno',[['Asistido',v[1],c],['Deportación',v[0],c2]], true) + porNac('ret_tipo', 1, 'asistido', s, n, c, c2); }
+    h = anillo('ret_tipo', s, n, [['Retorno asistido',1,c,'asistido'],['Deportación',0,c2]]); }
   else if (k==='recib'){ const v = comp('recib_edad',s,n); sub = 'Esta base trae adultos y menores, sin sexo';
-    h = reparto('Edad',[['Menores',v[1],c],['Adultos',v[0],c2]], true) + porNac('recib_edad', 1, 'menores', s, n, c, c2); }
+    h = anillo('recib_edad', s, n, [['Menores',1,c,'menores'],['Adultos',0,c2]]); }
   else if (k==='rep'){ const v = comp('rep_comp',s,null); sub = 'Sexo y edad de los mexicanos repatriados';
     h = grupo('Adultos',[['Hombres',v[0],c2],['Mujeres',v[1]]]) + grupo('Menores',[['Niños',v[2],c2],['Niñas',v[3]]]) + grupo('Menores, con o sin compañía',[['Acompañados',v[4],c2],['Solos',v[5]]]) + grupo('Modalidad',[['Terrestre',v[6],c2],['Aérea',v[7]]]); }
   return '<div class="caja"><h2><span>Composición · '+(k==='rech' ? '2da revisión' : IND[k].n)+'</span></h2><span class="mini">'+sub+' · periodo completo</span><div class="cgrid">'+(h || '<span class="mini">Sin registros con este filtro.</span>')+'</div></div>';
@@ -1269,7 +1276,6 @@ function iniciar(){
     if (id==='per-anio'){ S.anio = +e.target.value; S.mes = 0; cambiarPeriodo(); return; }
     if (id==='per-mes'){ S.mes = +e.target.value; cambiarPeriodo(); return; }
     if (id==='per-desde' || id==='per-hasta'){ S[id.slice(4)] = e.target.value; if (S.desde>S.hasta){ const x = S.desde; S.desde = S.hasta; S.hasta = x; } cambiarPeriodo(); return; }
-    if (id==='cruce-est'){ S.cruce.pres = +e.target.value; pintarBajo(); marcarFiltro(); return; }
     if (id!=='region') return;
     S.region = e.target.value || null; pintarTodo();
     if (S.region) volarConMexico(REGIONES[S.region][1]);
