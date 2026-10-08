@@ -234,6 +234,13 @@ button.fk:hover{background:var(--panel2)}
 .tt .q.a>span::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-right:5px;vertical-align:middle}
 
 @media (min-width:1100px){ .bajo .ancha{grid-column:span 2} }
+/* Contexto con desplazamiento: de inicio se ven 4 eventos */
+.ctx-lista{position:relative;max-height:420px;overflow:auto;padding-right:6px;scrollbar-width:thin}
+/* Tarjeta informativa de cada indicador */
+.kpi-tip{position:fixed;z-index:80;max-width:320px;display:flex;flex-direction:column;gap:5px;background:var(--ink);color:var(--bg);border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.35;box-shadow:var(--sombra);pointer-events:none;zoom:var(--e)}
+.kpi-tip b{font-weight:600}
+.kpi-tip>b:first-child{font:600 15px var(--f-num)}
+.kpi-tip small{font-size:11px;opacity:.75}
 /* Menú de Direcciones */
 .menu{position:absolute;z-index:70;min-width:280px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:var(--sombra);padding:4px}
 .menu button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;padding:8px 10px;border-radius:7px;text-align:left}

@@ -426,11 +426,12 @@ def por_semana(t, inicio, cortes):
 def puntos(B, inicio, cortes):
     ing, seg, rep, pres = B["ing"], B["seg"], B["rep"], B["pres"]
     rech = seg.groupby(["punto", "det"]).v.sum().unstack(fill_value=0)
-    salida, con_coord = [], 0
+    salida, con_coord, indice = [], 0, {}
     for nombre, (corto, lon, lat) in C.PUNTOS_INTERNACION.items():
         d = ing[ing["punto"] == norm(nombre)]
         if not len(d):
             continue
+        indice[norm(nombre)] = len(salida)
         con_coord += int(d.v.sum())
         extranjeros = d[d["n"] != MEXICO]
         top = extranjeros.groupby(extranjeros["NACIONALIDAD"].astype(str).str.strip()).v.sum().sort_values(ascending=False).head(5)
@@ -459,7 +460,14 @@ def puntos(B, inicio, cortes):
         d = pres[pres["estacion"].map(norm) == norm(nombre)]
         if len(d):
             estaciones.append({"n": abreviar(nombre), "s": int(d["s"].iloc[0]), "x": lon, "y": lat, "wk": por_semana(d, inicio, cortes)})
-    return salida, repat, estaciones
+    return salida, repat, estaciones, por_punto(ing, indice), por_punto(seg[seg["det"] == 1], indice)
+
+
+def por_punto(t, indice):
+    """Para cada nacionalidad, sus 3 puntos de internación principales: {n: [[punto, valor], ...]}."""
+    d = t[t["punto"].isin(indice.keys()) & (t["n"] < OTRAS)]
+    g = d.groupby(["n", "punto"]).v.sum().reset_index().sort_values("v", ascending=False)
+    return {int(n): [[indice[p], int(v)] for p, v in zip(sub["punto"], sub["v"])][:3] for n, sub in g.groupby("n")}
 
 
 # ==== [9] DOCUMENTOS VIGENTES =====================================
@@ -585,7 +593,7 @@ def main():
         for parte in ("cube", "daily", "ds", "dn"):
             salida[parte][k] = r[parte]
     salida["comp"], salida["estaciones"] = composiciones(B)
-    salida["puntos"], salida["repPuntos"], salida["emPuntos"] = puntos(B, inicio, cortes)
+    salida["puntos"], salida["repPuntos"], salida["emPuntos"], salida["ingPunto"], salida["rechPunto"] = puntos(B, inicio, cortes)
     salida["docs"] = documentos(tablas, cargas)
     salida["cbp"] = None
     if "cbp" in tablas:
