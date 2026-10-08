@@ -56,6 +56,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import catalogos as C  # noqa: E402
 
 warnings.filterwarnings("ignore")
+TIPOS_TRAM = []
 
 
 # ==== [1] UTILIDADES ==============================================
@@ -400,6 +401,11 @@ def composiciones(B):
     con_edad = tram[(tram["sexo"] >= 0) & (tram["edad"] >= 0)]
     o["tram_se"] = composicion(con_edad, con_edad["sexo"] * 8 + con_edad["edad"], con_edad["v"])
     o["tram_res"] = composicion(tram, tram["res"], tram["v"])
+    # tipo de trámite: los 14 más frecuentes y "Otros"
+    global TIPOS_TRAM
+    orden = list(tram.groupby("TIPO DE TRAMITE").v.sum().sort_values(ascending=False).index)
+    TIPOS_TRAM = [" ".join(str(x).split()) for x in orden[:14]] + (["Otros"] if len(orden) > 14 else [])
+    o["tram_tipo"] = composicion(tram, tram["TIPO DE TRAMITE"].map(lambda x: orden.index(x) if orden.index(x) < 14 else 14), tram["v"])
     a = apilar(resc, ["1RA VEZ", "REINCIDENTES"])
     o["resc_rei"] = composicion(a, a["c"], a["v"])
     sd = resc.assign(SIN=(resc["TOTAL"] - resc["PRESENTADOS EN ESTACIONES MIGRATORIAS"] - resc["CANALIZADOS AL DIF"]).clip(lower=0))
@@ -631,6 +637,7 @@ def main():
         for parte in ("cube", "daily", "ds", "dn"):
             salida[parte][k] = r[parte]
     salida["comp"], salida["estaciones"] = composiciones(B)
+    salida["tramTipos"] = TIPOS_TRAM
     salida["puntos"], salida["repPuntos"], salida["emPuntos"], salida["ingPunto"], salida["rechPunto"] = puntos(B, inicio, cortes)
     salida["docs"] = documentos(tablas, cargas)
     salida["cbp"] = None
