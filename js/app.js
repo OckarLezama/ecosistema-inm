@@ -102,8 +102,9 @@ const CTX = {
 };
 const ORIGEN = {840:[-97,36.2], 124:[-100,54], 643:[38,56]};     // puntos de partida ajustados
 const ANCLA_EU = [-99.3, 32.4];
-const CAJA = [[-125,37.5],[-62,1.5]];                   // encuadre inicial: México, Centroamérica, Caribe y norte de Sudamérica
-const VISTA_MX = {c:[-94,19.5], z:1}, VISTA_AM = {c:[-84,-6], z:0.33};
+const CAJA = [[-125,35.5],[-62,2.5]];                   // encuadre inicial: México, Centroamérica, Caribe y norte de Sudamérica
+const ESCALA_LAT = 0.92;                                // corrección de proporción a la latitud de México
+const VISTA_MX = {c:[-93.5,19], z:1}, VISTA_AM = {c:[-84,-6], z:0.36};
 const VEL = 5;                                         // días por segundo al reproducir
 // Colores del mapa por tema (independientes del tema de la página)
 const TM = {
@@ -323,7 +324,7 @@ function opcionBase(){
     backgroundColor:'transparent', animationDurationUpdate:420, animationEasingUpdate:'cubicOut',
     tooltip:{ trigger:'item', confine:true, backgroundColor: S.tema==='oscuro'?'#F7F5EE':'#2B2926', borderWidth:0, padding:[9,11],
               textStyle:{ color: S.tema==='oscuro'?'#2B2926':'#F4F2EA', fontSize:12 }, extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:9px;zoom:'+E+';', formatter: tarjeta },
-    geo:{ map:'ianami', nameProperty:'key', roam:true, boundingCoords:CAJA, center:VISTA_MX.c, zoom:S.zoom, scaleLimit:{min:0.18, max:40}, left:0, right:0, top:0, bottom:0, aspectScale:0.92,
+    geo:{ map:'ianami', nameProperty:'key', roam:true, boundingCoords:CAJA, center:VISTA_MX.c, zoom:S.zoom, scaleLimit:{min:0.18, max:40}, layoutCenter:['50%','50%'], layoutSize:encuadre(), aspectScale:ESCALA_LAT,
           itemStyle:{ areaColor:t.tierra, borderColor:t.linea, borderWidth:0.5*E },
           emphasis:{ label:{show:false}, itemStyle:{ areaColor:t.tierra, borderColor:t.linea, borderWidth:0.8*E } },
           select:{ disabled:true }, label:{show:false}, tooltip:{ show:true, formatter:tarjeta }, regions:regiones() },
@@ -340,6 +341,13 @@ function opcionBase(){
     ]
   };
 }
+// El mapa nunca se deforma: conserva su proporción y el encuadre inicial cabe completo;
+// si el contenedor es más ancho o más alto, simplemente se ve más mapa alrededor.
+function encuadre(){
+  const lz = $('lz'), proporcion = (CAJA[1][0]-CAJA[0][0]) / (CAJA[0][1]-CAJA[1][1]) * ESCALA_LAT;
+  return Math.round(Math.min(lz.clientWidth, lz.clientHeight*proporcion));
+}
+function reencuadrar(){ chart.resize(); chart.setOption({geo:{layoutSize:encuadre()}}); }
 function capaPuntos(kc){                        // qué puntos corresponden al indicador
   if (kc==='rep') return {lista:D.repPuntos, tipo:'rep', siempre:true};
   if (kc==='pres') return {lista:D.emPuntos, tipo:'em', siempre:true};
@@ -716,7 +724,7 @@ function elegir(i){ const x = hallados[i]; if (!x) return; $('buscar').value = '
 function pintarNav(){ $('nav').innerHTML = SECCIONES.map(s => '<button data-vista="'+s[0]+'" class="'+(S.vista===s[0]?'on':'')+'"'+(S.vista===s[0]?' aria-current="page"':'')+'>'+s[1]+'</button>').join(''); }
 function irA(v){
   S.vista = v; pintarNav(); const pulso = v==='pulso'; $('vista-pulso').hidden = !pulso; $('vista-otra').hidden = pulso;
-  if (pulso){ ajustarAlto(); chart.resize(); ajustarLienzo(); pintarTodo(); return; }
+  if (pulso){ ajustarAlto(); reencuadrar(); ajustarLienzo(); pintarTodo(); return; }
   if (S.play) detener();
   const F0 = {ss:null, n:null}; let h = '';
   if (v==='dir') h = '<h1>Direcciones</h1><p>Cada dirección tendrá aquí su propio tablero. Por ahora se muestran sus bases y totales del periodo.</p><div class="rej">'+
@@ -757,7 +765,7 @@ function iniciar(){
   });
   let espera = 0;
   chart.on('georoam', () => { clearTimeout(espera); espera = setTimeout(() => { const z = chart.getOption().geo[0].zoom; if (Math.abs(z-S.zoom)/S.zoom > 0.04){ S.zoom = z; pintarMapa(); } }, 160); });
-  new ResizeObserver(() => { const cambio = escala(); chart.resize(); ajustarLienzo(); if (cambio) rehacerMapa(); else pintarTiempo(); }).observe($('lz'));
+  new ResizeObserver(() => { const cambio = escala(); reencuadrar(); ajustarLienzo(); if (cambio) rehacerMapa(); else pintarTiempo(); }).observe($('lz'));
   window.addEventListener('resize', () => { if (escala()) rehacerMapa(); ajustarAlto(); pintarAnalisis(); });
   if (window.innerHeight<=520) S.kpiModo = 'compacto';        // teléfono acostado: indicadores compactos
   ajustarLienzo();
