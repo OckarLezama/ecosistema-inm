@@ -58,6 +58,10 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .pil button[disabled]{opacity:.55;cursor:not-allowed}
 .pil.chica button{height:24px;padding:0 10px;font-size:12px}
 .rango{display:flex;align-items:baseline;gap:8px}
+.per-extra{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2)}
+.per-extra:empty{display:none}
+.per-extra select,.per-extra input{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.avisos-todos{max-height:340px;overflow:auto;scrollbar-width:thin}
 .rango b{font:600 18px var(--f-num)}
 .rango span{font-size:12px;color:var(--ink2)}
 .varia{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}

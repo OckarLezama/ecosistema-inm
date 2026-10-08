@@ -16,16 +16,21 @@
 
 /* ==== [1] CONFIG Y CATÁLOGOS ====================================== */
 const D = window.IANAMI_DATOS, GEO = window.IANAMI_GEO, CEN = window.IANAMI_CEN;
-const NN = D.nats.length, NS = D.ests.length, NW = D.ends.length, ND = D.dias;
+const NN = D.nats.length, NS = D.ests.length;
+let NW = D.ends.length, ND = D.dias, P0 = 0, P1 = D.dias;   // semanas y días del periodo elegido; P0-P1: su lugar en los datos completos
 const OT = NN - 2, MX = NN - 1;                       // índices de "Otras" y "México"
 // Series diarias por estado y por nacionalidad: llegan dispersas ([día, columna, valor]) y aquí se expanden
 ['ds','dn'].forEach(p => Object.keys(D[p]).forEach(k => { const L = p==='ds' ? NS : NN, a = new Float64Array(ND*L), c = D[p][k];
   for (let i=0;i<c.length;i+=3) a[c[i]*L + c[i+1]] = c[i+2]; D[p][k] = a; }));
+// Copia de los datos completos: cada periodo se arma a partir de aquí (aplicarPeriodo)
+const D0 = { dias:D.dias, ends:D.ends.slice(), daily:Object.assign({}, D.daily), ds:Object.assign({}, D.ds), dn:Object.assign({}, D.dn), wks:[] };
+[D.puntos, D.repPuntos, D.emPuntos, D.cbp ? D.cbp.sectores : []].forEach(l => l.forEach(o => D0.wks.push({ obj:o, wk:o.wk.slice() })));
 const EST = D.ests;
 const ESTC = EST.map(e => e==='Ciudad de México'?'CDMX':e==='Estado de México'?'Edo. de México':e==='Baja California Sur'?'Baja California S.':e);
 const ECLAVE = EST.map(e => 'MX_' + (e==='Estado de México' ? 'México' : e));   // clave del estado en el mapa
 const MES12 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-const INICIO = new Date(D.inicio+'T00:00:00');        // primer día con datos; todo el calendario sale de aquí
+const INICIO0 = new Date(D.inicio+'T00:00:00');       // primer día de las bases
+let INICIO = INICIO0;                                  // primer día del periodo elegido; el calendario sale de aquí
 const INDS = [
   {k:'ing',  n:'Ingresos',    g:'reg', nat:true,  donde:'Por dónde ingresan'},
   {k:'rech', n:'Rechazos',    g:'reg', nat:true,  donde:'Dónde son rechazados'},
@@ -69,11 +74,14 @@ const CTX = window.IANAMI_CONTEXTO || {reg:[]};
 const ORIGEN = {840:[-97,36.2], 124:[-100,54], 643:[38,56]};     // puntos de partida ajustados
 const ANCLA_EU = [-99.3, 32.4];
 // Íconos del mapa: punto de internación (marcador), repatriación (casa) y estación migratoria (edificio)
-const ICONO_PUNTO = {
-  ing:'path://M12 23C12 23 3 15.5 3 9.5A9 9 0 0 1 21 9.5C21 15.5 12 23 12 23ZM6.8 10.6L10.8 10.6L10.8 12.8L15 9.5L10.8 6.2L10.8 8.4L6.8 8.4ZM15.9 5.2L15.9 13.8L17.4 13.8L17.4 5.2Z',
-  rep:'path://M12 2L1.5 11.5H5V22h14V11.5h3.5z',
-  em: 'path://M12 23C12 23 3 15.5 3 9.5A9 9 0 0 1 21 9.5C21 15.5 12 23 12 23ZM7.5 6L7.5 14L16.5 14L16.5 6ZM9 7.4L11 7.4L11 9.2L9 9.2ZM13 7.4L15 7.4L15 9.2L13 9.2ZM9 10.6L11 10.6L11 12.4L9 12.4ZM13 10.6L15 10.6L15 12.4L13 12.4Z'
+const GLIFO_PUNTO = {
+  ing:'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3',
+  rep:'M3 10.5L12 3l9 7.5M5.5 9v11h13V9M10 20v-5h4v5',
+  em: 'M6 21V4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21M3 21h18M10 7h1M13 7h1M10 11h1M13 11h1M10 15h1M13 15h1'
 };
+function svgPunto(tipo, color, fondo){ return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14.5" fill="'+fondo+'" stroke="'+color+'" stroke-width="1.8"/>'+
+  '<g transform="translate(8.8 8.8) scale(.6)" fill="none" stroke="'+color+'" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="'+GLIFO_PUNTO[tipo]+'"/></g></svg>'; }
+const ICONO_PUNTO = (tipo, color, fondo) => 'image://data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgPunto(tipo, color, fondo));
 const NOMBRE_PUNTO = {ing:'Puntos de internación', rep:'Puntos de repatriación', em:'Estaciones migratorias'};
 const CAJA = [[-125,35.5],[-62,2.5]];                   // encuadre inicial: México, Centroamérica, Caribe y norte de Sudamérica
 const ESCALA_LAT = 0.92;                                // corrección de proporción a la latitud de México
@@ -98,14 +106,37 @@ const TM = {
 
 /* ==== [2] DATOS (cubo y consultas) ================================= */
 // Cubo denso por indicador [semana][estado][nacionalidad] y sus dos resúmenes
-const CUBO = {}, WS = {}, WN = {};
+// Cubo semanal de todas las fechas (…0); CUBO, WS y WN son la vista del periodo elegido
+const CUBO0 = {}, WS0 = {}, WN0 = {}, CUBO = {}, WS = {}, WN = {};
 INDS.forEach(m => { const a = new Float32Array(NW*NS*NN), ws = new Float64Array(NW*NS), wn = new Float64Array(NW*NN), c = D.cube[m.k];
   for (let i=0;i<c.length;i+=4){ a[(c[i]*NS + c[i+1])*NN + c[i+2]] += c[i+3]; ws[c[i]*NS+c[i+1]] += c[i+3]; wn[c[i]*NN+c[i+2]] += c[i+3]; }
-  CUBO[m.k] = a; WS[m.k] = ws; WN[m.k] = wn; });
+  CUBO0[m.k] = a; WS0[m.k] = ws; WN0[m.k] = wn; });
 const NCAT = {ing_via:3, rech_det:2, tram_se:16, tram_res:3, resc_rei:2, resc_des:3, pres_est:D.estaciones.length, can_nna:12, can_ad:2, ret_tipo:2, recib_edad:2, rep_comp:8};
-const COMP = {};
-Object.keys(NCAT).forEach(k => { const nc = NCAT[k], a = new Float64Array(NS*NN*nc), c = D.comp[k];
-  for (let i=0;i<c.length;i+=4) a[(c[i]*NN + c[i+1])*nc + c[i+2]] += c[i+3]; COMP[k] = a; });
+const COMP = {};                                  // desgloses del periodo (llegan por mes: [mes, estado, nacionalidad, categoría, valor])
+// Parte de un mes de las bases que cae dentro del periodo elegido (0 a 1)
+function fraccionMes(m){
+  const a = new Date(INICIO0.getFullYear(), INICIO0.getMonth()+m, 1), b = new Date(INICIO0.getFullYear(), INICIO0.getMonth()+m+1, 1);
+  const s = Math.max(0, Math.round((a-INICIO0)/864e5)), e = Math.min(D0.dias, Math.round((b-INICIO0)/864e5)), o = Math.min(e,P1) - Math.max(s,P0);
+  return e>s && o>0 ? o/(e-s) : 0;
+}
+// Arma todas las series para el periodo [p0, p1) de los datos completos. Las semanas que el periodo corta se prorratean.
+function aplicarPeriodo(p0, p1){
+  P0 = p0; P1 = p1; ND = p1-p0; INICIO = new Date(INICIO0.getFullYear(), INICIO0.getMonth(), INICIO0.getDate()+p0);
+  const sem = [], E0 = D0.ends;
+  for (let w=0; w<E0.length; w++){ const a = w ? E0[w-1] : 0, b = E0[w], x = Math.max(a,p0), y = Math.min(b,p1); if (y>x) sem.push([w, (y-x)/(b-a), y-p0]); }
+  NW = sem.length; D.ends = sem.map(x => x[2]);
+  INDS.forEach(m => { const A = CUBO0[m.k], B = WS0[m.k], C = WN0[m.k], a = new Float32Array(NW*NS*NN), ws = new Float64Array(NW*NS), wn = new Float64Array(NW*NN), L = NS*NN;
+    sem.forEach((x,j) => { const w = x[0], f = x[1];
+      for (let i=0;i<L;i++) a[j*L+i] = A[w*L+i]*f;
+      for (let i=0;i<NS;i++) ws[j*NS+i] = B[w*NS+i]*f;
+      for (let i=0;i<NN;i++) wn[j*NN+i] = C[w*NN+i]*f; });
+    CUBO[m.k] = a; WS[m.k] = ws; WN[m.k] = wn;
+    D.daily[m.k] = D0.daily[m.k].slice(p0,p1); D.ds[m.k] = D0.ds[m.k].subarray(p0*NS, p1*NS); D.dn[m.k] = D0.dn[m.k].subarray(p0*NN, p1*NN); });
+  D0.wks.forEach(o => { o.obj.wk = sem.map(x => o.wk[x[0]]*x[1]); });
+  Object.keys(NCAT).forEach(k => { const nc = NCAT[k], a = new Float64Array(NS*NN*nc), c = D.comp[k];
+    for (let i=0;i<c.length;i+=5){ const f = fraccionMes(c[i]); if (f) a[(c[i+1]*NN + c[i+2])*nc + c[i+3]] += c[i+4]*f; } COMP[k] = a; });
+  calendario();
+}
 const TODOS = EST.map((e,i)=>i);
 
 // ss = lista de estados (o null = todos); n = nacionalidad (o null = todas)
@@ -118,15 +149,15 @@ function sumaSem(k, w0, w1, ss, n){
   return t;
 }
 function semanal(k, ss, n){ const o = []; for (let w=0;w<NW;w++) o.push(sumaSem(k,w,w,ss,n)); return o; }
-function diario(k, F){                         // serie diaria con el filtro activo
-  const o = new Array(ND).fill(0), n = 'nd' in F ? F.nd : F.n;
+function diario(k, F){                         // serie diaria con el filtro activo (lleva k y F para comparar con el año anterior)
+  const o = new Array(ND).fill(0), n = 'nd' in F ? F.nd : F.n; o.k = k; o.F = F;
   if (F.ss && n!=null){                          // estado × nacionalidad solo existe por semana: se reparte en sus días
     for (let w=0;w<NW;w++){ const i0 = w ? D.ends[w-1] : 0, i1 = D.ends[w], v = sumaSem(k,w,w,F.ss,n)/(i1-i0); for (let d=i0;d<i1;d++) o[d] = v; }
     return o; }
   if (Array.isArray(n)){ const a = D.dn[k]; for (let d=0;d<ND;d++) for (let j=0;j<n.length;j++) o[d] += a[d*NN+n[j]]; return o; }
   if (F.ss){ const a = D.ds[k]; for (let d=0;d<ND;d++) for (let j=0;j<F.ss.length;j++) o[d] += a[d*NS+F.ss[j]]; return o; }
   if (n!=null){ const a = D.dn[k]; for (let d=0;d<ND;d++) o[d] = a[d*NN+n]; return o; }
-  return D.daily[k];
+  const t = D.daily[k].slice(); t.k = k; t.F = F; return t;
 }
 function comp(k, ss, n){
   if (Array.isArray(n)){ const o = new Array(NCAT[k]).fill(0); n.forEach(x => comp(k,ss,x).forEach((v,i) => o[i] += v)); return o; }
@@ -168,11 +199,32 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const sinAcento = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const diaDe = i => new Date(INICIO.getFullYear(), INICIO.getMonth(), INICIO.getDate()+i);
 const indiceDe = iso => Math.round((new Date(iso+'T00:00:00') - INICIO)/864e5);
-const VARIOS_ANIOS = diaDe(0).getFullYear() !== diaDe(ND-1).getFullYear();
+let VARIOS_ANIOS = false, MESES_INI = [];
 function fechaDia(i){ const f = diaDe(i); return f.getDate()+' '+MES12[f.getMonth()]+(VARIOS_ANIOS ? ' '+String(f.getFullYear()).slice(2) : ''); }
 function fechaLarga(i){ const f = diaDe(i); return f.getDate()+' '+MES12[f.getMonth()]+' '+f.getFullYear(); }
 function fechaISO(iso){ const f = new Date(iso+'T00:00:00'); return f.getDate()+' '+MES12[f.getMonth()]+' '+f.getFullYear(); }
-const MESES_INI = []; for (let i=0;i<ND;i++){ const f = diaDe(i); if (!i || f.getDate()===1) MESES_INI.push([i, MES12[f.getMonth()]+((!i || !f.getMonth()) ? ' '+f.getFullYear() : '')]); }
+function calendario(){                          // etiquetas de meses de la barra de tiempo
+  VARIOS_ANIOS = diaDe(0).getFullYear() !== diaDe(ND-1).getFullYear(); MESES_INI = [];
+  for (let i=0;i<ND;i++){ const f = diaDe(i); if (!i || f.getDate()===1) MESES_INI.push([i, MES12[f.getMonth()]+((!i || !f.getMonth()) ? ' '+f.getFullYear() : '')]); }
+}
+const idxBase = iso => Math.round((new Date(iso+'T00:00:00') - INICIO0)/864e5);   // día dentro de las bases completas
+const fechaBase = i => new Date(INICIO0.getFullYear(), INICIO0.getMonth(), INICIO0.getDate()+i);
+const isoDe = f => f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0')+'-'+String(f.getDate()).padStart(2,'0');
+// Rango del periodo elegido dentro de las bases: [inicio, fin) o null si no hay datos
+function rangoPeriodo(per){
+  per = per || S.per; let a = 0, b = D0.dias;
+  if (per==='shein') a = idxBase('2024-10-01');
+  else if (per==='trump') a = idxBase('2025-01-20');
+  else if (per==='anio'){ const y = S.anio, m = S.mes; a = idxBase(isoDe(new Date(y, m ? m-1 : 0, 1))); b = idxBase(isoDe(new Date(m ? y : y+1, m ? m : 0, 1))); }
+  else if (per==='pers'){ a = idxBase(S.desde); b = idxBase(S.hasta)+1; }
+  a = Math.max(0, a); b = Math.min(D0.dias, b); return b>a ? [a,b] : null;
+}
+function cambiarPeriodo(){
+  const r = rangoPeriodo(); if (!r) return;
+  if (S.play) S.play = false;
+  aplicarPeriodo(r[0], r[1]); S.dia = ND; S.t = ND; validarCmp();
+  $('tgraf').setAttribute('aria-valuemax', ND); pintarTodo();
+}
 const mesAnio = f => MES12[+f.slice(5,7)-1]+' '+f.slice(0,4);
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const colG = g => cssv(g==='reg'?'--reg':g==='irr'?'--irr':'--usa');
@@ -192,7 +244,7 @@ function mezclaRGB(rampa, t){                  // color intermedio de una rampa,
 function tri(arriba, color){ return '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="'+(arriba?'M6 2l5 8H1z':'M6 10L1 2h10z')+'" fill="'+color+'"/></svg>'; }
 
 /* ==== [4] ESTADO Y FILTRO ========================================= */
-const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, circulos:true, puntos:false, calor:false, cbp:false, modoVista:'mundo', centro:null, region:null, agr:'e', cmp:30, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
+const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, circulos:true, puntos:false, calor:false, cbp:false, modoVista:'mundo', centro:null, region:null, agr:'e', cmp:30, per:'shein', anio:fechaBase(D.dias-1).getFullYear(), mes:0, desde:D.inicio, hasta:D.corte, verAvisos:false, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
 let E = 1;                                      // escala para pantallas muy grandes
 // Filtro que produce la selección: una lista de estados (estado, cinturón o CECO) o una nacionalidad
 // ss: estados; n: una nacionalidad; r: nacionalidades de la región elegida; nd: lo que usan los cálculos (n o r)
@@ -221,9 +273,31 @@ function fijarSel(sel, volar){ S.sel = sel; if (S.ind==='rep' && sel && sel.t===
 
 /* ==== [5] ANÁLISIS AUTOMÁTICO ===================================== */
 // Compara los últimos N días con datos contra los N anteriores (N = 7 o 30) con el filtro activo.
-function variacion(d){ const N = S.cmp, a = suma(d,ND-N,ND), b = suma(d,ND-2*N,ND-N); return {a:a, b:b, dl: b ? (a/b-1)*100 : 0, ok: b >= (N===30?30:10)}; }
+// Variación: últimos N días contra los N anteriores, o el periodo contra el mismo periodo del año anterior ('aa')
+const cmpN = () => S.cmp==='aa' ? 30 : S.cmp;               // ventana para los avisos
+const etiquetaN = n => n===90 ? '3 meses' : n+' días';
+function textoCmp(){ return S.cmp==='aa' ? 'el periodo contra el mismo periodo del año anterior' : 'últimos '+etiquetaN(S.cmp)+' contra '+(S.cmp===90 ? 'los 3 meses' : 'los '+S.cmp+' días')+' anteriores'; }
+function variacion(d){
+  if (S.cmp==='aa'){ const q0 = idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))), b = q0>=0 && d.k ? sumaCompleta(d.k, d.F, q0, q0+ND) : null, a = suma(d,0,ND);
+    return {a:a, b:b||0, dl: b ? (a/b-1)*100 : 0, ok: b!=null && b>=30}; }
+  const N = S.cmp, a = suma(d,ND-N,ND), b = suma(d,ND-2*N,ND-N);
+  return {a:a, b:b, dl: b ? (a/b-1)*100 : 0, ok: 2*N<=ND && b >= (N>=30?30:10)};
+}
+// Suma en cualquier tramo de las bases completas (para comparar con el año anterior)
+function sumaCompleta(k, F, q0, q1){
+  const n = F && 'nd' in F ? F.nd : F ? F.n : null; let t = 0;
+  if (F && F.ss && n!=null) return null;
+  for (let d=Math.max(0,q0); d<Math.min(D0.dias,q1); d++){
+    if (F && F.ss) for (let j=0;j<F.ss.length;j++) t += D0.ds[k][d*NS+F.ss[j]];
+    else if (Array.isArray(n)) for (let j=0;j<n.length;j++) t += D0.dn[k][d*NN+n[j]];
+    else if (n!=null) t += D0.dn[k][d*NN+n]; else t += D0.daily[k][d];
+  }
+  return t;
+}
+function cmpDisponible(o){ return o==='aa' ? idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))) >= 0 : 2*o<=ND; }
+function validarCmp(){ if (!cmpDisponible(S.cmp)) S.cmp = [30,7].find(cmpDisponible) || 7; }
 function analizar(F){
-  const out = [], N = S.cmp, umbral = N===30 ? 15 : 25;
+  const out = [], N = cmpN(), umbral = N>=30 ? 15 : 25;
   INDS.forEach(m => {
     if (F.nd!=null && !m.nat) return;
     const d = diario(m.k, F), v = variacion(d);
@@ -231,11 +305,12 @@ function analizar(F){
     const base = d.slice(Math.max(0,ND-70), ND-14).sort((x,y)=>x-y), mitad = base.length>>1, med = base[mitad] || 0;   // lo habitual: 8 semanas previas
     const des = base.map(x=>Math.abs(x-med)).sort((x,y)=>x-y)[mitad]*1.4826 || 1;
     let mejor = null;
-    for (let i=ND-Math.min(N,14);i<ND;i++){ const z = (d[i]-med)/des; if (d[i]>=25 && z>=4 && (!mejor || z>mejor.z)) mejor = {i:i, z:z, v:d[i], med:med}; }
+    // los picos solo se buscan con 4 semanas o más de referencia
+    if (ND-14 >= 28) for (let i=ND-Math.min(N,14);i<ND;i++){ const z = (d[i]-med)/des; if (d[i]>=25 && z>=4 && (!mejor || z>mejor.z)) mejor = {i:i, z:z, v:d[i], med:med}; }
     if (mejor) out.push({t:'pico', k:m.k, i:mejor.i, v:mejor.v, med:mejor.med, p: 8 + Math.min(mejor.z,20)});
   });
   const u = NW-1, diasSem = (a,b) => D.ends[b] - (a>0 ? D.ends[a-1] : 0);
-  const w = N===30 ? [u-3,u,u-7,u-4] : [u,u,u-1,u-1];               // semanas que cubren cada ventana
+  const ws = Math.max(1, Math.round(N/7)), w = [u-ws+1, u, u-2*ws+1, u-ws];   // semanas que cubren cada ventana
   w.push(diasSem(w[0],w[1]), diasSem(w[2],w[3]));
   if (F.n==null && w[2]>=0){
     [['resc',300],['ing',4000],['rech',150]].forEach(par => { const k = par[0]; let mejor = null;
@@ -251,19 +326,22 @@ function analizar(F){
     INDS.forEach(m => { const a = D.ds[m.k];
       for (let s=0;s<NS;s++){ let x = 0, y = 0;
         for (let d=ND-N;d<ND;d++) x += a[d*NS+s]; for (let d=ND-2*N;d<ND-N;d++) y += a[d*NS+s];
-        if (y>=(N===30?80:25)){ const dl = (x/y-1)*100; if (Math.abs(dl)>=40) o.push({t:'est', k:m.k, s:s, dl:dl, a:x, b:y, p:9+Math.min(Math.abs(dl),300)/12}); } } });
+        if (2*N<=ND && y>=(N>=30?80:25)){ const dl = (x/y-1)*100; if (Math.abs(dl)>=40) o.push({t:'est', k:m.k, s:s, dl:dl, a:x, b:y, p:9+Math.min(Math.abs(dl),300)/12}); } } });
     o.sort((x,y)=>y.p-x.p); const vistos = {}; let c = 0;
     o.forEach(r => { if (!vistos[r.s] && c<3){ vistos[r.s] = 1; c++; out.push(r); } });
   }
   return out.sort((x,y)=>y.p-x.p);
 }
+// Cada aviso se redacta como hallazgo: qué cambió, cuánto y contra qué
+function cuanto(a, b){ const r = a/Math.max(b,1e-9);
+  return r>=2 ? 'se multiplicaron por '+r.toFixed(1) : r>=1 ? 'subieron '+((r-1)*100).toFixed(0)+'%' : 'bajaron '+((1-r)*100).toFixed(0)+'%'; }
 function textoAviso(a){
-  const N = IND[a.k].n, prev = 'en los '+S.cmp+' días previos';
-  if (a.t==='cambio') return '<b>'+N+'</b>: '+corto(a.a)+' contra '+corto(a.b)+' '+prev+'.';
-  if (a.t==='pico')   return '<b>'+N+'</b>: '+miles(a.v)+' el '+fechaDia(a.i)+'; lo habitual, '+miles(a.med)+'.';
-  if (a.t==='nac')    return '<b>'+esc(D.nats[a.n][0])+'</b>, '+N.toLowerCase()+': '+miles(a.a)+' por día contra '+miles(a.b)+'.';
-  if (a.t==='est')    return '<b>'+esc(EST[a.s])+'</b>, '+N.toLowerCase()+': '+miles(a.a)+' contra '+miles(a.b)+' '+prev+'.';
-  return 'de los <b>rechazos</b> son de '+esc(D.nats[a.n][0])+'.';
+  const N = IND[a.k].n, prev = S.cmp==='aa' ? 'el año anterior' : 'los '+etiquetaN(cmpN())+' previos';
+  if (a.t==='cambio') return '<b>'+N+'</b> '+cuanto(a.a,a.b)+': '+corto(a.a)+' frente a '+corto(a.b)+' en '+prev+'.';
+  if (a.t==='pico')   return '<b>'+N+'</b>: pico de '+miles(a.v)+' el '+fechaDia(a.i)+', cuando lo habitual es '+miles(a.med)+' al día.';
+  if (a.t==='nac')    return '<b>'+esc(D.nats[a.n][0])+'</b>: '+N.toLowerCase()+' por día '+cuanto(a.a,a.b)+' ('+miles(a.b)+' → '+miles(a.a)+').';
+  if (a.t==='est')    return '<b>'+esc(EST[a.s])+'</b>: '+N.toLowerCase()+' '+cuanto(a.a,a.b)+' ('+miles(a.b)+' → '+miles(a.a)+').';
+  return '<b>'+esc(D.nats[a.n][0])+'</b> concentra '+pct(a.a,a.b)+'% de los <b>rechazos</b>.';
 }
 function filaAviso(a, i){
   const c = colG(IND[a.k].g); let ic, ci;
@@ -272,7 +350,7 @@ function filaAviso(a, i){
   else { ic = tri(a.dl>=0, c); ci = Math.abs(a.dl).toFixed(0)+'%'; }
   return '<button class="av" data-av="'+i+'"><span class="ic">'+ic+'</span><span class="ci">'+ci+'</span><span class="tx">'+textoAviso(a)+'</span></button>';
 }
-function abrirAviso(i){ const a = AVISOS[i]; if (!a) return; S.ind = a.k; $('avisos').hidden = true;
+function abrirAviso(i){ const a = AVISOS[i]; if (!a) return; S.ind = a.k;
   if (a.n!=null) fijarSel({t:'n', i:a.n}, true); else if (a.s!=null) fijarSel({t:'e', i:a.s}, true); else { pintarTodo(); acercarSiMundo(); } }
 
 /* ==== [6] INDICADORES ============================================= */
@@ -312,7 +390,7 @@ function tipKpi(el){
   const k = el.dataset.k, m = IND[k], F = filtro(), va = variacion(diario(k,F)), b = D.bases.find(x => x.k===BASE_IND[k]) || {};
   const tot = acum(k,F.ss,m.nat ? F.nd : null) || 1, tn = m.nat && F.n==null ? topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 3) : [];
   return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+
-    (va.ok ? '<span>Últimos '+S.cmp+' días: <b>'+corto(va.a)+'</b> · '+S.cmp+' anteriores: '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
+    (va.ok ? '<span>'+(S.cmp==='aa' ? 'Este periodo' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(S.cmp==='aa' ? 'año anterior' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
     (tn.length ? '<span>Principales: '+tn.map(r => esc(D.nats[r[0]][0])+' '+pct(r[1],tot)+'%').join(' · ')+'</span>' : '')+
     '<small>Base: '+esc(b.archivo || '')+(b.hasta ? ' · datos al '+fechaISO(b.hasta) : '')+' · clic para verlo en el mapa</small>';
 }
@@ -445,7 +523,7 @@ function pintarMapa(){
     const r = l[n].map(x => [D.puntos[x[0]], x[1]]).filter(x => !F.ss || F.ss.indexOf(x[0].s)>=0); return r.length ? r : null; };
   const salida = k => k==='ret' || k==='rech';             // rechazos y retornados salen de México hacia el país
   const nR = S.region ? 10 : 0;                              // con una región elegida se muestran más nacionalidades
-  const pares = kc ? [[kc, nR||8, true]] : [['ing', nR||5, false], ['resc', nR||6, true]];     // sin indicador: panorama regular + irregular
+  const pares = kc ? [[kc, (kc==='ing' || kc==='resc') ? 10 : (nR||8), true]] : [['ing', 10, false], ['resc', 10, true]];     // sin indicador: panorama regular + irregular
   pares.forEach(par => { const k = par[0], c = k==='rech' ? t.arena : t[IND[k].g], latido = k==='tram';   // trámites: sin flujo, solo latido
     if (k==='rep'){ const l = D.repPuntos.map(p=>[p, suma(p.wk,0,NW)]).sort((x,y)=>y[1]-x[1]).slice(0,7), mx = l[0][1];
       l.forEach((r,i) => flujo('rep'+i, ANCLA_EU, [r[0].x,r[0].y], r[1], mx, c)); return; }
@@ -462,9 +540,12 @@ function pintarMapa(){
     const l = topNats(n => enRegion(n) ? ritmo(k,F.ss,n) : 0, par[1]), mx = l.length?l[0][1]:1;
     const mb = l.length ? (fin ? l[0][1] : Math.max.apply(null, semanal(k,F.ss,l[0][0]))) : 1;
     l.forEach((r,i) => { const a = xyNat(r[0]);
-      if (!latido){ const pp = puntoDe(k, r[0]), d = pp ? [[pp[0][0].x, pp[0][0].y]] : destinoDe(k, r[0]); if (!d[0]) return; if (salida(k)) flujo(k+r[0], d[0], a, r[1], mx, c); else flujo(k+r[0], a, d[0], r[1], mx, c); }
+      if (!latido){ const pp = puntoDe(k, r[0]);
+        if (pp){ const tp = pp.reduce((x,y) => x+y[1], 0);         // se reparte entre sus principales puntos de internación
+          pp.forEach((x,j) => { const b = [x[0].x, x[0].y], v = r[1]*x[1]/tp; if (salida(k)) flujo(k+r[0]+'p'+j, b, a, v, mx, c); else flujo(k+r[0]+'p'+j, a, b, v, mx, c); }); }
+        else { const d = destinoDe(k, r[0]); if (!d[0]) return; if (salida(k)) flujo(k+r[0], d[0], a, r[1], mx, c); else flujo(k+r[0], a, d[0], r[1], mx, c); } }
       if (par[2]) burbuja(r[0], r[1], mb, c, (i<5 || !S.flujos) ? D.nats[r[0]][0]+' · '+corto(fin?r[1]:acum(k,F.ss,r[0])) : '', 0, latido);
-      else if (!bub.concat(lat).some(x=>x.nat===r[0])) burbuja(r[0], r[1], mb, c, D.nats[r[0]][0]+' · '+corto(fin?r[1]:acum(k,F.ss,r[0])), S.flujos ? 9 : 0); });
+      else if (!bub.concat(lat).some(x=>x.nat===r[0])) burbuja(r[0], r[1], mb, c, D.nats[r[0]][0]+' · '+corto(fin?r[1]:acum(k,F.ss,r[0])), 0); });
   });
   if (F.n!=null && !bub.concat(lat).some(x => x.nat===F.n)) burbuja(F.n, 1, 1, t.tinta, D.nats[F.n][0], 18, true);   // el país elegido siempre se ve
   if (!S.circulos) [bub, lat].forEach(a => { for (let i=a.length-1;i>=0;i--) if (a[i].nat!==F.n) a.splice(i,1); });   // círculos ocultos (menos el país elegido)
@@ -477,10 +558,10 @@ function pintarMapa(){
     cp.lista.forEach((p,i) => { const v = suma(p.wk,0,semDe(S.dia)+1); if (v<=0) return;
       if (S.calor) calor.push([p.x,p.y,Math.sqrt(v)]);
       if (ver) pts.push({ value:[p.x,p.y,v], pt:i, pTipo:cp.tipo, et:p.n,
-        symbol: ICONO_PUNTO[cp.tipo], symbolKeepAspect:true, symbolOffset: cp.tipo==='rep' ? [0,0] : [0,'-48%'],
-        symbolSize: (14 + 14*Math.sqrt(v/maxP))*E,
+        symbol: ICONO_PUNTO(cp.tipo, t[cp.tipo==='ing'?'reg':cp.tipo==='rep'?'usa':'irr'], S.tema==='oscuro' ? '#2B2926' : '#FFFFFF'),
+        symbolSize: (15 + 11*Math.sqrt(v/maxP))*E,
         label:{ show: S.zoom>=3.4 || (cp.siempre && S.zoom>=1.5) || (selP && S.sel.i===i) },
-        itemStyle:{ color:t[cp.tipo==='ing'?'reg':cp.tipo==='rep'?'usa':'irr'], opacity:.95, borderColor:t.halo, borderWidth:1.4*E, shadowBlur:4*E, shadowColor:'rgba(0,0,0,.25)', shadowOffsetY:1*E } }); });
+        itemStyle:{ color:t[cp.tipo==='ing'?'reg':cp.tipo==='rep'?'usa':'irr'], opacity:.95, borderWidth:0 } }); });
   }
   // -- Encuentros de la CBP por sector, del lado de EE. UU.
   const enc = [];
@@ -500,7 +581,7 @@ function pintarMapa(){
   else h = '<b>Panorama'+esc(quien)+'</b><span>De dónde llegan'+(fin?'':' · al '+fechaDia(S.dia-1))+'. Elige un indicador para colorear los estados.</span>'+
            '<span class="lin"><i style="background:'+t.reg+'"></i>Ingresos (regular)</span><span class="lin"><i style="background:'+t.irr+'"></i>Rescatados (irregular)</span>';
   if (pts.length){ const cP = t[cp.tipo==='ing'?'reg':cp.tipo==='rep'?'usa':'irr'];
-    h += '<span class="lin"><svg width="12" height="12" viewBox="0 0 24 24"><path d="'+ICONO_PUNTO[cp.tipo].slice(7)+'" fill="'+cP+'"/></svg>'+NOMBRE_PUNTO[cp.tipo]+'</span>'; }
+    h += '<span class="lin"><span style="display:inline-flex;width:14px;height:14px">'+svgPunto(cp.tipo, cP, '#FFFFFF')+'</span>'+NOMBRE_PUNTO[cp.tipo]+'</span>'; }
   if (S.cbp && D.cbp) h += '<span class="lin"><i style="background:'+t.usa+';width:9px;height:9px;border-radius:50%"></i>Encuentros CBP · '+corto(enc.reduce((x,y)=>x+y.value[2],0))+'</span>';
   const vp = S.agr!=='e' ? S.agr : S.modoVista==='mundo' ? 'm' : S.modoVista==='mx' ? 'e' : '';   // si el usuario movió el mapa, ninguno de los dos
   h += '<div class="verpor" role="group" aria-label="Vista del mapa">'+[['m','Mundo'],['e','Estado'],['c','Cinturón'],['o','CECO']].map(x=>'<button data-agr="'+x[0]+'" class="'+(vp===x[0]?'on':'')+'" aria-pressed="'+(vp===x[0])+'">'+x[1]+'</button>').join('')+'</div>';
@@ -532,7 +613,7 @@ function perfil(ss, n, activo, tc, breve){
 }
 function soloKpi(k, ss, n, tc, sem, breve){      // tarjeta con un indicador elegido: solo ese dato
   const nota = notaPerfil(k, ss, n), d = (ss && n!=null) ? '' : variaTxt(diario(k,{ss:ss,n:n}));
-  return '<span class="v">'+miles(acum(k, ss, n))+'</span>'+((nota || d) ? '<span class="s">'+[nota, d ? d+' en '+S.cmp+' días' : ''].filter(Boolean).join(' · ')+'</span>' : '')+
+  return '<span class="v">'+miles(acum(k, ss, n))+'</span>'+((nota || d) ? '<span class="s">'+[nota, d ? d+' '+(S.cmp==='aa' ? 'vs. año anterior' : 'en '+etiquetaN(S.cmp)) : ''].filter(Boolean).join(' · ')+'</span>' : '')+
          (breve ? '' : chispa(semanal(k,ss,n),232,30,k==='rech'?tc.arena:tc[IND[k].g],sem));
 }
 const accion = (txt, may) => { const a = (TACTIL ? 'toca otra vez para ' : 'clic para ')+txt; return may ? a[0].toUpperCase()+a.slice(1) : a; };
@@ -540,7 +621,7 @@ function tarjeta(p){
   const F = filtro(), kc = S.ind, fin = alFinal(), sem = semDe(S.dia), breve = $('lz').clientHeight < 430*E;
   const tc = TM[S.tema==='claro' ? 'oscuro' : 'claro'];              // la tarjeta va en el tono contrario al mapa
   const cuando = fin ? 'Periodo completo' : 'Acumulado al '+fechaDia(S.dia-1);
-  const pie = txt => breve ? '' : '<span class="f">▲▼ últimos '+S.cmp+' días contra los '+S.cmp+' anteriores'+(txt ? ' · '+txt : '')+'</span>';
+  const pie = txt => breve ? '' : '<span class="f">▲▼ '+textoCmp()+(txt ? ' · '+txt : '')+'</span>';
   const fila = (n,frac,tx,color) => '<div class="r"><span>'+n+'</span><span class="b"><i style="width:'+Math.max(2,Math.min(100,frac*100)).toFixed(0)+'%;background:'+color+'"></i></span><span class="x">'+tx+'</span></div>';
   const dato = (n,tx) => '<div class="r"><span>'+n+'</span><span></span><span class="x">'+tx+'</span></div>';
   if (p.seriesId==='bub' || p.seriesId==='lat'){ const n = p.data.nat, kn = kc && IND[kc].nat ? kc : null;
@@ -656,6 +737,8 @@ function pintarTiempo(){
   const usarF = IND[k].nat || F.nd==null ? F : {ss:F.ss, n:null, nd:null};
   const d = diario(k, usarF), mx = Math.max.apply(null,d) || 1, pw = W/ND, c = t[IND[k].g], alto = base-16;
   let h = '';
+  temporadas().forEach(x => { const a = Math.max(0, indiceDe(x[0])), b = Math.min(ND, indiceDe(x[1])+1); if (b<=a) return;       // vacaciones SEP y fiestas
+    h += '<rect x="'+(a*pw).toFixed(1)+'" y="0" width="'+((b-a)*pw).toFixed(1)+'" height="'+(base+2)+'" fill="#BDB58D" fill-opacity=".22"><title>'+esc(x[2])+'</title></rect>'; });
   const cadaCuanto = Math.ceil(MESES_INI.length*46/W);                 // si hay muchos meses, se rotula uno de cada tantos
   MESES_INI.forEach((m,i) => { const x = (m[0]*pw).toFixed(1); h += '<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+(base+4)+'" stroke="'+t.tinta+'" stroke-opacity=".18"/>'+(i%cadaCuanto ? '' : '<text x="'+(m[0]*pw+4).toFixed(1)+'" y="'+(H-3)+'" font-size="11" fill="'+t.tinta+'" fill-opacity=".7" font-family="Barlow, sans-serif">'+m[1]+'</text>'); });
   d.forEach((v,i) => { const bh = v/mx*alto; h += '<rect x="'+(i*pw+0.5).toFixed(1)+'" y="'+(base-bh).toFixed(1)+'" width="'+Math.max(1,pw-1.5).toFixed(1)+'" height="'+Math.max(bh,0.5).toFixed(1)+'" rx="1" fill="'+c+'" fill-opacity="'+(i<S.dia?0.62:0.18)+'"/>'; });
@@ -666,9 +749,19 @@ function pintarTiempo(){
   sv.setAttribute('viewBox','0 0 '+W+' '+H); sv.innerHTML = h; moverCursor(S.play ? S.t : S.dia);
   sv.setAttribute('aria-valuenow', S.dia); sv.setAttribute('aria-valuetext','al '+fechaDia(S.dia-1));
   $('t-tit').innerHTML = '<b>'+IND[k].n+'</b> por día'+(S.ind?'':' · sin indicador elegido se muestran los ingresos');
-  $('t-ley').innerHTML = '<svg width="20" height="6" viewBox="0 0 20 6" style="vertical-align:middle"><line x1="0" y1="3" x2="20" y2="3" stroke="'+t.tinta+'" stroke-width="2"/></svg> promedio de 7 días';
+  $('t-ley').innerHTML = '<span style="display:inline-block;width:12px;height:8px;background:#BDB58D;opacity:.5;margin-right:4px;vertical-align:middle"></span>vacaciones SEP · <svg width="20" height="6" viewBox="0 0 20 6" style="vertical-align:middle"><line x1="0" y1="3" x2="20" y2="3" stroke="'+t.tinta+'" stroke-width="2"/></svg> promedio de 7 días';
   $('play').innerHTML = S.play ? '<svg width="14" height="14" viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" fill="currentColor"/></svg>' : '<svg width="14" height="14" viewBox="0 0 16 16"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>';
   $('play').setAttribute('aria-label', S.play ? 'Pausar' : 'Reproducir el periodo');
+}
+// Temporadas que tocan el periodo: vacaciones SEP (invierno, Semana Santa, verano), Navidad y Acción de Gracias (EE. UU.)
+function temporadas(){
+  const T = window.IANAMI_TEMPORADAS || {}, o = [], n = {invierno:'Vacaciones de invierno (SEP)', semana_santa:'Semana Santa (SEP)', verano:'Vacaciones de verano (SEP)'};
+  Object.keys(n).forEach(k => (T[k] || []).forEach(x => { if (x.inicio) o.push([x.inicio, x.fin || x.inicio, n[k]+' · ciclo '+x.ciclo]); }));
+  for (let y=INICIO.getFullYear(); y<=diaDe(ND-1).getFullYear(); y++){
+    const nov = new Date(y,10,1), jueves = 1 + ((4 - nov.getDay() + 7) % 7) + 21;     // cuarto jueves de noviembre
+    o.push([isoDe(new Date(y,10,jueves)), isoDe(new Date(y,10,jueves)), 'Acción de Gracias (EE. UU.)']);
+  }
+  return o;
 }
 function moverCursor(d){ const c = document.getElementById('cursor'); if (c) c.setAttribute('transform','translate('+Math.min(Wt-1, d*Wt/ND).toFixed(2)+',0)'); }
 function fijarDia(d){ d = Math.max(1, Math.min(ND, Math.round(d))); if (d===S.dia) return; S.dia = d; S.t = d; pintarTodo(true); }
@@ -707,11 +800,10 @@ function cuantosAvisos(){ const h = window.innerHeight/E; return window.innerWid
 function pintarAnalisis(){
   const F = filtro(); AVISOS = analizar(F);
   const quien = nombreFiltro() || 'todo el país';
-  $('analisis').innerHTML = '<h2><span>Lo que cambió</span></h2><span class="mini">'+esc(quien)+' · últimos '+S.cmp+' días contra los '+S.cmp+' anteriores</span>'+
-    (AVISOS.length ? AVISOS.slice(0,cuantosAvisos()).map(filaAviso).join('') : '<span class="mini">Sin cambios relevantes con este filtro.</span>')+
-    (AVISOS.length>cuantosAvisos() ? '<button class="mas" id="ver-avisos">Ver los '+AVISOS.length+' avisos</button>' : '');
-  $('campana-n').textContent = AVISOS.length; $('campana-n').hidden = !AVISOS.length;
-  $('avisos').innerHTML = '<h3>Avisos de cambio · '+esc(quien)+'</h3>'+(AVISOS.map(filaAviso).join('') || '<span class="mini">Sin avisos.</span>');
+  const n = S.verAvisos ? AVISOS.length : cuantosAvisos();    // detección automática: lo más relevante primero; «ver todos» despliega aquí mismo
+  $('analisis').innerHTML = '<h2><span>Lo que cambió</span></h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
+    (AVISOS.length ? '<div class="'+(S.verAvisos ? 'avisos-todos' : '')+'">'+AVISOS.slice(0,n).map(filaAviso).join('')+'</div>' : '<span class="mini">Sin cambios relevantes con este filtro.</span>')+
+    (AVISOS.length>cuantosAvisos() ? '<button class="mas" id="ver-avisos">'+(S.verAvisos ? 'Ver menos' : 'Ver los '+AVISOS.length+' hallazgos')+'</button>' : '');
 }
 const barrasNat = (l, color) => { const mx = l.length?l[0][1]:1; return l.map(r => '<button class="barra" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+color+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); };
 function htmlBreve(n){                          // datos clave de una nacionalidad
@@ -722,10 +814,10 @@ function htmlBreve(n){                          // datos clave de una nacionalid
     (H+M ? '<span class="mini"><b>'+pct(M,H+M)+'%</b> de sus trámites son de mujeres.</span>' : '')+
     (nna ? '<span class="mini"><b>'+miles(nna)+'</b> niñas, niños y adolescentes canalizados; '+miles(na)+' no acompañados.</span>' : '');
 }
-function htmlTops(F){
-  const k = S.ind && IND[S.ind].nat ? S.ind : S.topModo, l = topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 10);
-  return '<div class="caja"><h2><span>Principales nacionalidades</span>'+(S.region ? '<small>'+REGIONES[S.region][0]+'</small>' : '')+'</h2>'+
-    (S.ind && IND[S.ind].nat ? '<span class="mini">'+IND[k].n+(S.dia<ND?' · acumulado al '+fechaDia(S.dia-1):' · periodo completo')+'</span>' : '<div class="pil chica" style="align-self:flex-start"><button data-top="resc" class="'+(k==='resc'?'on':'')+'">Rescatados</button><button data-top="ing" class="'+(k==='ing'?'on':'')+'">Ingresos</button></div>')+
+function htmlTops(F, k){
+  const l = topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 10);
+  return '<div class="caja"><h2><span>Principales nacionalidades · '+IND[k].n+'</span>'+(S.region ? '<small>'+REGIONES[S.region][0]+'</small>' : '')+'</h2>'+
+    '<span class="mini">'+(S.dia<ND ? 'Acumulado al '+fechaDia(S.dia-1) : 'Periodo completo')+'</span>'+
     (barrasNat(l, colG(IND[k].g)) || '<span class="mini">Sin registros.</span>')+'</div>';
 }
 // Sexo y edad donde la base los trae; en las demás, su propio desglose.
@@ -790,7 +882,7 @@ function pintarBajo(){
       lista.map(m => { const sem = semanal(m.k,F.ss,F.nd); return '<button class="fk'+(S.ind===m.k?' on':'')+'" data-k="'+m.k+'"><span>'+m.n+'</span>'+chispa(sem,64,20,colG(m.g),semDe(S.dia))+'<span class="x">'+corto(acum(m.k,F.ss,F.nd))+'</span></button>'; }).join('')+
       (s.t==='n' ? '<hr class="sep">'+htmlBreve(s.i) : '')+'</div>'); }
   // 1b) Principales nacionalidades (cuando no hay una elegida)
-  if (F.n==null) cajas.push(htmlTops(F));
+  if (F.n==null){ if (!S.ind){ cajas.push(htmlTops(F,'ing')); cajas.push(htmlTops(F,'resc')); } else if (IND[S.ind].nat) cajas.push(htmlTops(F,S.ind)); }
   // 2) Punto elegido
   if (s && s.t==='p'){ const tp = s.tipo, P = listaPuntos(tp)[s.i], tot = suma(P.wk,0,NW), c = colG(tp==='ing'?'reg':tp==='rep'?'usa':'irr');
     let h = '<div class="caja" data-propia="1"><h2><span>'+esc(P.n)+'</span></h2><span class="mini">'+(tp==='ing' ? ['Punto aéreo','Punto terrestre','Punto marítimo'][P.t]+' · '+EST[P.s] : tp==='rep' ? 'Punto de repatriación · '+EST[P.s] : 'Estación o estancia migratoria')+' · ubicación aproximada</span>'+
@@ -819,8 +911,19 @@ function pintarCtl(){
   const x = '<svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
   const f0 = diaDe(0), f1 = diaDe(S.dia-1);
   $('rango').textContent = f0.getDate()+' '+MES12[f0.getMonth()]+(f0.getFullYear()!==f1.getFullYear() ? ' '+f0.getFullYear() : '')+' – '+fechaLarga(S.dia-1);
-  $('rango-nota').textContent = S.dia>=ND ? ND+' días' : S.dia+' días · acumulado';
-  $('cmp').innerHTML = [[7,'7 días'],[30,'30 días']].map(o => '<button data-cmp="'+o[0]+'" class="'+(S.cmp===o[0]?'on':'')+'" aria-pressed="'+(S.cmp===o[0])+'" title="Últimos '+o[0]+' días con datos contra los '+o[0]+' anteriores">'+o[1]+'</button>').join('');
+  $('rango-nota').textContent = S.dia>=ND ? ND+' días' : S.dia+' de '+ND+' días';
+  $('cmp').innerHTML = [[7,'7 días'],[30,'30 días'],[90,'3 meses'],['aa','Año anterior']].map(o => { const ok = cmpDisponible(o[0]), on = S.cmp===o[0];
+    return '<button data-cmp="'+o[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'"'+(ok ? '' : ' disabled')+' title="'+(o[0]==='aa' ? (ok ? 'El periodo contra el mismo periodo del año anterior' : 'Requiere datos del año anterior') : (ok ? 'Últimos '+o[1]+' contra los '+o[1]+' anteriores' : 'El periodo elegido es muy corto'))+'">'+o[1]+'</button>'; }).join('');
+  // Periodos: Sheinbaum, Trump, Año (con mes) y Personalizado
+  $('per').innerHTML = [['shein','Sheinbaum'],['trump','Trump'],['anio','Año'],['pers','Personalizado']].map(o => { const ok = !!rangoPeriodo(o[0]==='anio' || o[0]==='pers' ? 'shein' : o[0]) && (o[0]!=='trump' || idxBase('2025-01-20') < D0.dias), on = S.per===o[0];
+    return '<button data-per="'+o[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'"'+(ok ? '' : ' disabled title="Sin datos para este periodo"')+'>'+o[1]+'</button>'; }).join('');
+  let ex = '';
+  if (S.per==='anio'){ const y0 = INICIO0.getFullYear(), y1 = fechaBase(D0.dias-1).getFullYear(), anios = []; for (let y=y0;y<=y1;y++) anios.push(y);
+    ex = '<select id="per-anio" aria-label="Año">'+anios.map(y => '<option'+(y===S.anio?' selected':'')+'>'+y+'</option>').join('')+'</select>'+
+         '<select id="per-mes" aria-label="Mes"><option value="0">Todo el año</option>'+MES12.map((m,i) => { const r = idxBase(isoDe(new Date(S.anio,i,1))) < D0.dias && idxBase(isoDe(new Date(S.anio,i+1,1))) > 0;
+           return '<option value="'+(i+1)+'"'+(S.mes===i+1?' selected':'')+(r?'':' disabled')+'>'+m+'</option>'; }).join('')+'</select>'; }
+  if (S.per==='pers') ex = '<input type="date" id="per-desde" min="'+D.inicio+'" max="'+D.corte+'" value="'+S.desde+'" aria-label="Desde"> – <input type="date" id="per-hasta" min="'+D.inicio+'" max="'+D.corte+'" value="'+S.hasta+'" aria-label="Hasta">';
+  $('per-extra').innerHTML = ex;
   $('chips').innerHTML = (S.sel ? '<span class="chip">'+esc(nombreSel())+'<button data-cerrar aria-label="Quitar filtro">'+x+'</button></span>' : '')+
     (S.region ? '<span class="chip">'+esc(nombreRegion())+'<button data-cerrar-region aria-label="Quitar región">'+x+'</button></span>' : '');
 }
@@ -874,13 +977,13 @@ function htmlDireccion(d){
   const F0 = {ss:null, n:null, nd:null}, fila = (nom, v, mx, c) => '<div class="barra"><span>'+esc(nom)+'</span><span class="b"><i style="width:'+(v/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(v)+'</span></div>';
   const cajas = d.ind.map(k => { const m = IND[k], c = colG(m.g), dd = diario(k,F0), va = variacion(dd), tot = suma(dd,0,ND);
     const tn = m.nat ? topNats(n => sumaSem(k,0,NW-1,null,n), 5) : [], te = topEsts(s => sumaSem(k,0,NW-1,[s],null), 5);
-    return '<div class="caja"><h2><span>'+m.n+'</span><small>'+(va.ok ? (va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'% en '+S.cmp+' días' : '')+'</small></h2>'+
+    return '<div class="caja"><h2><span>'+m.n+'</span><small>'+(va.ok ? (va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'% '+(S.cmp==='aa' ? 'vs. año anterior' : 'en '+etiquetaN(S.cmp)) : '')+'</small></h2>'+
       '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span class="num" style="font-size:30px">'+miles(tot)+'</span>'+chispa(semanal(k,null,null),140,40,c)+'</div>'+
       (tn.length ? '<span class="mini"><b>Principales nacionalidades</b></span>'+tn.map(r => fila(D.nats[r[0]][0], r[1], tn[0][1], c)).join('') : '')+
       '<span class="mini"><b>Principales estados</b></span>'+te.map(r => fila(ESTC[r[0]], r[1], te[0][1], c)).join('')+'</div>'; });
   if (d.docs) cajas.push('<div class="caja"><h2><span>Documentos vigentes</span><small>al último corte</small></h2><span class="num" style="font-size:30px">'+miles(D.docs.total)+'</span>'+
     '<span class="mini"><b>Por tipo</b></span>'+D.docs.tipos.slice(0,5).map(x => fila(x[0], x[1], D.docs.tipos[0][1], colG('reg'))).join('')+'</div>');
-  return '<h1>'+d.s+(d.n ? ' · '+d.n : '')+'</h1><p>Bases de esta dirección, del '+fechaLarga(0)+' al '+fechaLarga(ND-1)+'. Variación: últimos '+S.cmp+' días contra los '+S.cmp+' anteriores.</p><div class="rej">'+cajas.join('')+'</div>';
+  return '<h1>'+d.s+(d.n ? ' · '+d.n : '')+'</h1><p>Bases de esta dirección, del '+fechaLarga(0)+' al '+fechaLarga(ND-1)+'. Variación: '+textoCmp()+'.</p><div class="rej">'+cajas.join('')+'</div>';
 }
 function irA(v){
   S.vista = v; pintarNav(); const pulso = v==='pulso'; $('vista-pulso').hidden = !pulso; $('vista-otra').hidden = pulso;
@@ -957,7 +1060,8 @@ function iniciar(){
     if (T('[data-cerrar]')){ fijarSel(null); return; }
     if (T('[data-cerrar-region]')){ S.region = null; pintarTodo(); return; }
     if (T('#plegar')){ S.kpiModo = S.kpiModo==='tarjetas'?'compacto':'tarjetas'; pintarKpis(); ajustarAlto(); return; }
-    const cm = T('[data-cmp]'); if (cm){ S.cmp = +cm.dataset.cmp; pintarTodo(); return; }
+    const cm = T('[data-cmp]'); if (cm){ S.cmp = cm.dataset.cmp==='aa' ? 'aa' : +cm.dataset.cmp; pintarTodo(); return; }
+    const pe = T('[data-per]'); if (pe){ S.per = pe.dataset.per; cambiarPeriodo(); return; }
     const k = T('[data-k]'); if (k){ fijarInd(k.dataset.k); return; }
     const ag = T('[data-agr]'); if (ag){ const v = ag.dataset.agr;      // Mundo y Estado: datos generales; Cinturón y CECO: agrupan
       S.agr = v==='m' ? 'e' : v; if (S.sel && S.sel.t==='g' && (v==='m' || v==='e' || S.sel.a!==S.agr)) S.sel = null;
@@ -968,12 +1072,15 @@ function iniciar(){
     const es = T('[data-e]'); if (es){ fijarSel({t:'e', i:+es.dataset.e}, true); return; }
     const tp = T('[data-top]'); if (tp){ S.topModo = tp.dataset.top; pintarBajo(); marcarFiltro(); return; }
     const r = T('[data-r]'); if (r){ elegir(+r.dataset.r); return; }
-    if (T('#ver-avisos') || T('#campana')){ const a = $('avisos'); a.hidden = !a.hidden; $('campana').setAttribute('aria-expanded', !a.hidden); return; }
-    if (!T('#avisos')) $('avisos').hidden = true;
+    if (T('#ver-avisos')){ S.verAvisos = !S.verAvisos; pintarAnalisis(); marcarFiltro(); return; }
     if (!T('.busca')) $('res').hidden = true;
   });
   document.addEventListener('change', e => {               // región de origen: filtra las nacionalidades del mapa
-    if (e.target.id!=='region') return;
+    const id = e.target.id;
+    if (id==='per-anio'){ S.anio = +e.target.value; S.mes = 0; cambiarPeriodo(); return; }
+    if (id==='per-mes'){ S.mes = +e.target.value; cambiarPeriodo(); return; }
+    if (id==='per-desde' || id==='per-hasta'){ S[id.slice(4)] = e.target.value; if (S.desde>S.hasta){ const x = S.desde; S.desde = S.hasta; S.hasta = x; } cambiarPeriodo(); return; }
+    if (id!=='region') return;
     S.region = e.target.value || null; pintarTodo();
     if (S.region) volarConMexico(REGIONES[S.region][1]);
   });
@@ -982,6 +1089,7 @@ function iniciar(){
   window.addEventListener('scroll', () => mostrarTip(null), {passive:true});
   $('buscar').addEventListener('input', buscar);
   $('buscar').addEventListener('keydown', e => { if (e.key==='Enter'){ elegir(0); e.preventDefault(); } if (e.key==='Escape'){ $('res').hidden = true; } });
+  { const r = rangoPeriodo(); aplicarPeriodo(r[0], r[1]); }       // periodo inicial: Sheinbaum
   $('corte').textContent = 'Datos al '+fechaISO(D.corte);
   $('tgraf').setAttribute('aria-valuemax', ND);
   pintarNav();

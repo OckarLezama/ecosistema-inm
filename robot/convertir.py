@@ -374,10 +374,15 @@ def disperso(matriz):
 
 
 # ==== [7] COMPOSICIONES ===========================================
+INICIO_BASES = None      # primer día de las bases; lo fija main()
+
+
 def composicion(t, categoria, valor):
-    """Lista [estado, nacionalidad, categoría, valor, ...] para los desgloses."""
-    o = pd.DataFrame({"s": t["s"].values, "n": np.asarray(t["n"]), "c": np.asarray(categoria), "v": np.asarray(valor)})
-    o = o[o.c >= 0].groupby(["s", "n", "c"]).v.sum().reset_index()
+    """Lista [mes, estado, nacionalidad, categoría, valor, ...] para los desgloses.
+    El mes cuenta desde el primer mes de las bases, para poder filtrar por periodo."""
+    mes = (t["DIA"].dt.year - INICIO_BASES.year) * 12 + t["DIA"].dt.month - INICIO_BASES.month
+    o = pd.DataFrame({"m": mes.values, "s": t["s"].values, "n": np.asarray(t["n"]), "c": np.asarray(categoria), "v": np.asarray(valor)})
+    o = o[o.c >= 0].groupby(["m", "s", "n", "c"]).v.sum().reset_index()
     return [int(x) for x in o[o.v > 0].values.flatten()]
 
 
@@ -576,6 +581,8 @@ def main():
     B = {k: CARGAR[k](con_encabezado(tablas[k])) for k in CARGAR}
     inicio = min(t["DIA"].min() for t in B.values())          # el periodo lo fijan las bases del INM, no la de la CBP
     fin = max(t["DIA"].max() for t in B.values())
+    global INICIO_BASES
+    INICIO_BASES = inicio
     dias = (fin - inicio).days + 1
     cortes = semanas(dias)
 
