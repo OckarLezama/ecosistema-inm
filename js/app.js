@@ -18,6 +18,9 @@
 const D = window.IANAMI_DATOS, GEO = window.IANAMI_GEO, CEN = window.IANAMI_CEN;
 const NN = D.nats.length, NS = D.ests.length, NW = D.ends.length, ND = D.dias;
 const OT = NN - 2, MX = NN - 1;                       // índices de "Otras" y "México"
+// Series diarias por estado y por nacionalidad: llegan dispersas ([día, columna, valor]) y aquí se expanden
+['ds','dn'].forEach(p => Object.keys(D[p]).forEach(k => { const L = p==='ds' ? NS : NN, a = new Float64Array(ND*L), c = D[p][k];
+  for (let i=0;i<c.length;i+=3) a[c[i]*L + c[i+1]] = c[i+2]; D[p][k] = a; }));
 const EST = D.ests;
 const ESTC = EST.map(e => e==='Ciudad de México'?'CDMX':e==='Estado de México'?'Edo. de México':e==='Baja California Sur'?'Baja California S.':e);
 const ECLAVE = EST.map(e => 'MX_' + (e==='Estado de México' ? 'México' : e));   // clave del estado en el mapa
@@ -104,23 +107,28 @@ const ORIGEN = {840:[-97,36.2], 124:[-100,54], 643:[38,56]};     // puntos de pa
 const ANCLA_EU = [-99.3, 32.4];
 const CAJA = [[-125,35.5],[-62,2.5]];                   // encuadre inicial: México, Centroamérica, Caribe y norte de Sudamérica
 const ESCALA_LAT = 0.92;                                // corrección de proporción a la latitud de México
-const CAJA_MUNDO = [[-168,80],[178,-56]];               // el mundo completo, sin la Antártida
-const VISTA_MX = {c:[-93.5,19], z:1};
+// Mapa del mundo con América al centro: Asia y Oceanía a la izquierda, Europa y África a la derecha.
+// Todo lo que está al este del meridiano CORTE se dibuja también 360° a la izquierda.
+const CORTE = 62;
+const CAJA_MUNDO = [[CORTE-358,80],[CORTE-2,-56]];      // el mundo completo, sin la Antártida
+const VISTA_MX = {c:[-93.5,19], z:1};                    // z = 1 es el encuadre de México; los demás zooms se miden contra él
+const REGIONES = { NA:['Norteamérica',[-100,45]], CA:['Centroamérica y Caribe',[-80,15]], SA:['Sudamérica',[-60,-18]],
+                   EU:['Europa',[15,50]], AF:['África',[18,2]], AS:['Asia',[95-360,30]], OC:['Oceanía',[140-360,-25]] };
 const VEL = 5;                                         // días por segundo al reproducir
 // Colores del mapa por tema (independientes del tema de la página)
 const TM = {
   oscuro:{ mar:'#22201D', tierra:'#34312D', linea:'#4B4741', eu:'#3A3733', euL:'#5A554E', mx:'#47433D', mxL:'#9A958A', tinta:'#F1EEE4', halo:'#22201D',
-           reg:'#62B8A0', irr:'#E8827A', usa:'#DCC66C', neu:['#4A463F','#5E5950','#746E62','#8B8475'],
+           reg:'#62B8A0', irr:'#E8827A', usa:'#DCC66C', arena:'#D8CDA0', neu:['#4A463F','#5E5950','#746E62','#8B8475'],
            r_reg:['#2F4741','#3F6B60','#4F8F7F','#62B8A0','#A4E6D3'], r_irr:['#4A3A38','#7A4C48','#A85F59','#D6756D','#FFB0A8'], r_usa:['#4A4530','#7A6F3A','#A89845','#DCC66C','#F7E7A4'] },
   claro:{  mar:'#E4E1D5', tierra:'#F7F5EE', linea:'#CFCBBB', eu:'#F1EEE4', euL:'#B9B4A6', mx:'#FBFAF6', mxL:'#8A8579', tinta:'#2B2926', halo:'#F7F5EE',
-           reg:'#2F6657', irr:'#C4605A', usa:'#8F7F2E', neu:['#EEE9D6','#DDD5B8','#CABF98','#B3A77A'],
+           reg:'#2F6657', irr:'#C4605A', usa:'#8F7F2E', arena:'#A1925A', neu:['#EEE9D6','#DDD5B8','#CABF98','#B3A77A'],
            r_reg:['#E3ECE8','#AFC9C1','#7AA598','#2F6657','#17382F'], r_irr:['#F6E6E3','#E5B9B3','#D38E86','#C4605A','#7E302B'], r_usa:['#F1EBD0','#DDD09A','#C2B15E','#8F7F2E','#55490F'] }
 };
 
 /* ==== [2] DATOS (cubo y consultas) ================================= */
 // Cubo denso por indicador [semana][estado][nacionalidad] y sus dos resúmenes
 const CUBO = {}, WS = {}, WN = {};
-INDS.forEach(m => { const a = new Float64Array(NW*NS*NN), ws = new Float64Array(NW*NS), wn = new Float64Array(NW*NN), c = D.cube[m.k];
+INDS.forEach(m => { const a = new Float32Array(NW*NS*NN), ws = new Float64Array(NW*NS), wn = new Float64Array(NW*NN), c = D.cube[m.k];
   for (let i=0;i<c.length;i+=4){ a[(c[i]*NS + c[i+1])*NN + c[i+2]] += c[i+3]; ws[c[i]*NS+c[i+1]] += c[i+3]; wn[c[i]*NN+c[i+2]] += c[i+3]; }
   CUBO[m.k] = a; WS[m.k] = ws; WN[m.k] = wn; });
 const NCAT = {ing_via:3, rech_det:2, tram_se:16, tram_res:3, resc_rei:2, resc_des:3, pres_est:D.estaciones.length, can_nna:12, can_ad:2, ret_tipo:2, recib_edad:2, rep_comp:8};
@@ -164,7 +172,9 @@ function acum(k, ss, n){
 }
 function topNats(fn, cuantas){ const o = []; for (let n=0;n<OT;n++){ const v = fn(n); if (v>0) o.push([n,v]); } return o.sort((a,b)=>b[1]-a[1]).slice(0,cuantas); }
 function topEsts(fn, cuantos){ const o = []; for (let s=0;s<NS;s++){ const v = fn(s); if (v>0) o.push([s,v]); } return o.sort((a,b)=>b[1]-a[1]).slice(0,cuantos); }
-function xyNat(n){ const iso = D.nats[n][1]; return ORIGEN[iso] || CEN['P_'+iso] || null; }
+function xyNat(n){ const iso = D.nats[n][1], c = ORIGEN[iso] || CEN['P_'+String(iso).padStart(3,'0')];
+  return !c ? null : c[0] > CORTE ? [c[0]-360, c[1]] : c; }
+const enRegion = n => !S.region || D.nats[n][2]===S.region;
 function xyEst(s){ return CEN[ECLAVE[s]]; }
 function xyGrupo(ss){ let x = 0, y = 0; ss.forEach(s => { const c = xyEst(s); x += c[0]; y += c[1]; }); return [x/ss.length, y/ss.length]; }
 
@@ -202,7 +212,7 @@ function mezclaRGB(rampa, t){                  // color intermedio de una rampa,
 function tri(arriba, color){ return '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="'+(arriba?'M6 2l5 8H1z':'M6 10L1 2h10z')+'" fill="'+color+'"/></svg>'; }
 
 /* ==== [4] ESTADO Y FILTRO ========================================= */
-const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, puntos:false, calor:false, cbp:false, modoVista:'mundo', centro:null, agr:'e', cmp:30, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
+const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, puntos:false, calor:false, cbp:false, modoVista:'mundo', centro:null, region:null, agr:'e', cmp:30, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
 let E = 1;                                      // escala para pantallas muy grandes
 // Filtro que produce la selección: una lista de estados (estado, cinturón o CECO) o una nacionalidad
 function filtro(){
@@ -313,7 +323,7 @@ const COL = { act:{}, meta:{}, sucio:true };     // color actual y color meta de
 function regiones(){
   const t = TM[S.tema], F = filtro(), rgb = c => 'rgb('+Math.round(c[0])+','+Math.round(c[1])+','+Math.round(c[2])+')';
   const eu = S.cbp && D.cbp ? D.cbp.estados : {}, euMax = Math.max.apply(null, Object.values(eu).concat(1));
-  return GEO.features.filter(f => f.properties.t!=='p').map(f => { const k = f.properties.key, mx = f.properties.t==='m';
+  return GEO.features.filter(f => f.properties.t==='m' || f.properties.t==='u').map(f => { const k = f.properties.key, mx = f.properties.t==='m';
     const s = mx ? ECLAVE.indexOf(k) : -1, sel = mx && F.ss && F.ss.indexOf(s)>=0, c = COL.act[k], enc = mx ? 0 : eu[k.slice(3)];
     const area = c ? rgb(c) : enc ? rgb(mezclaRGB(t.r_usa, 0.1+0.45*enc/euMax)) : (mx?t.mx:t.eu);
     return { name:k, itemStyle:{ areaColor:area, borderColor: sel?t.tinta:(mx?t.mxL:t.euL), borderWidth: (sel?2:(mx?0.8:0.5))*E },
@@ -325,7 +335,7 @@ function opcionBase(){
     backgroundColor:'transparent', animationDurationUpdate:420, animationEasingUpdate:'cubicOut',
     tooltip:{ trigger:'item', confine:true, position:junto, backgroundColor: S.tema==='oscuro'?'#F7F5EE':'#2B2926', borderWidth:0, padding:[9*E,11*E],
               textStyle:{ color: S.tema==='oscuro'?'#2B2926':'#F4F2EA', fontSize:12 }, extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:'+(9*E)+'px;', formatter: tarjeta },
-    geo:{ map:'ianami', nameProperty:'key', roam:true, boundingCoords:CAJA, center:S.centro || VISTA_MX.c, zoom:S.zoom, scaleLimit:{min:0.05, max:40}, layoutCenter:['50%','50%'], layoutSize:encuadre(), aspectScale:ESCALA_LAT,
+    geo:{ map:'ianami', nameProperty:'key', roam:true, boundingCoords:CAJA_MUNDO, center:S.centro || VISTA_MX.c, zoom:S.zoom*KMX(), scaleLimit:{min:0.6, max:40*KMX()}, layoutCenter:['50%','50%'], layoutSize:encuadre(), aspectScale:ESCALA_LAT,
           itemStyle:{ areaColor:t.tierra, borderColor:t.linea, borderWidth:0.5*E },
           emphasis:{ label:{show:false}, itemStyle:{ areaColor:t.tierra, borderColor:t.linea, borderWidth:0.8*E } },
           select:{ disabled:true }, label:{show:false}, tooltip:{ show:true, formatter:tarjeta }, regions:regiones() },
@@ -340,23 +350,32 @@ function opcionBase(){
       { id:'cbp', type:'scatter', coordinateSystem:'geo', data:[], symbol:'circle',
         label:Object.assign({ show:false, position:'top', distance:4*E, formatter:p=>p.data.et, fontSize:11*E, fontWeight:600 }, et), labelLayout:{hideOverlap:true} },
       { id:'grp', type:'scatter', coordinateSystem:'geo', data:[], symbolSize:1, silent:true, itemStyle:{opacity:0},
-        label:Object.assign({ show:true, position:'inside', formatter:p=>p.data.et, fontSize:13*E, fontWeight:600 }, et, {fontFamily:'Barlow Condensed, Barlow, sans-serif'}) }
+        label:Object.assign({ show:true, position:'inside', formatter:p=>p.data.et, fontSize:13*E, fontWeight:600 }, et, {fontFamily:'Barlow Condensed, Barlow, sans-serif'}) },
+      { id:'lat', type:'effectScatter', coordinateSystem:'geo', data:[], showEffectOn:'render',          // latido: dónde están, sin flujo
+        rippleEffect:{ brushType:'stroke', scale:2.6, period:3.6, number:2 },
+        label:Object.assign({ show:true, position:'right', distance:6*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et), labelLayout:{hideOverlap:true} }
     ]
   };
 }
 // El mapa nunca se deforma: conserva su proporción y el encuadre inicial cabe completo;
 // si el contenedor es más ancho o más alto, simplemente se ve más mapa alrededor.
 function encuadre(){
-  const lz = $('lz'), proporcion = (CAJA[1][0]-CAJA[0][0]) / (CAJA[0][1]-CAJA[1][1]) * ESCALA_LAT;
+  const lz = $('lz'), proporcion = ancho(CAJA_MUNDO) / alto(CAJA_MUNDO) * ESCALA_LAT;
   return Math.round(Math.min(lz.clientWidth, lz.clientHeight*proporcion));
 }
-function reencuadrar(){ chart.resize(); chart.setOption({geo:{layoutSize:encuadre()}}); if (S.modoVista==='mundo'){ const v = vistaMundo(); chart.setOption({geo:{center:v.c, zoom:v.z}}); S.zoom = v.z; } }
-// Zoom necesario para que quepa una región de tantos grados (el zoom 1 es el encuadre de México)
-function zoomPara(gradosLon, gradosLat){
-  const lz = $('lz'), px = (a,b) => Math.min(lz.clientWidth/(a*ESCALA_LAT), lz.clientHeight/b);
-  return px(gradosLon, gradosLat) / px(CAJA[1][0]-CAJA[0][0], CAJA[0][1]-CAJA[1][1]);
-}
-function vistaMundo(){ const m = CAJA_MUNDO; return { c:[(m[0][0]+m[1][0])/2, (m[0][1]+m[1][1])/2], z:zoomPara(m[1][0]-m[0][0], m[0][1]-m[1][1]) }; }
+const ancho = c => c[1][0]-c[0][0], alto = c => c[0][1]-c[1][1];
+const pxGrado = (gLon, gLat) => { const lz = $('lz'); return Math.min(lz.clientWidth/(gLon*ESCALA_LAT), lz.clientHeight/gLat); };
+// Zoom del mapa que equivale al encuadre de México (el mapa base es el mundo)
+function KMX(){ return pxGrado(ancho(CAJA), alto(CAJA)) / pxGrado(ancho(CAJA_MUNDO), alto(CAJA_MUNDO)); }
+// Zoom (medido contra México) para que quepa una región de tantos grados
+function zoomPara(gLon, gLat){ return pxGrado(gLon, gLat) / pxGrado(ancho(CAJA), alto(CAJA)); }
+function vistaMundo(){ const m = CAJA_MUNDO; return { c:[(m[0][0]+m[1][0])/2, (m[0][1]+m[1][1])/2], z:zoomPara(ancho(m), alto(m)) }; }
+function reencuadrar(){ chart.resize(); chart.setOption({geo:{layoutSize:encuadre(), scaleLimit:{min:0.6, max:40*KMX()}}});
+  if (S.modoVista==='mundo'){ const v = vistaMundo(); chart.setOption({geo:{center:v.c, zoom:v.z*KMX()}}); S.zoom = v.z; } }
+// Vuelo que deja a la vista un punto lejano y a México
+function volarConMexico(xy){ S.modoVista = 'libre';
+  const z = zoomPara(Math.abs(xy[0]+102)+60, Math.abs(xy[1]-23)+40);
+  volar([(xy[0]-102)/2, (xy[1]+23)/2], Math.max(vistaMundo().z, Math.min(1, z))); }
 // Al elegir un indicador desde la vista del mundo, el mapa se acerca a México: ahí está el detalle por estado
 function acercarSiMundo(){ if (S.modoVista==='mundo'){ S.modoVista = 'mx'; volar(VISTA_MX.c, VISTA_MX.z); } }
 // La tarjeta aparece junto al cursor y nunca se sale del mapa
@@ -394,15 +413,16 @@ function pintarMapa(){
   }
   COL.meta = meta; COL.sucio = true;
   // -- Círculos por nacionalidad y flujos de origen a destino
-  const bub = [], fl = [], fz = Math.max(0.62, Math.min(1, 0.55+0.45*S.zoom));     // círculos algo menores al alejarse
-  const burbuja = (n, v, mx, c, et, fijo) => { const xy = xyNat(n); if (!xy) return;
-    bub.push({ value:[xy[0],xy[1],v], nat:n, et:et, symbolSize: (fijo || (7 + 30*Math.sqrt(Math.min(1, v/Math.max(mx,1)))))*E*fz,
+  const bub = [], lat = [], fl = [], fz = Math.max(0.62, Math.min(1, 0.55+0.45*S.zoom));     // círculos algo menores al alejarse
+  const burbuja = (n, v, mx, c, et, fijo, late) => { const xy = xyNat(n); if (!xy) return;
+    (late ? lat : bub).push({ value:[xy[0],xy[1],v], nat:n, et:et, symbolSize: (fijo || (7 + 30*Math.sqrt(Math.min(1, v/Math.max(mx,1)))))*E*fz,
                itemStyle:{ color:c, opacity:.72, borderColor:(F.n===n?t.tinta:t.halo), borderWidth:(F.n===n?2.5:1)*E } }); };
   const flujo = (id, a, b, v, mx, c) => { if (a && b) fl.push({ id:id, a:a, b:b, c:c, w: 1 + 3.4*Math.sqrt(Math.min(1, v/Math.max(mx,1))) }); };
   const destinoDe = (k, n) => { if (F.ss) return [xyGrupo(F.ss), 'F']; const r = topEsts(s => sumaSem(k,0,NW-1,[s],n), 1)[0]; return r ? [xyEst(r[0]), r[0]] : [null,null]; };
   const salida = k => k==='ret' || k==='rech';             // rechazos y retornados salen de México hacia el país
-  const pares = kc ? [[kc, 8, true]] : [['ing', 5, false], ['resc', 6, true]];     // sin indicador: panorama regular + irregular
-  pares.forEach(par => { const k = par[0], c = t[IND[k].g];
+  const nR = S.region ? 10 : 0;                              // con una región elegida se muestran más nacionalidades
+  const pares = kc ? [[kc, nR||8, true]] : [['ing', nR||5, false], ['resc', nR||6, true]];     // sin indicador: panorama regular + irregular
+  pares.forEach(par => { const k = par[0], c = k==='rech' ? t.arena : t[IND[k].g], latido = k==='tram';   // trámites: sin flujo, solo latido
     if (k==='rep'){ const l = D.repPuntos.map(p=>[p, suma(p.wk,0,NW)]).sort((x,y)=>y[1]-x[1]).slice(0,7), mx = l[0][1];
       l.forEach((r,i) => flujo('rep'+i, ANCLA_EU, [r[0].x,r[0].y], r[1], mx, c)); return; }
     if (k==='recib'){ const l = topEsts(s => ritmo(k,[s],F.n), 5), mx = l.length?l[0][1]:1; l.forEach(r => flujo('recib'+r[0], ANCLA_EU, xyEst(r[0]), r[1], mx, c));
@@ -410,14 +430,14 @@ function pintarMapa(){
       return; }
     if (F.n!=null){                               // una nacionalidad: hacia sus principales estados
       const l = topEsts(s => ritmo(k,[s],F.n), 3), mx = l.length?l[0][1]:1;
-      l.forEach(r => { const a = xyNat(F.n), b = xyEst(r[0]); if (salida(k)) flujo(k+'n'+r[0], b, a, r[1], mx, c); else flujo(k+'n'+r[0], a, b, r[1], mx, c); });
-      if (par[2]) burbuja(F.n, ritmo(k,null,F.n), 1, c, D.nats[F.n][0]+' · '+corto(fin?sumaSem(k,0,NW-1,null,F.n):acum(k,null,F.n)), 22);
+      if (!latido) l.forEach(r => { const a = xyNat(F.n), b = xyEst(r[0]); if (salida(k)) flujo(k+'n'+r[0], b, a, r[1], mx, c); else flujo(k+'n'+r[0], a, b, r[1], mx, c); });
+      if (par[2]) burbuja(F.n, ritmo(k,null,F.n), 1, c, D.nats[F.n][0]+' · '+corto(fin?sumaSem(k,0,NW-1,null,F.n):acum(k,null,F.n)), 22, latido);
       return; }
-    const l = topNats(n => ritmo(k,F.ss,n), par[1]), mx = l.length?l[0][1]:1;
+    const l = topNats(n => enRegion(n) ? ritmo(k,F.ss,n) : 0, par[1]), mx = l.length?l[0][1]:1;
     const mb = l.length ? (fin ? l[0][1] : Math.max.apply(null, semanal(k,F.ss,l[0][0]))) : 1;
-    l.forEach((r,i) => { const d = destinoDe(k, r[0]); if (!d[0]) return;
-      const a = xyNat(r[0]); if (salida(k)) flujo(k+r[0], d[0], a, r[1], mx, c); else flujo(k+r[0], a, d[0], r[1], mx, c);
-      if (par[2]) burbuja(r[0], r[1], mb, c, i<5 ? D.nats[r[0]][0]+' · '+corto(fin?r[1]:acum(k,F.ss,r[0])) : '');
+    l.forEach((r,i) => { const a = xyNat(r[0]);
+      if (!latido){ const d = destinoDe(k, r[0]); if (!d[0]) return; if (salida(k)) flujo(k+r[0], d[0], a, r[1], mx, c); else flujo(k+r[0], a, d[0], r[1], mx, c); }
+      if (par[2]) burbuja(r[0], r[1], mb, c, i<5 ? D.nats[r[0]][0]+' · '+corto(fin?r[1]:acum(k,F.ss,r[0])) : '', 0, latido);
       else if (!bub.some(x=>x.nat===r[0])) burbuja(r[0], r[1], mb, c, D.nats[r[0]][0], 9); });
   });
   ponerFlujos(S.flujos ? fl : []);
@@ -441,7 +461,7 @@ function pintarMapa(){
       enc.push({ value:[P.x,P.y,v], cb:i, et:P.n+' · '+corto(v), symbolSize:(8 + 20*Math.sqrt(v/mxc))*E, label:{ show:S.zoom>=0.75 },
                  itemStyle:{ color:t.usa, opacity:.9, borderColor:t.tinta, borderWidth:1.4*E } }); }); }
   chart.setOption({ visualMap:[ {id:'vh', max:Math.sqrt(maxP)} ],
-                    series:[ {id:'bub', data:bub}, {id:'pts', data:pts}, {id:'calor', data:calor}, {id:'cbp', data:enc}, {id:'grp', data:grp} ] });
+                    series:[ {id:'bub', data:bub}, {id:'pts', data:pts}, {id:'calor', data:calor}, {id:'cbp', data:enc}, {id:'grp', data:grp}, {id:'lat', data:lat} ] });
   // -- Rótulo acoplado: título, cifra, leyenda y selector "Ver por"
   const quien = S.sel && S.sel.t!=='p' ? (S.sel.t==='n'?' de ':' en ')+nombreSel() : '';
   let h;
@@ -452,7 +472,10 @@ function pintarMapa(){
   else h = '<b>Panorama'+esc(quien)+'</b><span>De dónde llegan'+(fin?'':' · al '+fechaDia(S.dia-1))+'. Elige un indicador para colorear los estados.</span>'+
            '<span class="lin"><i style="background:'+t.reg+'"></i>Ingresos (regular)</span><span class="lin"><i style="background:'+t.irr+'"></i>Rescatados (irregular)</span>';
   if (S.cbp && D.cbp) h += '<span class="lin"><i style="background:'+t.usa+';width:9px;height:9px;border-radius:50%"></i>Encuentros CBP · '+corto(enc.reduce((x,y)=>x+y.value[2],0))+'</span>';
-  h += '<div class="verpor" role="group" aria-label="Agrupar estados">'+[['e','Estado'],['c','Cinturón'],['o','CECO']].map(x=>'<button data-agr="'+x[0]+'" class="'+(S.agr===x[0]?'on':'')+'" aria-pressed="'+(S.agr===x[0])+'">'+x[1]+'</button>').join('')+'</div>';
+  const vp = S.agr!=='e' ? S.agr : S.modoVista==='mundo' ? 'm' : S.modoVista==='mx' ? 'e' : '';   // si el usuario movió el mapa, ninguno de los dos
+  h += '<div class="verpor" role="group" aria-label="Vista del mapa">'+[['m','Mundo'],['e','Estado'],['c','Cinturón'],['o','CECO']].map(x=>'<button data-agr="'+x[0]+'" class="'+(vp===x[0]?'on':'')+'" aria-pressed="'+(vp===x[0])+'">'+x[1]+'</button>').join('')+'</div>';
+  if (F.n==null) h += '<label class="origen">Origen <select id="region" aria-label="Región de origen"><option value="">todas las regiones</option>'+
+    Object.keys(REGIONES).map(r => '<option value="'+r+'"'+(S.region===r?' selected':'')+'>'+REGIONES[r][0]+'</option>').join('')+'</select></label>';
   $('m-tit').innerHTML = h;
 }
 // Tarjetas al pasar el cursor. Muestran el perfil completo (todos los indicadores con su variación)
@@ -477,6 +500,11 @@ function perfil(ss, n, activo, tc, breve){
     if (filas) out.push((breve ? '' : '<div class="g"><i style="background:'+tc[g[0]]+'"></i>'+g[1]+'</div>')+filas); });
   return out.join('');
 }
+function soloKpi(k, ss, n, tc, sem, breve){      // tarjeta con un indicador elegido: solo ese dato
+  const nota = notaPerfil(k, ss, n), d = (ss && n!=null) ? '' : variaTxt(diario(k,{ss:ss,n:n}));
+  return '<span class="v">'+miles(acum(k, ss, n))+'</span>'+((nota || d) ? '<span class="s">'+[nota, d ? d+' en '+S.cmp+' días' : ''].filter(Boolean).join(' · ')+'</span>' : '')+
+         (breve ? '' : chispa(semanal(k,ss,n),232,30,k==='rech'?tc.arena:tc[IND[k].g],sem));
+}
 function tarjeta(p){
   const F = filtro(), kc = S.ind, fin = alFinal(), sem = semDe(S.dia), breve = $('lz').clientHeight < 430*E;
   const tc = TM[S.tema==='claro' ? 'oscuro' : 'claro'];              // la tarjeta va en el tono contrario al mapa
@@ -484,9 +512,9 @@ function tarjeta(p){
   const pie = txt => breve ? '' : '<span class="f">▲▼ últimos '+S.cmp+' días contra los '+S.cmp+' anteriores'+(txt ? ' · '+txt : '')+'</span>';
   const fila = (n,frac,tx,color) => '<div class="r"><span>'+n+'</span><span class="b"><i style="width:'+Math.max(2,Math.min(100,frac*100)).toFixed(0)+'%;background:'+color+'"></i></span><span class="x">'+tx+'</span></div>';
   const dato = (n,tx) => '<div class="r"><span>'+n+'</span><span></span><span class="x">'+tx+'</span></div>';
-  if (p.seriesId==='bub'){ const n = p.data.nat, kn = kc && IND[kc].nat ? kc : null;
-    return '<div class="tt"><b class="h">'+esc(D.nats[n][0])+'</b><span class="s">'+cuando+(F.ss ? ' · en '+esc(nombreSel()) : '')+'</span>'+
-      (kn && !breve ? chispa(semanal(kn,F.ss,n),232,30,tc[IND[kn].g],sem) : '')+perfil(F.ss, n, kn, tc, breve)+pie('clic para abrir su ficha')+'</div>'; }
+  if (p.seriesId==='bub' || p.seriesId==='lat'){ const n = p.data.nat, kn = kc && IND[kc].nat ? kc : null;
+    return '<div class="tt"><b class="h">'+esc(D.nats[n][0])+'</b><span class="s">'+(kn ? IND[kn].n+' · ' : '')+cuando+(F.ss ? ' · en '+esc(nombreSel()) : '')+'</span>'+
+      (kn ? soloKpi(kn, F.ss, n, tc, sem, breve) : perfil(F.ss, n, null, tc, breve))+pie('clic para abrir su ficha')+'</div>'; }
   if (p.componentType==='geo'){
     if (p.name.indexOf('US_')===0 && S.cbp && D.cbp && D.cbp.estados[p.name.slice(3)])
       return '<div class="tt"><b class="h">'+esc(p.name.slice(3))+'</b><span class="s">Encuentros de la CBP · periodo completo</span><span class="v">'+miles(D.cbp.estados[p.name.slice(3)])+'</span><span class="f">'+pct(D.cbp.estados[p.name.slice(3)], D.cbp.total)+'% de los encuentros en la frontera</span></div>';
@@ -494,8 +522,8 @@ function tarjeta(p){
     const s = ECLAVE.indexOf(p.name); if (s<0) return '';
     const gru = ['c','o'].map(a => AGR[a].de[s]>=0 ? AGR[a].nombres[AGR[a].de[s]] : null).filter(Boolean).join(' · ');
     const nF = F.n, top = kc && IND[kc].nat && nF==null && !breve ? topNats(n => acum(kc,[s],n), 3) : [], mx = top.length ? top[0][1] : 1;
-    return '<div class="tt"><b class="h">'+esc(EST[s])+'</b><span class="s">'+(gru || 'Sin cinturón ni CECO')+' · '+cuando+(nF!=null ? ' · '+esc(D.nats[nF][0]) : '')+'</span>'+
-      (kc && !breve ? chispa(semanal(kc,[s],IND[kc].nat?nF:null),232,30,tc[IND[kc].g],sem) : '')+perfil([s], nF, kc, tc, breve)+
+    return '<div class="tt"><b class="h">'+esc(EST[s])+'</b><span class="s">'+(kc ? IND[kc].n+' · ' : '')+(gru || 'Sin cinturón ni CECO')+' · '+cuando+(nF!=null ? ' · '+esc(D.nats[nF][0]) : '')+'</span>'+
+      (kc ? soloKpi(kc, [s], IND[kc].nat ? nF : null, tc, sem, breve) : perfil([s], nF, null, tc, breve))+
       (top.length ? '<div class="g">Principales nacionalidades · '+IND[kc].n.toLowerCase()+'</div>'+top.map(r => fila(esc(D.nats[r[0]][0]), r[1]/mx, corto(r[1]), tc[IND[kc].g])).join('') : '')+
       pie('clic para ver todos sus datos')+'</div>'; }
   if (p.seriesId==='pts'){ const tp = p.data.pTipo, P = listaPuntos(tp)[p.data.pt], col = tc[tp==='ing'?'reg':tp==='rep'?'usa':'irr'];
@@ -512,14 +540,14 @@ function tarjeta(p){
   return '';
 }
 let vuelo = 0;
-function volar(c, z){
-  const g = chart.getOption().geo[0], c0 = g.center, z0 = g.zoom;
+function volar(c, zr){                          // zr: zoom medido contra el encuadre de México
+  const g = chart.getOption().geo[0], c0 = g.center, z0 = g.zoom, z = zr*KMX();
   cancelAnimationFrame(vuelo);
-  if (reducido()){ chart.setOption({geo:{center:c, zoom:z}}); S.zoom = z; pintarMapa(); return; }
+  if (reducido()){ chart.setOption({geo:{center:c, zoom:z}}); S.zoom = zr; pintarMapa(); return; }
   let i = 0; const N = 26;
   const paso = () => { i++; const x = i/N, e = x<.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2;
     chart.setOption({geo:{ center:[c0[0]+(c[0]-c0[0])*e, c0[1]+(c[1]-c0[1])*e], zoom: z0*Math.pow(z/z0,e) }});
-    if (i<N) vuelo = requestAnimationFrame(paso); else { S.zoom = z; pintarMapa(); } };
+    if (i<N) vuelo = requestAnimationFrame(paso); else { S.zoom = zr; pintarMapa(); } };
   paso();
 }
 function volarA(sel){
@@ -527,14 +555,12 @@ function volarA(sel){
   if (sel.t==='e'){ volar(xyEst(sel.i), 2.2); return; }
   if (sel.t==='g'){ volar(xyGrupo(miembros(sel.a,sel.q)), 1.25); return; }
   if (sel.t==='p'){ const P = listaPuntos(sel.tipo)[sel.i]; volar([P.x,P.y], 5); return; }
-  const xy = xyNat(sel.i); if (!xy) return;         // encuadre que contiene al país y a México
-  const z = zoomPara(Math.abs(xy[0]+102)+40, Math.abs(xy[1]-23)+34);
-  volar([(xy[0]-102)/2, (xy[1]+23)/2], Math.max(vistaMundo().z, Math.min(1, z)));
+  const xy = xyNat(sel.i); if (xy) volarConMexico(xy);
 }
 function herramienta(a){
   const g = chart.getOption().geo[0];
-  if (a==='mas'){ S.modoVista = 'libre'; volar(g.center, Math.min(40, g.zoom*1.7)); }
-  else if (a==='menos'){ S.modoVista = 'libre'; volar(g.center, Math.max(0.05, g.zoom/1.7)); }
+  if (a==='mas'){ S.modoVista = 'libre'; volar(g.center, Math.min(40, g.zoom/KMX()*1.7)); }
+  else if (a==='menos'){ S.modoVista = 'libre'; volar(g.center, Math.max(vistaMundo().z*0.6, g.zoom/KMX()/1.7)); }
   else if (a==='mx'){ S.modoVista = 'mx'; volar(VISTA_MX.c, VISTA_MX.z); }
   else if (a==='mundo'){ const v = vistaMundo(); S.modoVista = 'mundo'; volar(v.c, v.z); }
   else if (a==='tema'){ S.tema = S.tema==='oscuro'?'claro':'oscuro'; $('mapa').dataset.m = S.tema; rehacerMapa(); }
@@ -665,8 +691,8 @@ function htmlBreve(n){                          // datos clave de una nacionalid
     (nna ? '<span class="mini"><b>'+miles(nna)+'</b> niñas, niños y adolescentes canalizados; '+miles(na)+' no acompañados.</span>' : '');
 }
 function htmlTops(F){
-  const k = S.ind && IND[S.ind].nat ? S.ind : S.topModo, l = topNats(n => acum(k,F.ss,n), 7);
-  return '<div class="caja"><h2><span>Principales nacionalidades</span></h2>'+
+  const k = S.ind && IND[S.ind].nat ? S.ind : S.topModo, l = topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 10);
+  return '<div class="caja"><h2><span>Principales nacionalidades</span>'+(S.region ? '<small>'+REGIONES[S.region][0]+'</small>' : '')+'</h2>'+
     (S.ind && IND[S.ind].nat ? '<span class="mini">'+IND[k].n+(S.dia<ND?' · acumulado al '+fechaDia(S.dia-1):' · periodo completo')+'</span>' : '<div class="pil chica" style="align-self:flex-start"><button data-top="resc" class="'+(k==='resc'?'on':'')+'">Rescatados</button><button data-top="ing" class="'+(k==='ing'?'on':'')+'">Ingresos</button></div>')+
     (barrasNat(l, colG(IND[k].g)) || '<span class="mini">Sin registros.</span>')+'</div>';
 }
@@ -697,14 +723,14 @@ function htmlComp(k, F){
   else if (k==='recib'){ const v = comp('recib_edad',s,n); sub = 'Esta base trae adultos y menores, sin sexo'; h = grupo('Edad',[['Adultos',v[0],c2],['Menores',v[1]]]); }
   else if (k==='rep'){ const v = comp('rep_comp',s,null); sub = 'Sexo y edad de los mexicanos repatriados';
     h = grupo('Adultos',[['Hombres',v[0],c2],['Mujeres',v[1]]]) + grupo('Menores',[['Niños',v[2],c2],['Niñas',v[3]]]) + grupo('Menores, con o sin compañía',[['Acompañados',v[4],c2],['Solos',v[5]]]) + grupo('Modalidad',[['Terrestre',v[6],c2],['Aérea',v[7]]]); }
-  return '<div class="caja"><h2><span>Composición · '+IND[k].n+'</span></h2><span class="mini">'+sub+' · periodo completo</span><div class="cgrid">'+(h || '<span class="mini">Sin registros con este filtro.</span>')+'</div></div>';
+  return '<div class="caja"><h2><span>Composición · '+(k==='rech' ? '2da revisión' : IND[k].n)+'</span></h2><span class="mini">'+sub+' · periodo completo</span><div class="cgrid">'+(h || '<span class="mini">Sin registros con este filtro.</span>')+'</div></div>';
 }
 function cajaLugares(k, F){                      // un indicador repartido por estado, cinturón o CECO
   const nF = IND[k].nat ? F.n : null, c = colG(IND[k].g); let filas, tit;
   if (S.agr==='e' || F.ss){ const todos = topEsts(s => acum(k,[s],nF), NS), uno = F.ss && F.ss.length===1 ? F.ss[0] : -1;
-    let lista = F.ss && F.ss.length>1 ? todos.filter(r => F.ss.indexOf(r[0])>=0).slice(0,7) : todos.slice(0,7);
+    let lista = F.ss && F.ss.length>1 ? todos.filter(r => F.ss.indexOf(r[0])>=0).slice(0,10) : todos.slice(0,10);
     const lugar = todos.findIndex(r => r[0]===uno), mx = lista.length?lista[0][1]:1;
-    if (lugar>=7) lista = lista.slice(0,6).concat([todos[lugar]]);
+    if (lugar>=10) lista = lista.slice(0,9).concat([todos[lugar]]);
     tit = F.n!=null ? IND[k].donde : IND[k].n+' por estado';
     filas = lista.map(r => '<button class="barra'+(r[0]===uno?' on':'')+'" data-e="'+r[0]+'"><span>'+(r[0]===uno?(lugar+1)+'.º ':'')+esc(ESTC[r[0]])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); }
   else { const ag = AGR[S.agr], tot = ag.nombres.map((x,q)=>acum(k,miembros(S.agr,q),nF)), sin = acum(k,null,nF)-tot.reduce((x,y)=>x+y,0);
@@ -718,14 +744,14 @@ function pintarBajo(){
   const F = filtro(), s = S.sel, cajas = [];
   // 1) Todos los indicadores de la selección (país, estado, cinturón o CECO)
   if (s && s.t!=='p'){ const lista = INDS.filter(m => F.n==null || m.nat);
-    cajas.push('<div class="caja"><h2><span>'+esc(nombreSel())+'</span><small>todos sus indicadores</small></h2><span class="mini">'+(s.t==='g' ? miembros(s.a,s.q).map(x=>ESTC[x]).join(', ') : s.t==='e' ? ['c','o'].map(a => AGR[a].de[s.i]>=0 ? AGR[a].nombres[AGR[a].de[s.i]] : AGR[a].sin).join(' · ') : 'Clic en un renglón para verlo en el mapa')+'</span>'+
+    cajas.push('<div class="caja" data-propia="1"><h2><span>'+esc(nombreSel())+'</span><small>todos sus indicadores</small></h2><span class="mini">'+(s.t==='g' ? miembros(s.a,s.q).map(x=>ESTC[x]).join(', ') : s.t==='e' ? ['c','o'].map(a => AGR[a].de[s.i]>=0 ? AGR[a].nombres[AGR[a].de[s.i]] : AGR[a].sin).join(' · ') : 'Clic en un renglón para verlo en el mapa')+'</span>'+
       lista.map(m => { const sem = semanal(m.k,F.ss,F.n); return '<button class="fk'+(S.ind===m.k?' on':'')+'" data-k="'+m.k+'"><span>'+m.n+'</span>'+chispa(sem,64,20,colG(m.g),semDe(S.dia))+'<span class="x">'+corto(acum(m.k,F.ss,F.n))+'</span></button>'; }).join('')+
       (s.t==='n' ? '<hr class="sep">'+htmlBreve(s.i) : '')+'</div>'); }
   // 1b) Principales nacionalidades (cuando no hay una elegida)
   if (F.n==null) cajas.push(htmlTops(F));
   // 2) Punto elegido
   if (s && s.t==='p'){ const tp = s.tipo, P = listaPuntos(tp)[s.i], tot = suma(P.wk,0,NW), c = colG(tp==='ing'?'reg':tp==='rep'?'usa':'irr');
-    let h = '<div class="caja"><h2><span>'+esc(P.n)+'</span></h2><span class="mini">'+(tp==='ing' ? ['Punto aéreo','Punto terrestre','Punto marítimo'][P.t]+' · '+EST[P.s] : tp==='rep' ? 'Punto de repatriación · '+EST[P.s] : 'Estación o estancia migratoria')+' · ubicación aproximada</span>'+
+    let h = '<div class="caja" data-propia="1"><h2><span>'+esc(P.n)+'</span></h2><span class="mini">'+(tp==='ing' ? ['Punto aéreo','Punto terrestre','Punto marítimo'][P.t]+' · '+EST[P.s] : tp==='rep' ? 'Punto de repatriación · '+EST[P.s] : 'Estación o estancia migratoria')+' · ubicación aproximada</span>'+
       '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span><span class="num" style="font-size:30px">'+miles(tot)+'</span><br><span class="mini">'+(tp==='ing'?'ingresos':tp==='rep'?'mexicanos repatriados':'presentados')+' en el periodo</span></span>'+chispa(P.wk,130,40,c,semDe(S.dia))+'</div>';
     if (tp==='ing'){ const mxv = P.top.length?P.top[0][1]:1;
       h += '<hr class="sep"><span class="mini"><b>Quién entra por aquí</b> · '+pct(P.mx,tot)+'% mexicanos</span>'+P.top.map(r => '<div class="barra"><span>'+esc(typeof r[0]==='number'?D.nats[r[0]][0]:r[0])+'</span><span class="b"><i style="width:'+(r[1]/mxv*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></div>').join('')+
@@ -754,7 +780,18 @@ function pintarCtl(){
 }
 function pintarTodo(soloTiempo){
   if (S.vista!=='pulso') return;
-  pintarCtl(); if (!soloTiempo) pintarAnalisis(); if (!soloTiempo) pintarDocs(); pintarKpis(); pintarTiempo(); pintarMapa(); pintarBajo();
+  pintarCtl(); if (!soloTiempo) pintarAnalisis(); if (!soloTiempo) pintarDocs(); pintarKpis(); pintarTiempo(); pintarMapa(); pintarBajo(); marcarFiltro();
+}
+// Con una nacionalidad, estado, grupo o punto elegido, cada tarjeta que cambió lleva una franja y el nombre
+function marcarFiltro(){
+  const nom = S.sel ? nombreSel() : '';
+  document.querySelectorAll('.rail .caja, #bajo .caja').forEach(c => {
+    c.classList.toggle('filtro', !!nom);
+    const h = c.querySelector('h2 > span'); if (!h) return;
+    let t = h.querySelector('.tag');
+    if (nom && !c.dataset.propia){ if (!t){ t = document.createElement('span'); t.className = 'tag'; h.appendChild(t); } t.textContent = nom; }
+    else if (t) t.remove();
+  });
 }
 
 /* ==== [11] BUSCADOR, SECCIONES Y AVISOS =========================== */
@@ -809,19 +846,23 @@ function escala(){ const n = window.innerWidth>=2200 ? Math.min(4, window.innerW
 /* ==== [12] ARRANQUE =============================================== */
 function iniciar(){
   escala();
-  echarts.registerMap('ianami', GEO);
+  // Copia desplazada 360° de lo que queda al este del corte, para que Asia y Oceanía aparezcan a la izquierda
+  const mover = g => JSON.parse(JSON.stringify(g), (k,v) => Array.isArray(v) && typeof v[0]==='number' && v.length===2 ? [v[0]-360, v[1]] : v);
+  const lonMax = f => { let m = -999; JSON.stringify(f.geometry.coordinates).replace(/\[(-?[\d.]+),/g, (x,l) => { m = Math.max(m, +l); return x; }); return m; };
+  const copias = GEO.features.filter(f => f.properties.t==='p' && lonMax(f) > CORTE).map(f => ({ type:'Feature', properties:{ key:'W_'+f.properties.key, t:'w' }, geometry:mover(f.geometry) }));
+  echarts.registerMap('ianami', { type:'FeatureCollection', features:GEO.features.concat(copias) });
   chart = echarts.init($('lienzo'), null, {renderer:'canvas'});
   { const v = vistaMundo(); S.zoom = v.z; S.centro = v.c; }      // la primera vista es el mundo completo
   chart.setOption(opcionBase());
   if (!D.cbp) $('b-cbp').hidden = true;
   chart.on('click', p => {
-    if (p.seriesId==='bub') fijarSel({t:'n', i:p.data.nat}, false);
+    if (p.seriesId==='bub' || p.seriesId==='lat') fijarSel({t:'n', i:p.data.nat}, false);
     else if (p.seriesId==='pts') fijarSel({t:'p', tipo:p.data.pTipo, i:p.data.pt}, false);
     else if (p.name && p.name.indexOf('MX_')===0){ const s = ECLAVE.indexOf(p.name); if (s<0) return;
       if (S.agr!=='e' && AGR[S.agr].de[s]>=0) fijarSel({t:'g', a:S.agr, q:AGR[S.agr].de[s]}, false); else fijarSel({t:'e', i:s}, false); }
   });
   let espera = 0;
-  chart.on('georoam', () => { S.modoVista = 'libre'; clearTimeout(espera); espera = setTimeout(() => { const z = chart.getOption().geo[0].zoom; if (Math.abs(z-S.zoom)/S.zoom > 0.04){ S.zoom = z; pintarMapa(); } }, 160); });
+  chart.on('georoam', () => { S.modoVista = 'libre'; clearTimeout(espera); espera = setTimeout(() => { const z = chart.getOption().geo[0].zoom/KMX(); if (Math.abs(z-S.zoom)/S.zoom > 0.04){ S.zoom = z; pintarMapa(); } }, 160); });
   new ResizeObserver(() => { const cambio = escala(); reencuadrar(); ajustarLienzo(); if (cambio) rehacerMapa(); else pintarTiempo(); }).observe($('lz'));
   window.addEventListener('resize', () => { if (escala()) rehacerMapa(); ajustarAlto(); pintarAnalisis(); });
   if (window.innerHeight<=520) S.kpiModo = 'compacto';        // teléfono acostado: indicadores compactos
@@ -843,15 +884,23 @@ function iniciar(){
     if (T('#plegar')){ S.kpiModo = S.kpiModo==='tarjetas'?'compacto':'tarjetas'; pintarKpis(); ajustarAlto(); return; }
     const cm = T('[data-cmp]'); if (cm){ S.cmp = +cm.dataset.cmp; pintarTodo(); return; }
     const k = T('[data-k]'); if (k){ fijarInd(k.dataset.k); return; }
-    const ag = T('[data-agr]'); if (ag){ S.agr = ag.dataset.agr; if (S.sel && S.sel.t==='g' && S.sel.a!==S.agr) S.sel = null; pintarTodo(); return; }
+    const ag = T('[data-agr]'); if (ag){ const v = ag.dataset.agr;      // Mundo y Estado: datos generales; Cinturón y CECO: agrupan
+      S.agr = v==='m' ? 'e' : v; if (S.sel && S.sel.t==='g' && (v==='m' || v==='e' || S.sel.a!==S.agr)) S.sel = null;
+      if (v==='m') herramienta('mundo'); else if (v==='e') herramienta('mx'); else acercarSiMundo();
+      pintarTodo(); return; }
     const gg = T('[data-g]'); if (gg){ fijarSel({t:'g', a:gg.dataset.g[0], q:+gg.dataset.g.slice(1)}, true); return; }
     const n = T('[data-n]'); if (n){ fijarSel({t:'n', i:+n.dataset.n}, true); return; }
     const es = T('[data-e]'); if (es){ fijarSel({t:'e', i:+es.dataset.e}, true); return; }
-    const tp = T('[data-top]'); if (tp){ S.topModo = tp.dataset.top; pintarBajo(); return; }
+    const tp = T('[data-top]'); if (tp){ S.topModo = tp.dataset.top; pintarBajo(); marcarFiltro(); return; }
     const r = T('[data-r]'); if (r){ elegir(+r.dataset.r); return; }
     if (T('#ver-avisos') || T('#campana')){ const a = $('avisos'); a.hidden = !a.hidden; $('campana').setAttribute('aria-expanded', !a.hidden); return; }
     if (!T('#avisos')) $('avisos').hidden = true;
     if (!T('.busca')) $('res').hidden = true;
+  });
+  document.addEventListener('change', e => {               // región de origen: filtra las nacionalidades del mapa
+    if (e.target.id!=='region') return;
+    S.region = e.target.value || null; pintarTodo();
+    if (S.region) volarConMexico(REGIONES[S.region][1]);
   });
   $('buscar').addEventListener('input', buscar);
   $('buscar').addEventListener('keydown', e => { if (e.key==='Enter'){ elegir(0); e.preventDefault(); } if (e.key==='Escape'){ $('res').hidden = true; } });

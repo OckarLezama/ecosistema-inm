@@ -110,7 +110,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .kpis[data-modo="compacto"] .kc-pie,.kpis[data-modo="compacto"] .kc-ic{display:none}
 
 /* ==== [6] RETÍCULA ================================================ */
-.main{display:grid;grid-template-columns:minmax(0,3.4fr) minmax(calc(250px * var(--e)),1fr);gap:12px;padding:0 16px 12px;align-items:stretch}
+.main{display:grid;grid-template-columns:minmax(0,4fr) minmax(calc(250px * var(--e)),1fr);gap:12px;padding:0 16px 12px;align-items:stretch}
 .rail-w{position:relative;min-width:0}                 /* la columna toma el alto del mapa, nunca al revés */
 .rail{position:absolute;inset:0;overflow:auto;scrollbar-width:thin;display:flex;flex-direction:column;gap:12px}
 .rail>.caja:last-child{flex:1 0 auto}
@@ -143,6 +143,10 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .m-her button:hover,.m-her button.on{background:var(--m-btn)}
 .m-her hr{width:18px;border:0;border-top:1px solid var(--m-linea);margin:2px auto}
 
+/* Región de origen en el rótulo del mapa */
+.origen{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--m-ink2);margin-top:3px}
+.origen select{font:inherit;font-size:12px;color:var(--m-ink);background:var(--m-btn);border:0;border-radius:999px;padding:3px 8px;max-width:170px}
+
 /* ==== [8] BARRA DE TIEMPO ========================================= */
 .tiempo{display:flex;align-items:center;gap:12px;padding:8px 14px 9px;background:var(--m-panel);border-top:1px solid var(--m-linea);color:var(--m-ink)}
 .play{flex:none;width:36px;height:36px;border-radius:50%;background:var(--m-ink);color:var(--m-mar);display:grid;place-items:center;transition:transform .15s}
@@ -155,6 +159,8 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 /* ==== [9] CAJAS =================================================== */
 .caja{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px 12px;display:flex;flex-direction:column;gap:7px;min-width:0}
 .caja h2{margin:0;font:600 17px/1.15 var(--f-num);display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.caja.filtro{border-color:#CFC6A0;box-shadow:inset 0 3px 0 #A1925A}
+.tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;background:var(--hi);font:600 11.5px var(--f-txt);color:var(--ink);vertical-align:2px;white-space:nowrap}
 .caja h2 small{font:400 12px var(--f-txt);color:var(--ink2);text-align:right}
 .docs-f{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .docs-f .num{font-size:28px}

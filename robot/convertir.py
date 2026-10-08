@@ -138,19 +138,60 @@ def reconocer(tabla):
 
 
 # ==== [4] CATÁLOGOS ===============================================
-NAT = C.NACIONALIDADES
-OTRAS, MEXICO = len(NAT), len(NAT) + 1
-_nat = {n[0]: i for i, n in enumerate(NAT)}
-_nat.update({a: _nat[b] for a, b in C.ALIAS_NACIONALIDAD.items() if b in _nat})
+# Las nacionalidades se arman con las que traen las bases: una por código ISO, con su región.
+# Lo que no tiene código (empleadores, apátridas, nombres nuevos) se suma en «Otras».
+NAT, OTRAS, MEXICO, _iso = [], 0, 1, {}
 _est = {norm(e): i for i, e in enumerate(C.ESTADOS)}
 _est.update({a: _est[b] for a, b in C.ALIAS_ESTADO.items()})
+PARTICULAS = {"De", "Del", "La", "Las", "Los", "Y", "E"}
+
+
+def clave_nat(valor):
+    k = norm(valor)
+    return C.ALIAS_NACIONALIDAD.get(k, k)
+
+
+def es_mexico(k):
+    return k in ("MEXICO", "MEXICANA", "ESTADOS UNIDOS MEXICANOS")
+
+
+def nombre_visible(valor):
+    """Nombre para mostrar: respeta acentos y pone en minúsculas las partículas."""
+    if not valor.isupper():
+        return valor
+    return " ".join(w if i == 0 or w not in PARTICULAS else w.lower() for i, w in enumerate(valor.title().split()))
+
+
+def construir_catalogo(tablas):
+    global NAT, OTRAS, MEXICO
+    volumen, original = {}, {}
+    for clave, tabla in tablas.items():
+        if clave not in CARGAR and clave != "docs_nat":
+            continue
+        t = con_encabezado(tabla)
+        col = next((c for c in ("NACIONALIDAD", "PAIS / EMPLEADOR") if c in t.columns), None)
+        if not col:
+            continue
+        for valor, n in t[col].dropna().astype(str).str.strip().value_counts().items():
+            k = clave_nat(valor)
+            i = C.ISO_NACIONALIDAD.get(k)
+            if i is None or es_mexico(k):
+                continue
+            volumen[i] = volumen.get(i, 0) + int(n)
+            if i not in original or (original[i].isupper() and not valor.isupper()):
+                original[i] = valor
+    orden = sorted(volumen, key=lambda i: -volumen[i])
+    NAT = [[C.NOMBRE_CORTO.get(i, nombre_visible(original[i])), i, C.REGION_ISO.get(i, "OT")] for i in orden]
+    _iso.clear()
+    _iso.update({i: j for j, i in enumerate(orden)})
+    OTRAS, MEXICO = len(NAT), len(NAT) + 1
 
 
 def idx_nat(valor):
-    k = norm(valor)
-    if k in ("MEXICO", "MEXICANA", "ESTADOS UNIDOS MEXICANOS"):
+    k = clave_nat(valor)
+    if es_mexico(k):
         return MEXICO
-    return _nat.get(k, OTRAS)
+    return _iso.get(C.ISO_NACIONALIDAD.get(k), OTRAS)
 
 
 def idx_est(valor):
@@ -176,6 +217,11 @@ def preparar(clave, t, col_nat="NACIONALIDAD"):
     if len(malos):
         avisar(clave, f"{int(malos.sum()):,} renglones con O.R. no reconocida (no se cuentan): " + ", ".join(malos.index[:6]))
     t["n"] = t[col_nat].map(idx_nat) if col_nat else MEXICO
+    if col_nat:
+        sin = t.loc[t["n"] == OTRAS, col_nat].astype(str).str.strip().value_counts()
+        sin = sin[[norm(x) not in ("EMPLEADOR", "APATRIDA", "SIN DATO", "NAN") for x in sin.index]]
+        if len(sin):
+            avisar(clave, f"{int(sin.sum()):,} renglones con nacionalidad sin código (van a «Otras»): " + ", ".join(sin.index[:8]))
     return t[t["DIA"].notna() & (t["s"] >= 0)].copy()
 
 
@@ -305,6 +351,7 @@ def semanas(dias):
 
 def resumir(t, inicio, dias, cortes):
     """Cubo semanal estado × nacionalidad y series diarias (total, por estado, por nacionalidad)."""
+    t = t[t["v"] != 0]
     d = (t["DIA"] - inicio).dt.days.values
     s, n, v = t["s"].values, np.asarray(t["n"]), t["v"].values
     w = np.searchsorted(cortes, d + 1)
@@ -316,8 +363,14 @@ def resumir(t, inicio, dias, cortes):
     cubo = cubo[cubo.v > 0]
     return {"cube": [int(x) for x in cubo.values.flatten()],
             "daily": [int(x) for x in por_estado.sum(axis=1)],
-            "ds": [int(x) for x in por_estado.flatten()],
-            "dn": [int(x) for x in por_nat.flatten()]}
+            "ds": disperso(por_estado),
+            "dn": disperso(por_nat)}
+
+
+def disperso(matriz):
+    """Solo las celdas con valor: [día, columna, valor, ...]."""
+    d, c = np.nonzero(matriz)
+    return [int(x) for x in np.column_stack([d, c, matriz[d, c]]).flatten()]
 
 
 # ==== [7] COMPOSICIONES ===========================================
@@ -430,10 +483,9 @@ def documentos(tablas, cargas):
     lista = sorted(((corto_doc(n), int(entero(filas[c + 2]).sum())) for c, n in tipos), key=lambda x: -x[1])
     por_nat = {}
     for _, r in p.iloc[2:].iterrows():
-        k = norm(r[0])
-        k = C.ALIAS_NACIONALIDAD.get(k, k)
-        if k in _nat and pd.notna(pd.to_numeric(r[3], errors="coerce")):
-            por_nat[_nat[k]] = [int(r[3]), int(r[1]), int(r[2])]
+        j = idx_nat(r[0])
+        if j < OTRAS and pd.notna(pd.to_numeric(r[3], errors="coerce")):
+            por_nat[j] = [int(r[3]), int(r[1]), int(r[2])]
     return {"total": total_h + total_m, "h": total_h, "m": total_m, "tipos": [list(x) for x in lista],
             "est": por_estado, "nat": por_nat, "corte": max(cargas.get("docs_est", ""), cargas.get("docs_nat", ""))}
 
@@ -473,7 +525,7 @@ def encuentros(tabla, inicio, dias, cortes):
                          "x": lon, "y": lat, "wk": por_semana(s, inicio, cortes), "tot": int(s["v"].sum()),
                          "mex": int(s["MEXICO"].sum()), "ext": int(s["EXTRANJEROS"].sum()),
                          "ag": [int(s.loc[s["AGENCIA"].map(norm) == a, "v"].sum()) for a in agencias],
-                         "top": [[NAT[idx_nat(k)][1] if idx_nat(k) < OTRAS else original.get(k, k.title()), int(v)] for k, v in top.items() if v > 0]})
+                         "top": [[NAT[idx_nat(k)][0] if idx_nat(k) < OTRAS else original.get(k, k.title()), int(v)] for k, v in top.items() if v > 0]})
     sin_coord = sorted(set(t["sector"]) - set(C.SECTORES_CBP))
     if sin_coord:
         avisar("cbp", "Sectores sin coordenadas en el catálogo: " + ", ".join(sin_coord))
@@ -512,6 +564,7 @@ def main():
         sys.exit("Faltan bases en " + a.origen + ": " + ", ".join(faltan))
 
     # -- Cargar y fijar el periodo con las fechas de las bases
+    construir_catalogo(tablas)
     B = {k: CARGAR[k](con_encabezado(tablas[k])) for k in CARGAR}
     inicio = min(t["DIA"].min() for t in B.values())          # el periodo lo fijan las bases del INM, no la de la CBP
     fin = max(t["DIA"].max() for t in B.values())
@@ -525,7 +578,7 @@ def main():
                    "can": can, "ret": B["ret"], "recib": B["recib"], "rep": B["rep"]}
     salida = {"inicio": inicio.date().isoformat(), "corte": fin.date().isoformat(), "dias": dias,
               "generado": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
-              "nats": [[n[1], n[2]] for n in NAT] + [["Otras", 0], ["México", 484]],
+              "nats": [list(n) for n in NAT] + [["Otras", 0, "OT"], ["México", 484, "NA"]],
               "ests": C.ESTADOS, "ends": cortes, "cube": {}, "daily": {}, "ds": {}, "dn": {}}
     for k, t in indicadores.items():
         r = resumir(t, inicio, dias, cortes)
