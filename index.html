@@ -14,7 +14,7 @@
      ÍNDICE: [1] BARRA SUPERIOR  [2] CONTROLES  [3] INDICADORES
              [4] MAPA Y BARRA DE TIEMPO  [5] COLUMNA DE ANÁLISIS
              [6] FRANJA DE CAJAS  [7] OTRAS SECCIONES  [8] PROGRAMAS
-     Estilos: css/estilos.css · Lógica: js/app.js · Datos: datos/datos.js
+     Estilos: css/estilos.css · Lógica: js/app.js · Datos: datos/datos.js · Contexto: js/contexto.js
      ================================================================== -->
 <div class="app">
 
@@ -30,6 +30,7 @@
       </button>
       <div class="avisos" id="avisos" hidden></div>
     </div>
+    <div class="menu" id="menu-dir" role="menu" hidden></div>
   </header>
 
   <div id="vista-pulso">
@@ -104,6 +105,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
 <script src="datos/datos.js"></script>
 <script src="js/geo.js"></script>
+<script src="js/contexto.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

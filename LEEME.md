@@ -10,6 +10,7 @@ Página principal (Pulso) y convertidor de bases.
 | `css/estilos.css` | Estilos |
 | `js/app.js` | Lógica de la página |
 | `js/geo.js` | Mapa base (países, estados de México y de EE. UU.) |
+| `js/contexto.js` | Eventos por país desde 2018: qué pasó, efecto migratorio y fuente. Se edita a mano |
 | `datos/datos.js` | Resumen de las bases. **Se genera, no se edita a mano** |
 | `datos/reporte.txt` | Revisión de la última conversión |
 | `robot/convertir.py` | Convierte las bases de `DATA` en `datos/` |
