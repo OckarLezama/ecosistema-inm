@@ -70,9 +70,9 @@ const ORIGEN = {840:[-97,36.2], 124:[-100,54], 643:[38,56]};     // puntos de pa
 const ANCLA_EU = [-99.3, 32.4];
 // Íconos del mapa: punto de internación (marcador), repatriación (casa) y estación migratoria (edificio)
 const ICONO_PUNTO = {
-  ing:'path://M12 0C6.5 0 2 4.5 2 10c0 7.5 10 14 10 14s10-6.5 10-14C22 4.5 17.5 0 12 0z',
+  ing:'path://M12 23C12 23 3 15.5 3 9.5A9 9 0 0 1 21 9.5C21 15.5 12 23 12 23ZM6.8 10.6L10.8 10.6L10.8 12.8L15 9.5L10.8 6.2L10.8 8.4L6.8 8.4ZM15.9 5.2L15.9 13.8L17.4 13.8L17.4 5.2Z',
   rep:'path://M12 2L1.5 11.5H5V22h14V11.5h3.5z',
-  em: 'path://M3 22V9h4V2h10v7h4v13z'
+  em: 'path://M12 23C12 23 3 15.5 3 9.5A9 9 0 0 1 21 9.5C21 15.5 12 23 12 23ZM7.5 6L7.5 14L16.5 14L16.5 6ZM9 7.4L11 7.4L11 9.2L9 9.2ZM13 7.4L15 7.4L15 9.2L13 9.2ZM9 10.6L11 10.6L11 12.4L9 12.4ZM13 10.6L15 10.6L15 12.4L13 12.4Z'
 };
 const NOMBRE_PUNTO = {ing:'Puntos de internación', rep:'Puntos de repatriación', em:'Estaciones migratorias'};
 const CAJA = [[-125,35.5],[-62,2.5]];                   // encuadre inicial: México, Centroamérica, Caribe y norte de Sudamérica
@@ -450,7 +450,7 @@ function pintarMapa(){
     if (k==='rep'){ const l = D.repPuntos.map(p=>[p, suma(p.wk,0,NW)]).sort((x,y)=>y[1]-x[1]).slice(0,7), mx = l[0][1];
       l.forEach((r,i) => flujo('rep'+i, ANCLA_EU, [r[0].x,r[0].y], r[1], mx, c)); return; }
     if (k==='recib'){ const l = topEsts(s => ritmo(k,[s],F.nd), 5), mx = l.length?l[0][1]:1; l.forEach(r => flujo('recib'+r[0], ANCLA_EU, xyEst(r[0]), r[1], mx, c));
-      if (kc){ const ln = F.n!=null ? [[F.n, ritmo(k,F.ss,F.n)]] : topNats(n => enRegion(n) ? ritmo(k,F.ss,n) : 0, 10), mb = ln.length ? (fin?ln[0][1]:Math.max.apply(null,semanal(k,F.ss,ln[0][0]))) : 1; ln.forEach((r,i) => burbuja(r[0], r[1], mb, c, i<5?D.nats[r[0]][0]+' · '+corto(fin?r[1]:acum(k,F.ss,r[0])):'')); }
+      if (kc){ const ln = F.n!=null ? [[F.n, ritmo(k,F.ss,F.n)]] : topNats(n => enRegion(n) ? ritmo(k,F.ss,n) : 0, 10), mb = ln.length ? (fin?ln[0][1]:Math.max.apply(null,semanal(k,F.ss,ln[0][0]))) : 1; ln.forEach((r,i) => burbuja(r[0], r[1], mb, c, i<5?D.nats[r[0]][0]+' · '+corto(fin?r[1]:acum(k,F.ss,r[0])):'', 0, r[0]===F.n)); }
       return; }
     if (F.n!=null){                               // una nacionalidad: hacia sus principales estados
       const l = topEsts(s => ritmo(k,[s],F.n), 3), mx = l.length?l[0][1]:1;
@@ -464,7 +464,7 @@ function pintarMapa(){
     l.forEach((r,i) => { const a = xyNat(r[0]);
       if (!latido){ const pp = puntoDe(k, r[0]), d = pp ? [[pp[0][0].x, pp[0][0].y]] : destinoDe(k, r[0]); if (!d[0]) return; if (salida(k)) flujo(k+r[0], d[0], a, r[1], mx, c); else flujo(k+r[0], a, d[0], r[1], mx, c); }
       if (par[2]) burbuja(r[0], r[1], mb, c, (i<5 || !S.flujos) ? D.nats[r[0]][0]+' · '+corto(fin?r[1]:acum(k,F.ss,r[0])) : '', 0, latido);
-      else if (!bub.concat(lat).some(x=>x.nat===r[0])) burbuja(r[0], r[1], mb, c, D.nats[r[0]][0]+(S.flujos ? '' : ' · '+corto(fin?r[1]:acum(k,F.ss,r[0]))), S.flujos ? 9 : 0); });
+      else if (!bub.concat(lat).some(x=>x.nat===r[0])) burbuja(r[0], r[1], mb, c, D.nats[r[0]][0]+' · '+corto(fin?r[1]:acum(k,F.ss,r[0])), S.flujos ? 9 : 0); });
   });
   if (F.n!=null && !bub.concat(lat).some(x => x.nat===F.n)) burbuja(F.n, 1, 1, t.tinta, D.nats[F.n][0], 18, true);   // el país elegido siempre se ve
   if (!S.circulos) [bub, lat].forEach(a => { for (let i=a.length-1;i>=0;i--) if (a[i].nat!==F.n) a.splice(i,1); });   // círculos ocultos (menos el país elegido)
@@ -477,10 +477,10 @@ function pintarMapa(){
     cp.lista.forEach((p,i) => { const v = suma(p.wk,0,semDe(S.dia)+1); if (v<=0) return;
       if (S.calor) calor.push([p.x,p.y,Math.sqrt(v)]);
       if (ver) pts.push({ value:[p.x,p.y,v], pt:i, pTipo:cp.tipo, et:p.n,
-        symbol: ICONO_PUNTO[cp.tipo], symbolKeepAspect:true, symbolOffset: cp.tipo==='ing' ? [0,'-45%'] : [0,0],
-        symbolSize: (11 + 13*Math.sqrt(v/maxP))*E,
+        symbol: ICONO_PUNTO[cp.tipo], symbolKeepAspect:true, symbolOffset: cp.tipo==='rep' ? [0,0] : [0,'-48%'],
+        symbolSize: (14 + 14*Math.sqrt(v/maxP))*E,
         label:{ show: S.zoom>=3.4 || (cp.siempre && S.zoom>=1.5) || (selP && S.sel.i===i) },
-        itemStyle:{ color:t[cp.tipo==='ing'?'reg':cp.tipo==='rep'?'usa':'irr'], opacity:.95, borderColor:t.halo, borderWidth:1.2*E } }); });
+        itemStyle:{ color:t[cp.tipo==='ing'?'reg':cp.tipo==='rep'?'usa':'irr'], opacity:.95, borderColor:t.halo, borderWidth:1.4*E, shadowBlur:4*E, shadowColor:'rgba(0,0,0,.25)', shadowOffsetY:1*E } }); });
   }
   // -- Encuentros de la CBP por sector, del lado de EE. UU.
   const enc = [];
