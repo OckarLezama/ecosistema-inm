@@ -10,6 +10,7 @@ un nombre nuevo (el reporte de cada conversión avisa cuáles faltan).
   [2] ESTADOS         las 32 oficinas de representación, en orden fijo
   [3] PUNTOS          coordenadas de puntos de internación, repatriación
                       y estaciones migratorias (ubicación aproximada)
+  [4] SECTORES CBP    sectores y oficinas de la CBP en la frontera sur de EE. UU.
 """
 
 # ==== [1] NACIONALIDADES ==========================================
@@ -192,3 +193,17 @@ ESTACIONES = {'Estación Migratoria Tuxtla Gutiérrez': (-93.12, 16.75),
  'Estancia Provisional Monterrey': (-100.31, 25.68),
  'Estación Migratoria Palenque': (-91.98, 17.51),
  'Estación Migratoria Hermosillo': (-110.96, 29.07)}
+
+# ==== [4] SECTORES CBP ============================================
+# sector u oficina de campo: (longitud, latitud) de su ciudad sede
+SECTORES_CBP = {
+    'SAN DIEGO': (-117.04, 32.56),
+    'EL CENTRO': (-115.56, 32.79),
+    'YUMA': (-114.62, 32.69),
+    'TUCSON': (-110.97, 32.22),
+    'EL PASO': (-106.49, 31.76),
+    'BIG BEND': (-104.02, 30.31),
+    'DEL RIO': (-100.90, 29.36),
+    'LAREDO': (-99.51, 27.51),
+    'RIO GRANDE': (-98.23, 26.20),
+}

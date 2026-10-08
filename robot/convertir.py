@@ -35,7 +35,8 @@ Reglas
   [7] COMPOSICIONES         desgloses propios de cada base
   [8] PUNTOS                internación, repatriación y estaciones
   [9] DOCUMENTOS VIGENTES
-  [10] REPORTE Y SALIDA
+  [10] ENCUENTROS CBP
+  [11] REPORTE Y SALIDA
 """
 import argparse
 import datetime as dt
@@ -445,7 +446,42 @@ def corto_doc(nombre):
     return cortos.get(n, n.capitalize())
 
 
-# ==== [10] REPORTE Y SALIDA =======================================
+# ==== [10] ENCUENTROS CBP =========================================
+def encuentros(tabla, inicio, dias, cortes):
+    """Encuentros de la CBP por sector fronterizo: total, mexicanos, extranjeros, agencia y nacionalidades."""
+    original = {norm(c): " ".join(str(c).split()) for c in tabla.iloc[0].tolist()}
+    t = con_encabezado(tabla)
+    t["DIA"] = fecha(t["DIA"])
+    fijas = ["DIA", "AGENCIA", "LOCATION", "CIUDAD EEUU", "CIUDAD MX", "TOTAL", "MEXICO", "EXTRANJEROS"]
+    paises = [c for c in t.columns if c not in fijas and c != "OTROS"]
+    for c in t.columns[5:]:
+        t[c] = entero(t[c])
+    d = (t["DIA"] - inicio).dt.days
+    t = t[t["DIA"].notna() & (d >= 0) & (d < dias)].copy()
+    t["v"] = t["TOTAL"]
+    t["sector"] = t["LOCATION"].map(norm)
+    agencias = ["USBP", "OFO", "CBP ONE"]
+    sectores, por_estado = [], {}
+    for clave, (lon, lat) in C.SECTORES_CBP.items():
+        s = t[t["sector"] == clave]
+        if not len(s):
+            continue
+        top = s[paises].sum().sort_values(ascending=False).head(5)
+        estado_eu = str(s["CIUDAD EEUU"].iloc[0]).strip()
+        por_estado[estado_eu] = por_estado.get(estado_eu, 0) + int(s["v"].sum())
+        sectores.append({"n": str(s["LOCATION"].iloc[0]).strip(), "eu": estado_eu, "mx": idx_est(s["CIUDAD MX"].iloc[0]),
+                         "x": lon, "y": lat, "wk": por_semana(s, inicio, cortes), "tot": int(s["v"].sum()),
+                         "mex": int(s["MEXICO"].sum()), "ext": int(s["EXTRANJEROS"].sum()),
+                         "ag": [int(s.loc[s["AGENCIA"].map(norm) == a, "v"].sum()) for a in agencias],
+                         "top": [[NAT[idx_nat(k)][1] if idx_nat(k) < OTRAS else original.get(k, k.title()), int(v)] for k, v in top.items() if v > 0]})
+    sin_coord = sorted(set(t["sector"]) - set(C.SECTORES_CBP))
+    if sin_coord:
+        avisar("cbp", "Sectores sin coordenadas en el catálogo: " + ", ".join(sin_coord))
+    return t, {"total": int(t["v"].sum()), "mex": int(t["MEXICO"].sum()), "ext": int(t["EXTRANJEROS"].sum()),
+               "sectores": sectores, "estados": por_estado}
+
+
+# ==== [11] REPORTE Y SALIDA =======================================
 def dias_faltantes(t, inicio, fin):
     todos = pd.date_range(inicio, fin)
     return [x.date().isoformat() for x in todos.difference(pd.DatetimeIndex(t["DIA"].unique()))]
@@ -477,7 +513,7 @@ def main():
 
     # -- Cargar y fijar el periodo con las fechas de las bases
     B = {k: CARGAR[k](con_encabezado(tablas[k])) for k in CARGAR}
-    inicio = min(t["DIA"].min() for t in B.values())
+    inicio = min(t["DIA"].min() for t in B.values())          # el periodo lo fijan las bases del INM, no la de la CBP
     fin = max(t["DIA"].max() for t in B.values())
     dias = (fin - inicio).days + 1
     cortes = semanas(dias)
@@ -498,6 +534,9 @@ def main():
     salida["comp"], salida["estaciones"] = composiciones(B)
     salida["puntos"], salida["repPuntos"], salida["emPuntos"] = puntos(B, inicio, cortes)
     salida["docs"] = documentos(tablas, cargas)
+    salida["cbp"] = None
+    if "cbp" in tablas:
+        B["cbp"], salida["cbp"] = encuentros(tablas["cbp"], inicio, dias, cortes)
 
     # -- Estado de cada base (para la sección Bases y el reporte)
     salida["bases"] = []
@@ -511,17 +550,15 @@ def main():
         if k in B:
             t = B[k]
             falt = dias_faltantes(t, inicio, fin)
-            otras = int(t.loc[t["n"] == OTRAS, "v"].sum())
+            otras = int(t.loc[t["n"] == OTRAS, "v"].sum()) if "n" in t.columns else 0
             info.update({"filas": int(len(t)), "total": int(t["v"].sum()), "desde": t["DIA"].min().date().isoformat(),
                          "hasta": t["DIA"].max().date().isoformat(), "faltan": len(falt)})
             lineas.append(f"   {len(t):,} renglones · total {int(t['v'].sum()):,} · del {info['desde']} al {info['hasta']}")
             lineas.append(f"   Días sin datos: {len(falt)}" + (" → " + ", ".join(falt[:14]) + (" …" if len(falt) > 14 else "") if falt else ""))
-            if k != "rep":
+            if k not in ("rep", "cbp"):
                 lineas.append(f"   En «Otras» nacionalidades: {otras:,} ({otras / max(int(t['v'].sum()), 1) * 100:.1f}%)")
         if ocultas.get(k):
             avisar(k, "El archivo trae hojas ocultas que no se leen: " + ", ".join(ocultas[k]))
-        if k == "cbp":
-            lineas.append("   Reconocida; todavía no se usa en la página.")
         for x in AVISOS.get(k, []):
             lineas.append("   · " + x)
         info["avisos"] = len(AVISOS.get(k, []))

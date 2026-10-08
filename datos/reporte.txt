@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-07 17:55
+Generado: 2026-10-07 19:39
 Periodo de las bases: 2024-10-01 a 2024-12-31 (92 días)
 
 == Ingresos  ·  DGCVM INGRESOS.xlsx  ·  cargado 2026-10-07
@@ -62,5 +62,6 @@ Periodo de las bases: 2024-10-01 a 2024-12-31 (92 días)
 == Documentos vigentes estado × país  ·  DGRAM Extranjerios_DocVigente_EdosvsPaises.xlsx  ·  cargado 2026-10-07
 
 == Encuentros CBP  ·  CBP ENCUENTROS.xlsx  ·  cargado 2026-10-07
-   Reconocida; todavía no se usa en la página.
+   1,564 renglones · total 288,882 · del 2024-10-01 al 2024-12-31
+   Días sin datos: 0
 
