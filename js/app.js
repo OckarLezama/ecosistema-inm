@@ -226,6 +226,48 @@ function cambiarPeriodo(){
   $('tgraf').setAttribute('aria-valuemax', ND); pintarTodo();
 }
 const mesAnio = f => MES12[+f.slice(5,7)-1]+' '+f.slice(0,4);
+// Ayuda (i): el texto va en el propio botón; se asoma con el cursor y queda fija con un toque
+const infoP = txt => '<button class="rg-i" data-itxt="'+esc(txt)+'" aria-label="Qué muestra esta sección">i</button>';
+let ayudaFija = false;
+function ayuda(b, fija){ let p = $('rg-pop'); if (!p){ p = document.createElement('div'); p.id = 'rg-pop'; p.className = 'rg-pop'; document.body.appendChild(p); }
+  if (!b){ if (!ayudaFija || fija===null){ p.hidden = true; ayudaFija = false; } return; }
+  ayudaFija = !!fija; p.innerHTML = (fija ? '<button class="rg-pop-x" data-tipayx aria-label="Cerrar">×</button>' : '')+b.dataset.itxt; p.hidden = false; p.classList.toggle('fija', ayudaFija);
+  const r = b.getBoundingClientRect(), w = p.offsetWidth; p.style.left = Math.max(8, Math.min(r.left-12, window.innerWidth-w-8))+'px'; p.style.top = (r.bottom+8)+'px'; }
+/* ==== COMPARTIR: PDF de lo que está en pantalla, para descargar o mandar por WhatsApp ==== */
+const LIBS_PDF = ['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
+const cargarJS = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok; s.onerror = mal; document.head.appendChild(s); });
+function tituloVista(){ if (S.vista==='pulso') return 'Pulso'+(nombreFiltro() ? ' · '+nombreFiltro() : '');
+  const h = document.querySelector('#vista-otra h1'), t = document.querySelector('.rg-vistas .on'); return (h ? h.textContent : 'IA-NAMI')+(t ? ' · '+t.textContent : ''); }
+async function hacerPDF(){
+  await Promise.all(LIBS_PDF.map(cargarJS));
+  const zona = S.vista==='pulso' ? $('vista-pulso') : $('vista-otra'), tit = 'IA-NAMI · '+tituloVista()+' · '+(S.vista==='pulso' ? $('rango').textContent : ((document.querySelector('#vista-otra .rango b') || {}).textContent || ''));
+  const lienzo = await html2canvas(zona, { scale:1.6, backgroundColor:'#F4F2EA', useCORS:true, ignoreElements:el => el.id==='rg-pop' || el.id==='kpi-tip' || (el.classList && el.classList.contains('res')),
+    onclone:doc => { const st = doc.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; doc.head.appendChild(st); } });
+  const { jsPDF } = window.jspdf, pdf = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' }), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), m = 22;
+  const esc2 = (W-2*m)/lienzo.width, alto = Math.floor((H-2*m-14)/esc2);
+  for (let y=0, p=0; y<lienzo.height; y+=alto, p++){
+    if (p) pdf.addPage(); const h = Math.min(alto, lienzo.height-y), c = document.createElement('canvas'); c.width = lienzo.width; c.height = h;
+    c.getContext('2d').drawImage(lienzo, 0, y, lienzo.width, h, 0, 0, lienzo.width, h);
+    pdf.setFontSize(9); pdf.setTextColor(92, 89, 82); pdf.text(tit, m, m); pdf.text('Hoja '+(p+1), W-m, m, { align:'right' });
+    pdf.addImage(c.toDataURL('image/jpeg', .9), 'JPEG', m, m+8, W-2*m, h*esc2);
+  }
+  return { pdf:pdf, nombre:('IA-NAMI_'+tituloVista()).replace(/[^\wÁÉÍÓÚáéíóúñÑ]+/g,'_').replace(/_+$/,'')+'.pdf', tit:tit };
+}
+async function compartir(modo){
+  const b = $('b-comp'), txt = b.innerHTML; $('menu-comp').hidden = true; b.disabled = true; b.textContent = 'Generando PDF…';
+  try {
+    const r = await hacerPDF();
+    if (modo==='wa'){ const f = new File([r.pdf.output('blob')], r.nombre, { type:'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files:[f] })) await navigator.share({ files:[f], title:r.tit, text:r.tit });
+      else { r.pdf.save(r.nombre); window.open('https://wa.me/?text='+encodeURIComponent(r.tit+' — te comparto el PDF (adjúntalo desde tus descargas).'), '_blank', 'noopener'); } }
+    else r.pdf.save(r.nombre);
+  } catch (e){ if (!e || e.name!=='AbortError') alertaComp('No se pudo generar el PDF. Revisa tu conexión e intenta de nuevo.'); }
+  b.disabled = false; b.innerHTML = txt;
+}
+function alertaComp(m){ const a = $('menu-comp'); a.innerHTML = '<p class="mini" style="padding:8px 10px;margin:0">'+esc(m)+'</p>'; a.hidden = false; setTimeout(() => { a.hidden = true; menuComp(false); }, 3500); }
+function menuComp(abrir){ const m = $('menu-comp'); if (!abrir){ m.hidden = true; return; }
+  m.innerHTML = '<button data-comp="pdf"><b>Descargar PDF</b><span>de lo que estás viendo</span></button><button data-comp="wa"><b>Enviar por WhatsApp</b><span>'+(navigator.canShare ? 'elige el chat al compartir' : 'se descarga el PDF y se abre WhatsApp')+'</span></button>';
+  m.hidden = false; }
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const colG = g => cssv(g==='reg'?'--reg':g==='irr'?'--irr':'--usa');
 const reducido = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -244,7 +286,7 @@ function mezclaRGB(rampa, t){                  // color intermedio de una rampa,
 function tri(arriba, color){ return '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="'+(arriba?'M6 2l5 8H1z':'M6 10L1 2h10z')+'" fill="'+color+'"/></svg>'; }
 
 /* ==== [4] ESTADO Y FILTRO ========================================= */
-const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, circulos:true, puntos:false, cbp:false, car:false, carSel:null, modoVista:'mundo', centro:null, region:null, agr:'e', cmp:30, per:'shein', anio:fechaBase(D.dias-1).getFullYear(), mes:0, desde:D.inicio, hasta:D.corte, cruce:{ing:0, resc:0, pres:0}, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
+const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, circulos:true, puntos:false, cbp:false, car:false, carSel:null, modoVista:'mundo', centro:null, region:null, agr:'e', cmp:'sem', per:'shein', anio:fechaBase(D.dias-1).getFullYear(), mes:0, desde:D.inicio, hasta:D.corte, cruce:{ing:0, resc:0, pres:0}, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
 let E = 1;                                      // escala para pantallas muy grandes
 // Filtro que produce la selección: una lista de estados (estado, cinturón o CECO) o una nacionalidad
 // ss: estados; n: una nacionalidad; r: nacionalidades de la región elegida; nd: lo que usan los cálculos (n o r)
@@ -274,13 +316,17 @@ function fijarSel(sel, volar){ S.sel = sel; if (S.ind==='rep' && sel && sel.t===
 /* ==== [5] ANÁLISIS AUTOMÁTICO ===================================== */
 // Compara los últimos N días con datos contra los N anteriores (N = 7 o 30) con el filtro activo.
 // Variación: últimos N días contra los N anteriores, o el periodo contra el mismo periodo del año anterior ('aa')
-const cmpN = () => S.cmp==='aa' ? 30 : S.cmp;               // ventana para los avisos
-const etiquetaN = n => n===90 ? '3 meses' : n+' días';
-function textoCmp(){ return S.cmp==='aa' ? 'el periodo contra el mismo periodo del año anterior' : 'últimos '+etiquetaN(S.cmp)+' contra '+(S.cmp===90 ? 'los 3 meses' : 'los '+S.cmp+' días')+' anteriores'; }
+const cmpN = () => S.cmp==='aa' ? 30 : S.cmp==='sem' ? 7 : S.cmp;               // ventana para los avisos
+const etiquetaN = n => n==='sem' ? '7 días' : n===90 ? '3 meses' : n+' días';
+// Semana anterior: la última semana completa (lunes a domingo) con datos contra la previa
+function semanasCmp(U){ let b = U; while (b>0 && (diaDe(b-1).getDay()!==0)) b--; return b-14>=0 ? [b-7, b, b-14, b-7] : null; }
+function textoCmp(){ if (S.cmp==='sem'){ const w = semanasCmp(ND); return w ? 'semana del '+fechaDia(w[0])+' al '+fechaDia(w[1]-1)+' contra la anterior' : 'semana anterior'; }
+  return S.cmp==='aa' ? 'el periodo contra el mismo periodo del año anterior' : 'últimos '+etiquetaN(S.cmp)+' contra '+(S.cmp===90 ? 'los 3 meses' : 'los '+S.cmp+' días')+' anteriores'; }
 function variacion(d){
   const U = d.k ? finDatos(d.k) : ND;            // los días pendientes no entran a la comparación
   if (S.cmp==='aa'){ const q0 = idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))), b = q0>=0 && d.k ? sumaCompleta(d.k, d.F, q0, q0+U) : null, a = suma(d,0,U);
     return {a:a, b:b||0, dl: b ? (a/b-1)*100 : 0, ok: b!=null && b>=30}; }
+  if (S.cmp==='sem'){ const w = semanasCmp(U); if (!w) return {a:0, b:0, dl:0, ok:false}; const a = suma(d,w[0],w[1]), b = suma(d,w[2],w[3]); return {a:a, b:b, dl: b ? (a/b-1)*100 : 0, ok: b>=10}; }
   const N = S.cmp, a = suma(d,U-N,U), b = suma(d,U-2*N,U-N);
   return {a:a, b:b, dl: b ? (a/b-1)*100 : 0, ok: 2*N<=U && b >= (N>=30?30:10)};
 }
@@ -295,8 +341,8 @@ function sumaCompleta(k, F, q0, q1){
   }
   return t;
 }
-function cmpDisponible(o){ return o==='aa' ? idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))) >= 0 : 2*o<=ND; }
-function validarCmp(){ if (!cmpDisponible(S.cmp)) S.cmp = [30,7].find(cmpDisponible) || 7; }
+function cmpDisponible(o){ if (o==='sem') return !!semanasCmp(ND); return o==='aa' ? idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))) >= 0 : 2*o<=ND; }
+function validarCmp(){ if (!cmpDisponible(S.cmp)) S.cmp = ['sem',30,7].find(cmpDisponible) || 7; }
 function analizar(F){
   const out = [], N = cmpN(), umbral = N>=30 ? 15 : 25;
   INDS.forEach(m => {
@@ -395,7 +441,8 @@ const DEF_IND = {
   rep:'Personas mexicanas repatriadas desde EE. UU.'
 };
 const BASE_IND = {ing:'ing', rech:'seg', tram:'tram', resc:'resc', pres:'pres', can:'can_nna', ret:'ret', recib:'recib', rep:'rep'};
-const FUENTE = {resc:['eventos · O.R.','O.R.'], pres:['Sistema','Sistema']};     // [en la tarjeta, en el detalle]
+const FUENTE = {ing:['incluye mexicanos',null], resc:['eventos · O.R.','O.R.'], pres:['Sistema','Sistema']};     // [nota en la tarjeta, fuente en el detalle]
+const nomInd = k => IND[k].n+(k==='resc' ? ' (eventos)' : '');                 // nombre para títulos de listas
 // Último día con datos de cada indicador dentro del periodo: los días posteriores están pendientes, no son cero
 function finDatos(k){
   const bs = (k==='can' ? ['can_nna','can_ad'] : [BASE_IND[k]]).map(c => D.bases.find(x => x.k===c)).filter(b => b && b.hasta);
@@ -406,17 +453,20 @@ function tipKpi(el){
   const k = el.dataset.k, m = IND[k], F = filtro(), va = variacion(diario(k,F)), b = D.bases.find(x => x.k===BASE_IND[k]) || {};
   const tot = acum(k,F.ss,m.nat ? F.nd : null) || 1, tn = m.nat && F.n==null ? topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 3) : [];
   return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+
-    (va.ok ? '<span>'+(S.cmp==='aa' ? 'Este periodo' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(S.cmp==='aa' ? 'año anterior' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
+    (va.ok ? '<span>'+(S.cmp==='aa' ? 'Este periodo' : S.cmp==='sem' ? 'Última semana completa' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(S.cmp==='aa' ? 'año anterior' : S.cmp==='sem' ? 'semana previa' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
+    (U => U>0 ? '<span>Promedio: <b>'+miles(suma(diario(k,F),0,U)/U)+'</b> al día · <b>'+miles(suma(diario(k,F),0,U)/U*7)+'</b> a la semana'+(U>=60 ? ' · <b>'+miles(suma(diario(k,F),0,U)/U*30.4)+'</b> al mes' : '')+'</span>' : '')(finDatos(k))+
     (k==='resc' ? (r => '<span>Eventos: <b>'+miles(r[0]+r[1])+'</b> · personas (1ra vez): <b>'+miles(r[0])+'</b> · reincidentes: '+miles(r[1])+'</span>')(comp('resc_rei',F.ss,F.nd)) : '')+
     (tn.length ? '<span>Principales: '+tn.map(r => esc(D.nats[r[0]][0])+' '+pct(r[1],tot)+'%').join(' · ')+'</span>' : '')+
     (finDatos(k)<ND ? '<span>Días pendientes: la base llega al '+fechaLarga(finDatos(k)-1)+'; la comparación se hace hasta ese día.</span>' : '')+
-    '<small>'+(FUENTE[k] ? 'Fuente: '+FUENTE[k][1]+' · ' : '')+'Base: '+esc(b.archivo || '')+(b.hasta ? ' · datos al '+fechaISO(b.hasta) : '')+(TACTIL ? '' : ' · clic para verlo en el mapa')+'</small>';
+    '<small>'+(FUENTE[k] && FUENTE[k][1] ? 'Fuente: '+FUENTE[k][1]+' · ' : '')+'Base: '+esc(b.archivo || '')+(b.hasta ? ' · datos al '+fechaISO(b.hasta) : '')+(TACTIL ? '' : ' · clic para verlo en el mapa')+'</small>';
 }
 let tipEspera = 0;
-function mostrarTip(el, tocar){                  // en pantallas táctiles aparece al tocar y se va sola
-  const t = $('kpi-tip'); clearTimeout(tipEspera); if (!el || (TACTIL && !tocar)){ t.hidden = true; return; }
-  if (tocar) tipEspera = setTimeout(() => { t.hidden = true; }, 4500);
-  t.innerHTML = tipKpi(el); t.hidden = false;
+let PUNTERO = 'mouse';                           // último tipo de puntero: con el dedo, la ventanita se fija y se cierra con ×
+document.addEventListener('pointerdown', e => { PUNTERO = e.pointerType; }, true);
+function mostrarTip(el, tocar){
+  const t = $('kpi-tip'); clearTimeout(tipEspera); if (!el){ t.hidden = true; t.classList.remove('fija'); return; }
+  if (PUNTERO==='touch' && !tocar) return;
+  t.innerHTML = (tocar ? '<button class="kpi-tip-x" data-tipx aria-label="Cerrar">×</button>' : '')+tipKpi(el); t.hidden = false; t.classList.toggle('fija', !!tocar);
   const r = el.getBoundingClientRect(), w = t.offsetWidth;
   t.style.left = Math.max(8, Math.min(r.left, window.innerWidth-w-8))+'px'; t.style.top = (r.bottom+8)+'px';
 }
@@ -606,11 +656,11 @@ function pintarMapa(){
   const quien = (S.sel && S.sel.t!=='p' ? (S.sel.t==='n'?' de ':' en ')+nombreSel() : '')+(F.todo ? ' en '+(S.agr==='c' ? 'cinturones' : 'los CECO') : '')+(F.r ? ' · '+nombreRegion() : '');
   let h;
   if (kc){ const tot = acum(kc,F.ss,nF);
-    h = '<b>'+esc(IND[kc].n+quien)+'</b><span>'+(fin ? 'Periodo completo' : 'Ritmo semanal al '+fechaDia(S.dia-1))+'</span>'+
+    h = '<b>'+esc(nomInd(kc)+quien)+'</b><span>'+(fin ? 'Periodo completo' : 'Ritmo semanal al '+fechaDia(S.dia-1))+'</span>'+
         '<div class="gr"><span class="num">'+corto(tot)+'</span>'+chispa(semanal(kc,F.ss,nF),88,26,col,semDe(S.dia))+'</div>'+
         '<div class="rampa"><span>menos</span><i style="background:linear-gradient(90deg,'+rampa.join(',')+')"></i><span>'+corto(maxE)+'</span></div>'; }
   else h = '<b>Panorama'+esc(quien)+'</b><span>De dónde llegan'+(fin?'':' · al '+fechaDia(S.dia-1))+'. Elige un indicador para colorear los estados.</span>'+
-           '<span class="lin"><i style="background:'+t.reg+'"></i>Ingresos (regular)</span><span class="lin"><i style="background:'+t.irr+'"></i>Rescatados (irregular)</span>'+
+           '<span class="lin"><i style="background:'+t.reg+'"></i>Ingresos (regular)</span><span class="lin"><i style="background:'+t.irr+'"></i>Rescatados (irregular, eventos)</span>'+
            '<span class="nota">Línea: del país al lugar de registro · círculo: tamaño según el total</span>';
   if (pts.length){ const cP = t[cp.tipo==='ing'?'reg':cp.tipo==='rep'?'usa':'irr'];
     h += '<span class="lin"><span style="display:inline-flex;width:14px;height:14px">'+svgPunto(cp.tipo, cP, '#FFFFFF')+'</span>'+NOMBRE_PUNTO[cp.tipo]+'</span>'; }
@@ -648,7 +698,7 @@ function perfil(ss, n, activo, tc, breve){
 }
 function soloKpi(k, ss, n, tc, sem, breve){      // tarjeta con un indicador elegido: solo ese dato
   const nota = notaPerfil(k, ss, n), d = (ss && n!=null) ? '' : variaTxt(diario(k,{ss:ss,n:n}));
-  return '<span class="v">'+miles(acum(k, ss, n))+'</span>'+((nota || d) ? '<span class="s">'+[nota, d ? d+' '+(S.cmp==='aa' ? 'vs. año anterior' : 'en '+etiquetaN(S.cmp)) : ''].filter(Boolean).join(' · ')+'</span>' : '')+
+  return '<span class="v">'+miles(acum(k, ss, n))+'</span>'+((nota || d) ? '<span class="s">'+[nota, d ? d+' '+(S.cmp==='aa' ? 'vs. año anterior' : S.cmp==='sem' ? 'vs. semana anterior' : 'en '+etiquetaN(S.cmp)) : ''].filter(Boolean).join(' · ')+'</span>' : '')+
          (breve ? '' : chispa(semanal(k,ss,n),232,30,k==='rech'?tc.arena:tc[IND[k].g],sem));
 }
 const accion = (txt, may) => { const a = (TACTIL ? 'toca otra vez para ' : 'clic para ')+txt; return may ? a[0].toUpperCase()+a.slice(1) : a; };
@@ -857,6 +907,15 @@ function caminata(f, pa, pb, dx, dy, len, nx, ny, ahora, quieto){
 // Barras, promedio, cursor y meses comparten una sola escala X: siempre quedan alineados.
 // El cursor avanza día por día (barra por barra) y entre días se desliza de forma continua.
 let Wt = 300;
+let TT = null;
+function tipTiempo(e){
+  const tip = $('t-tip'); if (!tip || !TT) return; if (!e){ tip.hidden = true; return; }
+  const sv = $('tgraf'), r = sv.getBoundingClientRect(), W = sv.viewBox.baseVal.width || r.width, i = Math.floor((e.clientX-r.left)/r.width*W/TT.pw);
+  if (i<0 || i>=ND){ tip.hidden = true; return; }
+  tip.innerHTML = '<b>'+fechaLarga(i)+'</b>'+TT.capas.map(c => '<span><i style="background:'+c.c+'"></i>'+IND[c.k].n+': <b>'+(i<c.U ? miles(c.d[i]) : 'pendiente')+'</b></span>').join('');
+  tip.hidden = false; const p = sv.parentNode.getBoundingClientRect(), w = tip.offsetWidth;
+  tip.style.left = Math.max(0, Math.min(e.clientX-p.left+12, p.width-w))+'px'; tip.style.top = '-6px';
+}
 function pintarTiempo(){
   // Sin indicador: ingresos hacia arriba y rescatados hacia abajo (espejo), cada uno con su propia escala.
   // Con indicador: solo esa serie. Debajo, la tira de vacaciones; arriba, los eventos.
@@ -866,8 +925,9 @@ function pintarTiempo(){
   let h = '<defs><pattern id="pend" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="'+t.tinta+'" stroke-opacity=".2" stroke-width="2"/></pattern></defs>';
   const cadaCuanto = Math.ceil(MESES_INI.length*46/W);                 // si hay muchos meses, se rotula uno de cada tantos
   MESES_INI.forEach((m,i) => { const x = (m[0]*pw).toFixed(1); h += '<line x1="'+x+'" y1="8" x2="'+x+'" y2="'+(TIRA+4)+'" stroke="'+t.tinta+'" stroke-opacity=".12"/>'+(i%cadaCuanto ? '' : '<text x="'+(m[0]*pw+4).toFixed(1)+'" y="'+(H-2)+'" font-size="11" fill="'+t.tinta+'" fill-opacity=".7" font-family="Barlow, sans-serif">'+m[1]+'</text>'); });
-  const tot = {};
+  const tot = {}; TT = { pw:pw, capas:[] };
   capas.forEach(cp => { const k = cp[0], b = cp[1], al = cp[2], dir = cp[3], d = serie(k), mx = Math.max.apply(null,d) || 1, c = t[IND[k].g], U = finDatos(k);
+    TT.capas.push({ k:k, d:d, c:c, U:U });
     tot[k] = suma(d,0,S.dia);
     d.forEach((v,i) => { const bh = Math.max(0.6, v/mx*al); h += '<rect x="'+(i*pw+0.5).toFixed(1)+'" y="'+(dir>0 ? b-bh : b).toFixed(1)+'" width="'+Math.max(1,pw-1.5).toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="1" fill="'+c+'" fill-opacity="'+(i<S.dia?0.7:0.2)+'"/>'; });
     const ma = []; for (let i=0;i<Math.min(S.dia,U);i++){ const a = Math.max(0,i-6); ma.push(((i+0.5)*pw).toFixed(1)+','+(b - dir*suma(d,a,i+1)/(i+1-a)/mx*al).toFixed(1)); }
@@ -886,8 +946,8 @@ function pintarTiempo(){
   sv.setAttribute('viewBox','0 0 '+W+' '+H); sv.innerHTML = h; moverCursor(S.play ? S.t : S.dia);
   sv.setAttribute('aria-valuenow', S.dia); sv.setAttribute('aria-valuetext','al '+fechaDia(S.dia-1));
   const cua = c => '<i class="t-c" style="background:'+c+'"></i>';
-  $('t-tit').innerHTML = dos ? cua(t.reg)+'<b>Ingresos</b> '+corto(tot.ing)+' &nbsp; '+cua(t.irr)+'<b>Rescatados</b> '+corto(tot.resc)+' <span class="t-n">por día · cada serie con su escala</span>'
-                             : cua(t[IND[S.ind].g])+'<b>'+IND[S.ind].n+'</b> '+corto(tot[S.ind])+' <span class="t-n">por día</span>';
+  $('t-tit').innerHTML = infoP('Cada barra es un día. Sin indicador elegido: ingresos hacia arriba y rescatados hacia abajo, cada uno con su escala. La línea es el promedio de 7 días y la franja dorada, las vacaciones SEP. Pasa el cursor o toca para ver la fecha y el dato; arrastra para moverte en el tiempo; ▶ reproduce el periodo.')+(dos ? cua(t.reg)+'<b>Ingresos</b> '+corto(tot.ing)+' &nbsp; '+cua(t.irr)+'<b>Rescatados</b> '+corto(tot.resc)+' <span class="t-n">por día · cada serie con su escala</span>'
+                             : cua(t[IND[S.ind].g])+'<b>'+IND[S.ind].n+'</b> '+corto(tot[S.ind])+' <span class="t-n">por día</span>');
   $('t-ley').innerHTML = '<span style="display:inline-block;width:14px;height:4px;border-radius:2px;background:#BDB58D;margin-right:4px;vertical-align:middle"></span>vacaciones SEP · <svg width="20" height="6" viewBox="0 0 20 6" style="vertical-align:middle"><line x1="0" y1="3" x2="20" y2="3" stroke="'+t.tinta+'" stroke-width="2"/></svg> promedio de 7 días';
   $('play').innerHTML = S.play ? '<svg width="14" height="14" viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" fill="currentColor"/></svg>' : '<svg width="14" height="14" viewBox="0 0 16 16"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>';
   $('play').setAttribute('aria-label', S.play ? 'Pausar' : 'Reproducir el periodo');
@@ -931,14 +991,14 @@ function pintarDocs(){
     barra = '<div class="apil">'+seg.map((x,i)=>'<span style="width:'+(x[1]/dv.total*100).toFixed(1)+'%;background:'+cs[i]+'" title="'+x[0]+': '+miles(x[1])+'"></span>').join('')+'</div>'+
             '<div class="ley">'+seg.map((x,i)=>'<span><i style="background:'+cs[i]+'"></i>'+x[0]+' '+pct(x[1],dv.total)+'%</span>').join('')+'</div>';
   }
-  $('docs').innerHTML = '<h2><span>Extranjeros con documento vigente</span></h2>'+
+  $('docs').innerHTML = '<h2><span>Extranjeros con documento vigente</span>'+infoP('Personas extranjeras con un documento migratorio vigente (residencia o visitante) al último corte semanal de la DGRAM. Es una foto al día del corte: por eso solo aparece cuando consultas un periodo que llega a hoy.')+'</h2>'+
     '<div class="docs-f"><span class="num">'+(tot==null?'s/d':miles(tot))+'</span><span class="mini">'+esc(sub)+(hm?' · '+pct(hm[1],hm[0]+hm[1])+'% mujeres':'')+'</span></div>'+barra+
     '<span class="mini">Corte: '+fechaISO(dv.corte)+'</span>';
 }
 function pintarAnalisis(){
-  const F = filtro(); AVISOS = analizar(F);
-  const quien = nombreFiltro() || 'todo el país';
-  $('analisis').innerHTML = '<h2><span>Lo que cambió</span>'+(AVISOS.length ? '<small class="av-n">'+AVISOS.length+' hallazgos</small>' : '')+'</h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
+  const F = filtro(); AVISOS = analizar(F).filter(a => !S.ind || a.k===S.ind || (a.t==='car' && S.ind==='resc'));   // con un indicador elegido, solo sus cambios
+  const quien = (S.ind ? IND[S.ind].n+' · ' : '')+(nombreFiltro() || 'todo el país');
+  $('analisis').innerHTML = '<h2><span>Lo que cambió</span>'+infoP('Cambios recientes que conviene atender: indicadores que subieron o bajaron más de lo normal, nacionalidades o estados que se movieron y caravanas. Compara según «Comparar con». Solo aparece cuando el periodo llega a hoy.')+(AVISOS.length ? '<small class="av-n">'+AVISOS.length+' hallazgos</small>' : '')+'</h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
     (AVISOS.length ? '<div class="avisos-lista">'+AVISOS.map(filaAviso).join('')+'</div>' : '<span class="mini">Sin cambios relevantes con este filtro.</span>');
 }
 const barrasNat = (l, color) => { const mx = l.length?l[0][1]:1; return l.map(r => '<button class="barra" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+color+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); };
@@ -952,7 +1012,7 @@ function htmlBreve(n){                          // datos clave de una nacionalid
 }
 function htmlTops(F, k){
   const l = topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, TOP);
-  return '<div class="caja"><h2><span>Principales nacionalidades · '+IND[k].n+'</span>'+(S.region ? '<small>'+REGIONES[S.region][0]+'</small>' : '')+'</h2>'+
+  return '<div class="caja"><h2><span>Principales nacionalidades · '+nomInd(k)+'</span>'+infoP('Las nacionalidades con más registros de este indicador en el periodo, con su parte del total. Toca una para filtrar todo el tablero por ella.')+(S.region ? '<small>'+REGIONES[S.region][0]+'</small>' : '')+'</h2>'+
     '<span class="mini">'+(S.dia<ND ? 'Acumulado al '+fechaDia(S.dia-1) : 'Periodo completo')+'</span>'+
     (barrasNat(l, colG(IND[k].g)) || '<span class="mini">Sin registros.</span>')+'</div>';
 }
@@ -985,24 +1045,24 @@ const nomEst = i => String(D.estaciones[i]).replace(/^E[MP] /,'');
 function cajaCruce(k, F){
   const c = colG(IND[k].g), q = S.cruce[k] || 0, cfg = {
     ing:{ kc:'ing_via', cats:['vía aérea','vía terrestre','vía marítima'], tit:'Nacionalidades por ', de:'de sus ingresos' },
-    resc:{ kc:'resc_rei', cats:['primera vez','reincidentes'], tit:'Nacionalidades · ', de:'de sus rescates' },
+    resc:{ kc:'resc_rei', cats:['primera vez','reincidentes'], tit:'Nacionalidades · ', de:'de sus rescates (eventos)' },
     pres:{ kc:'pres_est', cats:D.estaciones.map((x,i)=>nomEst(i)), tit:'Nacionalidades en ', de:'de sus presentados' } }[k];
   const tot = n => comp(cfg.kc,F.ss,n), l = topNats(n => enRegion(n) ? tot(n)[q] : 0, TOP), mx = l.length ? l[0][1] : 1;
-  return '<div class="caja"><h2><span>'+cfg.tit+esc(cfg.cats[q])+'</span></h2><span class="mini">Se cambia desde Composición · periodo completo · el % es la parte '+cfg.de+'</span>'+
+  return '<div class="caja"><h2><span>'+cfg.tit+esc(cfg.cats[q])+'</span>'+infoP('Las principales nacionalidades dentro de la categoría elegida en «Composición». El % es su parte de esa categoría.')+'</h2><span class="mini">Se cambia desde Composición · periodo completo · el % es la parte '+cfg.de+'</span>'+
     (l.map(r => { const t = tot(r[0]).reduce((a,b)=>a+b,0);
       return '<button class="barra pc" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+' <small>'+pct(r[1],t)+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>'; }).join('') || '<span class="mini">Sin registros.</span>')+'</div>';
 }
 // Rechazos: nacionalidades que sí se internaron tras la segunda revisión, con su tasa de rechazo
 function cajaInternacion(F){
   const c = colG('reg'), l = topNats(n => enRegion(n) ? comp('rech_det',F.ss,n)[0] : 0, TOP), mx = l.length ? l[0][1] : 1;
-  return '<div class="caja"><h2><span>Principales nacionalidades · Internación</span></h2><span class="mini">Se internaron tras la 2da revisión · periodo completo · el % es su tasa de rechazo</span>'+
+  return '<div class="caja"><h2><span>Principales nacionalidades · Internación</span>'+infoP('Nacionalidades que pasaron a segunda revisión y se internaron. El % es su tasa de rechazo en esa revisión.')+'</h2><span class="mini">Se internaron tras la 2da revisión · periodo completo · el % es su tasa de rechazo</span>'+
     (l.map(r => { const v = comp('rech_det',F.ss,r[0]);
       return '<button class="barra pc" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+' <small>'+pct(v[1],v[0]+v[1])+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>'; }).join('') || '<span class="mini">Sin registros.</span>')+'</div>';
 }
 // Trámites: los 10 tipos más frecuentes
 function cajaTramites(F){
   const v = comp('tram_tipo',F.ss,F.nd).map((x,i)=>[i,x]).filter(r => r[1]>0 && D.tramTipos[r[0]]!=='Otros').sort((x,y)=>y[1]-x[1]).slice(0,5), mx = v.length ? v[0][1] : 1, tot = comp('tram_tipo',F.ss,F.nd).reduce((a,b)=>a+b,0);
-  return '<div class="caja"><h2><span>Principales trámites</span></h2><span class="mini">Periodo completo · el % es la parte del total</span>'+
+  return '<div class="caja"><h2><span>Principales trámites</span>'+infoP('Los tipos de trámite migratorio con más registros en el periodo y su parte del total.')+'</h2><span class="mini">Periodo completo · el % es la parte del total</span>'+
     (v.map(r => '<div class="barra larga" title="'+esc(D.tramTipos[r[0]])+'"><span>'+esc(D.tramTipos[r[0]])+' <small>'+pct(r[1],tot)+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+colG('reg')+'"></i></span><span class="x">'+corto(r[1])+'</span></div>').join('') || '<span class="mini">Sin registros.</span>')+'</div>';
 }
 // Sexo y edad donde la base los trae; en las demás, su propio desglose.
@@ -1027,7 +1087,7 @@ function htmlComp(k, F){
   else if (k==='resc'){ const a = comp('resc_rei',s,n), d = comp('resc_des',s,n);
     h = elegible('Primera vez o reincidente','resc',[['Primera vez',a[0],c2],['Reincidente',a[1]]]) + grupo('Destino',[['Estación migr.',d[0]],['DIF',d[1]],['Sin destino',d[2],c2]]); }
   else if (k==='pres'){ const v = comp('pres_est',s,n).map((x,i)=>[i,x]).filter(r=>r[1]>0).sort((x,y)=>y[1]-x[1]).slice(0,TOP), mx = v.length ? v[0][1] : 1; sub = 'Estaciones con más presentados · clic para ver sus nacionalidades';
-    return '<div class="caja"><h2><span>Composición · Presentados</span></h2><span class="mini">'+sub+' · periodo completo</span>'+
+    return '<div class="caja"><h2><span>Composición · Presentados</span>'+infoP('Cómo se reparten las personas presentadas ante el INM. Toca una categoría para ver sus nacionalidades en la tarjeta de al lado.')+'</h2><span class="mini">'+sub+' · periodo completo</span>'+
       (v.map(r => '<button class="barra'+(S.cruce.pres===r[0]?' on':'')+'" data-cruce="pres:'+r[0]+'"><span>'+esc(nomEst(r[0]))+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join('') || '<span class="mini">Sin registros con este filtro.</span>')+'</div>'; }
   else if (k==='can'){ const v = comp('can_nna',s,n), a = comp('can_ad',s,n), g2 = f => v.reduce((t,x,i)=>t+(f(i)?x:0),0); sub = 'Niñas, niños y adolescentes, y sus acompañantes';
     h = grupo('NNA por sexo',[['Niñas',g2(i=>i>=6)],['Niños',g2(i=>i<6),c2]]) + grupo('NNA por edad',[['0 a 11 años',g2(i=>Math.floor(i/3)%2===0)],['12 a 17 años',g2(i=>Math.floor(i/3)%2===1),c2]]) +
@@ -1038,7 +1098,7 @@ function htmlComp(k, F){
     h = anillo('recib_edad', s, n, [['Menores',1,c,'son menores'],['Adultos',0,c2,'adultos']]); }
   else if (k==='rep'){ const v = comp('rep_comp',s,null); sub = 'Sexo y edad de los mexicanos repatriados';
     h = grupo('Adultos',[['Hombres',v[0],c2],['Mujeres',v[1]]]) + grupo('Menores',[['Niños',v[2],c2],['Niñas',v[3]]]) + grupo('Menores, con o sin compañía',[['Acompañados',v[4],c2],['Solos',v[5]]]) + grupo('Modalidad',[['Terrestre',v[6],c2],['Aérea',v[7]]]); }
-  return '<div class="caja"><h2><span>Composición · '+(k==='rech' ? '2da revisión' : IND[k].n)+'</span></h2><span class="mini">'+sub+' · periodo completo</span><div class="cgrid">'+(h || '<span class="mini">Sin registros con este filtro.</span>')+'</div></div>';
+  return '<div class="caja"><h2><span>Composición · '+(k==='rech' ? '2da revisión' : IND[k].n)+'</span>'+infoP('Cómo se reparte el indicador por tipo (vía, edad, sexo u otro). Toca una categoría para ver sus nacionalidades.')+'</h2><span class="mini">'+sub+' · periodo completo</span><div class="cgrid">'+(h || '<span class="mini">Sin registros con este filtro.</span>')+'</div></div>';
 }
 function cajaLugares(k, F){                      // un indicador repartido por estado, cinturón o CECO
   const nF = IND[k].nat ? F.nd : null, c = colG(IND[k].g); let filas, tit;
@@ -1046,13 +1106,13 @@ function cajaLugares(k, F){                      // un indicador repartido por e
     let lista = F.ss && F.ss.length>1 ? todos.filter(r => F.ss.indexOf(r[0])>=0).slice(0,TOP) : todos.slice(0,TOP);
     const lugar = todos.findIndex(r => r[0]===uno), mx = lista.length?lista[0][1]:1;
     if (lugar>=TOP) lista = lista.slice(0,TOP-1).concat([todos[lugar]]);
-    tit = F.nd!=null ? IND[k].donde : IND[k].n+' por estado';
+    tit = F.nd!=null ? IND[k].donde : nomInd(k)+' por estado';
     filas = lista.map(r => '<button class="barra'+(r[0]===uno?' on':'')+'" data-e="'+r[0]+'"><span>'+(r[0]===uno?(lugar+1)+'.º ':'')+esc(ESTC[r[0]])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); }
   else { const ag = AGR[S.agr], tot = ag.nombres.map((x,q)=>acum(k,miembros(S.agr,q),nF)), sin = acum(k,null,nF)-tot.reduce((x,y)=>x+y,0);
-    const mx = Math.max(sin, Math.max.apply(null,tot), 1); tit = (F.nd!=null ? IND[k].donde : IND[k].n)+' por '+ag.n.toLowerCase();
+    const mx = Math.max(sin, Math.max.apply(null,tot), 1); tit = (F.nd!=null ? IND[k].donde : nomInd(k))+' por '+ag.n.toLowerCase();
     filas = ag.nombres.map((nom,q) => '<button class="barra" data-g="'+S.agr+q+'"><span>'+nom+'</span><span class="b"><i style="width:'+(tot[q]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(tot[q])+'</span></button>').join('')+
             '<div class="barra"><span>'+ag.sin+'</span><span class="b"><i style="width:'+(Math.max(sin,0)/mx*100).toFixed(1)+'%;background:'+cssv('--ink3')+'"></i></span><span class="x">'+corto(Math.max(sin,0))+'</span></div>'; }
-  return '<div class="caja"><h2><span>'+esc(tit)+'</span></h2><span class="mini">'+(S.dia<ND?'Acumulado al '+fechaDia(S.dia-1):'Periodo completo')+(S.agr!=='e'&&(!F.ss||F.todo)?' · clic en un grupo para filtrar solo ese':'')+'</span>'+(filas || '<span class="mini">Sin registros.</span>')+'</div>';
+  return '<div class="caja"><h2><span>'+esc(tit)+'</span>'+infoP('Total por estado (o por el grupo elegido en el mapa) en el periodo. Toca un estado para filtrar todo el tablero.')+'</h2><span class="mini">'+(S.dia<ND?'Acumulado al '+fechaDia(S.dia-1):'Periodo completo')+(S.agr!=='e'&&(!F.ss||F.todo)?' · clic en un grupo para filtrar solo ese':'')+'</span>'+(filas || '<span class="mini">Sin registros.</span>')+'</div>';
 }
 function fechaEv(f){ const p = f.split('-'); return (p[2] ? (+p[2])+' ' : '')+MES12[+p[1]-1]+' '+p[0]; }
 // Lo que se ve en nuestras cifras: 4 semanas después del evento contra las 4 anteriores (si cae dentro del periodo de las bases)
@@ -1106,8 +1166,9 @@ function pintarCtl(){
   const f0 = diaDe(0), f1 = diaDe(S.dia-1);
   $('rango').textContent = f0.getDate()+' '+MES12[f0.getMonth()]+(f0.getFullYear()!==f1.getFullYear() ? ' '+f0.getFullYear() : '')+' – '+fechaLarga(S.dia-1);
   $('rango-nota').textContent = S.dia>=ND ? ND+' días' : S.dia+' de '+ND+' días';
-  $('cmp').innerHTML = [[7,'7 días'],[30,'30 días'],[90,'3 meses'],['aa','Año anterior']].map(o => { const ok = cmpDisponible(o[0]), on = S.cmp===o[0];
-    return '<button data-cmp="'+o[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'"'+(ok ? '' : ' disabled')+' title="'+(o[0]==='aa' ? (ok ? 'El periodo contra el mismo periodo del año anterior' : 'Requiere datos del año anterior') : (ok ? 'Últimos '+o[1]+' contra los '+o[1]+' anteriores' : 'El periodo elegido es muy corto'))+'">'+o[1]+'</button>'; }).join('');
+  $('cmp').innerHTML = '<select id="cmp-sel" aria-label="Comparar con">'+[['sem','Semana anterior'],[7,'7 días previos'],[30,'30 días previos'],[90,'3 meses previos'],['aa','Mismo periodo del año anterior']].map(o => { const ok = cmpDisponible(o[0]);
+    return '<option value="'+o[0]+'"'+(String(S.cmp)===String(o[0])?' selected':'')+(ok?'':' disabled')+'>'+o[1]+(!ok && o[0]==='aa' ? ' (sin datos)' : '')+'</option>'; }).join('')+'</select>'+
+    (S.cmp==='sem' && semanasCmp(ND) ? (w => '<span class="cmp-n">'+fechaDia(w[0])+' – '+fechaDia(w[1]-1)+' contra '+fechaDia(w[2])+' – '+fechaDia(w[3]-1)+'</span>')(semanasCmp(ND)) : '');
   // Periodos: Sheinbaum, Trump, Año (con mes) y Personalizado
   $('per').innerHTML = [['shein','Sheinbaum'],['trump','Trump'],['anio','Año'],['pers','Personalizado']].map(o => { const ok = !!rangoPeriodo(o[0]==='anio' || o[0]==='pers' ? 'shein' : o[0]) && (o[0]!=='trump' || idxBase('2025-01-20') < D0.dias), on = S.per===o[0];
     return '<button data-per="'+o[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'"'+(ok ? '' : ' disabled title="Sin datos para este periodo"')+'>'+o[1]+'</button>'; }).join('');
@@ -1123,6 +1184,9 @@ function pintarCtl(){
 }
 function pintarTodo(soloTiempo){
   if (S.vista!=='pulso') return;
+  const actual = P1>=D0.dias, m = document.querySelector('.main');
+  if (m && m.classList.contains('pasado')===actual){ m.classList.toggle('pasado', !actual); setTimeout(() => window.dispatchEvent(new Event('resize')), 520); }
+  const av = $('aviso-pasado'); if (av) av.hidden = actual;
   pintarCtl(); if (!soloTiempo) pintarAnalisis(); if (!soloTiempo) pintarDocs(); pintarKpis(); pintarTiempo(); pintarMapa(); pintarBajo(); marcarFiltro();
 }
 // Con una nacionalidad, estado, grupo o punto elegido, cada tarjeta que cambió lleva una franja y el nombre
@@ -1135,6 +1199,109 @@ function marcarFiltro(){
     if (nom && !c.dataset.propia){ if (!t){ t = document.createElement('span'); t.className = 'tag'; h.appendChild(t); } t.textContent = nom; }
     else if (t) t.remove();
   });
+}
+
+/* ==== [12] VENTANA DE CONSULTA ==================================== */
+// Se escribe la pregunta; la página reconoce indicador, desglose, lugar, nacionalidad y periodo,
+// muestra lo que entendió (editable) y responde con los datos de las bases. Sin servicios externos.
+const Q = { k:'tram', por:'n', s:-1, n:-1, r:'', d0:D.inicio, d1:D.corte, top:10 };
+const SINON = { ing:['ingreso','entrada','internacion'], rech:['rechaz','inadmi'], tram:['tramite','documento','residen','visa'], resc:['rescat','rescate'],
+                pres:['presentad'], can:['canalizad','nna','menores'], ret:['retornad','retorno','deportad'], recib:['recibid'], rep:['repatriad','repatriacion'] };
+function entender(txt){
+  const t = ' '+sinAcento(txt).replace(/[^a-z0-9ñ ]/g,' ').replace(/\s+/g,' ')+' ', q = Object.assign({}, Q, {s:-1, n:-1, r:'', d0:D.inicio, d1:D.corte, top:10});
+  Object.keys(SINON).forEach(k => { if (SINON[k].some(w => t.indexOf(' '+w)>=0)) q.k = k; });
+  const dicho = /por (estado|entidad|oficina)|en que estado|donde/.test(t) ? 'e' : /por mes|mensual|cada mes|por meses/.test(t) ? 'm' : /por (dia|fecha)|diari/.test(t) ? 'd' : /por (nacionalidad|pais|paises|origen)/.test(t) ? 'n' : '';
+  q.por = dicho || 'n';
+  EST.map((e,i) => [sinAcento(e), i]).concat([['cdmx', EST.indexOf('Ciudad de México')], ['edomex', EST.indexOf('Estado de México')]]).sort((a,b) => b[0].length-a[0].length)
+     .some(x => { if (t.indexOf(' '+x[0]+' ')>=0){ q.s = x[1]; return true; } return false; });
+  const alias = [['estados unidos',D.nats.findIndex(x => x[1]===840)], ['eeuu',D.nats.findIndex(x => x[1]===840)], ['eua',D.nats.findIndex(x => x[1]===840)]];
+  D.nats.slice(0,OT).map((x,i) => [sinAcento(x[0]).replace(/\./g,'').trim(), i]).concat(alias).filter(x => x[0].length>3 && x[1]>=0).sort((a,b) => b[0].length-a[0].length)
+     .some(x => { if (t.indexOf(' '+x[0]+' ')>=0 && !(q.s>=0 && sinAcento(EST[q.s]).indexOf(x[0])>=0)){ q.n = x[1]; return true; } return false; });
+  Object.keys(REGIONES).forEach(r => { const w = sinAcento(REGIONES[r][0]).split(' ')[0]; if (t.indexOf(' '+w)>=0) q.r = r; });
+  const anio = t.match(/ (20[12]\d) /), mes = MES12.findIndex(m => new RegExp(' '+m+'[a-z]* ').test(t));
+  if (/sheinbaum/.test(t)) q.d0 = '2024-10-01';
+  if (/trump/.test(t)) q.d0 = '2025-01-20';
+  if (anio){ const y = +anio[1]; if (mes>=0){ q.d0 = isoDe(new Date(y,mes,1)); q.d1 = isoDe(new Date(y,mes+1,0)); } else { q.d0 = y+'-01-01'; q.d1 = y+'-12-31'; } }
+  else if (mes>=0){ const y = fechaBase(D0.dias-1).getFullYear(); q.d0 = isoDe(new Date(y,mes,1)); q.d1 = isoDe(new Date(y,mes+1,0)); }
+  const top = t.match(/ (?:top|principales|primer[oa]s) (\d{1,2}) /); if (top) q.top = Math.max(3, Math.min(50, +top[1]));
+  if (!dicho && q.n>=0) q.por = q.s>=0 ? 'm' : 'e';           // con país y estado elegidos, lo útil es verlo en el tiempo
+  if (!dicho && q.s>=0 && q.n<0 && !IND[q.k].nat) q.por = 'm';
+  if (q.d0<D.inicio) q.d0 = D.inicio; if (q.d1>D.corte) q.d1 = D.corte;   // el rango no puede salir de lo que traen las bases
+  return q;
+}
+// Suma de un indicador en [q0, q1) de las bases completas, con estado y nacionalidad opcionales
+function sumaQ(k, ss, nn, q0, q1){
+  let t = 0;
+  if (ss && nn){ const E0 = D0.ends, L = NS*NN, A = CUBO0[k];        // estado × nacionalidad: por semana, la parte que cae en el rango
+    for (let w=0; w<E0.length; w++){ const a = w ? E0[w-1] : 0, b = E0[w], f = (Math.min(b,q1)-Math.max(a,q0))/(b-a); if (f<=0) continue;
+      ss.forEach(s => nn.forEach(n => { t += A[w*L + s*NN + n]*f; })); }
+    return t; }
+  for (let d=q0; d<q1; d++){
+    if (ss) ss.forEach(s => { t += D0.ds[k][d*NS+s]; });
+    else if (nn) nn.forEach(n => { t += D0.dn[k][d*NN+n]; });
+    else t += D0.daily[k][d]; }
+  return t;
+}
+function responder(q){
+  const q0 = Math.max(0, idxBase(q.d0)), q1 = Math.min(D0.dias, idxBase(q.d1)+1), ss = q.s>=0 ? [q.s] : null, k = q.k, m = IND[k];
+  const nn = !m.nat ? null : q.n>=0 ? [q.n] : q.r ? LISTA_REG[q.r] : null;
+  if (q1<=q0) return { filas:[], tot:0, vacio:'Las bases no tienen datos en ese periodo (cubren del '+fechaISO(D.inicio)+' al '+fechaISO(D.corte)+').' };
+  let filas = [];
+  if (q.por==='n' && m.nat){ for (let n=0;n<OT;n++){ if (q.r && D.nats[n][2]!==q.r) continue; if (q.n>=0 && n!==q.n) continue; const v = sumaQ(k, ss, [n], q0, q1); if (v>0) filas.push([D.nats[n][0], v]); } }
+  else if (q.por==='e'){ for (let s=0;s<NS;s++){ if (q.s>=0 && s!==q.s) continue; const v = sumaQ(k, [s], nn, q0, q1); if (v>0) filas.push([EST[s], v]); } }
+  else { const porMes = q.por==='m', grupos = {};
+    for (let d=q0; d<q1; d++){ const f = fechaBase(d), clave = porMes ? f.getFullYear()*12+f.getMonth() : d; grupos[clave] = (grupos[clave]||0) + sumaQ(k, ss, nn, d, d+1); }
+    filas = Object.keys(grupos).map(Number).sort((a,b)=>a-b).map(c => [porMes ? MES12[c%12]+' '+Math.floor(c/12) : fechaLarga(c-idxBase(isoDe(INICIO))), grupos[c]]); }
+  const orden = q.por==='n' || q.por==='e', suma = filas.reduce((a,b)=>a+b[1],0), tot = q.por==='n' ? sumaQ(k, ss, nn && q.n<0 && !q.r ? null : nn, q0, q1) : suma;
+  if (q.por==='n' && tot-suma >= 1) filas.push(['Sin nacionalidad u otras', tot-suma]);     // empleadores, «Otras» y mexicanos: el total siempre cuadra
+  if (orden) filas.sort((a,b)=>b[1]-a[1]);
+  return { filas: orden ? filas.slice(0, q.top) : filas, todas: filas, tot: tot, resto: orden ? Math.max(0, filas.length-q.top) : 0 };
+}
+function tituloQ(q){
+  const por = {n:'por nacionalidad', e:'por estado', m:'por mes', d:'por día'}[q.por];
+  return nomInd(q.k)+' '+por+(q.s>=0 ? ' · '+EST[q.s] : '')+(q.n>=0 ? ' · '+D.nats[q.n][0] : q.r ? ' · '+REGIONES[q.r][0] : '')+' · '+fechaISO(q.d0)+' – '+fechaISO(q.d1);
+}
+function pintarConsulta(){
+  const q = Q, r = responder(q), c = colG(IND[q.k].g), mx = r.filas.reduce((a,b)=>Math.max(a,b[1]),1);
+  const op = (v, l, sel) => '<option value="'+v+'"'+(sel?' selected':'')+'>'+esc(l)+'</option>';
+  $('q-ent').innerHTML =
+    '<label>Indicador<select data-q="k">'+INDS.map(m => op(m.k, m.n, q.k===m.k)).join('')+'</select></label>'+
+    '<label>Desglose<select data-q="por">'+[['n','por nacionalidad'],['e','por estado'],['m','por mes'],['d','por día']].filter(x => x[0]!=='n' || IND[q.k].nat).map(x => op(x[0], x[1], q.por===x[0])).join('')+'</select></label>'+
+    '<label>Estado<select data-q="s">'+op(-1,'Todo el país',q.s<0)+EST.map((e,i) => op(i, e, q.s===i)).join('')+'</select></label>'+
+    (IND[q.k].nat ? '<label>Nacionalidad<select data-q="n">'+op(-1,'Todas',q.n<0)+D.nats.slice(0,OT).map((x,i)=>[x[0],i]).sort((a,b)=>a[0].localeCompare(b[0],'es')).map(x => op(x[1], x[0], q.n===x[1])).join('')+'</select></label>' : '')+
+    '<label>Desde<input type="date" data-q="d0" value="'+q.d0+'" min="'+D.inicio+'" max="'+D.corte+'"></label><label>Hasta<input type="date" data-q="d1" value="'+q.d1+'" min="'+D.inicio+'" max="'+D.corte+'"></label>';
+  $('q-res').innerHTML = '<div class="q-cab"><div><b>'+esc(tituloQ(q))+'</b><span>Total: <b class="num">'+miles(r.tot)+'</b>'+(r.resto ? ' · se muestran los '+q.top+' principales de '+r.todas.length : '')+'</span></div>'+
+      (r.filas.length ? '<button class="q-csv" id="q-csv">Descargar CSV</button>' : '')+'</div>'+
+    (r.vacio ? '<p class="mini">'+esc(r.vacio)+'</p>' : !r.filas.length ? '<p class="mini">Sin registros con esos criterios.</p>' :
+      '<div class="q-tabla">'+r.filas.map((f,i) => '<div class="barra pc"><span>'+(q.por==='n'||q.por==='e' ? (i+1)+'. ' : '')+esc(f[0])+' <small>'+(r.tot ? (f[1]/r.tot*100).toFixed(1) : 0)+'%</small></span><span class="b"><i style="width:'+(f[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+miles(f[1])+'</span></div>').join('')+'</div>')+
+    '<p class="q-nota">Datos de las bases'+(q.s>=0 && q.n>=0 ? ' · el cruce estado × nacionalidad se guarda por semana: en un rango que corta semanas, esa parte se reparte por día' : '')+'.</p>';
+}
+function abrirConsulta(abrir){
+  $('consulta').hidden = !abrir; document.body.classList.toggle('modal', abrir);
+  if (abrir){ pintarConsulta(); setTimeout(() => $('q-txt').focus(), 30); }
+}
+function descargarCSV(){
+  const r = responder(Q), filas = [['Concepto', IND[Q.k].n]].concat(r.todas.map(f => [f[0], Math.round(f[1])]));
+  const txt = '﻿'+filas.map(f => f.map(x => '"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], {type:'text/csv;charset=utf-8'}));
+  a.download = 'ia-nami_'+sinAcento(tituloQ(Q)).replace(/[^a-z0-9]+/g,'_').slice(0,70)+'.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function iniciarConsulta(){
+  $('b-consulta').addEventListener('click', () => abrirConsulta(true));
+  $('b-comp').addEventListener('click', e => { e.stopPropagation(); menuComp($('menu-comp').hidden); });
+  $('menu-comp').addEventListener('click', e => { const b = e.target.closest('[data-comp]'); if (b) compartir(b.dataset.comp); });
+  document.addEventListener('click', e => { if (!e.target.closest('#menu-comp, #b-comp')) menuComp(false); });
+  $('consulta').addEventListener('click', e => {
+    if (e.target.id==='consulta' || e.target.closest('[data-q-cerrar]')){ abrirConsulta(false); return; }
+    const ej = e.target.closest('[data-ej]'); if (ej){ $('q-txt').value = ej.dataset.ej; Object.assign(Q, entender(ej.dataset.ej)); pintarConsulta(); return; }
+    if (e.target.closest('#q-csv')) descargarCSV();
+  });
+  $('q-form').addEventListener('submit', e => { e.preventDefault(); Object.assign(Q, entender($('q-txt').value)); pintarConsulta(); });
+  $('q-ent').addEventListener('change', e => { const x = e.target.dataset.q; if (!x) return;
+    Q[x] = x==='k' || x==='por' ? e.target.value : x==='d0' || x==='d1' ? e.target.value : +e.target.value;
+    if (x==='k' && !IND[Q.k].nat){ Q.n = -1; if (Q.por==='n') Q.por = 'e'; }
+    if (Q.d0>Q.d1){ const t = Q.d0; Q.d0 = Q.d1; Q.d1 = t; } pintarConsulta(); });
+  document.addEventListener('keydown', e => { if (e.key==='Escape' && !$('consulta').hidden) abrirConsulta(false); });
 }
 
 /* ==== [11] BUSCADOR, SECCIONES Y AVISOS =========================== */
@@ -1159,6 +1326,13 @@ function elegir(i){ const x = hallados[i]; if (!x) return; $('buscar').value = '
 function pintarNav(){ $('nav').innerHTML = SECCIONES.map(s => s[0]==='dir'
   ? '<button data-menu-dir aria-haspopup="true" aria-expanded="false" class="'+(S.vista==='dir'?'on':'')+'">Direcciones ▾</button>'
   : '<button data-vista="'+s[0]+'" class="'+(S.vista===s[0]?'on':'')+'"'+(S.vista===s[0]?' aria-current="page"':'')+'>'+s[1]+'</button>').join(''); }
+// Con mouse, el menú de Direcciones se abre al pasar el cursor; en pantallas táctiles, con un toque
+const CON_HOVER = matchMedia('(hover:hover) and (pointer:fine)').matches; let tMenu = null;
+if (CON_HOVER) document.addEventListener('mouseover', e => {
+  const m = $('menu-dir'); if (!m) return; const boton = e.target.closest('[data-menu-dir]');
+  if (boton || e.target.closest('#menu-dir')){ clearTimeout(tMenu); if (boton && m.hidden) menuDir(true); }
+  else if (!m.hidden){ clearTimeout(tMenu); tMenu = setTimeout(() => menuDir(false), 220); }
+});
 function menuDir(abrir){
   const m = $('menu-dir'), b = document.querySelector('[data-menu-dir]'); if (!m || !b) return;
   m.hidden = !abrir; b.setAttribute('aria-expanded', abrir);
@@ -1171,7 +1345,7 @@ function htmlDireccion(d){
   const F0 = {ss:null, n:null, nd:null}, fila = (nom, v, mx, c) => '<div class="barra"><span>'+esc(nom)+'</span><span class="b"><i style="width:'+(v/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(v)+'</span></div>';
   const cajas = d.ind.map(k => { const m = IND[k], c = colG(m.g), dd = diario(k,F0), va = variacion(dd), tot = suma(dd,0,ND);
     const tn = m.nat ? topNats(n => sumaSem(k,0,NW-1,null,n), 5) : [], te = topEsts(s => sumaSem(k,0,NW-1,[s],null), 5);
-    return '<div class="caja"><h2><span>'+m.n+'</span><small>'+(va.ok ? (va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'% '+(S.cmp==='aa' ? 'vs. año anterior' : 'en '+etiquetaN(S.cmp)) : '')+'</small></h2>'+
+    return '<div class="caja"><h2><span>'+m.n+'</span><small>'+(va.ok ? (va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'% '+(S.cmp==='aa' ? 'vs. año anterior' : S.cmp==='sem' ? 'vs. semana anterior' : 'en '+etiquetaN(S.cmp)) : '')+'</small></h2>'+
       '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span class="num" style="font-size:30px">'+miles(tot)+'</span>'+chispa(semanal(k,null,null),140,40,c)+'</div>'+
       (tn.length ? '<span class="mini"><b>Principales nacionalidades</b></span>'+tn.map(r => fila(D.nats[r[0]][0], r[1], tn[0][1], c)).join('') : '')+
       '<span class="mini"><b>Principales estados</b></span>'+te.map(r => fila(ESTC[r[0]], r[1], te[0][1], c)).join('')+'</div>'; });
@@ -1184,6 +1358,7 @@ function irA(v){
   if (pulso){ ajustarAlto(); reencuadrar(); ajustarLienzo(); pintarTodo(); return; }
   if (S.play) detener();
   const F0 = {ss:null, n:null}; let h = '';
+  if (v==='dir' && DIRS[S.dir || 0].s==='DGRAM' && window.IANAMI_REGULACION){ window.IANAMI_REGULACION.pintar($('vista-otra')); return; }   // Regulación tiene su propia vista
   if (v==='dir') h = htmlDireccion(DIRS[S.dir || 0]);
   else if (v==='bases') h = '<h1>Bases</h1><p>Estado de cada base según la última conversión ('+esc(D.generado)+'). La carga con usuario y contraseña se agrega después.</p>'+
     '<div class="caja"><div class="tb-w"><table class="tb"><thead><tr><th>Base</th><th>Datos hasta</th><th>Cargada</th><th>Renglones</th><th>Días sin datos</th><th>Observaciones</th></tr></thead><tbody>'+
@@ -1240,6 +1415,7 @@ function iniciar(){
 
   $('m-her').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) herramienta(b.dataset.a); });
   $('play').addEventListener('click', reproducir);
+  $('tgraf').addEventListener('pointermove', tipTiempo); $('tgraf').addEventListener('pointerleave', () => tipTiempo(null)); $('tgraf').addEventListener('pointerup', e => { if (e.pointerType==='touch') setTimeout(() => tipTiempo(null), 1800); });
   const tg = $('tgraf'); let arr = false, pend = 0;
   const arrastre = e => { const d = diaDesdeX(e); cancelAnimationFrame(pend); pend = requestAnimationFrame(() => fijarDia(d)); };
   tg.addEventListener('pointerdown', e => { arr = true; tg.setPointerCapture(e.pointerId); if (S.play){ S.play = false; } arrastre(e); });
@@ -1248,7 +1424,7 @@ function iniciar(){
   tg.addEventListener('keydown', e => { if (e.key==='ArrowLeft'){ fijarDia(S.dia-1); e.preventDefault(); } if (e.key==='ArrowRight'){ fijarDia(S.dia+1); e.preventDefault(); } });
   document.addEventListener('click', e => {
     const T = q => e.target.closest(q);
-    if (T('[data-menu-dir]')){ menuDir($('menu-dir').hidden); return; }
+    if (T('[data-menu-dir]')){ menuDir(CON_HOVER ? true : $('menu-dir').hidden); return; }
     const di = T('[data-dir]'); if (di){ S.dir = +di.dataset.dir; menuDir(false); irA('dir'); return; }
     if (!T('#menu-dir')) menuDir(false);
     const vi = T('[data-vista]'); if (vi){ irA(vi.dataset.vista); return; }
@@ -1258,7 +1434,10 @@ function iniciar(){
     if (T('#plegar')){ S.kpiModo = S.kpiModo==='tarjetas'?'compacto':'tarjetas'; pintarKpis(); ajustarAlto(); return; }
     const cm = T('[data-cmp]'); if (cm){ S.cmp = cm.dataset.cmp==='aa' ? 'aa' : +cm.dataset.cmp; pintarTodo(); return; }
     const pe = T('[data-per]'); if (pe){ S.per = pe.dataset.per; cambiarPeriodo(); return; }
-    const k = T('[data-k]'); if (k){ const kk = k.dataset.k; fijarInd(kk); if (TACTIL) mostrarTip(document.querySelector('.kc[data-k="'+kk+'"]'), true); return; }
+    if (T('[data-tipx]')){ mostrarTip(null); return; }
+    if (T('[data-tipayx]')){ ayuda(null, null); return; }
+    const ib = T('[data-itxt]'); if (ib){ const p = $('rg-pop'); if (p && !p.hidden && ayudaFija && p.dataset.cual===ib.dataset.itxt) ayuda(null, null); else { ayuda(ib, true); $('rg-pop').dataset.cual = ib.dataset.itxt; } return; }
+    const k = T('[data-k]'); if (k){ const kk = k.dataset.k, touch = PUNTERO==='touch'; fijarInd(kk); if (touch) mostrarTip(document.querySelector('.kc[data-k="'+kk+'"]'), true); return; }
     const ag = T('[data-agr]'); if (ag){ const v = ag.dataset.agr;      // Mundo y Estado: datos generales; Cinturón y CECO: agrupan
       S.agr = v==='m' ? 'e' : v; if (S.sel && S.sel.t==='g' && (v==='m' || v==='e' || S.sel.a!==S.agr)) S.sel = null;
       if (v==='m') herramienta('mundo'); else if (v==='e') herramienta('mx'); else acercarSiMundo();
@@ -1275,15 +1454,18 @@ function iniciar(){
     const id = e.target.id;
     if (id==='per-anio'){ S.anio = +e.target.value; S.mes = 0; cambiarPeriodo(); return; }
     if (id==='per-mes'){ S.mes = +e.target.value; cambiarPeriodo(); return; }
+    if (id==='cmp-sel'){ const v = e.target.value; S.cmp = v==='sem' || v==='aa' ? v : +v; pintarTodo(); return; }
     if (id==='per-desde' || id==='per-hasta'){ S[id.slice(4)] = e.target.value; if (S.desde>S.hasta){ const x = S.desde; S.desde = S.hasta; S.hasta = x; } cambiarPeriodo(); return; }
     if (id!=='region') return;
     S.region = e.target.value || null; pintarTodo();
     if (S.region) volarConMexico(REGIONES[S.region][1]);
   });
-  document.addEventListener('mouseover', e => { const k = e.target.closest('.kc[data-k]'); if (k) mostrarTip(k); });
-  document.addEventListener('mouseout', e => { const k = e.target.closest('.kc[data-k]'); if (k && !k.contains(e.relatedTarget)) mostrarTip(null); });
+  document.addEventListener('mouseover', e => { const k = e.target.closest('.kc[data-k]'); if (k) mostrarTip(k); const ib = e.target.closest('[data-itxt]'); if (ib && PUNTERO==='mouse' && !ayudaFija) ayuda(ib, false); });
+  document.addEventListener('mouseout', e => { const ib = e.target.closest('[data-itxt]'); if (ib && !ib.contains(e.relatedTarget)) ayuda(null); });
+  document.addEventListener('pointerdown', e => { if (!e.target.closest('#rg-pop, [data-itxt]')) ayuda(null, null); }, true);
+  document.addEventListener('mouseout', e => { const k = e.target.closest('.kc[data-k]'); if (k && !k.contains(e.relatedTarget) && PUNTERO!=='touch') mostrarTip(null); });
   window.addEventListener('scroll', () => mostrarTip(null), {passive:true});
-  if (TACTIL) document.addEventListener('touchstart', e => { if (!e.target.closest('.kc[data-k]')) mostrarTip(null); }, {passive:true});
+  document.addEventListener('pointerdown', e => { if (e.pointerType==='touch' && !e.target.closest('.kc[data-k], #kpi-tip')) mostrarTip(null); }, true);
   $('buscar').addEventListener('input', buscar);
   $('buscar').addEventListener('keydown', e => { if (e.key==='Enter'){ elegir(0); e.preventDefault(); } if (e.key==='Escape'){ $('res').hidden = true; } });
   { const r = rangoPeriodo(); aplicarPeriodo(r[0], r[1]); }       // periodo inicial: Sheinbaum
@@ -1293,6 +1475,7 @@ function iniciar(){
   pintarTodo();
   ajustarAlto();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarAlto);
+  iniciarConsulta();
   requestAnimationFrame(animar);
 }
 if (window.echarts && D && GEO) iniciar();

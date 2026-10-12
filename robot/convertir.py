@@ -338,16 +338,21 @@ CARGAR = {"ing": cargar_ing, "seg": cargar_seg, "tram": cargar_tram, "resc": car
 
 
 # ==== [6] CUBO Y SERIES ===========================================
-def semanas(dias):
-    """Cortes de semanas de 7 días desde el inicio; un sobrante de 1 a 3 días se une a la última."""
-    cortes = list(range(7, dias + 1, 7))
-    if not cortes:
-        return [dias]
-    if cortes[-1] != dias:
-        if dias - cortes[-1] <= 3:
-            cortes[-1] = dias
-        else:
-            cortes.append(dias)
+# Fechas en las que siempre se corta una semana (inicio de periodos de gobierno), además de cada día 1 de mes
+CORTES_FIJOS = {"2024-10-01", "2025-01-20"}
+
+
+def semanas(inicio, dias):
+    """Bloques de hasta 7 días que nunca cruzan un cambio de mes ni un inicio de periodo:
+    así cualquier consulta por mes, año, Sheinbaum o Trump sale exacta también en el cruce estado × nacionalidad."""
+    cortes, largo = [], 0
+    for d in range(dias):
+        f = inicio + pd.Timedelta(days=d)
+        if largo and (f.day == 1 or f.date().isoformat() in CORTES_FIJOS or largo == 7):
+            cortes.append(d)
+            largo = 0
+        largo += 1
+    cortes.append(dias)
     return cortes
 
 
@@ -621,7 +626,7 @@ def main():
     global INICIO_BASES
     INICIO_BASES = inicio
     dias = (fin - inicio).days + 1
-    cortes = semanas(dias)
+    cortes = semanas(inicio, dias)
 
     # -- Indicadores de la página
     rech = B["seg"][B["seg"]["det"] == 1]

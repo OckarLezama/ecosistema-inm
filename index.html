@@ -6,7 +6,7 @@
 <title>IA-NAMI · Inteligencia migratoria</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="css/estilos.css">
+<link rel="stylesheet" href="css/estilos.css?v=20261012c">
 </head>
 <body>
 <!-- ==================================================================
@@ -23,6 +23,8 @@
     <div class="marca"><b>IA-NAMI</b><span>Inteligencia migratoria</span></div>
     <nav class="nav" id="nav" aria-label="Secciones"></nav>
     <div class="top-der">
+      <span class="comp-w"><button class="b-consulta" id="b-comp" aria-haspopup="menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/></svg>Compartir</button><div class="menu-comp" id="menu-comp" role="menu" hidden></div></span>
+      <button class="b-consulta" id="b-consulta" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"></path><path d="M9 10.5h6"></path></svg>Consultar</button>
       <span id="corte"></span>
 </div>
     <div class="menu" id="menu-dir" role="menu" hidden></div>
@@ -34,7 +36,7 @@
       <div class="pil" role="group" aria-label="Periodo" id="per"></div>
       <span class="per-extra" id="per-extra"></span>
       <div class="rango"><b id="rango"></b><span id="rango-nota"></span></div>
-      <div class="varia"><span>Comparar ▲▼:</span><div class="pil chica" id="cmp" role="group" aria-label="Ventana de comparación"></div></div>
+      <label class="varia"><span>Comparar con</span><span class="cmp-c" id="cmp"></span></label>
       <span id="chips" style="display:inline-flex;gap:6px;flex-wrap:wrap"></span>
       <div class="busca">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
@@ -43,6 +45,7 @@
       </div>
     </div>
 
+    <p class="aviso-pasado" id="aviso-pasado" hidden>Consultas un periodo pasado: «Extranjeros con documento vigente» y «Lo que cambió» solo aparecen con datos al día. <button data-per="shein">Volver a hoy</button></p>
     <!-- ============ [3] INDICADORES ============ -->
     <section class="kpis esc" id="kpis" data-modo="tarjetas" aria-label="Indicadores"></section>
 
@@ -70,7 +73,7 @@
         </div>
         <div class="tiempo esc">
           <button class="play" id="play" aria-label="Reproducir el periodo"></button>
-          <div class="t-cuerpo">
+          <div class="t-cuerpo"><div class="t-tip" id="t-tip" hidden></div>
             <div class="t-cab"><span id="t-tit"></span><span id="t-ley"></span></div>
             <svg id="tgraf" role="slider" tabindex="0" aria-label="Día del periodo" aria-valuemin="1"></svg>
           </div>
@@ -93,14 +96,32 @@
   <!-- ============ [7] OTRAS SECCIONES ============ -->
   <div id="vista-otra" class="otra esc" hidden></div>
   <div class="kpi-tip" id="kpi-tip" role="tooltip" hidden></div>
+
+  <!-- ============ VENTANA DE CONSULTA ============ -->
+  <div class="consulta" id="consulta" role="dialog" aria-modal="true" aria-labelledby="q-tit" hidden>
+    <div class="q-caja">
+      <div class="q-top"><h2 id="q-tit">Consultar</h2><button class="q-x" data-q-cerrar aria-label="Cerrar">×</button></div>
+      <form id="q-form" class="q-form"><input id="q-txt" type="text" autocomplete="off" placeholder="Ej. trámites por nacionalidad en Chiapas en 2024" aria-label="Escribe tu consulta"><button type="submit">Consultar</button></form>
+      <div class="q-ej"><span>Ejemplos:</span>
+        <button type="button" data-ej="rescatados por estado">rescatados por estado</button>
+        <button type="button" data-ej="trámites por nacionalidad en Chiapas">trámites por nacionalidad en Chiapas</button>
+        <button type="button" data-ej="ingresos de Colombia por mes">ingresos de Colombia por mes</button>
+        <button type="button" data-ej="rechazos de Sudamérica por nacionalidad top 15">rechazos de Sudamérica top 15</button>
+      </div>
+      <div class="q-ent" id="q-ent" aria-label="Lo que se entendió"></div>
+      <div class="q-res" id="q-res" aria-live="polite"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ============ [8] PROGRAMAS ============ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
-<script src="datos/datos.js"></script>
-<script src="js/geo.js"></script>
-<script src="js/contexto.js"></script>
-<script src="js/temporadas.js"></script>
-<script src="js/app.js"></script>
+<script src="datos/datos.js?v=20261012c"></script>
+<script src="js/geo.js?v=20261012c"></script>
+<script src="js/contexto.js?v=20261012c"></script>
+<script src="js/temporadas.js?v=20261012c"></script>
+<script src="datos/regulacion.js?v=20261012c"></script>
+<script src="js/regulacion.js?v=20261012c"></script>
+<script src="js/app.js?v=20261012c"></script>
 </body>
 </html>
