@@ -798,3 +798,7 @@ div.rg-hz-i{cursor:default}
 .cv-sal-w.foc [data-salm]:not(.on){opacity:.22}.cv-sal-w [data-salm]{transition:opacity .2s,transform .2s}.cv-sal-w i[data-salm].on{transform:scale(1.12)}.cv-sal-w .cien-l.on{background:var(--panel2)}
 .cv-cien-c>div{cursor:default}.cv-cien-c>div i,.cv-cien-c>div span{transition:transform .2s ease}.cv-cien-c>div:hover i{transform:translateY(-4px)}.cv-cien-c>div:hover span{transform:translateY(-4px);color:#A8443E}
 .cv-cien i:hover{transform:scale(1.25)}
+
+/* Control migratorio · «Ver detalle»: el contenedor no altera la rejilla */
+.cv-det{display:contents}.cv-det[hidden]{display:none}
+.cv-det-b{margin:0}

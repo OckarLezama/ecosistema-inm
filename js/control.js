@@ -22,7 +22,7 @@ ORR.sd = ORR.v.map((x,i) => Math.max(0, x-ORR.pre[i]-ORR.can[i]));             /
 const DIC = CV.dic, NE = DIC.e.length, NN = DIC.n.length, NP = DIC.p.length, NS = DIC.s.length, MX = DIC.n.indexOf('México');
 const INI = new Date(CV.inicio+'T00:00:00'), DS = (INI.getDay()+6)%7;
 const semDe = d => Math.floor((d+DS)/7), semIni = w => w*7-DS, NSEM = semDe(CV.dias-1)+1;
-const Q = { vista:'int', per:'todo', d0:0, d1:CV.dias, cmp:'sem', nats:[], ests:[], pto:-1, via:-1, gran:'auto', eti:false, desgI:'tot', desgE:'tot', desgC:'tot', sel:null, tot:'n', sc:'n', rk:'r', em:'res', tote:'n', orTodo:false, reo:'n', mxm:'s', emo:'n', prm:'n', mas:{}, can:'nna', cls:-1, totc:'n', compacto:false };
+const Q = { det:{}, vista:'int', per:'todo', d0:0, d1:CV.dias, cmp:'sem', nats:[], ests:[], pto:-1, via:-1, gran:'auto', eti:false, desgI:'tot', desgE:'tot', desgC:'tot', sel:null, tot:'n', sc:'n', rk:'r', em:'res', tote:'n', orTodo:false, reo:'n', mxm:'s', emo:'n', prm:'n', mas:{}, can:'nna', cls:-1, totc:'n', compacto:false };
 // Vía de cada punto (la que más personas trae), para filtrar la segunda revisión por vía
 const PV = (() => { const c = new Float64Array(NP*3); for (let i=0;i<ING.N;i++) c[ING.p[i]*3+ING.vi[i]] += ING.v[i]; return [...Array(NP).keys()].map(p => { const x = [c[p*3], c[p*3+1], c[p*3+2]]; return x.indexOf(Math.max(...x)); }); })();
 
@@ -53,7 +53,9 @@ const sinAcento = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLower
 const VERDE = '#2F6657', ROJO = '#C4605A', OCRE = '#8F7F2E', VINO = '#7E302B', GRIS = '#9A958A', COMP = ['#2B2926','#A8443E','#766820'];
 const COLM = ['#C4605A','#2F6657','#8F7F2E','#7E302B','#BDB58D','#B66666','#CFCBBB','#2B2926'];       // motivos de salida
 const COLC = ['#778E88','#C4605A','#8F7F2E'];                                                             // acompañado, no acompañado, separado
-function graf(id, op){ const el = $(id); if (!el) return null; let ch = echarts.getInstanceByDom(el); if (!ch){ ch = echarts.init(el); new ResizeObserver(() => ch.resize()).observe(el); }
+// Objeto vacío que acepta cualquier llamada: las gráficas del detalle plegado no se dibujan hasta abrirlo
+const NADA = new Proxy(function(){}, { get:(t,k) => k===Symbol.toPrimitive ? () => 0 : NADA, apply:() => NADA });
+function graf(id, op){ const el = $(id); if (!el) return null; if (el.closest('.cv-det[hidden]')) return NADA; let ch = echarts.getInstanceByDom(el); if (!ch){ ch = echarts.init(el); new ResizeObserver(() => ch.resize()).observe(el); }
   ch.setOption(Object.assign({ textStyle:{ fontFamily:'Barlow, sans-serif', color:'#2B2926' }, animationDuration:800, animationDurationUpdate:600,
     tooltip:{ backgroundColor:'#2B2926', borderWidth:0, textStyle:{ color:'#F4F2EA', fontSize:12 }, extraCssText:'border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)' } }, op), true); return ch; }
 const ejeY = { type:'value', axisLabel:{ color:'#5C5952', fontSize:10.5, formatter:v => corto(v) }, splitLine:{ lineStyle:{ color:'#EEEBE2' } } };
@@ -74,6 +76,9 @@ const masG = (tit, val, eti, col, cartas) => '<button class="rg-tog'+(Q.mas[Q.vi
 function abrirMasC(){ const k = $('cv-kpis'), g = k && k.querySelector('.rg-mas'), t = k && k.querySelector('[data-cmas]'); if (!g) return; const on = !!Q.mas[Q.vista];
   g.classList.toggle('abierto', on); t.classList.toggle('on', on); t.setAttribute('aria-expanded', on); t.querySelector('i').textContent = on ? '‹' : '›';
   if (on){ k.classList.add('ancho'); const f = Date.now(), paso = () => { k.scrollLeft = k.scrollWidth; if (Date.now()-f < 650) requestAnimationFrame(paso); }; requestAnimationFrame(paso); } else { k.scrollLeft = 0; setTimeout(() => { if (!Q.mas[Q.vista]) k.classList.remove('ancho'); }, 620); } }
+// «Ver detalle»: igual que en Regulación migratoria; arriba queda lo esencial y el resto se abre con un botón
+const DET = { int:'totales, semana a semana y rechazos por punto', est:'totales y dónde se presenta cada nacionalidad', can:'nacionalidad, O.R. que canaliza y recibidos de EE. UU.' };
+const detIni = () => { const on = !!Q.det[Q.vista]; return '<button class="rg-det-b cv-det-b'+(on?' on':'')+'" data-cdet aria-expanded="'+on+'">'+(on ? 'Ocultar detalle ▴' : 'Ver detalle: '+DET[Q.vista]+' ▾')+'</button><div class="cv-det"'+(on ? '' : ' hidden')+'>'; };
 const plegar = () => '<button class="plegar" data-cplegar aria-label="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'" title="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'"><svg width="12" height="12" viewBox="0 0 12 12"><path d="'+(Q.compacto?'M2 4l4 4 4-4':'M2 8l4-4 4 4')+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
 const chipD = (a,b) => { if (!b || a+b<40) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%</span>'; };
 const IC = { avion:'M2 16l20-6-20-6 3 6zM5 10h9', tierra:'M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6', barco:'M3 17l2 3h14l2-3zM12 3v11M6 14l6-7 6 7', lupa:'M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-4-4',
@@ -285,13 +290,14 @@ function pintarInt(){
         kc({ nom:'% rechazado', sub:'de quienes llegan', ic:IC.no, col:VINO, val:crucero ? '—' : tasaTxt(base), d: crucero ? '<span class="kc-d">no aplica a cruceros</span>' : w ? chipD(tasa(tot(SEG, {ex:rech, d0:w[0][0], d1:w[0][1]}), tot(ING, {ex:llegada, d0:w[0][0], d1:w[0][1]}))*1e3, tasa(tot(SEG, {ex:rech, d0:w[1][0], d1:w[1][1]}), tot(ING, {ex:llegada, d0:w[1][0], d1:w[1][1]}))*1e3) : '' })+'</div></div>'+plegar()+'</section>'+
     '<div class="rg-hz" id="cv-hz"></div>'+
     '<div class="rg-g rg-g21">'+cajaTend('cv-tr', 'tr')+'<div class="caja"><h2><span id="cv-tp-t"></span>'+info('tp')+'</h2><span class="q" id="cv-tp-q"></span><div id="cv-tp"></div></div></div>'+
-    '<div class="caja rg-ancho cv-ancho"><h2><span>Totales de internaciones</span>'+info('tot')+'<span class="cv-h2r cv-h2b" id="cv-tt-sel"></span></h2><span class="q" id="cv-tt-q"></span><div class="cv-scroll cv-fill"><div id="cv-tt"></div></div></div>'+
     '<h3 class="cv-sec">Segunda revisión y rechazos <small>solo llegadas por aire y tierra</small></h3>'+
     (crucero ? '<p class="cv-cal" style="background:var(--panel2);color:var(--ink2)">Los pasajeros de crucero no pasan por segunda revisión. Quita el filtro de vía marítima para ver los rechazos.</p>' :
     '<div class="rg-g rg-g21"><div class="caja"><h2><span>¿Dónde y a quién se rechaza?</span>'+info('disp')+pil('data-csc', Q.sc, [['n','Nacionalidades'],['p','Puntos']])+'</h2><span class="q" id="cv-disp-q"></span><div id="cv-disp" class="cv-fill" style="min-height:440px"></div></div>'+
-      '<div class="caja"><h2><span id="cv-emb-t"></span>'+info('emb')+'<span class="cv-h2r" id="cv-emb-o"></span></h2><span class="q" id="cv-emb-q"></span><div id="cv-emb"></div></div></div>'+
-    '<div class="rg-g rg-g2">'+cajaTend('cv-sem', 'sem')+
-      '<div class="caja"><h2><span>Rechazos por punto</span>'+info('pto')+pil('data-crk', Q.rk, [['r','Rechazos'],['t','De cada 1,000']])+'</h2><span class="q" id="cv-pto-q"></span><div class="cv-scroll cv-fill"><div id="cv-pto"></div></div></div></div>');
+      '<div class="caja"><h2><span id="cv-emb-t"></span>'+info('emb')+'<span class="cv-h2r" id="cv-emb-o"></span></h2><span class="q" id="cv-emb-q"></span><div id="cv-emb"></div></div></div>')+
+    detIni()+
+    '<div class="caja rg-ancho cv-ancho"><h2><span>Totales de internaciones</span>'+info('tot')+'<span class="cv-h2r cv-h2b" id="cv-tt-sel"></span></h2><span class="q" id="cv-tt-q"></span><div class="cv-scroll cv-fill"><div id="cv-tt"></div></div></div>'+
+    (crucero ? '' : '<div class="rg-g rg-g2">'+cajaTend('cv-sem', 'sem')+
+      '<div class="caja"><h2><span>Rechazos por punto</span>'+info('pto')+pil('data-crk', Q.rk, [['r','Rechazos'],['t','De cada 1,000']])+'</h2><span class="q" id="cv-pto-q"></span><div class="cv-scroll cv-fill"><div id="cv-pto"></div></div></div></div>')+'</div>';
   const tn = crucero ? [] : tablaRech('n'), tp = crucero ? [] : tablaRech('p'), prom = tasa(tot(SEG, {ex:rech, nats:null, pto:-1, via:-1}), tot(ING, {ex:llegada, nats:null, pto:-1, via:-1})), hz = [];
   if (w){ const a = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), c0 = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]}), cuenta = k => k!==MX && (!Q.nats.length || Q.nats.indexOf(k)>=0);   // sin mexicanos, igual que las tarjetas; con nacionalidades elegidas, solo ellas
     let ta = 0, tc = 0; for (let k=0;k<NN;k++) if (cuenta(k)){ ta += a[k]; tc += c0[k]; }
@@ -422,10 +428,11 @@ function pintarEst(){
       masG('Sistema<br>DGCVM', corto(tot(PRE, {})), 'Sistema DGCVM · <button class="cv-lnk" data-cdif>¿por qué dos cifras de presentados?</button>', VERDE, sel('pre', 'Presentados', fuente('s','sistema'), IC.est, '#2B2926')+sel('ra', 'Retornos asistidos', '', IC.ret, VERDE)+sel('dep', 'Deportaciones', '', IC.ret, VINO))+plegar()+'</section>'+
     '<div class="rg-hz" id="cv-hz"></div>'+
     '<div class="rg-g rg-g21">'+cajaTend('cv-ps', 'tre')+'<div class="caja"><h2><span id="cv-pp-t"></span>'+info('pe')+'</h2><span class="q" id="cv-pp-q"></span><div id="cv-pp"></div></div></div>'+
-    '<div class="caja rg-ancho cv-ancho"><h2><span>Totales de '+M[0]+'</span>'+info('tote')+'<span class="cv-h2r cv-h2b" id="cv-te-sel"></span></h2><span class="q" id="cv-te-q"></span><div class="cv-scroll cv-fill"><div id="cv-te"></div></div></div>'+
     '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿Quién reincide?</span>'+info('rein')+'<span id="cv-rn-o" class="cv-h2r"></span></h2><span class="q" id="cv-rn-q"></span><div id="cv-rn"></div></div>'+
       '<div class="caja"><h2><span>¿Quién se presenta y quién retorna?</span>'+info('pr')+'<span class="cv-h2r" id="cv-pr-o"></span></h2><span class="q" id="cv-pr-q"></span><div class="cv-scroll cv-fill"><div id="cv-pr"></div></div></div></div>'+
-    '<div class="caja rg-ancho cv-ancho"><h2><span>¿Dónde se presenta cada nacionalidad?</span>'+info('mx')+'<span id="cv-mx-o" class="cv-h2r"></span></h2><span class="q" id="cv-mx-q"></span><div id="cv-mx"></div></div>';
+    detIni()+
+    '<div class="caja rg-ancho cv-ancho"><h2><span>Totales de '+M[0]+'</span>'+info('tote')+'<span class="cv-h2r cv-h2b" id="cv-te-sel"></span></h2><span class="q" id="cv-te-q"></span><div class="cv-scroll cv-fill"><div id="cv-te"></div></div></div>'+
+    '<div class="caja rg-ancho cv-ancho"><h2><span>¿Dónde se presenta cada nacionalidad?</span>'+info('mx')+'<span id="cv-mx-o" class="cv-h2r"></span></h2><span class="q" id="cv-mx-q"></span><div id="cv-mx"></div></div>'+'</div>';
   // Titulares: lo que cambió en rescates, reincidencia y presentados
   const hz = [];
   if (w){ const a = tot(ORR, {d0:w[0][0], d1:w[0][1]}), c = tot(ORR, {d0:w[1][0], d1:w[1][1]}), xa = agg(ORR, i => ORR.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), xc = agg(ORR, i => ORR.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]});
@@ -561,9 +568,10 @@ function pintarCan(){
     '<div class="rg-g rg-g21">'+cajaTend('cv-cs', 'ctend')+'<div class="caja"><h2><span id="cv-cp-t"></span>'+info('cp')+'</h2><span class="q" id="cv-cp-q"></span><div id="cv-cp"></div></div></div>'+
     '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿Cómo salen?</span>'+info('sal')+'</h2><span class="q" id="cv-sal-q"></span><div id="cv-sal"></div></div>'+
       '<div class="caja"><h2><span>'+(nna ? 'Edad y sexo' : 'Sexo')+'</span>'+info('edad')+'</h2><span class="q">'+(nna ? 'grupos de edad a la fecha del evento'+(Q.cls>=0 ? ' · '+CV.clases[Q.cls].toLowerCase()+'s' : '') : 'adultos que acompañan a NNA')+'</span><div id="cv-ed" class="cv-fill" style="min-height:260px"></div></div></div>'+
+    detIni()+
     '<div class="rg-g rg-g2"><div class="caja"><h2><span>Nacionalidad de '+(nna ? 'los NNA' : 'los adultos')+'</span>'+info('cnat')+'<span class="cv-h2r cv-h2b" id="cv-cn-o"></span></h2><span class="q" id="cv-cn-q"></span><div class="cv-scroll cv-fill"><div id="cv-cn"></div></div></div>'+
       '<div class="caja"><h2><span>O.R. que canaliza</span>'+info('cor')+'<span class="cv-h2r cv-h2b" id="cv-ce-o"></span></h2><span class="q" id="cv-ce-q"></span><div class="cv-scroll cv-fill"><div id="cv-ce"></div></div></div></div>'+
-    '<div class="caja rg-ancho cv-ancho"><h2><span>Recibidos de EE. UU.</span>'+info('rec')+'</h2><span class="q" id="cv-re-q"></span><div class="cv-rec"><div id="cv-re-k"></div><div class="cv-scroll"><div id="cv-re" style="height:260px"></div></div></div></div>';
+    '<div class="caja rg-ancho cv-ancho"><h2><span>Recibidos de EE. UU.</span>'+info('rec')+'</h2><span class="q" id="cv-re-q"></span><div class="cv-rec"><div id="cv-re-k"></div><div class="cv-scroll"><div id="cv-re" style="height:260px"></div></div></div></div>'+'</div>';
   // Titulares: qué pasó con los NNA en la comparación elegida
   const hz = [];
   if (w){ const per = Q.cmp==='sem' ? 'en la semana' : 'en los últimos '+Q.cmp+' días', a = tot(T, {d0:w[0][0], d1:w[0][1]}), c = tot(T, {d0:w[1][0], d1:w[1][1]});
@@ -716,6 +724,7 @@ function eventos(cont){
     if ((b = T('[data-creo]'))){ Q.reo = b.dataset.creo; pintarRein(); return; }
     if ((b = T('[data-cmxm]'))){ Q.mxm = b.dataset.cmxm; pintarMx(); return; }
     if ((b = T('[data-ce]'))){ alternar(Q.ests, +b.dataset.ce); cuerpo(); return; }
+    if (T('[data-cdet]')){ Q.det[Q.vista] = !Q.det[Q.vista]; cuerpo(); return; }
     if (T('[data-cplegar]')){ Q.compacto = !Q.compacto; cuerpo(); return; }
     if ((b = T('[data-cper]'))){ Q.per = b.dataset.cper; if (Q.per==='todo'){ Q.d0 = 0; Q.d1 = CV.dias; } else if (Q.per==='anio'){ const y = fDia(CV.dias-1).getFullYear(); Q.d0 = Math.max(0, diaDe(y+'-01-01')); Q.d1 = Math.min(CV.dias, diaDe((y+1)+'-01-01')); } Q.sel = null; cuerpo(); return; }
     if ((b = T('[data-ctot]'))){ Q.tot = b.dataset.ctot; cuerpo(); return; }
