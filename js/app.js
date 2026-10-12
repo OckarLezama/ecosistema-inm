@@ -51,12 +51,12 @@ const ICONO = {
   ret:'M21 12H9M13 7l-5 5 5 5M4 4v16', recib:'M12 4v10M8 10l4 4 4-4M5 19h14', rep:'M4 11l8-7 8 7M6 10v10h12V10M10 20v-5h4v5'
 };
 // Secciones del menú (las que aún no existen muestran qué llevarán)
-const SECCIONES = [['pulso','Pulso'],['dir','Direcciones'],['analizar','Analizar'],['prosp','Prospectiva'],['contexto','Contexto'],['bases','Bases']];
+const SECCIONES = [['pulso','Pulso'],['dir','Procesos'],['analizar','Analizar'],['prosp','Prospectiva'],['contexto','Contexto'],['bases','Bases']];
+// Procesos del INM y las direcciones que los alimentan
 const DIRS = [
-  {s:'DGCVM', n:'Control y Verificación Migratoria', ind:['ing','rech','pres','can','ret']},
-  {s:'DGRAM', n:'Regulación y Archivo Migratorio',   ind:['tram'], docs:true},
-  {s:'DGPMV', n:'Protección al Migrante',            ind:['rep']},
-  {s:'DGCOR', n:'',                                  ind:['resc','recib']}
+  {k:'control',    s:'Control migratorio',     n:'DGCVM y DGCOR', ind:['ing','rech','pres','can','ret','resc','recib']},
+  {k:'regulacion', s:'Regulación migratoria',  n:'DGRAM',         ind:['tram'], docs:true},
+  {k:'proteccion', s:'Protección al migrante', n:'DGPMV',         ind:['rep']}
 ];
 // Agrupaciones territoriales (vienen de Cinturones_Contencion.csv y Centro_Coordinador_Operaciones.csv)
 const AGR = {
@@ -164,6 +164,16 @@ function comp(k, ss, n){
   const nc = NCAT[k], a = COMP[k], o = new Array(nc).fill(0), l = ss || TODOS, n0 = n==null?0:n, n1 = n==null?NN-1:n;
   for (let j=0;j<l.length;j++) for (let ni=n0; ni<=n1; ni++){ const b = (l[j]*NN+ni)*nc; for (let c=0;c<nc;c++) o[c] += a[b+c]; }
   return o; }
+// Rechazo con la misma definición que Control migratorio: rechazos ÷ (extranjeros que llegan por aire y tierra + rechazos).
+// Sin mexicanos ni marítima (tripulación de cruceros). Devuelve [rechazos, llegadas].
+function rechazoExt(ss, n){
+  let l = n==null ? null : (Array.isArray(n) ? n : [n]);
+  if (l) { l = l.filter(x => x!==MX); if (!l.length) return [0,0]; }
+  const v = comp('ing_via',ss,l), re = sumaSem('rech',0,NW-1,ss,l);
+  let ing = v[0]+v[1], r = re;
+  if (!l){ const m = comp('ing_via',ss,MX); ing -= m[0]+m[1]; r -= sumaSem('rech',0,NW-1,ss,MX); }
+  return [r, ing + r];
+}
 // Posición del cursor en semanas y valores "al momento" (ritmo semanal interpolado) y acumulados
 function ritmo(k, ss, n){
   if (alFinal()) return sumaSem(k,0,NW-1,ss,n);
@@ -678,7 +688,7 @@ function pintarMapa(){
 // para leer un país, un estado o un punto sin tener que hacer clic.
 function variaTxt(d){ const va = variacion(d); return va.ok && Math.abs(va.dl)>=1 ? (va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(0)+'%' : ''; }
 function notaPerfil(k, ss, n){                   // el dato que da contexto a cada indicador
-  if (k==='rech'){ const re = sumaSem('rech',0,NW-1,ss,n), ing = sumaSem('ing',0,NW-1,ss,n); return re/(ing+re) >= 0.0005 ? (re/(ing+re)*100).toFixed(1)+'% de llegadas' : ''; }
+  if (k==='rech'){ const t = rechazoExt(ss,n); return t[1] && t[0]/t[1] >= 0.0005 ? (t[0]/t[1]*100).toFixed(2)+'% de llegadas' : ''; }
   if (k==='resc'){ const r = comp('resc_rei',ss,n); return r[1] ? pct(r[1],r[0]+r[1])+'% reincidentes' : ''; }
   if (k==='can'){ const v = suma(comp('can_nna',ss,n),0,12); return v ? miles(v)+' NNA' : ''; }
   if (k==='ret'){ const v = comp('ret_tipo',ss,n); return v[1] ? pct(v[1],v[0]+v[1])+'% asistido' : ''; }
@@ -1004,9 +1014,9 @@ function pintarAnalisis(){
 const barrasNat = (l, color) => { const mx = l.length?l[0][1]:1; return l.map(r => '<button class="barra" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+color+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); };
 function htmlBreve(n){                          // datos clave de una nacionalidad
   const rr = comp('resc_rei',null,n), ts = comp('tram_se',null,n), H = suma(ts,0,8), M = suma(ts,8,16), nn = comp('can_nna',null,n), nna = suma(nn,0,12), na = nn.reduce((t,x,i)=>t+(i%3===1?x:0),0);
-  const ing = sumaSem('ing',0,NW-1,null,n), re = sumaSem('rech',0,NW-1,null,n);
+  const tr = rechazoExt(null,n);
   return (rr[0]+rr[1] ? '<span class="mini"><b>'+pct(rr[1],rr[0]+rr[1])+' de cada 100</b> rescates son de reincidentes.</span>' : '')+
-    (ing ? '<span class="mini"><b>'+(re/(ing+re)*100).toFixed(1)+'%</b> de quienes llegan son rechazados.</span>' : '')+
+    (tr[1] ? '<span class="mini"><b>'+(tr[0]/tr[1]*100).toFixed(2)+'%</b> de los extranjeros que llegan por aire o tierra son rechazados.</span>' : '')+
     (H+M ? '<span class="mini"><b>'+pct(M,H+M)+'%</b> de sus trámites son de mujeres.</span>' : '')+
     (nna ? '<span class="mini"><b>'+miles(nna)+'</b> niñas, niños y adolescentes canalizados; '+miles(na)+' no acompañados.</span>' : '');
 }
@@ -1077,8 +1087,8 @@ function htmlComp(k, F){
   if (k==='ing'){ const v = comp('ing_via',s,n);
     h = elegible('Vía de ingreso','ing',[['Aérea',v[0]],['Terrestre',v[1]],['Marítima',v[2]]]);
     if (n==null){ const mxv = sumaSem('ing',0,NW-1,s,MX), tot = sumaSem('ing',0,NW-1,s,null); h += grupo('Quién ingresa',[['Extranjeros',tot-mxv],['Mexicanos',mxv,c2]]); } }
-  else if (k==='rech'){ const v = comp('rech_det',s,n), ing = sumaSem('ing',0,NW-1,s,n);
-    h = grupo('Resultado de la segunda revisión',[['Rechazo',v[1]],['Internación',v[0],c2]]) + (ing ? '<div><span class="mini"><b>'+(v[1]/(ing+v[1])*100).toFixed(1)+'%</b> de las llegadas termina en rechazo ('+miles(v[1])+' de '+corto(ing+v[1])+').</span></div>' : ''); }
+  else if (k==='rech'){ const v = comp('rech_det',s,n), tr = rechazoExt(s,n);
+    h = grupo('Resultado de la segunda revisión',[['Rechazo',v[1]],['Internación',v[0],c2]]) + (tr[1] ? '<div><span class="mini"><b>'+(tr[0]/tr[1]*100).toFixed(2)+'%</b> de los extranjeros que llegan por aire o tierra termina en rechazo ('+miles(tr[0])+' de '+corto(tr[1])+'). Sin mexicanos ni cruceros, igual que en Control migratorio.</span></div>' : ''); }
   else if (k==='tram'){ const v = comp('tram_se',s,n), r = comp('tram_res',s,n), ed = ['0–11','12–17','18–24','25–34','35–44','45–54','55–64','65+'];
     let mx = 1; v.forEach(x => mx = Math.max(mx,x)); const H = suma(v,0,8), M = suma(v,8,16); sub = 'Sexo y edad de quien tramita';
     h = '<div class="pira"><div class="pira-c"><span><b class="num">'+pct(H,H+M)+'%</b>Hombres · '+corto(H)+'</span><span class="d"><b class="num">'+pct(M,H+M)+'%</b>Mujeres · '+corto(M)+'</span></div>'+
@@ -1324,9 +1334,9 @@ function buscar(){
 function elegir(i){ const x = hallados[i]; if (!x) return; $('buscar').value = ''; $('res').hidden = true;
   if (x.sel.t==='g') S.agr = x.sel.a; fijarSel(x.sel, true); }
 function pintarNav(){ $('nav').innerHTML = SECCIONES.map(s => s[0]==='dir'
-  ? '<button data-menu-dir aria-haspopup="true" aria-expanded="false" class="'+(S.vista==='dir'?'on':'')+'">Direcciones ▾</button>'
+  ? '<button data-menu-dir aria-haspopup="true" aria-expanded="false" class="'+(S.vista==='dir'?'on':'')+'">Procesos ▾</button>'
   : '<button data-vista="'+s[0]+'" class="'+(S.vista===s[0]?'on':'')+'"'+(S.vista===s[0]?' aria-current="page"':'')+'>'+s[1]+'</button>').join(''); }
-// Con mouse, el menú de Direcciones se abre al pasar el cursor; en pantallas táctiles, con un toque
+// Con mouse, el menú de Procesos se abre al pasar el cursor; en pantallas táctiles, con un toque
 const CON_HOVER = matchMedia('(hover:hover) and (pointer:fine)').matches; let tMenu = null;
 if (CON_HOVER) document.addEventListener('mouseover', e => {
   const m = $('menu-dir'); if (!m) return; const boton = e.target.closest('[data-menu-dir]');
@@ -1338,7 +1348,7 @@ function menuDir(abrir){
   m.hidden = !abrir; b.setAttribute('aria-expanded', abrir);
   if (abrir){ const r = b.getBoundingClientRect(), top = document.querySelector('.top').getBoundingClientRect();
     m.style.left = Math.max(8, Math.min(r.left-top.left, top.width-m.offsetWidth-8))+'px'; m.style.top = (r.bottom-top.top+2)+'px';
-    m.innerHTML = DIRS.map((d,i) => '<button data-dir="'+i+'" class="'+(S.vista==='dir' && (S.dir||0)===i ? 'on' : '')+'"><b>'+d.s+'</b><span>'+(d.n || 'Nombre por confirmar')+'</span></button>').join(''); }
+    m.innerHTML = DIRS.map((d,i) => '<button data-dir="'+i+'" class="'+(S.vista==='dir' && (S.dir||0)===i ? 'on' : '')+'"><b>'+d.s+'</b><span>'+d.n+'</span></button>').join(''); }
 }
 // Tablero de una dirección: sus bases con total, variación, tendencia, nacionalidades y estados
 function htmlDireccion(d){
@@ -1351,14 +1361,23 @@ function htmlDireccion(d){
       '<span class="mini"><b>Principales estados</b></span>'+te.map(r => fila(ESTC[r[0]], r[1], te[0][1], c)).join('')+'</div>'; });
   if (d.docs) cajas.push('<div class="caja"><h2><span>Documentos vigentes</span><small>al último corte</small></h2><span class="num" style="font-size:30px">'+miles(D.docs.total)+'</span>'+
     '<span class="mini"><b>Por tipo</b></span>'+D.docs.tipos.slice(0,5).map(x => fila(x[0], x[1], D.docs.tipos[0][1], colG('reg'))).join('')+'</div>');
-  return '<h1>'+d.s+(d.n ? ' · '+d.n : '')+'</h1><p>Bases de esta dirección, del '+fechaLarga(0)+' al '+fechaLarga(ND-1)+'. Variación: '+textoCmp()+'.</p><div class="rej">'+cajas.join('')+'</div>';
+  return '<span class="mini">Procesos › '+d.n+'</span><h1>'+d.s+'</h1><p>Bases de este proceso, del '+fechaLarga(0)+' al '+fechaLarga(ND-1)+'. Variación: '+textoCmp()+'.</p><div class="rej">'+cajas.join('')+'</div>';
 }
+// Para que las vistas de los procesos abran Pulso filtrado por una nacionalidad (se busca por nombre)
+const normNom = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+function natPorNombre(nom){ const k = normNom(nom); for (let i=0;i<NN-2;i++) if (normNom(D.nats[i][0])===k) return i; return -1; }
+window.IANAMI_PULSO = {
+  tiene: nom => natPorNombre(nom)>=0,
+  rechazo: nom => rechazoExt(null, nom==null ? null : natPorNombre(nom)),   // [rechazos, llegadas] con la definición común
+  verNat(nom, ind){ const i = natPorNombre(nom); if (i<0) return false; S.ind = ind || 'ing'; irA('pulso'); fijarSel({t:'n', i:i}, true); window.scrollTo(0,0); return true; }
+};
 function irA(v){
   S.vista = v; pintarNav(); const pulso = v==='pulso'; $('vista-pulso').hidden = !pulso; $('vista-otra').hidden = pulso;
   if (pulso){ ajustarAlto(); reencuadrar(); ajustarLienzo(); pintarTodo(); return; }
   if (S.play) detener();
   const F0 = {ss:null, n:null}; let h = '';
-  if (v==='dir' && DIRS[S.dir || 0].s==='DGRAM' && window.IANAMI_REGULACION){ window.IANAMI_REGULACION.pintar($('vista-otra')); return; }   // Regulación tiene su propia vista
+  if (v==='dir' && DIRS[S.dir || 0].k==='regulacion' && window.IANAMI_REGULACION){ window.IANAMI_REGULACION.pintar($('vista-otra')); return; }   // Regulación tiene su propia vista
+  if (v==='dir' && DIRS[S.dir || 0].k==='control' && window.IANAMI_CONTROL){ window.IANAMI_CONTROL.pintar($('vista-otra')); return; }      // Control migratorio también
   if (v==='dir') h = htmlDireccion(DIRS[S.dir || 0]);
   else if (v==='bases') h = '<h1>Bases</h1><p>Estado de cada base según la última conversión ('+esc(D.generado)+'). La carga con usuario y contraseña se agrega después.</p>'+
     '<div class="caja"><div class="tb-w"><table class="tb"><thead><tr><th>Base</th><th>Datos hasta</th><th>Cargada</th><th>Renglones</th><th>Días sin datos</th><th>Observaciones</th></tr></thead><tbody>'+

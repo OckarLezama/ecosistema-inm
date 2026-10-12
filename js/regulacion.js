@@ -438,12 +438,15 @@ function panelResumen(){
     pasos.push('<h4>Comparación<small>cada O.R. por separado</small></h4><table class="rg-cmpt"><thead><tr><th></th><th>Trámites</th><th>Documento principal</th><th>Nacionalidad principal</th><th>Mujeres</th></tr></thead><tbody>'+filas+'</tbody></table>'+
       '<p class="rg-base">Lo de abajo (y el detalle) suma las '+Q.ests.length+' O.R. juntas.</p>'); }
   const sec = (t, q, cuerpo) => '<h4>'+t+'<small>'+q+'</small></h4>'+cuerpo;
+  // Las secciones siguen el orden de «Ver»: por documento, primero el documento; por O.R., primero la O.R.
+  const S3 = {nat:[], or:[], doc:[]};
   if (Q.nats.length<3){ const l = lista(K.n, NN, {nats:null, ex:personas}, 6, i => DIC.n[i], i => ' data-rpn="'+i+'"'+(Q.nats.indexOf(i)>=0 ? ' disabled' : ''), '#2F6657');
     l.html += '<button class="rg-vert" data-rvert="n">Ver las '+Math.min(l.n,30)+(l.n>30 ? ' y otras' : '')+' ›</button>';
-    pasos.push(sec(Q.nats.length ? '¿Agregar otra nacionalidad?' : '¿De qué nacionalidad?', Q.nats.length ? 'hasta 3 para comparar' : 'toca una para filtrar', l.html)); }
-  if (Q.ests.length<3 && Q.ofiF<0){ const l = lista(K.e, NE, Q.ests.length ? {est:null} : {}, 6, i => DIC.e[i], i => ' data-rpe="'+i+'"'+(Q.ests.indexOf(i)>=0 ? ' disabled' : ''), '#8F7F2E'); l.html += '<button class="rg-vert" data-rvert="e">Ver las '+l.n+' ›</button>'; pasos.push(sec(Q.ests.length ? '¿Comparar con otra O.R.?' : '¿En qué O.R.?', Q.ests.length ? 'hasta 3 para comparar' :  Q.nats.length>=2 ? 'las '+Q.nats.length+' juntas' : 'toca una para filtrar', l.html)); }
-  if (Q.est>=0 && Q.ofiF<0){ const l = lista(K.o, NO, {}, 6, i => nomO(DIC.o[i]), i => ' data-rpo="'+i+'"', '#8F7F2E'); if (l.n>=2) pasos.push(sec('¿En qué oficina?', l.n+' oficinas con trámites', l.html)); }
-  if (Q.doc<0){ const l = lista(K.c, NC, {doc:null}, 6, i => RG.condiciones[i], i => ' data-rdoc="'+i+'"', '#7E302B'); pasos.push(sec('¿Qué documento?', Q.nats.length>=2 ? 'las '+Q.nats.length+' juntas' : 'toca uno para filtrar', l.html)); }
+    S3.nat.push(sec(Q.nats.length ? '¿Agregar otra nacionalidad?' : '¿De qué nacionalidad?', Q.nats.length ? 'hasta 3 para comparar' : 'toca una para filtrar', l.html)); }
+  if (Q.ests.length<3 && Q.ofiF<0){ const l = lista(K.e, NE, Q.ests.length ? {est:null} : {}, 6, i => DIC.e[i], i => ' data-rpe="'+i+'"'+(Q.ests.indexOf(i)>=0 ? ' disabled' : ''), '#8F7F2E'); l.html += '<button class="rg-vert" data-rvert="e">Ver las '+l.n+' ›</button>'; S3.or.push(sec(Q.ests.length ? '¿Comparar con otra O.R.?' : '¿En qué O.R.?', Q.ests.length ? 'hasta 3 para comparar' :  Q.nats.length>=2 ? 'las '+Q.nats.length+' juntas' : 'toca una para filtrar', l.html)); }
+  if (Q.est>=0 && Q.ofiF<0){ const l = lista(K.o, NO, {}, 6, i => nomO(DIC.o[i]), i => ' data-rpo="'+i+'"', '#8F7F2E'); if (l.n>=2) S3.or.push(sec('¿En qué oficina?', l.n+' oficinas con trámites', l.html)); }
+  if (Q.doc<0){ const l = lista(K.c, NC, {doc:null}, 6, i => RG.condiciones[i], i => ' data-rdoc="'+i+'"', '#7E302B'); S3.doc.push(sec('¿Qué documento?', Q.nats.length>=2 ? 'las '+Q.nats.length+' juntas' : 'toca uno para filtrar', l.html)); }
+  ({doc:['doc','nat','or'], or:['or','nat','doc']}[Q.desg] || ['nat','or','doc']).forEach(k => pasos.push.apply(pasos, S3[k]));
   $('rg-pnl').innerHTML = '<div class="rg-pnl-fijo">'+cabeza('Resumen del periodo', hay ? filtros().concat(Q.doc>=0 ? [RG.condiciones[Q.doc]] : []).map(esc).join(' · ') : 'Todo el país', false)+
     '<p class="rg-pnl-q">'+fechaA(Q.d0)+' – '+fechaA(Q.d1-1)+'</p></div><p class="rg-frase">'+frase+'</p>'+pasos.join('')+
     (hay ? '<button class="rg-limpia" data-rlimpia>Quitar todos los filtros</button>' : '');
@@ -710,33 +713,39 @@ function vistaVigentes(){
     if (tipoT) $('rg-dv-q').insertAdjacentHTML('afterbegin', '<b class="rg-totr">Este cruce suma todos los tipos de documento: el archivo de estado × país no trae el desglose por tipo. </b>');
     el.style.width = ''; el.style.height = (R.length*(tr ? 26 : 24)+110)+'px';
     $('rg-dv-mas').innerHTML = tr ? '' : '<button class="rg-mas-f" data-rdvmx>'+(todo ? 'Ver solo los 15 principales ▴' : 'Ver los 32 estados ▾')+'</button>';
-    const guia = { show:true, type:'shadow', shadowStyle:{ color:'rgba(47,102,87,.10)' }, label:{ show:true, backgroundColor:'#2B2926', color:'#fff', fontSize:11, padding:[3,6], borderRadius:4 }, triggerTooltip:false };
+    const guia = { show:false, type:'shadow', shadowStyle:{ color:'rgba(47,102,87,.10)' }, label:{ show:true, backgroundColor:'#2B2926', color:'#fff', fontSize:11, padding:[3,6], borderRadius:4 }, triggerTooltip:false };
     const ch = graf('rg-dv', { tooltip:{ formatter:p => p.seriesIndex===0 ? '<b>'+esc(tr ? RG.dv_p[R[p.value[1]][0]]+' en '+RG.dv_e[C[p.value[0]][0]] : RG.dv_p[C[p.value[0]][0]]+' en '+RG.dv_e[R[p.value[1]][0]])+'</b><br>'+miles(p.value[2])+' personas · '+pct(p.value[2], totR[p.value[1]])+'% de la fila' : '<b>'+esc(p.name)+'</b><br>'+miles(p.value) },
       axisPointer:{ link:[{ xAxisIndex:[0,1] }, { yAxisIndex:[0,2] }] },
       grid:[{ left:118, right:104, top:100, bottom:6 }, { left:118, right:104, top:chico ? 44 : 52, height:chico ? 44 : 36 }, { right:46, width:52, top:100, bottom:6 }],
       xAxis:[{ type:'category', data:nC, gridIndex:0, axisLabel:{show:false}, axisTick:{show:false}, axisLine:{show:false}, axisPointer:Object.assign({}, guia, { label:{ show:false } }) }, { type:'category', data:nC, gridIndex:1, show:false }, { type:'value', gridIndex:2, show:false }],
-      yAxis:[{ type:'category', data:nR, gridIndex:0, inverse:true, axisLabel:{ fontSize:11.5, color:'#2B2926' }, axisTick:{show:false}, axisLine:{show:false}, triggerEvent:true, axisPointer:Object.assign({}, guia, { label:{ show:true, backgroundColor:'#7E302B', color:'#fff', fontSize:11.5, fontWeight:700, padding:[3,6], borderRadius:4 } }) }, { type:'value', gridIndex:1, show:false }, { type:'category', data:nR, gridIndex:2, inverse:true, show:false }],
+      yAxis:[{ type:'category', data:nR, gridIndex:0, inverse:true, axisLabel:{ fontSize:11.5, color:'#2B2926' }, axisTick:{show:false}, axisLine:{show:false}, triggerEvent:true, axisPointer:Object.assign({}, guia, { label:{ show:false } }) }, { type:'value', gridIndex:1, show:false }, { type:'category', data:nR, gridIndex:2, inverse:true, show:false }],
       series:[{ type:'heatmap', xAxisIndex:0, yAxisIndex:0, data:datos, label:{ show:!chico, fontSize:10, formatter:p => p.value[2] ? corto(p.value[2]) : '' }, itemStyle:{ borderColor:'#FCFBF7', borderWidth:chico ? 1.5 : 2.5, borderRadius:chico ? 3 : 5 }, emphasis:{ disabled:true } },
               { type:'bar', xAxisIndex:1, yAxisIndex:1, data:totC, itemStyle:{ color:'#9FC0B3', borderRadius:[3,3,0,0] }, barWidth:'62%', label:{ show:true, position:'top', distance:4, fontSize:chico ? 9 : 10, color:'#2B2926', lineHeight:12, rotate:chico ? 90 : 0, align:chico ? 'left' : 'center', verticalAlign:chico ? 'middle' : 'bottom', formatter:p => chico ? nC[p.dataIndex] : nC[p.dataIndex]+'\n'+corto(p.value) },
-                emphasis:{ itemStyle:{ color:'#7E302B' }, label:{ fontWeight:700, color:'#fff', backgroundColor:'#7E302B', borderRadius:3, padding:[2,4] } } },
+                emphasis:{ itemStyle:{ color:'#7E302B' }, label:{ fontWeight:700, color:'#7E302B' } } },
               { type:'bar', xAxisIndex:2, yAxisIndex:2, data:totR, itemStyle:{ color:'#2F6657', borderRadius:[0,3,3,0] }, barWidth:'60%', label:{ show:true, position:'right', fontSize:10, color:'#5C5952', formatter:p => corto(p.value) }, emphasis:{ itemStyle:{ color:'#7E302B' }, label:{ fontWeight:700, color:'#7E302B' } } },
-              { id:'banda', type:'scatter', xAxisIndex:0, yAxisIndex:0, data:[], silent:true, z:15, symbol:'rect', animation:false, itemStyle:{ color:'rgba(126,48,43,.12)' } },
-              { id:'foco', type:'scatter', xAxisIndex:0, yAxisIndex:0, data:[], silent:true, z:20, symbol:'roundRect', animationDurationUpdate:120, itemStyle:{ opacity:1, borderColor:'#FCFBF7', borderWidth:2.5, borderRadius:6, shadowBlur:16, shadowOffsetY:3, shadowColor:'rgba(0,0,0,.35)' }, z:30,
-                label:{ show:true, position:'inside', fontWeight:700, fontSize:14, formatter:p => p.value[2] ? miles(p.value[2]) : '0' } }] });
+              { id:'banda', type:'scatter', xAxisIndex:0, yAxisIndex:0, data:[], silent:true },
+              { id:'foco', type:'scatter', xAxisIndex:0, yAxisIndex:0, data:[], silent:true, symbol:'rect', animation:false, itemStyle:{ color:'rgba(0,0,0,0)' }, z:30,
+                label:{ show:true, position:'inside', fontWeight:700, fontSize:chico ? 10 : 10.5, formatter:p => p.value[2] ? corto(p.value[2]) : '0' } }] });
     // al pasar sobre una celda se iluminan su país (barra de arriba) y su estado (barra de la derecha)
     ch.off('mouseover'); ch.off('mouseout'); ch.off('globalout'); ch.off('click');
-    // al pasar sobre una celda: la celda crece un poco con su número en negrita, y se marcan su columna (arriba) y su fila (izquierda y derecha)
+    // al pasar sobre una celda: su fila y su columna se sombrean, sus nombres van en negrita, dos líneas finas llegan a la celda y su número se pone en negrita
     const cel = (() => { const a = ch.convertToPixel({gridIndex:0}, [0,0]), b = ch.convertToPixel({gridIndex:0}, [1,1]); return [Math.abs(b[0]-a[0]), Math.abs(b[1]-a[1])]; })();
     const enfoca = p => { const d = datos[p.dataIndex], fondo = d.itemStyle.color, t = p.value[2] ? Math.log1p(p.value[2])/Math.log1p(mx) : 0;
-      const banda = []; C.forEach((_,x) => { if (x!==p.value[0]) banda.push([x, p.value[1]]); }); R.forEach((_,y) => { if (y!==p.value[1]) banda.push([p.value[0], y]); });
-      ch.setOption({ series:[{ id:'banda', data:banda, symbolSize:[cel[0], cel[1]] }, { id:'foco', data:[{ value:p.value, symbolSize:[Math.max(cel[0]*1.5, 62), Math.max(cel[1]*1.7, 32)], itemStyle:{ color:echarts.color.lift(fondo, t>.62 ? -0.12 : -0.06) }, label:{ color:t>.62 ? '#fff' : '#2B2926' } }] }] }); };
+      // foco: la fila y la columna de la celda quedan a todo color y el resto se atenúa; la celda y sus nombres van en negrita
+      const luz = datos.map(x => x.value[0]===p.value[0] || x.value[1]===p.value[1] ? x : Object.assign({}, x, { itemStyle:Object.assign({}, x.itemStyle, { opacity:.2 }), label:Object.assign({}, x.label, { opacity:.25 }) }));
+      ch.setOption({ yAxis:[{ axisLabel:{ formatter:(v,i) => i===p.value[1] ? '{s|'+v+'}' : '{o|'+v+'}', rich:{ s:{ fontWeight:700, color:'#2B2926', fontSize:11.5 }, o:{ color:'#9A958A', fontSize:11.5 } } } }],
+        series:[{ data:luz }, {}, {}, {}, { id:'foco', data:[{ value:p.value, label:{ color:t>.62 ? '#fff' : '#2B2926' } }], symbolSize:[cel[0]-3, cel[1]-3] }] }); };
     ch.on('mouseover', p => { if (p.seriesIndex!==0) return; ch.dispatchAction({ type:'downplay', seriesIndex:[1,2] }); ch.dispatchAction({ type:'highlight', seriesIndex:1, dataIndex:p.value[0] }); ch.dispatchAction({ type:'highlight', seriesIndex:2, dataIndex:p.value[1] }); enfoca(p); });
-    ch.on('globalout', () => { ch.dispatchAction({ type:'downplay', seriesIndex:[1,2] }); ch.setOption({ series:[{ id:'banda', data:[] }, { id:'foco', data:[] }] }); });
+    ch.on('globalout', () => { ch.dispatchAction({ type:'downplay', seriesIndex:[1,2] }); ch.setOption({ yAxis:[{ axisLabel:{ formatter:v => v } }], series:[{ data:datos }, {}, {}, {}, { id:'foco', data:[] }] }); });
     ch.on('click', p => { let s = null;
       if (p.componentType==='yAxis') s = {t:tr?'p':'e', i:R[nR.indexOf(p.value)][0]};
       else if (p.seriesIndex===0) s = {t:tr?'p':'e', i:R[p.value[1]][0]}; else if (p.seriesIndex===2) s = {t:tr?'p':'e', i:R[p.dataIndex][0]}; else if (p.seriesIndex===1) s = {t:tr?'e':'p', i:C[p.dataIndex][0]};
       if (s){ Q.dvSel = Q.dvSel && nomSel(Q.dvSel)===nomSel(s) ? null : s; detalle(); } });
   }
+  // el detalle mide lo mismo que la tarjeta de la izquierda: si su lista es más larga, se desplaza por dentro
+  const ajustaDet = () => { const D = document.querySelector('.rg-dvp'), L = $('rg-dv') && $('rg-dv').closest('.caja'); if (!D || !L) return;
+    if (innerWidth<=1180){ D.style.height = ''; return; } D.style.height = '0px'; D.style.height = L.offsetHeight+'px'; };
+  requestAnimationFrame(ajustaDet); window.__rgAjustaDet = ajustaDet;
   // ---- tabla: totales y sexo por tipo de documento; las tarjetas de arriba la ordenan
   const porN = Q.dvR==='n' && RG.dv_n;
   const base = porN ? RG.dv_n.map(f => [f[0], f[1], f[2]].concat(tipos.map(x => { const k = RG.dv_nt.indexOf(x); return k>=0 ? f[3+k] : 0; }))) : (RG.dv_ed || []);
@@ -745,7 +754,7 @@ function vistaVigentes(){
     const tono = (n, m, c) => { if (!n) return ''; const t = Math.log1p(n)/Math.log1p(m); return ' style="background:'+echarts.color.modifyAlpha(c, (0.08+t*0.82).toFixed(2))+';color:'+(t>.62?'#fff':'#2B2926')+'"'; };
     const cab = (k, txt, tit) => '<th data-rdvo="'+k+'" class="'+(ord===k?'on':'')+'" title="Ordenar por '+esc(tit)+'">'+txt+(ord===k?' ▾':'')+'</th>';
     $('rg-dve-q').innerHTML = (ord>=0 ? 'Ordenado por <b>'+esc(tipos[ord])+'</b> · ' : '')+'toca una tarjeta de arriba o un encabezado para ordenar · color: más oscuro = más documentos (misma escala en toda la tabla)';
-    $('rg-dve').innerHTML = '<table class="rg-tb rg-tbe"><thead><tr><th class="l">'+(porN ? 'Nacionalidad' : 'Estado')+'</th>'+cab(-1,'Total','total')+cab(-3,'Hombres','hombres')+cab(-4,'Mujeres','mujeres')+cab(-2,'% M','porcentaje de mujeres')+
+    $('rg-dve').innerHTML = '<table class="rg-tb rg-tbe"><thead><tr><th class="l">'+(porN ? 'Nacionalidad' : 'Estado')+'</th>'+cab(-1,'Total','total')+cab(-3,'Hombres','hombres')+cab(-4,'Mujeres','mujeres')+cab(-2,'% mujeres','porcentaje de mujeres')+
         tipos.map((x,k) => cab(k, nomT(x).replace(' ','<br>'), x).replace('<th ', '<th'+(ord===k ? ' style="background:#E3ECE8"' : '')+' ')).join('')+'</tr></thead><tbody>'+
       filas.slice(0, Q.dvTodo ? filas.length : 12).map(f => { const t = f[1]+f[2];
         return '<tr><th class="l">'+esc(f[0])+'</th><td class="tot"'+tono(t, mxT, '#2B2926')+'>'+corto(t)+'</td><td class="pm">'+corto(f[1])+'</td><td class="pm">'+corto(f[2])+'</td><td class="pm"><span class="rg-hm" style="display:inline-flex;width:38px;vertical-align:middle;margin-right:5px"><i style="width:'+pct(f[1],t)+'%"></i><i style="width:'+pct(f[2],t)+'%"></i></span>'+pct(f[2],t)+'%</td>'+
@@ -864,7 +873,7 @@ function vistaValidacion(){
 
 /* ==== [7] MONTAJE Y EVENTOS ======================================= */
 function montar(cont){
-  cont.innerHTML = '<div class="rg"><div class="rg-sub"><div><span class="mini">Direcciones › DGRAM</span><h1>Regulación y Archivo Migratorio</h1></div><div class="rg-vistas">'+
+  cont.innerHTML = '<div class="rg"><div class="rg-sub"><div><span class="mini">Procesos › DGRAM</span><h1>Regulación migratoria</h1></div><div class="rg-vistas">'+
     [['tram','Trámites'],['dv','Documentos vigentes'],['val','Validación R. Civil']].map(x => '<button data-rvista="'+x[0]+'" class="'+(Q.vista===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div></div><div id="rg-body" class="rg-body anim"></div></div>';
   setTimeout(() => { const b = $('rg-body'); if (b) b.classList.remove('anim'); }, 1100);
   ({ tram:vistaTramites, dv:vistaVigentes, val:vistaValidacion })[Q.vista]();
@@ -885,7 +894,7 @@ function eventos(cont){
     if ((b = T('[data-rfil]'))){ Q.fil = b.dataset.rfil; Q.mz = null; pintarMezcla(); return; }
     if ((b = T('[data-rtg]'))){ Q.tipoG = b.dataset.rtg; pintarEvolucion(); return; }
     if (T('[data-reti]')){ Q.eti = !Q.eti; pintarPrincipal(); return; }
-    if ((b = T('[data-rdesg]'))){ Q.desg = b.dataset.rdesg; PANEL = null; pintarPrincipal(); return; }
+    if ((b = T('[data-rdesg]'))){ Q.desg = b.dataset.rdesg; PANEL = null; pintarPrincipal(); if ((Q.pv || 'res')==='res') pintarPanel(); return; }
     if (T('[data-rcierra]')){ cerrarPanel(); return; }
     if (T('[data-rdet]')){ Q.det = !Q.det; vistaTramites(); return; }
     if ((b = T('[data-rver]'))){ Q.det = true; Q.ofi = +b.dataset.rver; vistaTramites(); const of = $('rg-of'); if (of) of.closest('.caja').scrollIntoView({ behavior:'smooth', block:'center' }); return; }
