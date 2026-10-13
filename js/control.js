@@ -126,9 +126,18 @@ function autocompletar(inp, res, items, elegir){
 
 /* ==== [3] CONTROLES E INDICADORES ================================= */
 const filtrosTxt = () => Q.nats.map(nomN).concat(Q.ests.map(nomE), Q.pto>=0 ? [nomP(Q.pto)] : []);
+// «Año»: como en Pulso, se elige el año y, si se quiere, un mes; los meses sin datos quedan deshabilitados
+const pad2 = n => String(n).padStart(2,'0');
+function fijarAnio(){ const y = Q.anio, m = Q.mes || 0, a = diaDe(y+'-'+pad2(m || 1)+'-01'), b = m ? diaDe((m===12 ? (y+1)+'-01' : y+'-'+pad2(m+1))+'-01') : diaDe((y+1)+'-01-01');
+  Q.d0 = Math.max(0, a); Q.d1 = Math.min(CV.dias, b); if (Q.d1<=Q.d0) Q.d1 = Q.d0+1; }
+function selAnio(){ const y0 = fDia(0).getFullYear(), y1 = fDia(CV.dias-1).getFullYear(), an = []; for (let y=y0; y<=y1; y++) an.push(y);
+  return '<span class="per-extra"><select id="cv-anio" aria-label="Año">'+an.map(y => '<option'+(y===Q.anio ? ' selected' : '')+'>'+y+'</option>').join('')+'</select>'+
+    '<select id="cv-mes" aria-label="Mes"><option value="0">Todo el año</option>'+MES.map((m,i) => { const ini = diaDe(Q.anio+'-'+pad2(i+1)+'-01'), fin = diaDe((i===11 ? (Q.anio+1)+'-01' : Q.anio+'-'+pad2(i+2))+'-01'), ok = ini<CV.dias && fin>0;
+      return '<option value="'+(i+1)+'"'+((Q.mes || 0)===i+1 ? ' selected' : '')+(ok ? '' : ' disabled')+'>'+m+'</option>'; }).join('')+'</select></span>'; }
 function htmlCtl(){
   const okN = n => n==='sem' ? (() => { const q = Q.cmp; Q.cmp = 'sem'; const w = ventanas(); Q.cmp = q; return !!w; })() : n!=='aa' && 2*n <= Q.d1-Q.d0;
   return '<div class="pil">'+[['todo','Sheinbaum'],['trump','Trump'],['anio','Año'],['pers','Personalizado']].map(x => '<button data-cper="'+x[0]+'" class="'+(Q.per===x[0]?'on':'')+'"'+(x[0]==='trump'?' disabled title="Sin datos en ese periodo"':'')+'>'+x[1]+'</button>').join('')+'</div>'+
+    (Q.per==='anio' ? selAnio() : '')+
     (Q.per==='pers' ? '<span class="per-extra"><input type="date" id="cv-d0" value="'+iso(Q.d0)+'" min="'+iso(0)+'" max="'+iso(CV.dias-1)+'"> – <input type="date" id="cv-d1" value="'+iso(Q.d1-1)+'" min="'+iso(0)+'" max="'+iso(CV.dias-1)+'"></span>' : '')+
     '<div class="rango"><b>'+fechaA(Q.d0)+' – '+fechaA(Q.d1-1)+'</b><span>'+(Q.d1-Q.d0)+' días</span></div>'+
     '<label class="rg-sel">Comparar con <select id="cv-cmp">'+[['sem','Semana anterior'],[7,'7 días previos'],[30,'30 días previos'],[90,'3 meses previos'],['aa','Mismo periodo del año anterior']].map(x => '<option value="'+x[0]+'"'+(String(Q.cmp)===String(x[0])?' selected':'')+(okN(x[0])?'':' disabled')+'>'+x[1]+(x[0]==='aa' ? ' (sin datos aún)' : '')+'</option>').join('')+'</select></label>'+
@@ -726,7 +735,7 @@ function eventos(cont){
     if ((b = T('[data-ce]'))){ alternar(Q.ests, +b.dataset.ce); cuerpo(); return; }
     if (T('[data-cdet]')){ Q.det[Q.vista] = !Q.det[Q.vista]; cuerpo(); return; }
     if (T('[data-cplegar]')){ Q.compacto = !Q.compacto; cuerpo(); return; }
-    if ((b = T('[data-cper]'))){ Q.per = b.dataset.cper; if (Q.per==='todo'){ Q.d0 = 0; Q.d1 = CV.dias; } else if (Q.per==='anio'){ const y = fDia(CV.dias-1).getFullYear(); Q.d0 = Math.max(0, diaDe(y+'-01-01')); Q.d1 = Math.min(CV.dias, diaDe((y+1)+'-01-01')); } Q.sel = null; cuerpo(); return; }
+    if ((b = T('[data-cper]'))){ Q.per = b.dataset.cper; if (Q.per==='todo'){ Q.d0 = 0; Q.d1 = CV.dias; } else if (Q.per==='anio'){ Q.anio = fDia(CV.dias-1).getFullYear(); Q.mes = 0; fijarAnio(); } Q.sel = null; cuerpo(); return; }
     if ((b = T('[data-ctot]'))){ Q.tot = b.dataset.ctot; cuerpo(); return; }
     if ((b = T('[data-ctote]'))){ Q.tote = b.dataset.ctote; cuerpo(); return; }
     if ((b = T('[data-ctotc]'))){ Q.totc = b.dataset.ctotc; cuerpo(); return; }
@@ -739,6 +748,7 @@ function eventos(cont){
   cont.addEventListener('mouseout', e => { const w = e.target.closest('.cv-sal-w'); if (w && !w.contains(e.relatedTarget)){ w.classList.remove('foc'); w.querySelectorAll('.on').forEach(x => x.classList.remove('on')); } });
   cont.addEventListener('change', e => { if (!e.target.closest('.cv')) return; const id = e.target.id;
     if (id==='cv-cmp'){ Q.cmp = /^\d+$/.test(e.target.value) ? +e.target.value : e.target.value; cuerpo(); }
+    if (id==='cv-anio' || id==='cv-mes'){ if (id==='cv-anio'){ Q.anio = +e.target.value; Q.mes = 0; } else Q.mes = +e.target.value; fijarAnio(); Q.sel = null; cuerpo(); return; }
     else if (id==='cv-d0' || id==='cv-d1'){ const a = diaDe($('cv-d0').value), b = diaDe($('cv-d1').value)+1; if (!isNaN(a) && !isNaN(b) && b>a){ Q.d0 = Math.max(0, a); Q.d1 = Math.min(CV.dias, b); Q.sel = null; cuerpo(); } } });
   document.addEventListener('click', e => { const m = $('cv-modal'); if (m && !m.hidden && (e.target.closest('[data-cmodalx]') || e.target===m)) m.hidden = true; });
   document.addEventListener('keydown', e => { const m = $('cv-modal'); if (e.key==='Escape' && m) m.hidden = true; });
