@@ -540,11 +540,25 @@ function dibujar(cont, ops, anim){
 /* ==== [6] VENTANA ================================================== */
 const $ = id => document.getElementById(id);
 let Q = null, R = null, abierto = false, GR = [], menuDe = null;
+// Ayuda («i»): ejemplos que funcionan, por tipo de pregunta; al tocarlos se consultan
+const AYUDA = [
+  ['Cuántos', 'Un indicador, con país, estado o fecha', ['rescatados en noviembre', 'trámites de Venezuela', 'repatriados en Tamaulipas']],
+  ['De los… cuántos', 'Una parte de un total', ['de los rescatados cuántos fueron canalizados', 'de los repatriados cuántos son NNA']],
+  ['Por', 'Repartir por nacionalidad, O.R., vía o tipo', ['NNA de Colombia por O.R.', 'rescatados por nacionalidad', 'ingresos por vía']],
+  ['Cambio', 'Qué subió o bajó, y comparar dos periodos', ['qué nacionalidad de rescatados creció más', 'rescatados que más bajaron por O.R.', 'internaciones noviembre contra diciembre']],
+  ['Fechas relativas', 'Se cuentan hacia atrás desde el último dato', ['rescatados últimos 30 días', 'trámites últimas 2 semanas', 'repatriados últimos 3 meses', 'ingresos último trimestre', 'rescatados primera quincena de noviembre']]
+];
+const AYUDA_NOTAS = ['La respuesta sale primero en <b>una frase</b>; abajo, la gráfica y la fuente.',
+  'Si algo no se entiende o tiene un error de dedo, aparece <b>«¿Quisiste decir?»</b> con opciones para tocar.',
+  'A <b>«¿Por qué…?»</b> responde con lo que muestran los datos (cuánto, dónde, cuándo) y lo avisa: no da causas ni pronósticos.',
+  'Cada parte de la consulta es una pieza: tócala para cambiarla o usa × para quitarla.'];
 const EJ = ['de los rescatados cuántos fueron canalizados', 'NNA de Colombia por O.R.', 'qué nacionalidad de rescatados creció más', 'internaciones noviembre contra diciembre'];
 function montar(){
   if ($('cq')) return;
   const m = document.createElement('div'); m.id = 'cq'; m.className = 'cq'; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); m.setAttribute('aria-labelledby','cq-t'); m.hidden = true;
-  m.innerHTML = '<div class="cq-caja" id="cq-caja"><div class="cq-cab"><h2 id="cq-t">Pregunta a INAMI</h2><button type="button" class="cq-x" data-cqx aria-label="Cerrar">×</button></div>'+
+  m.innerHTML = '<div class="cq-caja" id="cq-caja"><div class="cq-cab"><h2 id="cq-t">Pregunta a INAMI</h2><button type="button" class="cq-i" data-cqi aria-expanded="false" aria-controls="cq-ay" title="Cómo preguntar: ejemplos">i</button><button type="button" class="cq-x" data-cqx aria-label="Cerrar">×</button></div>'+
+    '<div class="cq-ay" id="cq-ay" hidden>'+AYUDA.map(g => '<div class="cq-ayg"><b>'+esc(g[0])+'</b><small>'+esc(g[1])+'</small><div class="cq-ej">'+g[2].map(e => '<button type="button" data-cqej="'+esc(e)+'">'+esc(e)+'</button>').join('')+'</div></div>').join('')+
+      '<ul class="cq-ayn">'+AYUDA_NOTAS.map(n => '<li>'+n+'</li>').join('')+'</ul></div>'+
     '<form class="cq-txt" id="cq-f" autocomplete="off"><input id="cq-q" type="search" placeholder="¿Qué quieres saber? Ej.: NNA de Colombia por O.R." aria-label="Escribe tu pregunta"><button type="submit">Consultar</button><div class="cq-sug" id="cq-sug" hidden></div></form>'+
     '<div id="cq-inicio"><div class="cq-arma"><span>o arma tu consulta:</span><button type="button" class="cq-pz vacia" data-pz="ind">¿Qué quieres ver? ▾</button></div>'+
       '<div class="cq-ej"><span>Prueba:</span>'+EJ.map(e => '<button type="button" data-cqej="'+esc(e)+'">'+esc(e)+'</button>').join('')+'</div></div>'+
@@ -668,7 +682,8 @@ function clic(e){
   if (T('#cq-menu')) return;
   if ((b = T('[data-pz]'))){ if (b.dataset.pz==='ind' && !Q){ Q = nuevaQ(); Q.fmt = 'h'; } if (menuDe===b){ cerrarMenu(); return; } abrirMenu(b.dataset.pz, b); return; }
   cerrarMenu();
-  if ((b = T('[data-cqej]'))){ consultar(entender(b.dataset.cqej)); return; }
+  if ((b = T('[data-cqi]'))){ const a = $('cq-ay'), ab = a.hidden; a.hidden = !ab; b.setAttribute('aria-expanded', ab); b.classList.toggle('on', ab); return; }
+  if ((b = T('[data-cqej]'))){ $('cq-ay').hidden = true; $('cq-caja').querySelector('[data-cqi]').classList.remove('on'); consultar(entender(b.dataset.cqej)); return; }
   if ((b = T('[data-cqquita]'))){ const [k,i] = b.dataset.cqquita.split(':'); Q.filtros[k] = Q.filtros[k].filter(x => x!==+i); if (!Q.filtros[k].length) delete Q.filtros[k]; Q.avisos = []; Q.fix = []; pintar(); return; }
   if ((b = T('[data-cqquitap]'))){ Q.partes = Q.partes.filter(k => k!==b.dataset.cqquitap); Q.avisos = []; Q.fix = []; Q.sugs = []; limitar(Q); pintar(); return; }
   if (T('[data-cqcmp]')){ Q.cmp = !Q.cmp; pintar(); return; }

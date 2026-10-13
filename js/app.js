@@ -43,11 +43,14 @@ const INDS = [
   {k:'rep',  n:'Repatriados', g:'usa', nat:false, donde:'Dónde son repatriados'}
 ];
 const IND = {}; INDS.forEach(m => IND[m.k] = m);
+// Indicadores que solo existen en la pantalla completa de Regulación (no están en el cubo; ver [13])
+IND.co = {k:'co', n:'Constancias y oficios', g:'reg', nat:true}; IND.va = {k:'va', n:'Validación de actas', g:'reg', nat:true};
 const GRUPOS = [['reg','Regular',3],['irr','Irregular',4],['usa','Desde EE. UU.',2]];
 const ICONO = {
   ing:'M3 12h12M11 7l5 5-5 5M20 4v16', rech:'M5.6 5.6l12.8 12.8M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18z', tram:'M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5',
   resc:'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM12 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6zM5.7 5.7l4.2 4.2M14.1 14.1l4.2 4.2M18.3 5.7l-4.2 4.2M9.900 14.100l-4.200 4.200',
   pres:'M4 21V9l8-5 8 5v12M9 21v-6h6v6', can:'M12 20s-7-4.300-7-9.400A4 4 0 0 1 12 8a4 4 0 0 1 7 2.600C19 15.700 12 20 12 20z',
+  co:'M7 3h7l4 4v14H7zM14 3v4h4M10 11h5M12.5 15.5m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0', va:'M5 3h11l3 3v15H5zM9 9h6M9 13h3M13 16l2 2 4-4',
   ret:'M21 12H9M13 7l-5 5 5 5M4 4v16', recib:'M12 4v10M8 10l4 4 4-4M5 19h14', rep:'M4 11l8-7 8 7M6 10v10h12V10M10 20v-5h4v5'
 };
 // Secciones del menú (las que aún no existen muestran qué llevarán)
@@ -460,7 +463,7 @@ const FUENTE = {ing:['incluye mexicanos',null], resc:['eventos · O.R.','O.R.'],
 const nomInd = k => IND[k].n+(k==='resc' ? ' (eventos)' : '');                 // nombre para títulos de listas
 // Último día con datos de cada indicador dentro del periodo: los días posteriores están pendientes, no son cero
 function finDatos(k){
-  const bs = (k==='can' ? ['can_nna','can_ad'] : [BASE_IND[k]]).map(c => D.bases.find(x => x.k===c)).filter(b => b && b.hasta);
+  const bs = (k==='can' ? ['can_nna','can_ad'] : [BASE_IND[k==='co' ? 'tram' : k]]).map(c => D.bases.find(x => x.k===c)).filter(b => b && b.hasta);
   if (!bs.length) return ND;
   return Math.max(0, Math.min(ND, Math.min.apply(null, bs.map(b => idxBase(b.hasta)+1)) - P0));
 }
@@ -1203,6 +1206,24 @@ function cifraEvento(e, n){
 function contextoDe(n){ const nom = sinAcento(D.nats[n][0]), raiz = nom.slice(0, Math.max(5, nom.length-2));
   const own = CTX[D.nats[n][1]] || [], reg = (CTX.reg || []).filter(e => sinAcento(e.que+' '+(e.efecto || '')).indexOf(raiz)>=0);
   return own.length ? own.concat(reg).sort((a,b) => a.f<b.f ? 1 : -1) : null; }
+// ---- Índices internacionales del país (IDH, IPG, IEF, INFORM): datos/indices.js, que genera robot/indices.py una vez al año
+// con los archivos oficiales. Describen al país; no explican por sí solos la migración. Sin datos, no aparece nada.
+const IDX = window.IANAMI_IDX && window.IANAMI_IDX.p ? window.IANAMI_IDX : null;
+function idxPais(n){ const p = IDX && n!=null && D.nats[n] && IDX.p[D.nats[n][1]]; if (!p) return null;
+  const l = Object.keys(IDX.ind).filter(k => p[k] && p[k].length).map(k => ({ k:k, d:IDX.ind[k], s:p[k], u:p[k][p[k].length-1] })); return l.length ? l : null; }
+const fmtIdx = (k, v) => v.toFixed(k==='idh' ? 3 : k==='ipg' ? 2 : 1);
+function lineaIdx(n){ const l = idxPais(n); if (!l) return '';
+  return '<span class="fi-ix">'+l.map(x => '<span title="'+esc(x.d.n+' ('+x.d.esc+'), '+x.u[0]+'. '+x.d.nota+' Fuente: '+x.d.f)+'">'+x.d.c+' <b>'+fmtIdx(x.k, x.u[1])+'</b><small>’'+String(x.u[0]).slice(2)+'</small></span>').join('')+'</span>'; }
+function bloqueIdx(n){ const l = idxPais(n); if (!l) return ''; const t = TM[S.tema];
+  const fila = x => { const s = x.s, v = s.map(y => y[1]), mn = Math.min.apply(null, v), mx = Math.max.apply(null, v), a0 = s[0][0], a1 = s[s.length-1][0], W = 110, H = 26;
+    const px = y => a1>a0 ? (y-a0)/(a1-a0)*(W-6)+3 : W/2, py = y => mx>mn ? H-3-(y-mn)/(mx-mn)*(H-6) : H/2;
+    const svg = '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" aria-hidden="true"><polyline fill="none" stroke="'+t.tinta+'" stroke-width="1.6" stroke-linejoin="round" points="'+s.map(y => px(y[0]).toFixed(1)+','+py(y[1]).toFixed(1)).join(' ')+'"/><circle cx="'+px(a1).toFixed(1)+'" cy="'+py(x.u[1]).toFixed(1)+'" r="2.6" fill="'+t.tinta+'"/></svg>';
+    const dif = x.u[1]-s[0][1], igual = Math.abs(dif) < (x.k==='idh' ? 0.0005 : 0.05), mejora = dif*x.d.mejor > 0;
+    return '<div class="ix-f"><span class="ix-n"><b>'+esc(x.d.n)+'</b><small>'+esc(x.d.c+' · '+x.d.esc+' · '+x.d.nota)+'</small></span>'+svg+
+      '<span class="ix-v"><b>'+fmtIdx(x.k, x.u[1])+'</b><small>'+x.u[0]+'</small></span>'+
+      '<span class="ix-c'+(igual ? '' : mejora ? ' mej' : ' emp')+'">'+(s.length>1 ? (igual ? 'sin cambio' : (mejora ? 'mejoró ' : 'empeoró ')+(dif>0 ? '+' : '−')+fmtIdx(x.k, Math.abs(dif)))+' desde '+s[0][0] : 'un solo año')+'</span>'+
+      '<a href="'+esc(x.d.u)+'" target="_blank" rel="noopener">'+esc(x.d.f)+' ↗</a></div>'; };
+  return '<div class="ctx-ix"><h3>Índices del país</h3>'+l.map(fila).join('')+'<span class="nota">Describen al país; no explican por sí solos la migración. Que un índice y nuestros registros cambien al mismo tiempo no prueba que uno cause el otro.</span></div>'; }
 function cajaContexto(n){
   const l = contextoDe(n), ini = 0, fin = D0.dias, dia = e => idxBase(e.f.length===7 ? e.f+'-01' : e.f);
   const k = ['resc','ing','rech'].map(x => [x, rangoBase(x, 0, D0.dias, null, n)]).sort((a,b) => b[1]-a[1])[0][0];
@@ -1217,7 +1238,7 @@ function cajaContexto(n){
   return '<div class="caja ancha" data-propia="1"><h2><span>Contexto · '+esc(D.nats[n][0])+'</span>'+infoP('Eventos del país verificados con fuente pública y, junto a cada uno, lo que registran nuestras bases 30 días antes y después. Que coincidan en el tiempo no prueba que uno cause el otro.')+'</h2>'+
     '<span class="mini">Qué pasó en el país y qué muestran nuestros registros</span><div class="ctx-lista">'+
     (cerca.length ? cerca.map(ev).join('') : '<span class="mini">Ningún evento cae dentro o cerca del periodo de nuestras bases ('+fechaISO(D.inicio)+' – '+fechaISO(D.corte)+').</span>')+
-    pl('Después del periodo de nuestras bases', despues)+pl('Antes del periodo de nuestras bases', antes)+'</div>'+
+    pl('Después del periodo de nuestras bases', despues)+pl('Antes del periodo de nuestras bases', antes)+'</div>'+bloqueIdx(n)+
     '<div class="cats">'+Object.keys(CATS).map(c => '<span><i style="background:'+CATS[c][1]+'"></i>'+CATS[c][0]+'</span>').join('')+'</div>'+
     '<span class="nota">Coincidir en el tiempo no prueba la causa. El efecto migratorio solo se escribe cuando la fuente lo documenta.</span></div>';
 }
@@ -1251,6 +1272,7 @@ function pintarBajo(){
   if (F.n==null && (S.ind==='ing' || S.ind==='resc' || S.ind==='pres')) cajas.push(cajaCruce(S.ind, F));
   // 5) Contexto: aparece al elegir una nacionalidad
   if (F.n!=null && contextoDe(F.n)) cajas.push(cajaContexto(F.n));
+  else if (F.n!=null && idxPais(F.n)) cajas.push('<div class="caja ancha" data-propia="1"><h2><span>Contexto · '+esc(D.nats[F.n][0])+'</span></h2>'+bloqueIdx(F.n)+'</div>');   // sin eventos propios: solo los índices
   $('bajo').innerHTML = cajas.join('');
   const cl = document.querySelector('.ctx-lista');       // el contexto muestra de inicio los primeros 4 eventos
   if (cl){ const ev = cl.querySelectorAll(':scope > .ev'); if (ev.length>4) cl.style.maxHeight = ev[4].offsetTop+'px'; }
@@ -1403,7 +1425,7 @@ function escala(){ const n = window.innerWidth>=2200 ? Math.min(4, window.innerW
 // una gráfica de barras y la barra de tiempo. Usa el mismo motor del Pulso (periodo, filtro, día del cursor),
 // así que el mapa, las cifras y la reproducción siempre dicen lo mismo. Al salir, el Pulso queda como estaba.
 const SALA = { on:false, cmp:false, A:null, B:null, guarda:null, gr:null, anim:{}, por:{}, fijo:false };
-const PALABRA = { ing:'ingresos de extranjeros', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados' };
+const PALABRA = { ing:'ingresos de extranjeros', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados', co:'constancias y oficios', va:'solicitudes de validación de actas' };
 const ORDEN_SALA = ['ing','resc','rep','rech','can','pres'];
 const IND_SALA = [['', 'Resumen', 'Panorama', 'Lo principal de todo en un vistazo'], ['ing', 'Regular', 'Ingresos', 'Extranjeros que entraron al país'], ['tram', 'Regular', 'Trámites', 'Trámites migratorios concluidos'],
   ['resc', 'Irregular', 'Rescatados', 'Personas en situación irregular'], ['can', 'Irregular', 'Canalizados', 'NNA y acompañantes al DIF'], ['rep', 'Desde EE. UU.', 'Repatriados', 'Mexicanos devueltos por EE. UU.']];
@@ -1422,12 +1444,12 @@ function rangoBase(k, a, b, ss, n){
 }
 // «Ingresos» en el Pulso incluye a los mexicanos que regresan; aquí la cifra dice «extranjeros», así que se descuentan
 const sinMx = (k, n) => (k==='ing' || (k==='rech' && SALA.perfil==='control')) && n==null;   // en Control, los rechazos tampoco cuentan mexicanos (igual que su vista)
-const valAcum = (k, ss, n) => acum(k, ss, n) - (sinMx(k, n) ? acum(k, ss, MX) : 0);
-const valRango = (k, a, b, ss, n) => rangoBase(k, a, b, ss, n) - (sinMx(k, n) ? rangoBase(k, a, b, ss, MX) : 0);
+const valAcum = (k, ss, n) => k==='co' ? coRango(P0, P0+Math.min(S.dia, ND), ss, n) : acum(k, ss, n) - (sinMx(k, n) ? acum(k, ss, MX) : 0);
+const valRango = (k, a, b, ss, n) => k==='co' ? coRango(a, b, ss, n) : rangoBase(k, a, b, ss, n) - (sinMx(k, n) ? rangoBase(k, a, b, ss, MX) : 0);
 // La misma unidad que --u en el CSS: centésima del rectángulo 16:9 que cabe; en columna (teléfono o vertical), fija
 const uSala = () => { const w = innerWidth, h = innerHeight; return (w<=760 || w/h<=1.25 || h<=560) ? 13.6*Math.max(1, Math.min(2.6, w/390, h/700)) : Math.min(w/100, h*1.7778/100); };
 const nFde = (k, F) => IND[k].nat ? F.nd : null;
-const salaInd = () => S.ind || null;            // null = Panorama
+const salaInd = () => (SALA.on && SALA.extra) || S.ind || null;   // null = Panorama; «co» y «va» son propios de Regulación (debajo, el mapa sigue en trámites)
 const nomRango = (a, b) => { const f0 = fechaBase(a), f1 = fechaBase(b-1);
   if (f0.getDate()===1 && isoDe(new Date(f1.getFullYear(), f1.getMonth(), f1.getDate()+1)).slice(8)==='01' && f0.getMonth()===f1.getMonth() && f0.getFullYear()===f1.getFullYear()) return MES_L[f0.getMonth()]+' '+f0.getFullYear();
   return f0.getDate()+' '+MES12[f0.getMonth()]+(f0.getFullYear()!==f1.getFullYear() ? ' '+f0.getFullYear() : '')+' – '+f1.getDate()+' '+MES12[f1.getMonth()]+' '+f1.getFullYear(); };
@@ -1456,7 +1478,7 @@ function abrirSala(pf){
   if (SALA.on) return; if (S.play) detener();
   SALA.perfil = PERFILES[pf] ? pf : 'pulso';
   SALA.guarda = { vista:S.vista, tema:S.tema, per:S.per, desde:S.desde, hasta:S.hasta, anio:S.anio, mes:S.mes, ind:S.ind, sel:S.sel, region:S.region, agr:S.agr, p:[P0, P1], dia:S.dia };
-  SALA.on = true; SALA.cmp = false; SALA.anim = {};
+  SALA.on = true; SALA.cmp = false; SALA.anim = {}; SALA.extra = null;
   S.sel = null; S.region = null; S.ind = null; S.agr = 'e';      // entra limpia: la consulta del Pulso no se arrastra (al salir regresa)
   if (S.vista!=='pulso'){ SALA.guarda.proceso = true; S.vista = 'pulso'; $('vista-pulso').hidden = false; $('vista-otra').hidden = true; }   // abierta desde un proceso: el mapa del Pulso cubre la pantalla
   const m = $('mapa'); m.classList.add('sala'); document.body.classList.add('en-sala');
@@ -1491,15 +1513,15 @@ function abrirSala(pf){
   document.addEventListener('pointerdown', cerrarIndSala, true);
   L.addEventListener('click', clicSala); L.addEventListener('change', cambioSala);
   $('sl-q').addEventListener('input', buscarSala); $('sl-q').addEventListener('keydown', e => { if (e.key==='Enter'){ elegirSala(0); e.preventDefault(); } if (e.key==='Escape'){ if (!$('sl-res').hidden){ $('sl-res').hidden = true; e.stopPropagation(); } else e.target.blur(); } });
-  const tg = $('sl-tg'); tg.addEventListener('pointerdown', e => { if (S.play) detener(); fijarDia(diaSala(e)); tg.setPointerCapture(e.pointerId); });
-  tg.addEventListener('pointermove', e => { if (e.buttons) fijarDia(diaSala(e)); });
-  tg.addEventListener('keydown', e => { if (e.key==='ArrowLeft'){ fijarDia(S.dia-1); e.preventDefault(); } if (e.key==='ArrowRight'){ fijarDia(S.dia+1); e.preventDefault(); } });
+  const tg = $('sl-tg'); tg.addEventListener('pointerdown', e => { if (SALA.extra==='va') return; if (S.play) detener(); fijarDia(diaSala(e)); tg.setPointerCapture(e.pointerId); });
+  tg.addEventListener('pointermove', e => { if (e.buttons && SALA.extra!=='va') fijarDia(diaSala(e)); });
+  tg.addEventListener('keydown', e => { if (SALA.extra==='va') return; if (e.key==='ArrowLeft'){ fijarDia(S.dia-1); e.preventDefault(); } if (e.key==='ArrowRight'){ fijarDia(S.dia+1); e.preventDefault(); } });
   setTimeout(() => { reencuadrar(); ajustarLienzo(); rehacerMapa(); S.modoVista = 'mundo'; prepararVuelo(); volarSala(); }, 60);   // entra al mundo completo; rehacerMapa pinta todo, sala incluida
 }
 function cerrarIndSala(e){ const m = $('sl-im'); if (m && !m.hidden && !e.target.closest('.sl-ib')){ m.hidden = true; $('sl-indb').setAttribute('aria-expanded', false); } }
 function cerrarSala(){
   if (!SALA.on) return; if (S.play) detener(); document.removeEventListener('pointerdown', cerrarIndSala, true);
-  SALA.on = false; const g = SALA.guarda; if (SALA.gr){ SALA.gr.dispose(); SALA.gr = null; }
+  SALA.on = false; SALA.extra = null; $('mapa').classList.remove('sl-va'); const g = SALA.guarda; if (SALA.gr){ SALA.gr.dispose(); SALA.gr = null; }
   const L = $('sala'); if (L) L.remove();
   $('mapa').classList.remove('sala'); document.body.classList.remove('en-sala');
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -1514,7 +1536,7 @@ function clicSala(e){
   const b = e.target.closest('button'); if (!b) return;
   if (b.id==='sl-x'){ cerrarSala(); return; }
   if (b.id==='sl-indb'){ const m = $('sl-im'), ab = m.hidden; m.hidden = !ab; b.setAttribute('aria-expanded', ab); if (ab){ const on = m.querySelector('.on') || m.querySelector('button'); on.focus(); } return; }
-  if (b.dataset.ind!=null){ $('sl-im').hidden = true; $('sl-indb').setAttribute('aria-expanded', false); S.ind = b.dataset.ind || null; if (S.ind==='rep' && S.sel && S.sel.t==='n') S.sel = null; pintarTodo(); return; }
+  if (b.dataset.ind!=null){ $('sl-im').hidden = true; $('sl-indb').setAttribute('aria-expanded', false); const v = b.dataset.ind || null; SALA.extra = v==='co' || v==='va' ? v : null; S.ind = SALA.extra ? 'tram' : v; if (SALA.extra==='va' && S.play) detener(); if (S.ind==='rep' && S.sel && S.sel.t==='n') S.sel = null; pintarTodo(); return; }
   if (b.dataset.por){ SALA.por[salaInd() || 'resc'] = b.dataset.por; pintarSala(false); return; }
   if (b.id==='sl-pl'){ reproducir(); return; }
   if (b.id==='sl-todo'){ verTodo(); return; }
@@ -1572,7 +1594,7 @@ const diaSala = e => { const r = $('sl-tg').getBoundingClientRect(); return (e.c
 function pintarSala(soloTiempo){
   const L = $('sala'); if (!L) return;
   const F = filtro(), k = salaInd(), t = TM[S.tema], nF = k ? nFde(k, F) : null, fin = S.dia>=ND && !S.play;
-  L.classList.toggle('pan', !k);
+  L.classList.toggle('pan', !k); L.classList.toggle('va', k==='va'); $('mapa').classList.toggle('sl-va', k==='va');
   const ent = S.sel ? nombreSel() : S.region ? nombreRegion() : 'todo el mundo';
   const per = nomRango(P0, P1);
   // controles
@@ -1590,6 +1612,7 @@ function pintarSala(soloTiempo){
     $('sl-ctx').innerHTML = '<span class="k">Estás viendo</span><b>'+(k ? cap1(PALABRA[k]) : perfilSala().ctx)+'</b><i>·</i>'+esc(ent)+'<i>·</i>'+(SALA.cmp ? esc(nomRango(SALA.B[0], SALA.B[1]))+' contra '+esc(nomRango(SALA.A[0], SALA.A[1]))+', por día' : esc(per));
     $('sl-fte').textContent = 'Fuente'+(perfilSala().orden.length>1 ? 's' : '')+': '+fuentesSala(k || perfilSala().mapa || 'ing')+' · el mapa muestra '+(SALA.cmp ? nomRango(SALA.B[0], SALA.B[1]) : 'el periodo')+(fin ? '' : ' hasta el '+fechaLarga(S.dia-1));
   }
+  if (k==='va'){ pintarVa(F, t); tapasSala(); return; }            // periodo propio: nada de lo de abajo aplica
   // cifra principal
   const dur = S.play ? 200 : SALA.anim.big ? 650 : 1100; SALA.anim.big = true;
   let pa = null, pb = null;
@@ -1605,7 +1628,7 @@ function pintarSala(soloTiempo){
     $('sl-dl').innerHTML = '<b>'+cortoK(v/dias)+'</b> por día · '+dias+' días';
   }
   // debajo de la cifra: el desglose del indicador
-  const otros = k ? ORDEN_SALA.filter(x => x!==k && (F.nd==null || IND[x].nat) && x!=='tram').slice(0,4) : [], G = $('sl-g');
+  const otros = k && k!=='co' ? ORDEN_SALA.filter(x => x!==k && (F.nd==null || IND[x].nat) && x!=='tram').slice(0,4) : [], G = $('sl-g');
   if (k) desgloseSala(k, F, t, dur); else G.innerHTML = '', G.dataset.k = '';
   // frase de un vistazo
   $('sl-fr').innerHTML = k ? fraseSala(k, F, nF, pa, pb, otros) : frasePanorama(F);
@@ -1618,7 +1641,7 @@ const cap1 = s => s.charAt(0).toUpperCase()+s.slice(1);
 const relevante = a => a.k && a.t!=='car' && (a.t==='cambio' || a.t==='pico' || Math.max(a.a||0, a.b||0)*cmpN() >= 300);
 const ventanaCmp = () => textoCmp().replace(' contra la anterior','');
 function flecha(a, b){ const x = (b/a-1)*100; if (Math.abs(x)<0.5) return '<span class="ig">= sin cambio</span>'; return '<span class="'+(x<0?'baja':'sube')+'">'+(x<0?'▼ ':'▲ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%</span>'; }
-function fuentesSala(k){ const f = { ing:'DGCVM', rech:'DGCVM', tram:'DGRAM', resc:'DGCOR', pres:'DGCVM', can:'SIRENNA', ret:'DGCOR', recib:'DGCOR', rep:'DGPMV' };
+function fuentesSala(k){ const f = { co:'DGRAM', va:'DGRAM', ing:'DGCVM', rech:'DGCVM', tram:'DGRAM', resc:'DGCOR', pres:'DGCVM', can:'SIRENNA', ret:'DGCOR', recib:'DGCOR', rep:'DGPMV' };
   const l = [...new Set([k].concat(perfilSala().orden).map(x => f[x]))]; return l.length>1 ? l.slice(0,-1).join(', ')+' y '+l[l.length-1] : l[0]; }
 // Reparto de un indicador en el periodo (sin mexicanos en ingresos, para que cuadre con «extranjeros»)
 function compSala(key, F){ const ss = F.ss, n = F.nd, v = comp(key, ss, n);
@@ -1669,6 +1692,58 @@ function docTram(F){ const R = window.IANAMI_REG; if (!R || !R.cols) return null
     if (F.ss && F.ss.indexOf(RGD.mapE[C.e[i]])<0) continue; if (nl && nl.indexOf(RGD.mapN[C.n[i]])<0) continue; v[C.c[i]] += C.v ? C.v[i] : 1; }
   const T = R.tarjetas, tar = v.slice(0,T).reduce((x,y) => x+y, 0), sin = v[v.length-1], otros = v.slice(T, v.length-1).map((x,j) => [R.condiciones[T+j], x]);
   return { tar:tar, co:otros.reduce((x,y) => x+y[1], 0), sin:sin, otros:otros }; }
+// ---- Constancias y oficios: trámites cuyo documento no es tarjeta (condiciones entre las tarjetas y «Sin expedición»).
+// Se separan una vez; cada consulta recorre solo esos renglones. Días en el mismo índice que las bases del Pulso (P0…).
+const NOM_CO = { 'Oficio S.R.E.':'Oficio de la S.R.E.', 'Permiso salida y regreso':'Permiso de salida y regreso' };
+const CO = {};
+function coFilas(){ if (CO.d) return CO; const R = window.IANAMI_REG; if (!R || !R.cols) return { d:[], nom:[] };
+  docTram({ ss:null, nd:null });                       // arma la equivalencia de estados y nacionalidades
+  const C = R.cols, off = idxBase(R.inicio), T = R.tarjetas, U = R.condiciones.length-1; CO.e = []; CO.n = []; CO.c = []; CO.v = []; const d = [];
+  for (let i=0; i<C.c.length; i++){ const c = C.c[i]; if (c<T || c>=U) continue; d.push(off + C.d[i]); CO.e.push(RGD.mapE[C.e[i]]); CO.n.push(RGD.mapN[C.n[i]]); CO.c.push(c-T); CO.v.push(C.v ? C.v[i] : 1); }
+  CO.nom = R.condiciones.slice(T, U); CO.d = d; return CO; }
+function coRango(a, b, ss, n, reparto){ const X = coFilas(), nl = n==null ? null : (Array.isArray(n) ? n : [n]), v = new Array(X.nom.length).fill(0);
+  for (let i=0; i<X.d.length; i++){ const d = X.d[i]; if (d<a || d>=b) continue; if (ss && ss.indexOf(X.e[i])<0) continue; if (nl && nl.indexOf(X.n[i])<0) continue; v[X.c[i]] += X.v[i]; }
+  return reparto ? v : v.reduce((s,x) => s+x, 0); }
+function coDiario(F){ const X = coFilas(), nl = F.nd==null ? null : (Array.isArray(F.nd) ? F.nd : [F.nd]), v = new Array(ND).fill(0);
+  for (let i=0; i<X.d.length; i++){ const d = X.d[i]-P0; if (d<0 || d>=ND) continue; if (F.ss && F.ss.indexOf(X.e[i])<0) continue; if (nl && nl.indexOf(X.n[i])<0) continue; v[d] += X.v[i]; }
+  return v; }
+// ---- Validación de actas del Registro Civil: base nueva con su propio periodo (desde RG.va_ini). No sigue al periodo,
+// al play ni a la comparación del tablero, y no se cruza con nada más; solo respeta el país, el estado o la región elegidos.
+// Renglón: [día, días entre registro y solicitud, O.R., entidad de registro, nacionalidad, trámite, acto, resultado, oficina]
+function vaFilas(F){ const R = window.IANAMI_REG; if (!R || !R.va) return []; const VD = R.va_dic;
+  if (!RGD.vaN){ const ie = {}, in_ = {}; EST.forEach((e,i) => ie[sinAcento(e)] = i); D.nats.forEach((x,i) => in_[sinAcento(x[0])] = i);
+    const m = (l, q) => l.map(x => q[sinAcento(x)]!=null ? q[sinAcento(x)] : -1); RGD.vaN = m(VD.n, in_); RGD.vaE = m(VD.ent, ie); RGD.vaO = m(VD.ofr, ie); }
+  const nl = F.nd==null ? null : (Array.isArray(F.nd) ? F.nd : [F.nd]);
+  return R.va.filter(r => (!nl || nl.indexOf(RGD.vaN[r[4]])>=0) && (!F.ss || F.ss.indexOf(RGD.vaE[r[3]])>=0 || F.ss.indexOf(RGD.vaO[r[2]])>=0)); }
+function vaPeriodo(){ const R = window.IANAMI_REG, ini = new Date(R.va_ini+'T00:00:00'), nd = Math.max.apply(null, R.va.map(r => r[0]))+1;
+  const f = d => { const x = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()+d); return x.getDate()+' '+MES12[x.getMonth()]; };
+  return { nd:nd, f:f, txt:f(0)+' – '+f(nd-1)+' '+ini.getFullYear() }; }
+function vaDesglose(F){ const VD = window.IANAMI_REG.va_dic, V = vaFilas(F), iM = VD.acto.indexOf('Matrimonio'), iN = VD.acto.indexOf('Nacimiento'), iP = VD.res.indexOf('Pendiente');
+  const n = f => V.reduce((s,r) => s + (f(r) ? 1 : 0), 0);
+  return [['Matrimonio', n(r => r[6]===iM)], ['Nacimiento', n(r => r[6]===iN)],
+    ['Matrimonio de ≤30 días', n(r => r[6]===iM && r[1]>=0 && r[1]<=30), 'Acta de matrimonio registrada 30 días o menos antes de la solicitud: señal para revisar, no una conclusión'],
+    ['Acta de otro estado', n(r => VD.ofr[r[2]]!=='DGRAM' && VD.ofr[r[2]]!==VD.ent[r[3]]), 'El acta es de un estado distinto al de la O.R. que la reporta (la DGRAM es oficina central y no cuenta)'],
+    ['Pendientes', n(r => r[7]===iP), 'Validaciones que aún no tienen resultado']]; }
+function pintarVa(F, t){
+  const P = vaPeriodo(), V = vaFilas(F), l = vaDesglose(F), ent = S.sel ? nombreSel() : S.region ? nombreRegion() : 'todo el país', c = t[IND.va.g], cua = x => '<i style="background:'+x+'"></i>';
+  $('sl-ctx').innerHTML = '<span class="k">Estás viendo</span><b>Validación de actas del Registro Civil</b><i>·</i>'+esc(ent)+'<i>·</i>'+P.txt+'<em class="sl-pp">periodo propio de esta base</em>';
+  $('sl-corte').innerHTML = '<span>Datos al <b>'+P.f(P.nd-1)+'</b></span><span>corte semanal de su base</span>';
+  mover($('sl-big'), V.length, cifraG, SALA.anim.big ? 650 : 1100); SALA.anim.big = true;
+  $('sl-cap').innerHTML = 'Solicitudes de validación de actas';
+  $('sl-dl').innerHTML = '<b>'+P.txt+'</b> · no sigue al periodo ni al play del tablero';
+  desgloseSala('va', F, t, 900);
+  const ent2 = S.sel ? (S.sel.t==='n' ? ' de '+nombreSel() : ' en '+nombreSel()) : S.region ? ' de '+nombreRegion() : '';
+  $('sl-fr').innerHTML = V.length ? 'Del '+P.f(0)+' al '+P.f(P.nd-1)+' se pidió validar <b>'+miles(V.length)+' actas</b>'+esc(ent2)+': '+Math.round(l[0][1]/V.length*100)+'% de matrimonio. <b>'+miles(l[2][1])+'</b> matrimonios se registraron 30 días o menos antes de la solicitud; es una señal para revisar, no una conclusión.' : 'Sin solicitudes de validación'+esc(ent2)+' en el periodo de esta base.';
+  pintarBarrasSala('va', F, null);
+  // barra de tiempo propia: solicitudes por día, sin cursor ni play
+  const sv = $('sl-tg'), W = Math.max(200, sv.clientWidth), H = Math.max(50, sv.clientHeight), fs = Math.max(10, Math.min(30, uSala()*0.8)), base = H - fs - 6, pw = W/P.nd, v = new Array(P.nd).fill(0);
+  V.forEach(r => v[r[0]]++); const mx = Math.max.apply(null, v) || 1, cada = Math.ceil(P.nd*fs*3.2/W); let h = '';
+  v.forEach((x,i) => { const bh = Math.max(0.6, x/mx*(base-4)); h += '<rect x="'+(i*pw+1).toFixed(1)+'" y="'+(base-bh).toFixed(1)+'" width="'+Math.max(1, pw-2).toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="2" fill="'+c+'"><title>'+P.f(i)+': '+x+'</title></rect>';
+    if (!(i%cada)) h += '<text x="'+(i*pw+pw/2).toFixed(1)+'" y="'+(H-3)+'" text-anchor="middle" font-size="'+fs.toFixed(1)+'" fill="'+t.tinta+'" fill-opacity=".7">'+P.f(i)+'</text>'; });
+  sv.setAttribute('viewBox', '0 0 '+W+' '+H); sv.setAttribute('preserveAspectRatio', 'none'); sv.innerHTML = h;
+  $('sl-tl').innerHTML = '<span>'+cua(c)+'Solicitudes por día</span><span class="m">periodo propio de la base · el mapa se atenúa porque sigue el periodo del tablero</span>';
+  $('sl-fte').textContent = 'Fuente: DGRAM, validación de actas del Registro Civil (corte semanal) · no se publican número de acta, oficialía, libro ni municipio';
+}
 function docsVig(F){ const d = D.docs; if (!d) return [0,0,0];
   if (F.nd!=null && !Array.isArray(F.nd)){ const r = d.nat && d.nat[F.nd]; return r ? r : [0,0,0]; }
   if (F.ss){ return [F.ss.reduce((a,s) => a+(d.est[s]||0), 0), null, null]; }
@@ -1691,7 +1766,8 @@ const PERFILES = {
         '. Hubo <b>'+v('resc')+' rescates</b>'+(d[0]+d[1] ? ': '+Math.round(d[0]/(d[0]+d[1]+d[2])*100)+'% a estación migratoria y '+Math.round(d[1]/(d[0]+d[1]+d[2])*100)+'% al DIF' : '')+', según el reporte de las O.R.'; } }
 };
 PERFILES.regulacion = { nom:'Regulación migratoria', ctx:'Panorama: trámites del periodo y documentos vigentes', dos:true, mapa:'tram', solo:true, orden:['tram'], cam:['tram'],
-  inds:[['', 'Resumen', 'Panorama', 'Trámites y documentos en un vistazo'], ['tram', 'Trámites', 'Trámites', 'Trámites migratorios concluidos']],
+  inds:[['', 'Resumen', 'Panorama', 'Trámites y documentos en un vistazo'], ['tram', 'Trámites', 'Trámites', 'Trámites migratorios concluidos'], ['co', 'Trámites', 'Constancias y oficios', 'Trámites que no terminan en tarjeta'],
+    ['va', 'Registro Civil · periodo propio', 'Validación de actas', 'Base nueva: desde el 28 sep 2026']],
   pan:[['tram','Trámites concluidos','reg','en el periodo','Lo que se tramitó en el periodo'], ['docs','Con documento vigente','reg','extranjeros','Lo que hay al corte', DOCS_ITEM]],
   frase:(F, ent, v) => { const r = compSala('tram_res', F), ti = compSala('tram_tipo', F).map((x,i) => [x, D.tramTipos[i]]).filter(x => x[1]!=='Otros').sort((a,b) => b[0]-a[0])[0], dv = docsVig(F)[0];
     const dt = docTram(F), T = dt ? dt.tar+dt.co+dt.sin : 0;
@@ -1739,11 +1815,13 @@ function desgloseSala(k, F, t, dur){
   else if (k==='rech'){ tit = 'Segunda revisión'; const v = z('rech_det'); l = [['Casos revisados',v[0]+v[1]],['Internación',v[0]],['Rechazo',v[1]]]; }
   else if (k==='pres'){ tit = 'Principales estaciones'; l = z('pres_est').map((x,i) => [nomEst(i), x]).filter(r => r[1]>0).sort((a,b) => b[1]-a[1]).slice(0,5); }
   else if (k==='ret'){ tit = 'Tipo de retorno'; const v = z('ret_tipo'); l = [['Retorno asistido',v[1]],['Deportación',v[0]]]; }
+  else if (k==='co'){ tit = 'Qué documento salió'; const v = coRango(P0, P0+Math.min(S.dia, ND), F.ss, F.nd, true); l = coFilas().nom.map((x,i) => [NOM_CO[x] || x, v[i]]).sort((a,b) => b[1]-a[1]); }
+  else if (k==='va'){ tit = 'Tipo de acta y señales'; l = vaDesglose(F); }
   else if (k==='rep'){ tit = 'Quiénes y por dónde'; const v = comp('rep_comp', F.ss, null); l = [['Adultos',v[0]+v[1]],['NNA',v[2]+v[3]],['Vía aérea (PRIM)',v[7],'Vía aérea: vuelos del Procedimiento de Repatriación al Interior de México (personas, no vuelos)'],['Vía terrestre',v[6]]]; }
   const G = $('sl-g'), key = k+'|'+l.map(x => x[0]).join(), c = t[IND[k].g];
-  if (G.dataset.k!==key){ G.dataset.k = key; G.innerHTML = '<div class="sl-gt">'+tit+(SALA.cmp ? ' · '+esc(nomRango(SALA.B[0], SALA.B[1])) : ' · periodo completo')+'</div>'+
+  if (G.dataset.k!==key){ G.dataset.k = key; G.innerHTML = '<div class="sl-gt">'+tit+(k==='va' ? ' · periodo propio' : SALA.cmp ? ' · '+esc(nomRango(SALA.B[0], SALA.B[1])) : ' · periodo completo')+'</div>'+
     l.map((x,i) => '<div class="sl-m sl-e" style="--d:'+(.28+i*.05)+'s"><div class="v" style="color:'+c+'" data-m="'+i+'">0</div><div class="n"'+(x[2] ? ' title="'+esc(x[2])+'"' : '')+'>'+esc(x[0])+'</div><div class="d"></div></div>').join(''); }
-  const tot = k==='rep' ? l[0][1]+l[1][1] : k==='can' ? l[0][1]+l[1][1] : k==='resc' ? l[0][1]+l[1][1] : k==='rech' ? l[0][1] : l.reduce((a,x) => a+x[1], 0) || 1;
+  const tot = k==='va' ? l[0][1]+l[1][1] : k==='rep' ? l[0][1]+l[1][1] : k==='can' ? l[0][1]+l[1][1] : k==='resc' ? l[0][1]+l[1][1] : k==='rech' ? l[0][1] : l.reduce((a,x) => a+x[1], 0) || 1;
   const base = k==='tram' ? compSala('tram_tipo', F).reduce((a,x) => a+x, 0) : k==='pres' ? compSala('pres_est', F).reduce((a,x) => a+x, 0) : tot;
   const nnaT = k==='can' ? l[1][1] : 0;
   l.forEach((x,i) => { const el = G.querySelector('[data-m="'+i+'"]'); if (!el) return; mover(el, x[1], cifraG, dur);
@@ -1763,6 +1841,8 @@ function fraseSala(k, F, nF, pa, pb, otros){
       .filter(c => c[1]*(SALA.A[1]-SALA.A[0])>=100).sort((a,b) => Math.abs(b[3])-Math.abs(a[3]))[0];
     return 'En '+B+' hubo <b>'+cortoK(pb)+' '+PALABRA[k]+ent+' por día</b>, '+dir+' en '+A+'.'+(cam && Math.abs(cam[3])>=5 ? ' Lo que más cambió: <b>'+PALABRA[cam[0]]+'</b> ('+(cam[3]<0 ? '−' : '+')+Math.abs(cam[3]).toFixed(0)+'%).' : '');
   }
+  if (k==='co'){ const v = valAcum(k, F.ss, nF), dt = docTram(F), T = dt ? dt.tar+dt.co+dt.sin : 0;
+    return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' salieron <b>'+cortoK(v)+' constancias y oficios</b>'+(T ? ': el '+Math.round(v/T*100)+'% de los trámites concluidos no terminó en tarjeta sino en uno de estos documentos.' : '.'); }
   const v = valAcum(k, F.ss, nF), top = AVISOS.find(a => relevante(a) && a.k===k) || AVISOS.find(relevante);
   return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+' se registraron <b>'+cortoK(v)+' '+PALABRA[k]+ent+'</b>.'+(top && S.dia>=ND ? ' Lo que más cambió ('+ventanaCmp()+'): '+textoAviso(top).replace(/\s*\([^)]*\)\.?$/, '.') : '');
 }
@@ -1779,9 +1859,11 @@ function pintarBarrasSala(k, F, nF){
   if (porPto){ (k==='rep' ? D.repPuntos : D.puntos).forEach((pt,i) => lista.push([pt.n, null, null, pt])); }
   else if (porEst){ for (let s=0;s<NS;s++){ if (ssF && ssF.indexOf(s)<0) continue; lista.push([ESTC[s], s, null]); } }
   else { const l = F.nd==null ? null : (Array.isArray(F.nd) ? F.nd : [F.nd]); for (let n=0;n<OT;n++){ if (l && l.indexOf(n)<0) continue; lista.push([D.nats[n][0], null, n]); } }
-  let datos, tit, sub, cmp = SALA.cmp;
   const nomCorto = s => s.replace('Estados Unidos','EE. UU.').replace('Ciudad de México','CDMX').replace('Edo. de México','Edomex').replace('Quintana Roo','Q. Roo').replace('Baja California S.','BCS').replace('Baja California','B. C.').replace('Indonesia','Indon.').replace('Filipinas','Filip.').replace('República Dominicana','Rep. Dom.');
-  if (cmp){ const dA = SALA.A[1]-SALA.A[0], dB = SALA.B[1]-SALA.B[0];
+  let datos, tit, sub, cmp = SALA.cmp && k!=='va';
+  if (k==='va'){ const V = vaFilas(F), DV = window.IANAMI_REG.va_dic, c = {}; V.forEach(r => { const x = porEst ? DV.ofr[r[2]] : DV.n[r[4]]; c[x] = (c[x]||0) + 1; });
+    datos = Object.entries(c).sort((a,b) => b[1]-a[1]).slice(0,8).map(x => [x[0], x[1], V.length]); tit = porEst ? 'Por O.R.' : 'Por nacionalidad'; sub = 'solicitudes de validación · periodo propio de la base'; }
+  else if (cmp){ const dA = SALA.A[1]-SALA.A[0], dB = SALA.B[1]-SALA.B[0];
     const r = lista.map(x => { if (x[3]){ const a = puntoRango(x[3], SALA.A[0], SALA.A[1]), b = puntoRango(x[3], SALA.B[0], SALA.B[1]); return [x[0], a/dA, b/dB, a]; }
       const ss = x[1]!=null ? [x[1]] : ssF, n = x[2]!=null ? x[2] : nF, a = valRango(k, SALA.A[0], SALA.A[1], ss, n), b = valRango(k, SALA.B[0], SALA.B[1], ss, n); return [x[0], a/dA, b/dB, a]; });
     const mx = Math.max(...r.map(x => x[3]), 1);
@@ -1824,7 +1906,7 @@ function pintarTiempoSala(k, F){
   const sv = $('sl-tg'); if (!sv) return; const W = Math.max(200, sv.clientWidth), H = Math.max(50, sv.clientHeight), t = TM[S.tema], pw = W/ND;
   const fs = Math.max(10, Math.min(30, uSala()*0.8)), base = H - fs - 6, mid = Math.round(base*0.64), alto1 = mid - 2, alto2 = base - mid - 2;
   const solo = perfilSala().solo, k2 = k==='resc' ? 'ing' : 'resc', capas = solo ? [[k, base-2, base-4, 1]] : [[k, mid, alto1, 1], [k2, mid+1, alto2, -1]];
-  const serie = x => { const d = diario(x, IND[x].nat || F.nd==null ? F : { ss:F.ss, n:null, nd:null });
+  const serie = x => { if (x==='co') return coDiario(F); const d = diario(x, IND[x].nat || F.nd==null ? F : { ss:F.ss, n:null, nd:null });
     if (sinMx(x, F.nd)){ const m = diario(x, { ss:F.ss, n:MX, nd:MX }); return d.map((v,i) => Math.max(0, v - m[i])); } return d; };
   let h = '';
   const cada = Math.ceil(MESES_INI.length*fs*4.4/W);
@@ -1894,7 +1976,7 @@ function fichaDatos(){
   const det = detalleFicha(ks[0], sel, F);
   const k0 = ks[0], top = nat ? topEsts(s => sumaSem(k0, 0, NW-1, [s], sel.i), 1)[0] : (IND[k0].nat ? topNats(n => sumaSem(k0, 0, NW-1, [sel.i], n), 1)[0] : null);
   const dest = top ? (nat ? 'Principal O.R.: <b>'+esc(ESTC[top[0]])+'</b>' : 'Principal nacionalidad: <b>'+esc(D.nats[top[0]][0])+'</b>') : '';
-  return { xy:xy, col:TM[S.tema][IND[ks[0]].g], html:'<button type="button" class="fi-x" aria-label="Quitar">×</button><span class="fi-k">'+(nat ? 'País' : 'Estado · O.R.')+'</span><b class="fi-n">'+esc(nombreSel())+'</b>'+filas+(dest ? '<span class="fi-d">'+dest+'</span>' : '')+det+'<span class="fi-c">'+(alFinal() ? 'periodo completo' : 'al '+fechaDia(S.dia-1))+' · '+esc(textoCmp())+'</span>' };
+  return { xy:xy, col:TM[S.tema][IND[ks[0]].g], html:'<button type="button" class="fi-x" aria-label="Quitar">×</button><span class="fi-k">'+(nat ? 'País' : 'Estado · O.R.')+'</span><b class="fi-n">'+esc(nombreSel())+'</b>'+filas+(dest ? '<span class="fi-d">'+dest+'</span>' : '')+det+(nat ? lineaIdx(sel.i) : '')+'<span class="fi-c">'+(alFinal() ? 'periodo completo' : 'al '+fechaDia(S.dia-1))+' · '+esc(textoCmp())+'</span>' };
 }
 // El dato que más dice de cada indicador para el lugar elegido
 function detalleFicha(k, sel, F){

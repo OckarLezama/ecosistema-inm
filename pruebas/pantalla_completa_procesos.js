@@ -9,7 +9,7 @@ const W=+process.argv[2]||1600, H=+process.argv[3]||900;
   await p.goto('file://'+dir+'/index.html'); await p.evaluate(()=>Promise.all(['900 20px "Big Shoulders Display"','700 13px "Barlow Condensed"','500 13px Barlow'].map(f=>document.fonts.load(f)))); await p.waitForTimeout(1200);
   await p.evaluate(pr=>IANAMI_NAV.ir(pr,{}), process.env.PROC||'control'); await p.waitForTimeout(1200);
   await p.click('[data-cvsala],[data-rsala]'); await p.waitForTimeout(2800); await p.screenshot({path:__dirname+'/capturas/'+(process.env.PROC||'control')+'-pan-'+W+'.png'});
-  for (const k of (process.env.PROC==='regulacion' ? ['tram'] : ['ing','rech','pres','ret'])){ await p.click('#sl-indb'); await p.waitForTimeout(150); await p.click('#sl-im [data-ind="'+k+'"]'); await p.waitForTimeout(1300); await p.screenshot({path:__dirname+'/capturas/k-'+k+'-'+W+'.png'}); }
+  for (const k of (process.env.PROC==='regulacion' ? ['tram','co','va'] : ['ing','rech','pres','ret'])){ await p.click('#sl-indb'); await p.waitForTimeout(150); await p.click('#sl-im [data-ind="'+k+'"]'); await p.waitForTimeout(1300); await p.screenshot({path:__dirname+'/capturas/k-'+k+'-'+W+'.png'}); }
   await p.click('.sl-por [data-por="p"]').catch(()=>{}); 
   if (process.env.PROC!=='regulacion'){ await p.click('#sl-indb'); await p.click('#sl-im [data-ind="ing"]'); await p.waitForTimeout(500); await p.click('.sl-por [data-por="p"]').catch(()=>console.log('sin selector punto')); await p.waitForTimeout(900); await p.screenshot({path:__dirname+'/capturas/k-ingp-'+W+'.png'}); }
   await p.keyboard.press('Escape'); await p.waitForTimeout(800);

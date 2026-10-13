@@ -21,6 +21,7 @@ Página principal (Pulso) y convertidor de bases.
 | `js/control.js` | Vista Procesos › Control migratorio (DGCVM y DGCOR) |
 | `robot/proteccion.py` | Genera `datos/proteccion.js` (mexicanos repatriados de EE. UU.) y revisa que las sumas cuadren |
 | `robot/vocabulario.py` | Genera `datos/vocabulario.js`: nombres, abreviaturas, gentilicios y sinónimos que usa Pregunta a INAMI para entender la búsqueda y corregir errores de escritura. Se edita en `catalogos.py`, sección [8] |
+| `robot/indices.py` | Genera `datos/indices.js` (IDH, Índice de Paz Global, Estados Frágiles e INFORM por país desde 2018) con los archivos oficiales. Se corre una vez al año |
 | `js/proteccion.js` | Vista Procesos › Protección al migrante (DGPMV) |
 | `lib/`, `fuentes/` | Librerías y tipografías incluidas en el sitio |
 | `pruebas/` | Pruebas automáticas (Playwright) |
@@ -40,6 +41,7 @@ Página principal (Pulso) y convertidor de bases.
    python robot/control.py
    python robot/proteccion.py
    python robot/vocabulario.py --destino datos
+   python robot/indices.py          # una vez al año, con los archivos oficiales en DATA/indices/
    ```
 
 3. Revisar `datos/reporte.txt` y las notas de calidad que imprime `control.py`, y subir todo lo de `datos/`.
@@ -75,7 +77,7 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 
 - Control migratorio y Regulación migratoria tienen su botón «Pantalla completa» junto al título. Usan la misma pieza que el Pulso (js/app.js, sección [13], objeto PERFILES): cada perfil define su panorama, sus indicadores, su frase y qué se compara. Protección al migrante se agrega cuando sus datos estén validados.
 - Control: dos cadenas que no se mezclan. Regular (ingresos con su vía; rechazos con el resultado de la segunda revisión y la tasa de rechazo, sin mexicanos ni cruceros) e irregular (rescatados con condición y destino según el reporte de las O.R.; presentados según el sistema, por estación; canalizados NNA/adultos; retornados asistido/deportación). Ingresos por punto de internación descuenta a los mexicanos de cada punto.
-- Regulación: lo que se tramitó en el periodo (documento que salió: tarjeta, constancia u oficio, o sin expedición; tipo y sexo) y lo que hay al corte (extranjeros con documento vigente, por tipo y sexo; no cambia con el periodo y lo dice). El mapa pinta los estados por trámites. Las oficinas como puntos requieren su catálogo de ubicaciones (pendiente).
+- Regulación: lo que se tramitó en el periodo (documento que salió: tarjeta, constancia u oficio, o sin expedición; tipo y sexo) y lo que hay al corte (extranjeros con documento vigente, por tipo y sexo; no cambia con el periodo y lo dice). En el indicador también están «Constancias y oficios» (los trámites que no terminan en tarjeta: oficio de cambio, oficio de la S.R.E., constancia de empleador y permiso de salida y regreso; siguen al periodo, al play y a la comparación) y «Validación de actas» del Registro Civil: base nueva con su propio periodo (desde el 28 sep 2026), que no sigue al periodo, al play ni a la comparación; esos controles se ocultan y el mapa se atenúa. El mapa pinta los estados por trámites. Las oficinas como puntos requieren su catálogo de ubicaciones (pendiente).
 
 ## Librerías, tipografías y pruebas
 
@@ -98,6 +100,7 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - Entiende cambios entre periodos: «qué nacionalidad creció más», «cuáles bajaron por O.R.», «internaciones noviembre contra diciembre». Compara por día (los periodos pueden durar distinto) y solo con volumen suficiente; sin mes dicho, toma el último mes completo contra el anterior. La comparación aparece en la frase de piezas y se quita con ×.
 - Fechas relativas: «últimos 30 días», «últimas 2 semanas», «últimos 3 meses», «último trimestre», «primera/segunda quincena de noviembre».
 - Si no reconoce qué ver, ofrece tres preguntas parecidas («¿Quisiste decir?»). A «¿por qué…?» responde con cifras y aclara que no explica causas.
+- La «i» junto al título abre ejemplos por tipo de pregunta (cuántos, de los… cuántos, por, cambio y fechas relativas); al tocarlos se consultan. pruebas/pregunta_ayuda.js revisa que todos respondan.
 - pruebas/consultas.js verifica 47 preguntas contra sumas independientes de los datos crudos.
 
 ## Pregunta a INAMI
@@ -120,7 +123,16 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - **Semanas:** el cruce estado × nacionalidad se guarda en bloques de hasta 7 días que nunca cruzan un cambio de mes ni el 1 oct 2024 o el 20 ene 2025; por eso las consultas por mes, año y periodo salen exactas.
 - **Caravanas:** columnas NO., NOMBRE, INICIO, LUGAR DE SALIDA, LUGAR DE DISOLUCIÓN (opcional) y PERSONAS (estimadas). Si llega un lugar nuevo, el reporte lo avisa y se agrega en `LUGARES` de `robot/catalogos.py`.
 
+## Índices internacionales por país
+
+- IDH (PNUD), Índice de Paz Global (Institute for Economics & Peace), Índice de Estados Frágiles (Fund for Peace) e INFORM Risk (Comisión Europea, JRC), desde 2018.
+- Se ven en la ficha del país (Pulso y pantalla completa: último valor y año) y en su caja de Contexto (evolución, si mejoró o empeoró, y la liga a la fuente). Siempre con la nota: describen al país, no explican por sí solos la migración, y coincidir en el tiempo no prueba causa.
+- Para actualizarlos: descargar los archivos oficiales (las ligas están en el encabezado de `robot/indices.py`), dejarlos en `DATA/indices/` y correr `python robot/indices.py`. El robot reconoce cada archivo por su contenido e imprime los países que no pudo identificar (se agregan en `catalogos.py`, sección [9]).
+- Mientras no se corra, `datos/indices.js` queda vacío y la página no muestra nada de esto.
+
 ## Pendientes
+
+- Índices: correr `robot/indices.py` con los archivos oficiales (desde aquí no se pudieron descargar).
 
 - Vigentes: pedir al área un archivo estado × país × tipo de documento para el cruce de tres (hoy los archivos cruzan de dos en dos).
 - Vigentes: que el robot guarde cada corte semanal para medir la variación del stock.

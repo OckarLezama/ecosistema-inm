@@ -813,6 +813,11 @@ div.rg-hz-i{cursor:default}
 .cq-caja{position:relative;width:min(680px,100%);background:var(--panel);color:var(--ink);border-radius:14px;box-shadow:0 24px 60px rgba(30,28,25,.3);padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;transition:width .25s ease}
 .cq-caja.con{width:min(1180px,100%)}
 .cq-cab{display:flex;align-items:center;justify-content:space-between}.cq-cab h2{margin:0;font:600 20px var(--f-num)}
+.cq-cab h2{flex:1}.cq-i{width:24px;height:24px;margin-right:6px;border-radius:50%;border:1.5px solid var(--ink3);color:var(--ink2);font:italic 700 13px Georgia,serif;line-height:1}.cq-i:hover,.cq-i.on{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+/* Ayuda de Pregunta a INAMI: ejemplos por tipo; se desplaza dentro de la ventana si no cabe */
+.cq-ay{margin:10px 0 4px;padding:12px 14px;border-radius:12px;background:var(--panel2);max-height:min(56vh,460px);overflow:auto;display:grid;gap:10px}
+.cq-ayg b{font:600 14px var(--f-num)}.cq-ayg small{margin-left:8px;color:var(--ink3);font-size:12px}.cq-ayg .cq-ej{margin-top:5px}.cq-ay .cq-ej button{background:var(--panel)}
+.cq-ayn{margin:2px 0 0;padding-left:18px;font-size:12.5px;color:var(--ink2);display:grid;gap:3px}
 .cq-x{width:32px;height:32px;border-radius:50%;font-size:22px;line-height:1;color:var(--ink2)}.cq-x:hover{background:var(--panel2)}
 .cq-txt{position:relative;display:flex;gap:8px;border:1px solid var(--line);border-radius:999px;padding:5px 5px 5px 16px;background:#fff}
 .cq-txt input{flex:1;min-width:0;border:0;background:transparent;font:500 15px var(--f);color:var(--ink);outline:none}
@@ -979,6 +984,10 @@ body.en-sala{overflow:hidden}
 .sl-ctx{position:absolute;left:var(--g);right:var(--g);top:calc(var(--u)*5.1);font:500 max(11px,calc(var(--u)*.94)) var(--f-txt,Barlow),sans-serif;color:var(--s-ink2);display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline}
 .sl-ctx .k{font:700 max(10px,calc(var(--u)*.8)) 'Barlow Condensed',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--s-o)}
 .sl-ctx b{color:var(--s-ink);font-weight:600}.sl-ctx i{font-style:normal}
+/* Validación de actas (Regulación): base con su propio periodo; el periodo, la comparación y el play del tablero no aplican y el mapa se atenúa */
+.sl-pp{font:600 max(10px,calc(var(--u)*.78)) "Barlow Condensed",sans-serif;letter-spacing:.04em;color:var(--s-o);border:1px solid currentColor;border-radius:99px;padding:1px 8px}
+.sl.va .sl-per,.sl.va .sl-cmpb{display:none}.sl.va .sl-tb{visibility:hidden}
+.mapa.sl-va #lienzo{opacity:.25;filter:grayscale(1);transition:opacity .4s}.mapa.sl-va #flujo,.mapa.sl-va .ficha{display:none}
 .sl-a{position:absolute;left:var(--g);top:calc(var(--u)*7);width:calc(var(--u)*30)}
 .sl-big{font:900 calc(var(--u)*10.6)/.86 'Big Shoulders Display','Barlow Condensed',sans-serif;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sl-big small{font-size:.42em;font-weight:800;margin-left:calc(var(--u)*.4)}
@@ -1072,6 +1081,7 @@ body.en-sala{overflow:hidden}
   /* el play siempre a la vista: la barra de tiempo queda fija abajo y lo demás se desplaza */
   .sl{padding-bottom:0!important}
   .sl>.sl-t{position:sticky!important;bottom:0!important;z-index:3;background:linear-gradient(0deg,var(--s-halo) 0,var(--s-halo) 86%,transparent);padding-top:calc(var(--c)*14);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .sl.va>.sl-t{position:relative!important;bottom:auto!important}   /* sin play que alcanzar: la barra va al final, no encima de la frase */
   .sl-t{margin-top:auto;height:auto;min-height:calc(var(--c)*150);grid-template-rows:auto calc(var(--c)*72) auto;padding:0 var(--g);column-gap:calc(var(--c)*12)} .sl-tl{font-size:calc(var(--c)*11);gap:10px} .sl-fte{font-size:calc(var(--c)*11);white-space:normal}
   .sl-pop{position:fixed!important;left:16px!important;right:16px!important;top:80px!important;width:auto!important}
   .mapa.sala .m-her{display:none}
@@ -1091,6 +1101,14 @@ body.en-sala{overflow:hidden}
 .ficha{position:absolute;left:0;top:0;z-index:5;width:max(210px,calc(var(--u,16px)*14.5));padding:10px 12px 10px 14px;border-radius:12px;background:color-mix(in srgb,var(--m-panel) 72%,transparent);border:1px solid color-mix(in srgb,var(--fc,#2F6657) 35%,transparent);border-left:3px solid var(--fc,#2F6657);
   backdrop-filter:blur(8px);color:var(--m-ink);box-shadow:0 10px 26px rgba(0,0,0,.16);font:500 12.5px var(--f-txt);pointer-events:auto;transition:opacity .25s;will-change:transform}
 .ficha[hidden]{display:none}
+/* Índices internacionales: en la ficha, una línea; en Contexto, uno por renglón con su evolución y su fuente */
+.fi-ix{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:6px;padding-top:6px;border-top:1px solid color-mix(in srgb,var(--m-ink2) 25%,transparent);font:500 max(11.5px,calc(var(--u,16px)*.78)) 'Barlow Condensed',sans-serif;color:var(--m-ink2)}
+.fi-ix b{color:var(--m-ink);font-weight:700}.fi-ix small{margin-left:2px;opacity:.75}
+.ctx-ix{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.ctx-ix h3{margin:0 0 6px;font:600 14px var(--f-num)}
+.ix-f{display:grid;grid-template-columns:minmax(150px,1.6fr) 110px auto minmax(110px,1fr);gap:4px 14px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+.ix-n small{display:block;color:var(--ink3);font-size:11px}.ix-v b{font:700 18px var(--f-num)}.ix-v small{margin-left:4px;color:var(--ink3)}
+.ix-c{color:var(--ink2)}.ix-c.mej{color:var(--reg)}.ix-c.emp{color:var(--irr,#B5524A)}.ix-f a{grid-column:1/-1;font-size:11px;color:var(--ink3)}
+@media (max-width:600px){.ix-f{grid-template-columns:1fr auto}.ix-f svg{grid-column:1}.ix-c{grid-column:1/-1}}
 .fi-x{position:absolute;top:4px;right:6px;width:26px;height:26px;border:0;background:transparent;color:var(--m-ink2);font-size:17px;cursor:pointer;border-radius:50%}
 .fi-x:hover{background:var(--m-btn)}
 .fi-k{display:block;font:700 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--s-o,#8F7F2E)}
