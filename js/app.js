@@ -245,8 +245,11 @@ function ayuda(b, fija){ let p = $('rg-pop'); if (!p){ p = document.createElemen
   ayudaFija = !!fija; p.innerHTML = (fija ? '<button class="rg-pop-x" data-tipayx aria-label="Cerrar">×</button>' : '')+b.dataset.itxt; p.hidden = false; p.classList.toggle('fija', ayudaFija);
   const r = b.getBoundingClientRect(), w = p.offsetWidth; p.style.left = Math.max(8, Math.min(r.left-12, window.innerWidth-w-8))+'px'; p.style.top = (r.bottom+8)+'px'; }
 /* ==== COMPARTIR: PDF de lo que está en pantalla, para descargar o mandar por WhatsApp ==== */
-const LIBS_PDF = ['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
-const cargarJS = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok; s.onerror = mal; document.head.appendChild(s); });
+const LIBS_PDF = ['lib/html2canvas.min.js', 'lib/jspdf.umd.min.js'];   // incluidas en el sitio (versiones 1.4.1 y 2.5.1)
+// Carga una librería del sitio; si no está, la toma de la red como respaldo
+const RESPALDO = { 'lib/html2canvas.min.js':'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'lib/jspdf.umd.min.js':'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js' };
+const cargarJS = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok;
+  s.onerror = () => { s.remove(); if (!RESPALDO[u]) return mal(); const r = document.createElement('script'); r.src = RESPALDO[u]; r.onload = ok; r.onerror = mal; document.head.appendChild(r); }; document.head.appendChild(s); });
 function tituloVista(){ if (S.vista==='pulso') return 'Pulso'+(nombreFiltro() ? ' · '+nombreFiltro() : '');
   const h = document.querySelector('#vista-otra h1'), t = document.querySelector('.rg-vistas .on'); return (h ? h.textContent : 'IA-NAMI')+(t ? ' · '+t.textContent : ''); }
 async function hacerPDF(){
@@ -580,8 +583,8 @@ function max7(k){ const key = k+'|'+P0+'|'+P1; if (MAX7[key]!=null) return MAX7[
   return MAX7[key] = m; }
 function pintarMapa(){
   const t = TM[S.tema], F = filtro(), fin = alFinal(), kc = S.ind;
-  const kcE = kc || (SALA.on ? 'resc' : null), nFE = kcE && IND[kcE].nat ? F.nd : null;   // en Panorama de pantalla completa, los estados se pintan por rescates
-  const g = kc ? IND[kc].g : 'irr', col = t[g], rampa = t['r_'+g], nF = kc && IND[kc].nat ? F.nd : null, ag = S.agr!=='e' ? AGR[S.agr] : null;
+  const kcE = kc || (SALA.on ? (perfilSala().mapa || 'resc') : null), nFE = kcE && IND[kcE].nat ? F.nd : null;   // en Panorama de pantalla completa, los estados se pintan por rescates
+  const g = kc ? IND[kc].g : (kcE ? IND[kcE].g : 'irr'), col = t[g], rampa = t['r_'+g], nF = kc && IND[kc].nat ? F.nd : null, ag = S.agr!=='e' ? AGR[S.agr] : null;
   const meta = {}, grp = []; let maxE = 0;
   // -- Estados (o cinturones / CECO) coloreados; la escala es fija para que la reproducción sea comparable
   if (kcE){
@@ -618,7 +621,8 @@ function pintarMapa(){
     const r = l[n].map(x => [D.puntos[x[0]], x[1]]).filter(x => !F.ss || F.ss.indexOf(x[0].s)>=0); return r.length ? r : null; };
   const salida = k => k==='ret' || k==='rech';             // rechazos y retornados salen de México hacia el país
   const nR = S.region ? 10 : 0;                              // con una región elegida se muestran más nacionalidades
-  const pares = kc ? [[kc, (kc==='ing' || kc==='resc') ? 10 : (nR||8), true]] : [['ing', 10, false], ['resc', 10, true]];     // sin indicador: panorama regular + irregular
+  const pmap = SALA.on && perfilSala().mapa;
+  const pares = kc ? [[kc, (kc==='ing' || kc==='resc') ? 10 : (nR||8), true]] : pmap ? [[pmap, 10, true]] : [['ing', 10, false], ['resc', 10, true]];     // sin indicador: panorama regular + irregular
   pares.forEach(par => { const k = par[0], c = k==='rech' ? t.arena : t[IND[k].g], latido = k==='tram';   // trámites: sin flujo, solo latido
     if (k==='rep'){ const l = D.repPuntos.map(p=>[p, suma(p.wk,0,NW)]).sort((x,y)=>y[1]-x[1]).slice(0,7), mx = l[0][1];
       l.forEach((r,i) => flujo('rep'+i, ANCLA_EU, [r[0].x,r[0].y], r[1], mx, c)); return; }
@@ -1359,6 +1363,7 @@ function htmlDireccion(d){
 const normNom = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
 function natPorNombre(nom){ const k = normNom(nom); for (let i=0;i<NN-2;i++) if (normNom(D.nats[i][0])===k) return i; return -1; }
 window.IANAMI_PULSO = {
+  sala(pf){ abrirSala(pf); },                    // pantalla completa con el perfil de un proceso
   tiene: nom => natPorNombre(nom)>=0,
   rechazo: nom => rechazoExt(null, nom==null ? null : natPorNombre(nom)),   // [rechazos, llegadas] con la definición común
   verNat(nom, ind){ const i = natPorNombre(nom); if (i<0) return false; S.ind = ind || 'ing'; irA('pulso'); fijarSel({t:'n', i:i}, true); window.scrollTo(0,0); return true; }
@@ -1416,7 +1421,7 @@ function rangoBase(k, a, b, ss, n){
   const A = D0.daily[k]; for (let d=a; d<b; d++) t += A[d]; return t;
 }
 // «Ingresos» en el Pulso incluye a los mexicanos que regresan; aquí la cifra dice «extranjeros», así que se descuentan
-const sinMx = (k, n) => k==='ing' && n==null;
+const sinMx = (k, n) => (k==='ing' || (k==='rech' && SALA.perfil==='control')) && n==null;   // en Control, los rechazos tampoco cuentan mexicanos (igual que su vista)
 const valAcum = (k, ss, n) => acum(k, ss, n) - (sinMx(k, n) ? acum(k, ss, MX) : 0);
 const valRango = (k, a, b, ss, n) => rangoBase(k, a, b, ss, n) - (sinMx(k, n) ? rangoBase(k, a, b, ss, MX) : 0);
 // La misma unidad que --u en el CSS: centésima del rectángulo 16:9 que cabe; en columna (teléfono o vertical), fija
@@ -1447,17 +1452,19 @@ function cmpInicial(){
   if (hayTrump()) return [[idxBase('2024-10-01'), idxBase('2025-01-20')], [idxBase('2025-01-20'), D0.dias]];
   const m = mesesBase(); return m.length>=2 ? [m[m.length-2], m[m.length-1]] : null;
 }
-function abrirSala(){
+function abrirSala(pf){
   if (SALA.on) return; if (S.play) detener();
-  SALA.guarda = { tema:S.tema, per:S.per, desde:S.desde, hasta:S.hasta, anio:S.anio, mes:S.mes, ind:S.ind, sel:S.sel, region:S.region, agr:S.agr, p:[P0, P1], dia:S.dia };
+  SALA.perfil = PERFILES[pf] ? pf : 'pulso';
+  SALA.guarda = { vista:S.vista, tema:S.tema, per:S.per, desde:S.desde, hasta:S.hasta, anio:S.anio, mes:S.mes, ind:S.ind, sel:S.sel, region:S.region, agr:S.agr, p:[P0, P1], dia:S.dia };
   SALA.on = true; SALA.cmp = false; SALA.anim = {};
   S.sel = null; S.region = null; S.ind = null; S.agr = 'e';      // entra limpia: la consulta del Pulso no se arrastra (al salir regresa)
+  if (S.vista!=='pulso'){ SALA.guarda.proceso = true; S.vista = 'pulso'; $('vista-pulso').hidden = false; $('vista-otra').hidden = true; }   // abierta desde un proceso: el mapa del Pulso cubre la pantalla
   const m = $('mapa'); m.classList.add('sala'); document.body.classList.add('en-sala');
   if (m.requestFullscreen && !reducido()) m.requestFullscreen().catch(() => {});
   const L = document.createElement('div'); L.className = 'sl'; L.id = 'sala'; L.setAttribute('role','region'); L.setAttribute('aria-label','Pulso en pantalla completa');
   L.innerHTML =
     '<header class="sl-h">'+
-      '<div class="sl-lo">IA-NAMI<small>Pulso migratorio</small></div>'+
+      '<div class="sl-lo">IA-NAMI<small>'+esc(perfilSala().nom)+'</small></div>'+
       '<div class="sl-bus"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'+
         '<input id="sl-q" type="search" autocomplete="off" placeholder="Busca un país o un estado (O.R.)" aria-label="Buscar país o estado"><button type="button" id="sl-qx" aria-label="Quitar" hidden>×</button><div class="sl-res" id="sl-res" hidden></div></div>'+
       '<label class="sl-dd"><small>Región</small><select id="sl-reg"></select></label>'+
@@ -1478,7 +1485,8 @@ function abrirSala(){
       '<svg id="sl-tg" role="slider" tabindex="0" aria-label="Día del periodo"></svg><div class="sl-fte" id="sl-fte"></div></section>';
   $('lz').appendChild(L);
   $('sl-reg').innerHTML = '<option value="">Todo el mundo</option>'+Object.keys(REGIONES).map(r => '<option value="'+r+'">'+REGIONES[r][0]+'</option>').join('');
-  $('sl-im').innerHTML = IND_SALA.map((x,i) => (i===0 || IND_SALA[i-1][1]!==x[1] ? '<span class="sl-ig">'+x[1]+'</span>' : '')+
+  const IS = perfilSala().inds;
+  $('sl-im').innerHTML = IS.map((x,i) => (i===0 || IS[i-1][1]!==x[1] ? '<span class="sl-ig">'+x[1]+'</span>' : '')+
     '<button type="button" role="option" data-ind="'+x[0]+'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(x[0] ? ICONO[x[0]] : ICONO_PAN)+'"/></svg><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span></button>').join('');
   document.addEventListener('pointerdown', cerrarIndSala, true);
   L.addEventListener('click', clicSala); L.addEventListener('change', cambioSala);
@@ -1498,6 +1506,7 @@ function cerrarSala(){
   S.tema = g.tema; $('mapa').dataset.m = S.tema; COL.act = {};
   Object.assign(S, { per:g.per, desde:g.desde, hasta:g.hasta, anio:g.anio, mes:g.mes, ind:g.ind, sel:g.sel, region:g.region, agr:g.agr });
   aplicarPeriodo(g.p[0], g.p[1]); S.dia = Math.min(g.dia, ND); S.t = S.dia; $('tgraf').setAttribute('aria-valuemax', ND);
+  if (g.proceso){ S.vista = g.vista; $('vista-pulso').hidden = true; $('vista-otra').hidden = false; return; }   // de regreso al proceso, tal como estaba
   setTimeout(() => { ajustarAlto(); reencuadrar(); ajustarLienzo(); rehacerMapa(); }, 60);
 }
 // ---- controles
@@ -1554,7 +1563,7 @@ function buscarSala(){
 function elegirSala(i){
   const x = hallSala[i]; if (!x) return; $('sl-res').hidden = true; $('sl-q').value = x.n; $('sl-qx').hidden = false;
   if (x.sel.t==='n'){                                         // el indicador principal pasa al que más registros tiene ese país
-    const F = { ss:null, n:x.sel.i, nd:x.sel.i }, mejor = ORDEN_SALA.filter(k => IND[k].nat).map(k => [k, sumaSem(k,0,NW-1,null,x.sel.i)]).sort((a,b) => b[1]-a[1])[0];
+    const F = { ss:null, n:x.sel.i, nd:x.sel.i }, mejor = perfilSala().orden.filter(k => IND[k].nat).map(k => [k, sumaSem(k,0,NW-1,null,x.sel.i)]).sort((a,b) => b[1]-a[1])[0];
     if (mejor && mejor[1]>0) S.ind = mejor[0]; S.region = null; }
   fijarSel(x.sel, true);
 }
@@ -1569,7 +1578,7 @@ function pintarSala(soloTiempo){
   // controles
   if (!soloTiempo){
     $('sl-reg').value = S.region || '';
-    const xi = IND_SALA.find(x => x[0]===(k || '')) || [k, '', IND[k] ? IND[k].n : k, ''];
+    const xi = perfilSala().inds.find(x => x[0]===(k || '')) || [k, '', IND[k] ? IND[k].n : k, ''];
     $('sl-indb').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(k ? ICONO[k] : ICONO_PAN)+'"/></svg><span>'+esc(xi[2])+'</span><em>▾</em>';
     $('sl-im').querySelectorAll('[data-ind]').forEach(o => { const on = o.dataset.ind===(k || ''); o.classList.toggle('on', on); o.setAttribute('aria-selected', on); });
     if (document.activeElement!==$('sl-q')){ $('sl-q').value = S.sel && S.sel.t!=='p' ? nombreSel() : ''; $('sl-qx').hidden = !S.sel; }
@@ -1578,8 +1587,8 @@ function pintarSala(soloTiempo){
     $('sl-cmpb').innerHTML = SALA.cmp ? '<button type="button" id="sl-cmpe" class="sl-dd sl-cb"><small>Comparación</small><span>'+nomCortoR(SALA.A)+' <em>→</em> '+nomCortoR(SALA.B)+' <i>▾</i></span></button>' : '';
     const ah = new Date();
     $('sl-corte').innerHTML = '<span>Datos al <b>'+fechaISO(D.corte)+'</b></span><span>consultado '+ah.getDate()+' '+MES12[ah.getMonth()]+' '+ah.getFullYear()+', '+String(ah.getHours()).padStart(2,'0')+':'+String(ah.getMinutes()).padStart(2,'0')+'</span>';
-    $('sl-ctx').innerHTML = '<span class="k">Estás viendo</span><b>'+(k ? cap1(PALABRA[k]) : 'Panorama: regular, irregular y desde EE. UU.')+'</b><i>·</i>'+esc(ent)+'<i>·</i>'+(SALA.cmp ? esc(nomRango(SALA.B[0], SALA.B[1]))+' contra '+esc(nomRango(SALA.A[0], SALA.A[1]))+', por día' : esc(per));
-    $('sl-fte').textContent = 'Fuentes: '+fuentesSala(k || 'ing')+' · el mapa muestra '+(SALA.cmp ? nomRango(SALA.B[0], SALA.B[1]) : 'el periodo')+(fin ? '' : ' hasta el '+fechaLarga(S.dia-1));
+    $('sl-ctx').innerHTML = '<span class="k">Estás viendo</span><b>'+(k ? cap1(PALABRA[k]) : perfilSala().ctx)+'</b><i>·</i>'+esc(ent)+'<i>·</i>'+(SALA.cmp ? esc(nomRango(SALA.B[0], SALA.B[1]))+' contra '+esc(nomRango(SALA.A[0], SALA.A[1]))+', por día' : esc(per));
+    $('sl-fte').textContent = 'Fuente'+(perfilSala().orden.length>1 ? 's' : '')+': '+fuentesSala(k || perfilSala().mapa || 'ing')+' · el mapa muestra '+(SALA.cmp ? nomRango(SALA.B[0], SALA.B[1]) : 'el periodo')+(fin ? '' : ' hasta el '+fechaLarga(S.dia-1));
   }
   // cifra principal
   const dur = S.play ? 200 : SALA.anim.big ? 650 : 1100; SALA.anim.big = true;
@@ -1602,7 +1611,7 @@ function pintarSala(soloTiempo){
   $('sl-fr').innerHTML = k ? fraseSala(k, F, nF, pa, pb, otros) : frasePanorama(F);
   tapasSala();
   if (k) pintarBarrasSala(k, F, nF); else cambiosSala(F, t);
-  pintarTiempoSala(k || 'ing', F);
+  pintarTiempoSala(k || perfilSala().mapa || 'ing', F);
 }
 const cap1 = s => s.charAt(0).toUpperCase()+s.slice(1);
 // Solo cambios con peso: un país que pasa de 20 a 1 al día no le dice nada a quien decide
@@ -1610,40 +1619,81 @@ const relevante = a => a.k && a.t!=='car' && (a.t==='cambio' || a.t==='pico' || 
 const ventanaCmp = () => textoCmp().replace(' contra la anterior','');
 function flecha(a, b){ const x = (b/a-1)*100; if (Math.abs(x)<0.5) return '<span class="ig">= sin cambio</span>'; return '<span class="'+(x<0?'baja':'sube')+'">'+(x<0?'▼ ':'▲ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%</span>'; }
 function fuentesSala(k){ const f = { ing:'DGCVM', rech:'DGCVM', tram:'DGRAM', resc:'DGCOR', pres:'DGCVM', can:'SIRENNA', ret:'DGCOR', recib:'DGCOR', rep:'DGPMV' };
-  const l = [...new Set([k].concat(ORDEN_SALA).map(x => f[x]))]; return l.slice(0,-1).join(', ')+' y '+l[l.length-1]; }
+  const l = [...new Set([k].concat(perfilSala().orden).map(x => f[x]))]; return l.length>1 ? l.slice(0,-1).join(', ')+' y '+l[l.length-1] : l[0]; }
 // Reparto de un indicador en el periodo (sin mexicanos en ingresos, para que cuadre con «extranjeros»)
 function compSala(key, F){ const ss = F.ss, n = F.nd, v = comp(key, ss, n);
-  if (key==='ing_via' && n==null){ const m = comp(key, ss, MX); return v.map((x,i) => Math.max(0, x - m[i])); } return v; }
+  if ((key==='ing_via' || (key==='rech_det' && SALA.perfil==='control')) && n==null){ const m = comp(key, ss, MX); return v.map((x,i) => Math.max(0, x - m[i])); } return v; }
 function repartos(k, F){ const z = (key) => compSala(key, F);
   if (k==='ing'){ const v = z('ing_via'); return [[['Aérea',v[0]],['Terrestre',v[1]],['Marítima',v[2]]]]; }
-  if (k==='tram'){ const v = z('tram_se'); return [[['Hombres',suma(v,0,8)],['Mujeres',suma(v,8,16)]]]; }
+  if (k==='tram'){ const v = z('tram_se'), sx = [['Hombres',suma(v,0,8)],['Mujeres',suma(v,8,16)]];
+    if (SALA.perfil!=='regulacion') return [sx];
+    const ti = z('tram_tipo').map((x,i) => [CORTO_TRAM(D.tramTipos[i]), x, D.tramTipos[i]]).filter(r => r[2]!=='Otros').sort((a,b) => b[1]-a[1]), T = z('tram_tipo').reduce((a,x) => a+x, 0);
+    const tp = ti.slice(0,2).map(r => [r[0], r[1]]).concat([['Otros', T - ti[0][1] - ti[1][1]]]); tp.t = 'Tipo'; tp.propios = true;
+    const r = z('tram_res'), rs = [['Positiva',r[0]],['Negativa',r[1]],['Otra',r[2]]]; rs.t = 'Resolución'; sx.t = 'Sexo'; return [tp, rs, sx]; }
   if (k==='resc'){ const a = z('resc_rei'), d = z('resc_des'); return [[['Primera vez',a[0]],['Reincidentes',a[1]]], [['A estación migratoria',d[0]],['Al DIF',d[1]],['Sin destino',d[2]]]]; }
   if (k==='rep'){ const v = comp('rep_comp', F.ss, null); return [[['Adultos',v[0]+v[1]],['NNA',v[2]+v[3]]]]; }
+  if (k==='rech'){ const v = z('rech_det'), r = [['Internación',v[0]],['Rechazo',v[1]]]; r.t = 'Segunda revisión'; return [r]; }
+  if (k==='pres'){ const v = z('pres_est').map((x,i) => [nomEst(i), x]).sort((a,b) => b[1]-a[1]), r = v.slice(0,2).concat([['Otras', v.slice(2).reduce((a,x) => a+x[1], 0)]]); r.t = 'Por estación'; r.propios = true; return [r]; }
+  if (k==='can'){ const v = z('can_nna'), a = z('can_ad'); return [[['NNA',v.reduce((s,x) => s+x, 0)],['Adultos acompañantes',a[0]+a[1]]]]; }
+  if (k==='ret'){ const v = z('ret_tipo'); return [[['Retorno asistido',v[1]],['Deportación',v[0]]]]; }
   return []; }
 // Barra al 100 % con su leyenda (color del indicador en tres intensidades)
 function barra100(l, c){ const T = l.reduce((a,x) => a+x[1], 0); if (!T) return '';
+  const tit = l.t ? '<span class="t">'+esc(l.t)+':</span>' : '';
   const al = [1, .62, .34], seg = l.map((x,i) => '<i style="width:'+(x[1]/T*100).toFixed(2)+'%;background:'+alfa(c, al[i]||.2)+'" title="'+esc(x[0])+': '+miles(x[1])+'"></i>').join('');
-  return '<div class="sl-bc"><div class="sl-b100">'+seg+'</div><div class="sl-bl">'+l.map((x,i) => '<span><i style="background:'+alfa(c, al[i]||.2)+'"></i><b>'+Math.round(x[1]/T*100)+'%</b> '+esc(/^[A-ZÁÉÍÓÚ]{2}/.test(x[0]) ? x[0] : x[0].charAt(0).toLowerCase()+x[0].slice(1)).replace('al Dif','al DIF')+'</span>').join('')+'</div></div>'; }
+  return '<div class="sl-bc"><div class="sl-b100">'+seg+'</div><div class="sl-bl">'+tit+l.map((x,i) => '<span><i style="background:'+alfa(c, al[i]||.2)+'"></i><b>'+Math.round(x[1]/T*100)+'%</b> '+esc(l.propios || /^[A-ZÁÉÍÓÚ]{2}/.test(x[0]) ? x[0] : x[0].charAt(0).toLowerCase()+x[0].slice(1)).replace('al Dif','al DIF')+'</span>').join('')+'</div></div>'; }
 const CUATRO = [['ing','Ingresos','reg','extranjeros que entraron'],['tram','Trámites','reg','trámites concluidos'],['resc','Rescatados','irr','rescates (eventos)'],['rep','Repatriados','usa','mexicanos desde EE. UU.']];
 function panoramaSala(F, t, dur){
-  const el = $('sl-tri'), l = CUATRO.filter(x => F.nd==null || IND[x[0]].nat);
-  if (el.dataset.k!==l.map(x => x[0]).join()+S.tema){ el.dataset.k = l.map(x => x[0]).join()+S.tema;
-    el.innerHTML = l.map((x,i) => '<div class="sl-tr sl-e" style="--d:'+(.12+i*.07)+'s"><div class="sl-tc"><span class="k" style="color:'+t[x[2]]+'">'+x[1]+'</span><span class="v" data-t="'+x[0]+'">0</span><span class="n">'+x[3]+' <span class="d"></span></span></div><div class="sl-rp"></div></div>').join(''); }
-  l.forEach(x => { const v = el.querySelector('[data-t="'+x[0]+'"]'), box = v.closest('.sl-tr'), d = box.querySelector('.d'), n = nFde(x[0], F);
-    if (SALA.cmp){ const a = valRango(x[0], SALA.A[0], SALA.A[1], F.ss, n)/(SALA.A[1]-SALA.A[0]), b = valRango(x[0], SALA.B[0], SALA.B[1], F.ss, n)/(SALA.B[1]-SALA.B[0]);
+  const P = perfilSala(), el = $('sl-tri'), l = P.pan.filter(x => x[5] ? x[5].ok(F) : (F.nd==null || IND[x[0]].nat));
+  el.classList.toggle('dos', !!P.dos);
+  if (el.dataset.k!==l.map(x => x[0]).join()+S.tema+SALA.perfil){ el.dataset.k = l.map(x => x[0]).join()+S.tema+SALA.perfil;
+    el.innerHTML = l.map((x,i) => (x[4] && (i===0 || l[i-1][4]!==x[4]) ? '<div class="sl-tg sl-e" style="--d:'+(.1+i*.07)+'s">'+x[4]+'</div>' : '')+'<div class="sl-tr sl-e" style="--d:'+(.12+i*.07)+'s"><div class="sl-tc"><span class="k" style="color:'+t[x[2]]+'">'+x[1]+'</span><span class="v" data-t="'+x[0]+'">0</span><span class="n">'+x[3]+' <span class="d"></span></span></div><div class="sl-rp"></div></div>').join(''); }
+  l.forEach(x => { const v = el.querySelector('[data-t="'+x[0]+'"]'), box = v.closest('.sl-tr'), d = box.querySelector('.d'), n = x[5] ? null : nFde(x[0], F);
+    if (SALA.cmp && !x[5]){ const a = valRango(x[0], SALA.A[0], SALA.A[1], F.ss, n)/(SALA.A[1]-SALA.A[0]), b = valRango(x[0], SALA.B[0], SALA.B[1], F.ss, n)/(SALA.B[1]-SALA.B[0]);
       mover(v, b, cifraG, dur); d.innerHTML = '· por día · '+(a>0 ? flecha(a, b) : 'sin registros antes'); }
+    else if (x[5]){ mover(v, x[5].val(F), cifraG, dur); d.innerHTML = '· '+x[5].nota; }
     else { const tv = valAcum(x[0], F.ss, n); mover(v, tv, cifraG, dur); d.innerHTML = '· '+cortoK(tv/Math.max(1, Math.min(S.dia, finDatos(x[0]))))+' por día'; }
-    const rp = repartos(x[0], F).map(r => barra100(r, t[x[2]])).join('');
-    const extra = x[0]==='rep' ? (vv => '<div class="sl-ex"><span>Vía aérea (vuelos PRIM) <b>'+miles(vv[7])+'</b></span><span>Vía terrestre <b>'+miles(vv[6])+'</b></span></div>')(comp('rep_comp', F.ss, null)) : '';
+    const rp = (x[5] ? x[5].rep(F) : repartos(x[0], F)).map(r => barra100(r, t[x[2]])).join('');
+    const extra = x[0]==='rep' ? (vv => '<div class="sl-ex"><span>Vía aérea (vuelos PRIM) <b>'+miles(vv[7])+'</b></span><span>Vía terrestre <b>'+miles(vv[6])+'</b></span></div>')(comp('rep_comp', F.ss, null))
+      : x[0]==='rech' ? (r => r[1] ? '<div class="sl-ex"><span>Tasa de rechazo <b>'+(r[0]/r[1]*100).toFixed(2)+'%</b> de los que llegan por aire o tierra</span></div>' : '')(rechazoExt(F.ss, F.nd)) : '';
     const html = rp + extra; const c = box.querySelector('.sl-rp'); if (c._h!==html){ c._h = html; c.innerHTML = html; } });
 }
+function docsVig(F){ const d = D.docs; if (!d) return [0,0,0];
+  if (F.nd!=null && !Array.isArray(F.nd)){ const r = d.nat && d.nat[F.nd]; return r ? r : [0,0,0]; }
+  if (F.ss){ return [F.ss.reduce((a,s) => a+(d.est[s]||0), 0), null, null]; }
+  return [d.total, d.h, d.m]; }
+const DOCS_ITEM = { ok:F => !!D.docs && (F.nd==null || !Array.isArray(F.nd)), val:F => docsVig(F)[0], nota:'al último corte · no cambia con el periodo',
+  rep:F => { const v = docsVig(F), out = []; if (!F.ss && F.nd==null && D.docs.tipos){ const tp = D.docs.tipos.slice().sort((a,b) => b[1]-a[1]), T = tp.reduce((a,x) => a+x[1], 0); const r = tp.slice(0,2).concat([['Otros', T - tp[0][1] - tp[1][1]]]); r.t = 'Tipo'; r.propios = true; out.push(r); }
+    if (v[1]!=null){ const r = [['Hombres',v[1]],['Mujeres',v[2]]]; r.t = 'Sexo'; out.push(r); } return out; } };
+// Perfiles de la pantalla completa: misma pieza, distinto contenido (Pulso y cada proceso)
+const PERFILES = {
+  pulso:{ nom:'Pulso migratorio', ctx:'Panorama: regular, irregular y desde EE. UU.', inds:IND_SALA, pan:CUATRO, orden:ORDEN_SALA, cam:['ing','tram','resc','can','rep'] },
+  control:{ nom:'Control migratorio', ctx:'Panorama: quienes llegan y quienes son rescatados', dos:true, puntoIng:true, orden:['ing','resc','rech','pres','can','ret'], cam:['ing','rech','resc','pres','can','ret'],
+    inds:[['', 'Resumen', 'Panorama', 'Llegadas y rescates en un vistazo'], ['ing', 'Regular · llegan', 'Ingresos', 'Extranjeros que entraron al país'], ['rech', 'Regular · llegan', 'Rechazos', 'Negados en segunda revisión'],
+          ['resc', 'Irregular · rescate y destino', 'Rescatados', 'Personas en situación irregular'], ['pres', 'Irregular · rescate y destino', 'Presentados', 'Ante una estación migratoria (sistema)'],
+          ['can', 'Irregular · rescate y destino', 'Canalizados', 'NNA y acompañantes al DIF'], ['ret', 'Irregular · rescate y destino', 'Retornados', 'Asistidos o deportados a su país']],
+    pan:[['ing','Ingresos','reg','extranjeros que entraron','Regular · llegan y son revisados'],['rech','Rechazos','reg','en segunda revisión','Regular · llegan y son revisados'],
+         ['resc','Rescatados','irr','rescates (eventos)','Irregular · rescate y destino'],['pres','Presentados','irr','en estación (sistema)','Irregular · rescate y destino'],
+         ['can','Canalizados','irr','NNA y acompañantes al DIF','Irregular · rescate y destino'],['ret','Retornados','irr','a su país','Irregular · rescate y destino']],
+    frase:(F, ent, v) => { const r = rechazoExt(F.ss, F.nd), d = compSala('resc_des', F);
+      return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' entraron <b>'+v('ing')+' extranjeros</b> y se rechazó a <b>'+v('rech')+'</b>'+(r[1] ? ' ('+(r[0]/r[1]*100).toFixed(2)+'% de quienes llegan por aire o tierra)' : '')+
+        '. Hubo <b>'+v('resc')+' rescates</b>'+(d[0]+d[1] ? ': '+Math.round(d[0]/(d[0]+d[1]+d[2])*100)+'% a estación migratoria y '+Math.round(d[1]/(d[0]+d[1]+d[2])*100)+'% al DIF' : '')+', según el reporte de las O.R.'; } }
+};
+PERFILES.regulacion = { nom:'Regulación migratoria', ctx:'Panorama: trámites del periodo y documentos vigentes', dos:true, mapa:'tram', solo:true, orden:['tram'], cam:['tram'],
+  inds:[['', 'Resumen', 'Panorama', 'Trámites y documentos en un vistazo'], ['tram', 'Trámites', 'Trámites', 'Trámites migratorios concluidos']],
+  pan:[['tram','Trámites concluidos','reg','en el periodo','Lo que se tramitó en el periodo'], ['docs','Con documento vigente','reg','extranjeros','Lo que hay al corte', DOCS_ITEM]],
+  frase:(F, ent, v) => { const r = compSala('tram_res', F), ti = compSala('tram_tipo', F).map((x,i) => [x, D.tramTipos[i]]).filter(x => x[1]!=='Otros').sort((a,b) => b[0]-a[0])[0], dv = docsVig(F)[0];
+    return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' se concluyeron <b>'+v('tram')+' trámites</b>'+(r[0]+r[1] ? ', '+Math.round(r[0]/(r[0]+r[1]+r[2])*100)+'% con resolución positiva' : '')+(ti && ti[0] ? '; el que más se hace es <b>'+esc(CORTO_TRAM(ti[1]).toLowerCase())+'</b>' : '')+
+      '.'+(dv ? ' Al último corte, <b>'+cortoK(dv)+' extranjeros</b> tienen documento migratorio vigente.' : ''); } };
+const perfilSala = () => PERFILES[SALA.perfil] || PERFILES.pulso;
 function frasePanorama(F){
   const ent = S.sel ? (S.sel.t==='n' ? ' de '+nombreSel() : ' en '+nombreSel()) : S.region ? ' de '+nombreRegion() : '';
-  const l = CUATRO.filter(x => F.nd==null || IND[x[0]].nat);
+  const P = perfilSala(), l = P.pan.filter(x => !x[5] && (F.nd==null || IND[x[0]].nat));
   if (SALA.cmp){ const A = nomRango(SALA.A[0], SALA.A[1]), B = nomRango(SALA.B[0], SALA.B[1]);
     return 'Por día, en '+B+ent+': '+l.map(x => { const n = nFde(x[0], F), a = valRango(x[0], SALA.A[0], SALA.A[1], F.ss, n)/(SALA.A[1]-SALA.A[0]), b = valRango(x[0], SALA.B[0], SALA.B[1], F.ss, n)/(SALA.B[1]-SALA.B[0]);
       return '<b>'+cortoK(b)+' '+x[3]+'</b>'+(a>0 ? ' ('+((b/a-1)*100<0 ? '−' : '+')+Math.abs((b/a-1)*100).toFixed(0)+'%)' : ''); }).join(', ').replace(/, ([^,]*)$/, ' y $1')+' contra '+A+'.'; }
   const v = x => cortoK(valAcum(x, F.ss, nFde(x, F)));
+  if (P.frase) return P.frase(F, ent, v);
   return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' entraron <b>'+v('ing')+' extranjeros</b>, se concluyeron <b>'+v('tram')+' trámites</b>, hubo <b>'+v('resc')+' rescates</b>'+
     (F.nd==null ? ' y <b>'+v('rep')+' mexicanos</b> fueron repatriados desde EE. UU.' : '.');
 }
@@ -1652,11 +1702,11 @@ function cambiosSala(F, t){
   if (SALA.gr){ SALA.gr.dispose(); SALA.gr = null; }
   const el = $('sl-qc'); let l;
   if (SALA.cmp){ const dA = SALA.A[1]-SALA.A[0], dB = SALA.B[1]-SALA.B[0];
-    l = ['ing','tram','resc','can','rep'].filter(x => F.nd==null || IND[x].nat).map(x => { const n = nFde(x, F), a = valRango(x, SALA.A[0], SALA.A[1], F.ss, n), b = valRango(x, SALA.B[0], SALA.B[1], F.ss, n);
+    l = perfilSala().cam.filter(x => F.nd==null || IND[x].nat).map(x => { const n = nFde(x, F), a = valRango(x, SALA.A[0], SALA.A[1], F.ss, n), b = valRango(x, SALA.B[0], SALA.B[1], F.ss, n);
       return a>=100 ? { k:x, x:(b/dB)/(a/dA)*100-100, txt:'<b>'+IND[x].n+'</b>: '+cortoK(a/dA)+' → '+cortoK(b/dB)+' por día' } : null; }).filter(Boolean).sort((a,b) => Math.abs(b.x)-Math.abs(a.x)).slice(0,3);
     $('sl-qt').textContent = 'Lo que más cambió'; $('sl-qs').textContent = 'por día, '+nomRango(SALA.B[0], SALA.B[1])+' contra '+nomRango(SALA.A[0], SALA.A[1]);
   } else {
-    l = AVISOS.filter(relevante).slice(0,3).map(a => ({ k:a.k, x:a.t==='pico' ? null : (a.a!=null && a.b ? (a.a/a.b-1)*100 : null), pico:a.t==='pico' ? a.v/Math.max(1,a.med) : null, txt:textoAviso(a) }));
+    l = AVISOS.filter(a => relevante(a) && perfilSala().cam.indexOf(a.k)>=0).slice(0,3).map(a => ({ k:a.k, x:a.t==='pico' ? null : (a.a!=null && a.b ? (a.a/a.b-1)*100 : null), pico:a.t==='pico' ? a.v/Math.max(1,a.med) : null, txt:textoAviso(a) }));
     $('sl-qt').textContent = 'Lo que cambió'; $('sl-qs').textContent = ventanaCmp()+' contra la semana anterior';
   }
   el.innerHTML = l.length ? '<div class="sl-cam">'+l.map(c => { const col = t[IND[c.k].g], sube = c.pico ? true : c.x>=0;
@@ -1674,15 +1724,20 @@ function desgloseSala(k, F, t, dur){
   else if (k==='resc'){ tit = 'Condición y destino'; const a = z('resc_rei'), d = z('resc_des'); l = [['Primera vez',a[0]],['Reincidentes',a[1]],['A estación migratoria',d[0]],['Al DIF',d[1]],['Sin destino',d[2]]]; }
   else if (k==='can'){ tit = 'Quiénes'; const v = z('can_nna'), a = z('can_ad'), g = f => v.reduce((s,x,i) => s+(f(i) ? x : 0), 0);
     l = [['Adultos',a[0]+a[1],'Adultos que acompañan a NNA'],['NNA',g(() => true)],['NNA acompañados',g(i => i%3===0),null,1],['NNA no acompañados',g(i => i%3===1),null,1],['NNA separados',g(i => i%3===2),null,1]]; }
+  else if (k==='rech'){ tit = 'Segunda revisión'; const v = z('rech_det'); l = [['Casos revisados',v[0]+v[1]],['Internación',v[0]],['Rechazo',v[1]]]; }
+  else if (k==='pres'){ tit = 'Principales estaciones'; l = z('pres_est').map((x,i) => [nomEst(i), x]).filter(r => r[1]>0).sort((a,b) => b[1]-a[1]).slice(0,5); }
+  else if (k==='ret'){ tit = 'Tipo de retorno'; const v = z('ret_tipo'); l = [['Retorno asistido',v[1]],['Deportación',v[0]]]; }
   else if (k==='rep'){ tit = 'Quiénes y por dónde'; const v = comp('rep_comp', F.ss, null); l = [['Adultos',v[0]+v[1]],['NNA',v[2]+v[3]],['Vía aérea (PRIM)',v[7],'Vía aérea: vuelos del Procedimiento de Repatriación al Interior de México (personas, no vuelos)'],['Vía terrestre',v[6]]]; }
   const G = $('sl-g'), key = k+'|'+l.map(x => x[0]).join(), c = t[IND[k].g];
   if (G.dataset.k!==key){ G.dataset.k = key; G.innerHTML = '<div class="sl-gt">'+tit+(SALA.cmp ? ' · '+esc(nomRango(SALA.B[0], SALA.B[1])) : ' · periodo completo')+'</div>'+
     l.map((x,i) => '<div class="sl-m sl-e" style="--d:'+(.28+i*.05)+'s"><div class="v" style="color:'+c+'" data-m="'+i+'">0</div><div class="n"'+(x[2] ? ' title="'+esc(x[2])+'"' : '')+'>'+esc(x[0])+'</div><div class="d"></div></div>').join(''); }
-  const tot = k==='rep' ? l[0][1]+l[1][1] : k==='can' ? l[0][1]+l[1][1] : k==='resc' ? l[0][1]+l[1][1] : l.reduce((a,x) => a+x[1], 0) || 1;
-  const base = k==='tram' ? compSala('tram_tipo', F).reduce((a,x) => a+x, 0) : tot;
+  const tot = k==='rep' ? l[0][1]+l[1][1] : k==='can' ? l[0][1]+l[1][1] : k==='resc' ? l[0][1]+l[1][1] : k==='rech' ? l[0][1] : l.reduce((a,x) => a+x[1], 0) || 1;
+  const base = k==='tram' ? compSala('tram_tipo', F).reduce((a,x) => a+x, 0) : k==='pres' ? compSala('pres_est', F).reduce((a,x) => a+x, 0) : tot;
   const nnaT = k==='can' ? l[1][1] : 0;
   l.forEach((x,i) => { const el = G.querySelector('[data-m="'+i+'"]'); if (!el) return; mover(el, x[1], cifraG, dur);
-    el.parentNode.querySelector('.d').textContent = x[3] ? (nnaT ? Math.round(x[1]/nnaT*100)+'% de los NNA' : '') : base ? Math.round(x[1]/base*100)+'% del total' : ''; });
+    el.parentNode.querySelector('.d').textContent = x[3] ? (nnaT ? Math.round(x[1]/nnaT*100)+'% de los NNA' : '') : (k==='rech' && i===0) ? 'segunda revisión' : base ? (x[1]/base*100<1 && x[1]>0 ? (x[1]/base*100).toFixed(2) : Math.round(x[1]/base*100))+'% '+(k==='rech' ? 'de los revisados' : 'del total') : ''; });
+  if (k==='rech'){ const r = rechazoExt(F.ss, F.nd); let n = G.querySelector('.sl-gn'); if (!n){ n = document.createElement('div'); n.className = 'sl-gn'; G.appendChild(n); }
+    n.innerHTML = r[1] ? 'Tasa de rechazo: <b>'+(r[0]/r[1]*100).toFixed(2)+'%</b> de los extranjeros que llegan por aire o tierra (sin mexicanos ni cruceros, como en Control migratorio).' : ''; }
 }
 function fraseSala(k, F, nF, pa, pb, otros){
   const ent = S.sel ? (S.sel.t==='n' ? ' de '+nombreSel() : ' en '+nombreSel()) : S.region ? ' de '+nombreRegion() : '';
@@ -1700,13 +1755,14 @@ function fraseSala(k, F, nF, pa, pb, otros){
 // Barras verticales: en un periodo, los 8 con más registros; al comparar, el cambio por día de cada uno.
 // Con un país elegido se reparte por estado (O.R.); si no, por nacionalidad. Repatriados siempre por estado.
 function opcionesPor(k){ if (k==='rep') return [['e','O.R.'],['p','Punto']]; const l = [];
-  if (!(S.sel && S.sel.t==='n')) l.push(['n','Nacionalidad']); if (!(S.sel && S.sel.t!=='n')) l.push(['e','O.R.']); return l; }
+  if (!(S.sel && S.sel.t==='n')) l.push(['n','Nacionalidad']); if (!(S.sel && S.sel.t!=='n')) l.push(['e','O.R.']);
+  if (k==='ing' && perfilSala().puntoIng && !S.sel) l.push(['p','Punto']); return l; }
 function pintarBarrasSala(k, F, nF){
   const ops = opcionesPor(k), por = ops.some(o => o[0]===SALA.por[k]) ? SALA.por[k] : ops[0][0];
   const porEst = por==='e', porPto = por==='p', t = TM[S.tema], cs = getComputedStyle($('sala'));
   const INK = t.tinta, I2 = cs.getPropertyValue('--s-ink2').trim(), LN = cs.getPropertyValue('--s-grid').trim(), VC = t[IND[k].g], RC = t.irr;
   const ssF = F.ss, lista = [];
-  if (porPto){ D.repPuntos.forEach((pt,i) => lista.push([pt.n, null, null, pt])); }
+  if (porPto){ (k==='rep' ? D.repPuntos : D.puntos).forEach((pt,i) => lista.push([pt.n, null, null, pt])); }
   else if (porEst){ for (let s=0;s<NS;s++){ if (ssF && ssF.indexOf(s)<0) continue; lista.push([ESTC[s], s, null]); } }
   else { const l = F.nd==null ? null : (Array.isArray(F.nd) ? F.nd : [F.nd]); for (let n=0;n<OT;n++){ if (l && l.indexOf(n)<0) continue; lista.push([D.nats[n][0], null, n]); } }
   let datos, tit, sub, cmp = SALA.cmp;
@@ -1716,13 +1772,13 @@ function pintarBarrasSala(k, F, nF){
       const ss = x[1]!=null ? [x[1]] : ssF, n = x[2]!=null ? x[2] : nF, a = valRango(k, SALA.A[0], SALA.A[1], ss, n), b = valRango(k, SALA.B[0], SALA.B[1], ss, n); return [x[0], a/dA, b/dB, a]; });
     const mx = Math.max(...r.map(x => x[3]), 1);
     datos = r.filter(x => x[3]>=Math.max(60, mx*0.01)).sort((a,b) => b[2]-a[2]).slice(0,8).map(x => [x[0], x[1], x[2], (x[2]/x[1]-1)*100]).sort((a,b) => b[3]-a[3]);
-    tit = 'Cambio por '+(porPto ? 'punto de repatriación' : porEst ? 'O.R.' : 'nacionalidad'); sub = PALABRA[k]+' por día, '+nomRango(SALA.B[0], SALA.B[1])+' contra '+nomRango(SALA.A[0], SALA.A[1])+' · solo los que tuvieron al menos 60 registros antes';
+    tit = 'Cambio por '+(porPto ? (k==='rep' ? 'punto de repatriación' : 'punto de internación') : porEst ? 'O.R.' : 'nacionalidad'); sub = PALABRA[k]+' por día, '+nomRango(SALA.B[0], SALA.B[1])+' contra '+nomRango(SALA.A[0], SALA.A[1])+' · solo los que tuvieron al menos 60 registros antes';
   } else {
     const nna = k==='can';                                     // canalizados: sobre el total de NNA
-    const val = x => x[3] ? suma(x[3].wk, 0, semDe(S.dia)+1) : nna ? suma(comp('can_nna', porEst ? [x[1]] : ssF, porEst ? nF : x[2]), 0, 12) : porEst ? valAcum(k, [x[1]], nF) : valAcum(k, ssF, x[2]);
+    const val = x => x[3] ? suma(x[3].wk, 0, semDe(S.dia)+1)*sinMxPunto(x[3]) : nna ? suma(comp('can_nna', porEst ? [x[1]] : ssF, porEst ? nF : x[2]), 0, 12) : porEst ? valAcum(k, [x[1]], nF) : valAcum(k, ssF, x[2]);
     const r = lista.map(x => [x[0], val(x)]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]);
     const tot = r.reduce((s,x) => s+x[1], 0); datos = r.slice(0,8).map(x => [x[0], x[1], tot]);
-    tit = (porPto ? 'Por punto de repatriación' : porEst ? 'Por O.R.' : 'Por nacionalidad')+(nna ? ' · NNA' : ''); sub = PALABRA[k]+' · los '+datos.length+' con más registros'+(S.dia<ND ? ' hasta el '+fechaDia(S.dia-1) : '');
+    tit = (porPto ? (k==='rep' ? 'Por punto de repatriación' : 'Por punto de internación') : porEst ? 'Por O.R.' : 'Por nacionalidad')+(nna ? ' · NNA' : ''); sub = PALABRA[k]+' · los '+datos.length+' con más registros'+(S.dia<ND ? ' hasta el '+fechaDia(S.dia-1) : '');
   }
   if (ops.length>1 && !cmp) tit = 'Top '+datos.length+(k==='can' ? ' · NNA' : '');
   $('sl-qt').innerHTML = esc(tit)+(ops.length>1 ? '<span class="sl-por" role="group" aria-label="Ver la gráfica por">'+ops.map(o => '<button type="button" data-por="'+o[0]+'" class="'+(o[0]===por ? 'on' : '')+'" aria-pressed="'+(o[0]===por)+'">'+o[1]+'</button>').join('')+'</span>' : '');
@@ -1753,7 +1809,7 @@ function pintarBarrasSala(k, F, nF){
 function pintarTiempoSala(k, F){
   const sv = $('sl-tg'); if (!sv) return; const W = Math.max(200, sv.clientWidth), H = Math.max(50, sv.clientHeight), t = TM[S.tema], pw = W/ND;
   const fs = Math.max(10, Math.min(30, uSala()*0.8)), base = H - fs - 6, mid = Math.round(base*0.64), alto1 = mid - 2, alto2 = base - mid - 2;
-  const k2 = k==='resc' ? 'ing' : 'resc', capas = [[k, mid, alto1, 1], [k2, mid+1, alto2, -1]];
+  const solo = perfilSala().solo, k2 = k==='resc' ? 'ing' : 'resc', capas = solo ? [[k, base-2, base-4, 1]] : [[k, mid, alto1, 1], [k2, mid+1, alto2, -1]];
   const serie = x => { const d = diario(x, IND[x].nat || F.nd==null ? F : { ss:F.ss, n:null, nd:null });
     if (sinMx(x, F.nd)){ const m = diario(x, { ss:F.ss, n:MX, nd:MX }); return d.map((v,i) => Math.max(0, v - m[i])); } return d; };
   let h = '';
@@ -1764,14 +1820,14 @@ function pintarTiempoSala(k, F){
     if (SALA.cmp && c[3]>0){ const a = valRango(x, SALA.A[0], SALA.A[1], F.ss, nFde(x, F))/(SALA.A[1]-SALA.A[0]), y = c[1]-Math.min(c[2], a/mx*c[2]);
       if (a>0) h += '<line x1="0" y1="'+y.toFixed(1)+'" x2="'+W+'" y2="'+y.toFixed(1)+'" stroke="'+t.tinta+'" stroke-width="1.4" stroke-dasharray="5 4" stroke-opacity=".8"/><text x="'+(W-4)+'" y="'+Math.max(fs, y-4).toFixed(1)+'" text-anchor="end" font-size="'+(fs*0.92).toFixed(1)+'" font-weight="600" fill="'+t.tinta+'" font-family="Barlow Condensed, Barlow, sans-serif">promedio por día en '+esc(nomRango(SALA.A[0], SALA.A[1]))+'</text>'; }
   });
-  h += '<line x1="0" y1="'+(mid+0.5)+'" x2="'+W+'" y2="'+(mid+0.5)+'" stroke="'+t.tinta+'" stroke-opacity=".3"/>';
+  if (!solo) h += '<line x1="0" y1="'+(mid+0.5)+'" x2="'+W+'" y2="'+(mid+0.5)+'" stroke="'+t.tinta+'" stroke-opacity=".3"/>';
   temporadas().forEach(x => { const a = Math.max(0, indiceDe(x[0])), b = Math.min(ND, indiceDe(x[1])+1); if (b<=a) return;
     h += '<rect x="'+(a*pw).toFixed(1)+'" y="'+(base+1)+'" width="'+Math.max(3,(b-a)*pw).toFixed(1)+'" height="3" rx="1.5" fill="'+COLOR_TEMP[x[3]]+'"><title>'+esc(x[2])+'</title></rect>'; });
   h += '<g id="sl-cur"><line x1="0" y1="0" x2="0" y2="'+base+'" stroke="'+t.tinta+'" stroke-width="2"/><circle cx="0" cy="'+(base-2)+'" r="5" fill="'+t.tinta+'" stroke="'+t.mar+'" stroke-width="2"/></g>';
   sv.setAttribute('viewBox', '0 0 '+W+' '+H); sv.setAttribute('preserveAspectRatio', 'none'); sv.innerHTML = h; moverCursor(S.play ? S.t : S.dia);
   sv.setAttribute('aria-valuemin', 1); sv.setAttribute('aria-valuemax', ND); sv.setAttribute('aria-valuenow', S.dia); sv.setAttribute('aria-valuetext', 'al '+fechaLarga(S.dia-1));
   const cua = c => '<i style="background:'+c+'"></i>';
-  $('sl-tl').innerHTML = '<span>'+cua(t[IND[k].g])+IND[k].n+' por día</span><span>'+cua(t[IND[k2].g])+IND[k2].n+' por día</span><span class="m">cada uno con su escala · estados: '+(S.ind ? IND[S.ind].n.toLowerCase() : 'rescatados')+(S.dia<ND || S.play ? ', promedio de 7 días' : ', periodo completo')+'</span>'+
+  $('sl-tl').innerHTML = '<span>'+cua(t[IND[k].g])+IND[k].n+' por día</span>'+(solo ? '' : '<span>'+cua(t[IND[k2].g])+IND[k2].n+' por día</span>')+'<span class="m">'+(solo ? '' : 'cada uno con su escala · ')+'estados: '+(S.ind ? IND[S.ind].n.toLowerCase() : (perfilSala().mapa ? IND[perfilSala().mapa].n.toLowerCase() : 'rescatados'))+(S.dia<ND || S.play ? ', promedio de 7 días' : ', periodo completo')+'</span>'+
     temporadasEnPeriodo().map(x => '<span class="m"><i style="background:'+COLOR_TEMP[x[1]]+'"></i>'+esc(x[0])+'</span>').join('');
   $('sl-pl').innerHTML = S.play ? '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" fill="currentColor"/></svg>' : '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>';
   $('sl-pl').setAttribute('aria-label', S.play ? 'Pausar' : 'Reproducir el periodo');
@@ -1812,11 +1868,13 @@ function ayudaHerramientas(){
 }
 // Repatriados por punto entre los días a y b de las bases completas (los puntos traen semanas)
 function puntoRango(pt, a, b){ const w = D0.wks.find(o => o.obj===pt); if (!w) return 0; const E0 = D0.ends; let t = 0;
-  for (let i=0; i<E0.length; i++){ const wa = i ? E0[i-1] : 0, wb = E0[i], x = Math.max(wa,a), y = Math.min(wb,b); if (y>x) t += w.wk[i]*(y-x)/(wb-wa); } return t; }
+  for (let i=0; i<E0.length; i++){ const wa = i ? E0[i-1] : 0, wb = E0[i], x = Math.max(wa,a), y = Math.min(wb,b); if (y>x) t += w.wk[i]*(y-x)/(wb-wa); } return t*sinMxPunto(pt); }
+// Los puntos de internación cuentan a todos; para «ingresos de extranjeros» se quita la parte de mexicanos de ese punto (exacto en el periodo completo)
+function sinMxPunto(pt){ if (pt.mx==null) return 1; const w = D0.wks.find(o => o.obj===pt), T = w ? w.wk.reduce((a,x) => a+x, 0) : 0; return T ? Math.max(0, 1 - pt.mx/T) : 1; }
 // Ficha anclada: al elegir un país o un estado, una ventanita translúcida con sus datos clave, unida por una línea al lugar
 function fichaDatos(){
   const sel = S.sel; if (!sel || (sel.t!=='n' && sel.t!=='e')) return null;
-  const F = filtro(), ks = S.ind ? [S.ind] : ['ing','resc'], nat = sel.t==='n', xy = nat ? xyNat(sel.i) : xyEst(sel.i); if (!xy) return null;
+  const F = filtro(), ks = S.ind ? [S.ind] : (SALA.on && perfilSala().mapa ? [perfilSala().mapa] : ['ing','resc']), nat = sel.t==='n', xy = nat ? xyNat(sel.i) : xyEst(sel.i); if (!xy) return null;
   const filas = ks.filter(k => nat ? IND[k].nat : true).map(k => { const n = nat ? sel.i : nFde(k, F), ss = nat ? F.ss : [sel.i], v = (SALA.on ? valAcum : acum)(k, ss, n), va = variaTxt(diario(k, nat ? {ss:F.ss, n:sel.i, nd:sel.i} : {ss:[sel.i], n:null, nd:null}));
     return '<div class="fi-r"><span>'+esc(SALA.on ? cap1(PALABRA[k]) : IND[k].n)+'</span><b>'+corto(v)+'</b>'+(va ? '<em class="'+(va.indexOf('▲')===0 ? 'sube' : 'baja')+'">'+va+'</em>' : '')+'</div>'; }).join('');
   const det = detalleFicha(ks[0], sel, F);

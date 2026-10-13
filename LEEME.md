@@ -22,6 +22,8 @@ Página principal (Pulso) y convertidor de bases.
 | `robot/proteccion.py` | Genera `datos/proteccion.js` (mexicanos repatriados de EE. UU.) y revisa que las sumas cuadren |
 | `robot/vocabulario.py` | Genera `datos/vocabulario.js`: nombres, abreviaturas, gentilicios y sinónimos que usa Pregunta a INAMI para entender la búsqueda y corregir errores de escritura. Se edita en `catalogos.py`, sección [8] |
 | `js/proteccion.js` | Vista Procesos › Protección al migrante (DGPMV) |
+| `lib/`, `fuentes/` | Librerías y tipografías incluidas en el sitio |
+| `pruebas/` | Pruebas automáticas (Playwright) |
 | `js/consulta.js` | Ventana Pregunta a INAMI: combos, texto libre, hoja de una página (PDF, imagen y compartir por WhatsApp), deshacer y nueva pregunta y «Profundizar en el tablero» |
 | `robot/catalogos.py` | Nacionalidades, estados y coordenadas de puntos |
 | `DATA/` | Bases en xlsx, tal como las entrega cada área |
@@ -68,6 +70,17 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - Indicadores de la pantalla completa: Panorama, Ingresos, Trámites, Rescatados, Canalizados y Repatriados (los demás quedan en el Pulso), en un selector propio agrupado. Cada uno muestra su desglose del periodo y una gráfica con selector sutil Nacionalidad / O.R. (Repatriados: O.R. / Punto; Canalizados: sobre el total de NNA).
 - La barra de tiempo con el play queda siempre a la vista, también en el modo columna (se probó con escalas de Windows de 125 %, 150 % y 175 % y tabletas Android).
 - «Ver todo» (aquí y en el Pulso) detiene la reproducción y regresa al periodo completo. Un periodo largo se recorre en unos 30 segundos.
+
+## Pantalla completa de los procesos
+
+- Control migratorio y Regulación migratoria tienen su botón «Pantalla completa» junto al título. Usan la misma pieza que el Pulso (js/app.js, sección [13], objeto PERFILES): cada perfil define su panorama, sus indicadores, su frase y qué se compara. Protección al migrante se agrega cuando sus datos estén validados.
+- Control: dos cadenas que no se mezclan. Regular (ingresos con su vía; rechazos con el resultado de la segunda revisión y la tasa de rechazo, sin mexicanos ni cruceros) e irregular (rescatados con condición y destino según el reporte de las O.R.; presentados según el sistema, por estación; canalizados NNA/adultos; retornados asistido/deportación). Ingresos por punto de internación descuenta a los mexicanos de cada punto.
+- Regulación: lo que se tramitó en el periodo (tipo, resolución y sexo) y lo que hay al corte (extranjeros con documento vigente, por tipo y sexo; no cambia con el periodo y lo dice). El mapa pinta los estados por trámites. Las oficinas como puntos requieren su catálogo de ubicaciones (pendiente).
+
+## Librerías, tipografías y pruebas
+
+- ECharts, html2canvas y jsPDF están en lib/ y las tipografías en fuentes/ (css/fuentes.css): el tablero no depende de internet. Si una librería faltara, se toma de la red como respaldo.
+- pruebas/: pruebas automáticas (ver pruebas/LEEME.md). Correrlas antes de publicar cualquier cambio.
 
 ## Mapa del Pulso
 

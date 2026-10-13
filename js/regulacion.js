@@ -882,7 +882,7 @@ function vistaValidacion(){
 
 /* ==== [7] MONTAJE Y EVENTOS ======================================= */
 function montar(cont){
-  cont.innerHTML = '<div class="rg"><div class="rg-sub"><div><span class="mini">Procesos › DGRAM</span><h1>Regulación migratoria</h1></div><div class="rg-vistas">'+
+  cont.innerHTML = '<div class="rg"><div class="rg-sub"><div><span class="mini">Procesos › DGRAM</span><h1>Regulación migratoria <button type="button" class="pc-b" data-rsala aria-label="Pantalla completa" title="Pantalla completa: lo principal en un vistazo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg><span>Pantalla completa</span></button></h1></div><div class="rg-vistas">'+
     [['tram','Trámites'],['dv','Documentos vigentes'],['val','Validación R. Civil']].map(x => '<button data-rvista="'+x[0]+'" class="'+(Q.vista===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div></div><div id="rg-body" class="rg-body anim"></div></div>';
   setTimeout(() => { const b = $('rg-body'); if (b) b.classList.remove('anim'); }, 1100);
   ({ tram:vistaTramites, dv:vistaVigentes, val:vistaValidacion })[Q.vista]();
@@ -890,6 +890,7 @@ function montar(cont){
 }
 function eventos(cont){
   cont.addEventListener('click', e => { const T = s => e.target.closest(s); let b;
+    if (T('[data-rsala]')){ if (window.IANAMI_PULSO && window.IANAMI_PULSO.sala) window.IANAMI_PULSO.sala('regulacion'); return; }
     if ((b = T('[data-rvista]'))){ Q.vista = b.dataset.rvista; montar(cont); return; }
     if ((b = T('[data-rdoc]'))){ const c = +b.dataset.rdoc; Q.doc = Q.doc===c ? -1 : c; tramites(); return; }
     if (T('[data-rmas]')){ Q.mas = !Q.mas; abrirMas(true); return; }

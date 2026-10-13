@@ -595,8 +595,11 @@ function clic(e){
 }
 
 /* ==== [7] DESCARGAS =============================================== */
-const LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
-const cargar = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok; s.onerror = mal; document.head.appendChild(s); });
+const LIBS = ['lib/html2canvas.min.js', 'lib/jspdf.umd.min.js'];   // incluidas en el sitio (versiones 1.4.1 y 2.5.1)
+// Carga una librería del sitio; si no está, la toma de la red como respaldo
+const RESPALDO = { 'lib/html2canvas.min.js':'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'lib/jspdf.umd.min.js':'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js' };
+const cargar = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok;
+  s.onerror = () => { s.remove(); if (!RESPALDO[u]) return mal(); const r = document.createElement('script'); r.src = RESPALDO[u]; r.onload = ok; r.onerror = mal; document.head.appendChild(r); }; document.head.appendChild(s); });
 const nombreArch = () => { let t = norm(titulo(R)); if (t.length>56) t = t.slice(0, t.lastIndexOf(' ', 56)); return 'IA-NAMI_'+t.replace(/ /g,'_')+'_'+Q.d0.slice(0,7); };
 // La imagen se dibuja aparte, a tamaño fijo, para que salga igual desde cualquier pantalla
 async function lienzo(){

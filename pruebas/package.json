@@ -1,0 +1,7 @@
+{
+  "name": "ia-nami-pruebas",
+  "private": true,
+  "description": "Pruebas automáticas del tablero IA-NAMI",
+  "scripts": { "todas": "node correr_todas.js" },
+  "dependencies": { "playwright": "^1.48.0" }
+}
