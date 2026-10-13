@@ -62,6 +62,8 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - Usa el mismo motor del Pulso (periodo, filtro y día del cursor): el mapa, las cifras y la reproducción siempre coinciden. Al reproducir, la intensidad de los estados y las cifras avanzan día por día.
 - Buscador de país o estado (O.R.), región, indicador y periodo: Sheinbaum, Trump (se activa cuando las bases lleguen a 2025) y Comparar (dos periodos, por día; el mapa muestra el segundo).
 - «Ingresos de extranjeros» descuenta a los mexicanos (en el Pulso, Ingresos los incluye).
+- Se ajusta a cualquier pantalla: todo se mide contra el rectángulo 16:9 que cabe (ancho y alto a la vez). En pantallas angostas, verticales o de menos de 560 px de alto pasa a una columna con desplazamiento. Probado de 390×844 a 3840×2160, con y sin pantalla táctil.
+- El botón claro/oscuro solo está en pantalla completa; al salir, el Pulso regresa al tono que tenía.
 - «Ver todo» (aquí y en el Pulso) detiene la reproducción y regresa al periodo completo. Un periodo largo se recorre en unos 30 segundos.
 
 ## Pregunta a INAMI

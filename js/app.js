@@ -1341,6 +1341,8 @@ function rangoBase(k, a, b, ss, n){
 const sinMx = (k, n) => k==='ing' && n==null;
 const valAcum = (k, ss, n) => acum(k, ss, n) - (sinMx(k, n) ? acum(k, ss, MX) : 0);
 const valRango = (k, a, b, ss, n) => rangoBase(k, a, b, ss, n) - (sinMx(k, n) ? rangoBase(k, a, b, ss, MX) : 0);
+// La misma unidad que --u en el CSS: centésima del rectángulo 16:9 que cabe; en columna (teléfono o vertical), fija
+const uSala = () => { const w = innerWidth, h = innerHeight; return (w<=760 || w/h<=1.25 || h<=560) ? 13.6*Math.max(1, Math.min(2.6, w/390, h/700)) : Math.min(w/100, h*1.7778/100); };
 const nFde = (k, F) => IND[k].nat ? F.nd : null;
 const salaInd = () => S.ind || 'ing';
 const nomRango = (a, b) => { const f0 = fechaBase(a), f1 = fechaBase(b-1);
@@ -1367,7 +1369,7 @@ function cmpInicial(){
 }
 function abrirSala(){
   if (SALA.on) return; if (S.play) detener();
-  SALA.guarda = { per:S.per, desde:S.desde, hasta:S.hasta, anio:S.anio, mes:S.mes, ind:S.ind, sel:S.sel, region:S.region, agr:S.agr, p:[P0, P1], dia:S.dia };
+  SALA.guarda = { tema:S.tema, per:S.per, desde:S.desde, hasta:S.hasta, anio:S.anio, mes:S.mes, ind:S.ind, sel:S.sel, region:S.region, agr:S.agr, p:[P0, P1], dia:S.dia };
   SALA.on = true; SALA.cmp = false; SALA.anim = {};
   if (!S.ind) S.ind = 'ing';
   const m = $('mapa'); m.classList.add('sala'); document.body.classList.add('en-sala');
@@ -1410,6 +1412,7 @@ function cerrarSala(){
   const L = $('sala'); if (L) L.remove();
   $('mapa').classList.remove('sala'); document.body.classList.remove('en-sala');
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  S.tema = g.tema; $('mapa').dataset.m = S.tema; COL.act = {};
   Object.assign(S, { per:g.per, desde:g.desde, hasta:g.hasta, anio:g.anio, mes:g.mes, ind:g.ind, sel:g.sel, region:g.region, agr:g.agr });
   aplicarPeriodo(g.p[0], g.p[1]); S.dia = Math.min(g.dia, ND); S.t = S.dia; $('tgraf').setAttribute('aria-valuemax', ND);
   setTimeout(() => { ajustarAlto(); reencuadrar(); ajustarLienzo(); rehacerMapa(); }, 60);
@@ -1554,43 +1557,44 @@ function pintarBarrasSala(k, F, nF){
   $('sl-qt').textContent = tit; $('sl-qs').textContent = sub;
   const el = $('sl-qc'); if (!datos.length){ if (SALA.gr){ SALA.gr.dispose(); SALA.gr = null; } el.innerHTML = '<p class="sl-nada">Sin registros suficientes para comparar.</p>'; return; }
   if (!SALA.gr || SALA.gr.getDom()!==el){ el.innerHTML = ''; SALA.gr = echarts.init(el); }
-  const fam = 'Barlow Condensed, Barlow, sans-serif', BIG = 'Big Shoulders Display, Barlow Condensed, sans-serif';
+  const fam = 'Barlow Condensed, Barlow, sans-serif', BIG = 'Big Shoulders Display, Barlow Condensed, sans-serif', f = Math.max(0.72, uSala()/16), fz = n => Math.round(n*f*10)/10;
   let op;
   if (cmp){ const mxp = Math.max(10, ...datos.map(d => d[3])), mnp = Math.min(0, ...datos.map(d => d[3])), paso = [5,10,25,50,100,200,500,1000].find(x => (mxp-mnp)/x<=5) || 2000;
-    op = { yAxis:{ type:'value', min:Math.floor(mnp/paso)*paso, max:Math.ceil(mxp/paso)*paso, interval:paso, splitLine:{ lineStyle:{ color:LN } }, axisLabel:{ color:I2, fontFamily:fam, fontSize:12, formatter:v => (v>0?'+':'')+v+'%' } },
+    op = { yAxis:{ type:'value', min:Math.floor(mnp/paso)*paso, max:Math.ceil(mxp/paso)*paso, interval:paso, splitLine:{ lineStyle:{ color:LN } }, axisLabel:{ color:I2, fontFamily:fam, fontSize:fz(12), formatter:v => (v>0?'+':'')+v+'%' } },
       series:[{ type:'bar', barMaxWidth:30, data:datos.map(d => ({ value:+d[3].toFixed(1), itemStyle:{ color:d[3]>=0 ? VC : RC, borderRadius:d[3]>=0 ? [4,4,0,0] : [0,0,4,4] }, label:{ position:d[3]>=0 ? 'top' : 'bottom' } })),
-        label:{ show:true, color:INK, fontFamily:BIG, fontWeight:900, fontSize:17, formatter:p => (p.value>0?'+':'')+Math.round(p.value)+'%' } }],
+        label:{ show:true, color:INK, fontFamily:BIG, fontWeight:900, fontSize:fz(17), formatter:p => (p.value>0?'+':'')+Math.round(p.value)+'%' } }],
       tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => { const d = datos[p[0].dataIndex]; return '<b>'+esc(d[0])+'</b><br>'+cortoK(d[1])+' → '+cortoK(d[2])+' por día'; } } };
   } else {
-    op = { yAxis:{ type:'value', splitLine:{ lineStyle:{ color:LN } }, axisLabel:{ color:I2, fontFamily:fam, fontSize:12, formatter:v => cortoK(v) } },
+    op = { yAxis:{ type:'value', splitLine:{ lineStyle:{ color:LN } }, axisLabel:{ color:I2, fontFamily:fam, fontSize:fz(12), formatter:v => cortoK(v) } },
       series:[{ type:'bar', barMaxWidth:30, data:datos.map(d => d[1]), itemStyle:{ color:VC, borderRadius:[4,4,0,0] },
-        label:{ show:true, position:'top', color:INK, fontFamily:BIG, fontWeight:800, fontSize:16, formatter:p => cortoK(p.value) } }],
+        label:{ show:true, position:'top', color:INK, fontFamily:BIG, fontWeight:800, fontSize:fz(16), formatter:p => cortoK(p.value) } }],
       tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => { const d = datos[p[0].dataIndex]; return '<b>'+esc(d[0])+'</b><br>'+miles(d[1])+' · '+pct(d[1], d[2])+'% del total'; } } };
   }
   SALA.gr.setOption(Object.assign({ animationDuration:900, animationDurationUpdate:S.play ? 180 : 600, animationEasing:'cubicOut', textStyle:{ fontFamily:fam },
-    grid:{ left:46, right:8, top:30, bottom:cmp ? 50 : 34 },
+    grid:{ left:fz(46), right:8, top:fz(30), bottom:fz(cmp ? 50 : 34) },
     xAxis:{ type:'category', data:datos.map(d => nomCorto(d[0])), axisLine:{ lineStyle:{ color:I2 } }, axisTick:{ show:false }, splitLine:{ show:true, lineStyle:{ color:LN } },
-      axisLabel:{ color:INK, fontFamily:fam, fontSize:13, fontWeight:600, interval:0, lineHeight:15, rich:{ s:{ color:I2, fontSize:11, fontFamily:fam, fontWeight:500 } },
+      axisLabel:{ color:INK, fontFamily:fam, fontSize:fz(13), fontWeight:600, interval:0, lineHeight:fz(15), hideOverlap:false, overflow:'truncate', width:Math.max(40, el.clientWidth/datos.length - 4), rich:{ s:{ color:I2, fontSize:fz(11), fontFamily:fam, fontWeight:500 } },
         formatter:(v,i) => cmp ? v+'\n{s|'+cortoK(datos[i][2])+'/día}' : v } } }, op), true);
 }
 // Barra de tiempo de la sala: el indicador hacia arriba y un segundo indicador hacia abajo, cada uno con su escala.
 // Al comparar, la línea punteada es el promedio por día del periodo de referencia.
 function pintarTiempoSala(k, F){
-  const sv = $('sl-tg'); if (!sv) return; const W = Math.max(200, sv.clientWidth), H = 92, t = TM[S.tema], pw = W/ND;
-  const k2 = k==='resc' ? 'ing' : 'resc', capas = [[k, 50, 44, 1], [k2, 52, 24, -1]];
+  const sv = $('sl-tg'); if (!sv) return; const W = Math.max(200, sv.clientWidth), H = Math.max(50, sv.clientHeight), t = TM[S.tema], pw = W/ND;
+  const fs = Math.max(10, Math.min(30, uSala()*0.8)), base = H - fs - 6, mid = Math.round(base*0.64), alto1 = mid - 2, alto2 = base - mid - 2;
+  const k2 = k==='resc' ? 'ing' : 'resc', capas = [[k, mid, alto1, 1], [k2, mid+1, alto2, -1]];
   const serie = x => { const d = diario(x, IND[x].nat || F.nd==null ? F : { ss:F.ss, n:null, nd:null });
     if (sinMx(x, F.nd)){ const m = diario(x, { ss:F.ss, n:MX, nd:MX }); return d.map((v,i) => Math.max(0, v - m[i])); } return d; };
   let h = '';
-  const cada = Math.ceil(MESES_INI.length*56/W);
-  MESES_INI.forEach((m,i) => { const x = (m[0]*pw).toFixed(1); h += '<line x1="'+x+'" y1="2" x2="'+x+'" y2="78" stroke="'+t.tinta+'" stroke-opacity=".14"/>'+(i%cada ? '' : '<text x="'+(m[0]*pw+5).toFixed(1)+'" y="90" font-size="12.5" font-weight="600" fill="'+t.tinta+'" fill-opacity=".65" font-family="Barlow Condensed, Barlow, sans-serif">'+esc(m[1])+'</text>'); });
+  const cada = Math.ceil(MESES_INI.length*fs*4.4/W);
+  MESES_INI.forEach((m,i) => { const x = (m[0]*pw).toFixed(1); h += '<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+base+'" stroke="'+t.tinta+'" stroke-opacity=".14"/>'+(i%cada ? '' : '<text x="'+(m[0]*pw+5).toFixed(1)+'" y="'+(H-3)+'" font-size="'+fs.toFixed(1)+'" font-weight="600" fill="'+t.tinta+'" fill-opacity=".65" font-family="Barlow Condensed, Barlow, sans-serif">'+esc(m[1])+'</text>'); });
   capas.forEach(c => { const x = c[0], d = serie(x), mx = Math.max.apply(null, d) || 1, col = t[IND[x].g], U = finDatos(x);
     d.forEach((v,i) => { if (i>=U) return; const bh = Math.max(0.6, v/mx*c[2]); h += '<rect x="'+(i*pw+0.4).toFixed(1)+'" y="'+(c[3]>0 ? c[1]-bh : c[1]).toFixed(1)+'" width="'+Math.max(1,pw-1.2).toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="1" fill="'+col+'" fill-opacity="'+(i<S.dia ? 0.85 : 0.22)+'"/>'; });
     if (SALA.cmp && c[3]>0){ const a = valRango(x, SALA.A[0], SALA.A[1], F.ss, nFde(x, F))/(SALA.A[1]-SALA.A[0]), y = c[1]-Math.min(c[2], a/mx*c[2]);
-      if (a>0) h += '<line x1="0" y1="'+y.toFixed(1)+'" x2="'+W+'" y2="'+y.toFixed(1)+'" stroke="'+t.tinta+'" stroke-width="1.4" stroke-dasharray="5 4" stroke-opacity=".8"/><text x="'+(W-4)+'" y="'+(y-4).toFixed(1)+'" text-anchor="end" font-size="11.5" font-weight="600" fill="'+t.tinta+'" font-family="Barlow Condensed, Barlow, sans-serif">promedio por día en '+esc(nomRango(SALA.A[0], SALA.A[1]))+'</text>'; }
+      if (a>0) h += '<line x1="0" y1="'+y.toFixed(1)+'" x2="'+W+'" y2="'+y.toFixed(1)+'" stroke="'+t.tinta+'" stroke-width="1.4" stroke-dasharray="5 4" stroke-opacity=".8"/><text x="'+(W-4)+'" y="'+Math.max(fs, y-4).toFixed(1)+'" text-anchor="end" font-size="'+(fs*0.92).toFixed(1)+'" font-weight="600" fill="'+t.tinta+'" font-family="Barlow Condensed, Barlow, sans-serif">promedio por día en '+esc(nomRango(SALA.A[0], SALA.A[1]))+'</text>'; }
   });
-  h += '<line x1="0" y1="51" x2="'+W+'" y2="51" stroke="'+t.tinta+'" stroke-opacity=".3"/>';
-  h += '<g id="sl-cur"><line x1="0" y1="0" x2="0" y2="78" stroke="'+t.tinta+'" stroke-width="2"/><circle cx="0" cy="76" r="5" fill="'+t.tinta+'" stroke="'+t.mar+'" stroke-width="2"/></g>';
-  sv.setAttribute('viewBox', '0 0 '+W+' '+H); sv.innerHTML = h; moverCursor(S.play ? S.t : S.dia);
+  h += '<line x1="0" y1="'+(mid+0.5)+'" x2="'+W+'" y2="'+(mid+0.5)+'" stroke="'+t.tinta+'" stroke-opacity=".3"/>';
+  h += '<g id="sl-cur"><line x1="0" y1="0" x2="0" y2="'+base+'" stroke="'+t.tinta+'" stroke-width="2"/><circle cx="0" cy="'+(base-2)+'" r="5" fill="'+t.tinta+'" stroke="'+t.mar+'" stroke-width="2"/></g>';
+  sv.setAttribute('viewBox', '0 0 '+W+' '+H); sv.setAttribute('preserveAspectRatio', 'none'); sv.innerHTML = h; moverCursor(S.play ? S.t : S.dia);
   sv.setAttribute('aria-valuemin', 1); sv.setAttribute('aria-valuemax', ND); sv.setAttribute('aria-valuenow', S.dia); sv.setAttribute('aria-valuetext', 'al '+fechaLarga(S.dia-1));
   const cua = c => '<i style="background:'+c+'"></i>';
   $('sl-tl').innerHTML = '<span>'+cua(t[IND[k].g])+IND[k].n+' por día</span><span>'+cua(t[IND[k2].g])+IND[k2].n+' por día</span><span class="m">cada uno con su escala'+(SALA.cmp ? '' : ' · ▶ recorre el periodo')+'</span>';
@@ -1641,7 +1645,7 @@ function iniciar(){
   });
   let espera = 0;
   chart.on('georoam', () => { S.modoVista = 'libre'; clearTimeout(espera); espera = setTimeout(() => { const z = chart.getOption().geo[0].zoom/KMX(); if (Math.abs(z-S.zoom)/S.zoom > 0.04){ S.zoom = z; pintarMapa(); } }, 160); });
-  new ResizeObserver(() => { const cambio = escala(); reencuadrar(); ajustarLienzo(); if (cambio) rehacerMapa(); else { pintarTiempo(); if (SALA.on){ pintarTiempoSala(salaInd(), filtro()); tapasSala(); if (SALA.gr) SALA.gr.resize(); } } }).observe($('lz'));
+  new ResizeObserver(() => { const cambio = escala(); reencuadrar(); ajustarLienzo(); if (cambio) rehacerMapa(); else { pintarTiempo(); if (SALA.on){ if (SALA.gr) SALA.gr.resize(); pintarSala(true); } } }).observe($('lz'));
   window.addEventListener('resize', () => { if (escala()) rehacerMapa(); ajustarAlto(); pintarAnalisis(); });
   if (window.innerHeight<=520) S.kpiModo = 'compacto';        // teléfono acostado: indicadores compactos
   ajustarLienzo();
