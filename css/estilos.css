@@ -1088,7 +1088,7 @@ body.en-sala{overflow:hidden}
 .mapa[data-m="oscuro"] .her-tip em{color:#8F7F2E}.mapa[data-m="oscuro"] .her-tip em.on{color:#2F6657}
 
 /* ficha anclada al país o estado elegido */
-.ficha{position:absolute;left:0;top:0;z-index:5;width:max(200px,calc(var(--u,16px)*14));padding:10px 12px 10px;border-radius:12px;background:color-mix(in srgb,var(--m-panel) 82%,transparent);border:1px solid var(--m-linea);
+.ficha{position:absolute;left:0;top:0;z-index:5;width:max(210px,calc(var(--u,16px)*14.5));padding:10px 12px 10px 14px;border-radius:12px;background:color-mix(in srgb,var(--m-panel) 72%,transparent);border:1px solid color-mix(in srgb,var(--fc,#2F6657) 35%,transparent);border-left:3px solid var(--fc,#2F6657);
   backdrop-filter:blur(8px);color:var(--m-ink);box-shadow:0 10px 26px rgba(0,0,0,.16);font:500 12.5px var(--f-txt);pointer-events:auto;transition:opacity .25s;will-change:transform}
 .ficha[hidden]{display:none}
 .fi-x{position:absolute;top:4px;right:6px;width:26px;height:26px;border:0;background:transparent;color:var(--m-ink2);font-size:17px;cursor:pointer;border-radius:50%}
@@ -1104,3 +1104,8 @@ body.en-sala{overflow:hidden}
 .ctx-mas{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
 .ctx-mas summary{cursor:pointer;font:600 12.5px var(--f-txt);color:var(--ink2);padding:4px 0}
 .ctx-mas .ev{opacity:.85}
+
+/* «Lo que cambió» se acomoda abajo, junto a la barra de tiempo */
+.sl.pan .sl-q{justify-content:flex-end}.sl.pan .sl-qc{flex:none}.sl.pan .sl-cam{height:auto;margin-top:calc(var(--u)*.6)}
+.sl.pan .sl-q{bottom:calc(var(--u)*10.6)}
+.sl>.ficha{position:absolute!important;z-index:2;pointer-events:auto}

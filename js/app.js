@@ -1819,16 +1819,34 @@ function fichaDatos(){
   const F = filtro(), ks = S.ind ? [S.ind] : ['ing','resc'], nat = sel.t==='n', xy = nat ? xyNat(sel.i) : xyEst(sel.i); if (!xy) return null;
   const filas = ks.filter(k => nat ? IND[k].nat : true).map(k => { const n = nat ? sel.i : nFde(k, F), ss = nat ? F.ss : [sel.i], v = (SALA.on ? valAcum : acum)(k, ss, n), va = variaTxt(diario(k, nat ? {ss:F.ss, n:sel.i, nd:sel.i} : {ss:[sel.i], n:null, nd:null}));
     return '<div class="fi-r"><span>'+esc(SALA.on ? cap1(PALABRA[k]) : IND[k].n)+'</span><b>'+corto(v)+'</b>'+(va ? '<em class="'+(va.indexOf('▲')===0 ? 'sube' : 'baja')+'">'+va+'</em>' : '')+'</div>'; }).join('');
+  const det = detalleFicha(ks[0], sel, F);
   const k0 = ks[0], top = nat ? topEsts(s => sumaSem(k0, 0, NW-1, [s], sel.i), 1)[0] : (IND[k0].nat ? topNats(n => sumaSem(k0, 0, NW-1, [sel.i], n), 1)[0] : null);
   const dest = top ? (nat ? 'Principal O.R.: <b>'+esc(ESTC[top[0]])+'</b>' : 'Principal nacionalidad: <b>'+esc(D.nats[top[0]][0])+'</b>') : '';
-  return { xy:xy, html:'<button type="button" class="fi-x" aria-label="Quitar">×</button><span class="fi-k">'+(nat ? 'País' : 'Estado · O.R.')+'</span><b class="fi-n">'+esc(nombreSel())+'</b>'+filas+(dest ? '<span class="fi-d">'+dest+'</span>' : '')+'<span class="fi-c">'+(alFinal() ? 'periodo completo' : 'al '+fechaDia(S.dia-1))+' · '+esc(textoCmp())+'</span>' };
+  return { xy:xy, col:TM[S.tema][IND[ks[0]].g], html:'<button type="button" class="fi-x" aria-label="Quitar">×</button><span class="fi-k">'+(nat ? 'País' : 'Estado · O.R.')+'</span><b class="fi-n">'+esc(nombreSel())+'</b>'+filas+(dest ? '<span class="fi-d">'+dest+'</span>' : '')+det+'<span class="fi-c">'+(alFinal() ? 'periodo completo' : 'al '+fechaDia(S.dia-1))+' · '+esc(textoCmp())+'</span>' };
+}
+// El dato que más dice de cada indicador para el lugar elegido
+function detalleFicha(k, sel, F){
+  const nat = sel.t==='n', ss = nat ? F.ss : [sel.i], n = nat ? sel.i : nFde(k, F), linea = (a, b) => '<span class="fi-d">'+a+': <b>'+esc(b)+'</b></span>';
+  const mayor = (v, nombres) => { let i = -1, m = 0; v.forEach((x,j) => { if (x>m){ m = x; i = j; } }); const T = v.reduce((a,x) => a+x, 0); return i<0 ? null : nombres[i]+' ('+Math.round(m/Math.max(T,1)*100)+'%)'; };
+  if (k==='ing'){ const v = comp('ing_via', ss, n), via = mayor(v, ['aérea','terrestre','marítima']);
+    let pto = null; if (nat && D.ingPunto && D.ingPunto[sel.i]){ const l = D.ingPunto[sel.i].filter(x => !F.ss || F.ss.indexOf(D.puntos[x[0]].s)>=0).sort((a,b) => b[1]-a[1]); if (l[0]) pto = D.puntos[l[0][0]].n; }
+    if (!nat){ const l = D.puntos.map((p,i) => [p, p.s===sel.i ? suma(p.wk,0,NW) : 0]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]); if (l[0]) pto = l[0][0].n; }
+    return (via ? linea('Principal vía', via) : '')+(pto ? linea('Principal punto de internación', pto) : ''); }
+  if (k==='tram'){ const v = comp('tram_tipo', ss, n).map((x,i) => [x, D.tramTipos[i]]).filter(x => x[1]!=='Otros').sort((a,b) => b[0]-a[0])[0]; return v && v[0]>0 ? linea('Trámite que más se hace', CORTO_TRAM(v[1])) : ''; }
+  if (k==='resc'){ const a = comp('resc_rei', ss, n), d = comp('resc_des', ss, n), T = a[0]+a[1], D2 = d[0]+d[1]+d[2];
+    return T ? '<span class="fi-d">Reincidentes: <b>'+Math.round(a[1]/T*100)+'%</b>'+(D2 ? ' · a estación migratoria: <b>'+Math.round(d[0]/D2*100)+'%</b>' : '')+'</span>' : ''; }
+  if (k==='can'){ const v = comp('can_nna', ss, n), N = v.reduce((a,x) => a+x, 0), na = v.reduce((a,x,i) => a+(i%3===1 ? x : 0), 0); return N ? linea('NNA no acompañados', Math.round(na/N*100)+'% de los NNA') : ''; }
+  if (k==='rep' && !nat){ const l = D.repPuntos.map(p => [p, p.s===sel.i ? suma(p.wk,0,NW) : 0]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]); return l[0] ? linea('Principal punto de repatriación', l[0][0].n) : ''; }
+  return '';
 }
 function pintarFicha(){
   let el = $('ficha'); const d = fichaDatos();
-  if (!d || $('lz').clientWidth<700){ if (el) el.hidden = true; FICHA.xy = null; return; }
-  if (!el){ el = document.createElement('div'); el.id = 'ficha'; el.className = 'ficha'; el.setAttribute('role','status'); $('lz').appendChild(el);
+  const sala = SALA.on && $('sala'), columna = sala && getComputedStyle(sala).overflowY==='auto';
+  if (!d || $('lz').clientWidth<700 || columna){ if (el) el.hidden = true; FICHA.xy = null; return; }
+  if (!el){ el = document.createElement('div'); el.id = 'ficha'; el.className = 'ficha'; el.setAttribute('role','status');
     el.addEventListener('click', e => { if (e.target.closest('.fi-x')) fijarSel(null, false); }); }
-  if (el._h!==d.html){ el._h = d.html; el.innerHTML = d.html; } FICHA.xy = d.xy; el.hidden = false;
+  const padre = sala || $('lz'); if (el.parentNode!==padre) padre.insertBefore(el, sala ? sala.querySelector('.sl-h') : null);   // en pantalla completa, debajo de la barra y sus menús
+  if (el._h!==d.html){ el._h = d.html; el.innerHTML = d.html; } FICHA.xy = d.xy; FICHA.col = d.col; el.style.setProperty('--fc', d.col); el.hidden = false;
 }
 const FICHA = { xy:null };
 // Cada cuadro: la ficha sigue al lugar en el mapa y se acomoda donde no tape nada; la línea la une con el punto
@@ -1843,11 +1861,18 @@ function moverFicha(){
   let p = lugares.find(q => !choca(q[0], q[1])) || lugares[0];
   p = [Math.max(m, Math.min(W-w-56, p[0])), Math.max(m, Math.min(H-h-m, p[1]))];
   el.style.transform = 'translate('+Math.round(p[0])+'px,'+Math.round(p[1])+'px)';
-  // línea guía: del punto a la esquina más cercana de la ficha
-  const cx = pa[0] < p[0] ? p[0] : p[0]+w, cy = pa[1] < p[1] ? p[1]+10 : p[1]+h-10;
-  const t = TM[S.tema]; ctxF.globalAlpha = 0.85*vis; ctxF.strokeStyle = t.tinta; ctxF.lineWidth = 1.2*E; ctxF.setLineDash([]);
-  ctxF.beginPath(); ctxF.moveTo(pa[0], pa[1]); ctxF.lineTo(cx, cy); ctxF.stroke();
-  ctxF.fillStyle = t.tinta; ctxF.beginPath(); ctxF.arc(pa[0], pa[1], 3.2*E, 0, 6.283); ctxF.fill(); ctxF.globalAlpha = 1;
+  // conector: del lugar al centro del borde más cercano de la ficha, con un quiebre corto antes de entrar
+  const L = p[0], T2 = p[1], Rr = p[0]+w, B = p[1]+h, izq = pa[0] < L, der = pa[0] > Rr, lado = izq || der;
+  const ex = izq ? L : der ? Rr : Math.max(L+16, Math.min(Rr-16, pa[0])), ey = lado ? Math.max(T2+16, Math.min(B-16, pa[1])) : (pa[1] < T2 ? T2 : B);
+  const qx = lado ? ex + (izq ? -18 : 18)*E : ex, qy = lado ? ey : ey + (pa[1] < T2 ? -18 : 18)*E;
+  const c = FICHA.col || TM[S.tema].tinta, ahora = performance.now(), pul = reducido() ? 0.5 : (Math.sin(ahora/520)+1)/2;
+  ctxF.save(); ctxF.lineCap = 'round'; ctxF.lineJoin = 'round';
+  ctxF.globalAlpha = 0.55*vis; ctxF.strokeStyle = c; ctxF.lineWidth = 1.4*E;
+  ctxF.beginPath(); ctxF.moveTo(pa[0], pa[1]); ctxF.lineTo(qx, qy); ctxF.lineTo(ex, ey); ctxF.stroke();
+  ctxF.globalAlpha = (0.18 + 0.16*pul)*vis; ctxF.fillStyle = c; ctxF.beginPath(); ctxF.arc(pa[0], pa[1], (7 + 5*pul)*E, 0, 6.283); ctxF.fill();   // halo que respira
+  ctxF.globalAlpha = vis; ctxF.beginPath(); ctxF.arc(pa[0], pa[1], 3.4*E, 0, 6.283); ctxF.fill();
+  ctxF.globalAlpha = 0.9*vis; ctxF.beginPath(); ctxF.arc(ex, ey, 2.4*E, 0, 6.283); ctxF.fill();
+  ctxF.restore();
 }
 const alfa = (c, a) => /^#/.test(c) ? 'rgba('+hex(c).join(',')+','+a+')' : c;
 
