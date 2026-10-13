@@ -74,6 +74,9 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - Al buscar o elegir un país, estado o región: se apagan líneas y círculos, la cámara vuela y al llegar las líneas salen del origen hacia su destino y los círculos crecen. Cada círculo tiene identidad fija por país, así no se desliza de un país a otro al reproducir.
 - Al reproducir con un indicador, los estados se pintan con el promedio de los últimos 7 días (escala fija del periodo).
 - La barra de tiempo nombra cada temporada (vacaciones de invierno, Semana Santa, vacaciones de verano; Acción de Gracias de EE. UU. aparte).
+- Países: al pasar el cursor se iluminan y muestran sus datos del periodo; con un clic (en pantalla táctil, dos toques) filtran por esa nacionalidad. Un segundo clic en lo mismo, la × o un clic en el mar quitan la selección.
+- Al elegir un país o un estado aparece una ficha translúcida unida por una línea al lugar: cifras clave, cambio contra la comparación y principal O.R. (o nacionalidad). Sigue al mapa y se acomoda donde no tape nada; en pantallas angostas no se muestra.
+- Contexto (al elegir una nacionalidad): solo si el país tiene eventos propios en js/contexto.js. Primero los que caen dentro o cerca del periodo de las bases, cada uno con lo que registran nuestras bases 30 días antes y después; el resto, plegado. El efecto migratorio solo se escribe si la fuente lo documenta; los eventos regionales solo si mencionan al país.
 - Los íconos del mapa tienen su propia ayuda (nombre, qué muestran y si están encendidos); en pantalla táctil aparece al tocarlos.
 
 ## Pregunta a INAMI

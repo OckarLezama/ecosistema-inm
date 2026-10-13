@@ -516,7 +516,7 @@ function opcionBase(){
               textStyle:{ color: S.tema==='oscuro'?'#2B2926':'#F4F2EA', fontSize:12 }, extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:'+(9*E)+'px;', formatter: tarjeta },
     geo:{ map:'ianami', nameProperty:'key', roam:true, boundingCoords:CAJA_MUNDO, center:S.centro || VISTA_MX.c, zoom:S.zoom*KMX(), scaleLimit:{min:0.6, max:40*KMX()}, layoutCenter:['50%','50%'], layoutSize:encuadre(), aspectScale:ESCALA_LAT,
           itemStyle:{ areaColor:t.tierra, borderColor:t.linea, borderWidth:0.5*E },
-          emphasis:{ label:{show:false}, itemStyle:{ areaColor:t.tierra, borderColor:t.linea, borderWidth:0.8*E } },
+          emphasis:{ label:{show:false}, itemStyle:{ areaColor:t.region, borderColor:t.tinta, borderWidth:0.9*E } },    // al pasar sobre un país se ilumina
           select:{ disabled:true }, label:{show:false}, tooltip:{ show:true, formatter:tarjeta }, regions:regiones() },
     series:[
       { id:'bub', type:'scatter', coordinateSystem:'geo', data:[],
@@ -729,6 +729,17 @@ function soloKpi(k, ss, n, tc, sem, breve){      // tarjeta con un indicador ele
          (breve ? '' : chispa(semanal(k,ss,n),232,30,k==='rech'?tc.arena:tc[IND[k].g],sem));
 }
 const accion = (txt, may) => { const a = (TACTIL ? 'toca otra vez para ' : 'clic para ')+txt; return may ? a[0].toUpperCase()+a.slice(1) : a; };
+// País del mapa → nacionalidad de las bases (los países sin registros no tienen nacionalidad)
+const NAT_ISO = {}; D.nats.slice(0, OT).forEach((x,i) => { NAT_ISO[x[1]] = i; });
+const NOM_GEO = {}; GEO.features.forEach(f => { if (f.properties.t==='p') NOM_GEO[f.properties.key] = f.properties.nom; });
+function natDePais(clave){ const iso = +clave.replace('W_','').slice(2); return NAT_ISO[iso]!=null ? NAT_ISO[iso] : -1; }
+function tarjetaPais(clave, cuando){
+  const n = natDePais(clave), nom = n>=0 ? D.nats[n][0] : (NOM_GEO[clave.replace('W_','')] || 'País');
+  const l = n<0 ? [] : [['ing','Ingresos'],['resc','Rescatados'],['rech','Rechazos']].map(x => [x[1], acum(x[0], null, n)]).filter(x => x[1]>0);
+  return '<div class="tt"><b class="h">'+esc(nom)+'</b><span class="s">'+cuando+'</span>'+
+    (l.length ? l.map(x => '<div class="r"><span>'+x[0]+'</span><span></span><span class="x">'+miles(x[1])+'</span></div>').join('')+'<span class="f">'+(TACTIL ? 'Toca otra vez' : 'Clic')+' para filtrar por '+esc(nom)+'</span>'
+              : '<span class="f">Sin registros en el periodo</span>')+'</div>';
+}
 function tarjeta(p){
   const F = filtro(), kc = S.ind, fin = alFinal(), sem = semDe(S.dia), breve = $('lz').clientHeight < 430*E;
   const tc = TM[S.tema==='claro' ? 'oscuro' : 'claro'];              // la tarjeta va en el tono contrario al mapa
@@ -742,6 +753,7 @@ function tarjeta(p){
   if (p.componentType==='geo'){
     if (p.name.indexOf('US_')===0 && S.cbp && D.cbp && D.cbp.estados[p.name.slice(3)])
       return '<div class="tt"><b class="h">'+esc(p.name.slice(3))+'</b><span class="s">Encuentros de la CBP · periodo completo</span><span class="v">'+miles(D.cbp.estados[p.name.slice(3)])+'</span><span class="f">'+pct(D.cbp.estados[p.name.slice(3)], D.cbp.total)+'% de los encuentros en la frontera</span></div>';
+    if (/^(W_)?P_\d+$/.test(p.name)) return tarjetaPais(p.name, cuando);
     if (p.name.indexOf('MX_')!==0) return '';
     const s = ECLAVE.indexOf(p.name); if (s<0) return '';
     const gru = ['c','o'].map(a => AGR[a].de[s]>=0 ? AGR[a].nombres[AGR[a].de[s]] : null).filter(Boolean).join(' · ');
@@ -901,7 +913,7 @@ function animar(ahora){
   const w = $('lz').clientWidth, h = $('lz').clientHeight, quieto = reducido();
   ctxF.clearRect(0,0,w,h);
   CAM.vis = CAM.vuela ? Math.max(0, CAM.vis - 0.16) : Math.min(1, CAM.vis + 0.1);
-  if (CAM.vis<=0.01) return;
+  if (CAM.vis<=0.01){ moverFicha(); return; }
   let orden = 0; const llega = CAM.llega, recien = llega && ahora < llega + 1800;
   if (llega && !recien) CAM.llega = 0;
   Object.keys(FL).forEach(id => { const f = FL[id]; if (recien && f.alm===0){ f.al = 0; delete FL[id]; return; }   // lo de antes del vuelo ya no se dibuja
@@ -929,6 +941,7 @@ function animar(ahora){
     ctxF.globalAlpha = 0.5*f.al*CAM.vis; ctxF.beginPath(); ctxF.arc(pb[0], pb[1], Math.max(2*E, gw*0.8), 0, 6.283); ctxF.fill();
   });
   ctxF.globalAlpha = 1;
+  moverFicha();
 }
 // Caravana: el contingente avanza por la carretera como un grupo compacto que camina;
 // lo ya recorrido queda marcado y lo que falta se ve punteado. Al llegar, se detiene un momento y vuelve a salir.
@@ -1181,6 +1194,29 @@ function cifraEvento(e, n){
     return a>=20 ? x[1]+' '+(b>=a?'▲ ':'▼ ')+Math.abs((b/a-1)*100).toFixed(0)+'%' : ''; }).filter(Boolean);
   return r.length ? '<span class="cf">En nuestras cifras, 4 semanas después: '+r.join(' · ')+'</span>' : '';
 }
+// Contexto honesto: qué pasó en el país (con fuente) y qué muestran nuestros registros alrededor de esa fecha.
+// No hay tarjeta si el país no tiene eventos propios. Los regionales solo entran si mencionan al país.
+function contextoDe(n){ const nom = sinAcento(D.nats[n][0]), raiz = nom.slice(0, Math.max(5, nom.length-2));
+  const own = CTX[D.nats[n][1]] || [], reg = (CTX.reg || []).filter(e => sinAcento(e.que+' '+(e.efecto || '')).indexOf(raiz)>=0);
+  return own.length ? own.concat(reg).sort((a,b) => a.f<b.f ? 1 : -1) : null; }
+function cajaContexto(n){
+  const l = contextoDe(n), ini = 0, fin = D0.dias, dia = e => idxBase(e.f.length===7 ? e.f+'-01' : e.f);
+  const k = ['resc','ing','rech'].map(x => [x, rangoBase(x, 0, D0.dias, null, n)]).sort((a,b) => b[1]-a[1])[0][0];
+  const cerca = l.filter(e => dia(e)>=ini-90 && dia(e)<=fin+90).sort((a,b) => { const da = dia(a), db = dia(b), ia = da>=0 && da<fin, ib = db>=0 && db<fin; return ia!==ib ? (ia ? -1 : 1) : da-db; }), antes = l.filter(e => dia(e)<ini-90), despues = l.filter(e => dia(e)>fin+90);
+  const nuestro = e => { const i = dia(e); if (i-30<0 || i+30>D0.dias) return '<span class="cf">'+(i<0 || i>=D0.dias ? 'Fuera del periodo de nuestras bases.' : 'En el borde de nuestras bases: no alcanzan 30 días antes y después.')+'</span>';
+    const a = rangoBase(k, i-30, i, null, n), b = rangoBase(k, i, i+30, null, n);
+    return a>=20 ? '<span class="cf">Nuestros registros de '+IND[k].n.toLowerCase()+', 30 días antes y después: <b>'+miles(a)+' → '+miles(b)+'</b> ('+(b>=a ? '+' : '−')+Math.abs((b/a-1)*100).toFixed(0)+'%)</span>' : ''; };
+  const ev = e => '<div class="ev"><time>'+fechaEv(e.f)+'</time><i style="background:'+CATS[e.c][1]+'" title="'+CATS[e.c][0]+'"></i><div><b>'+esc(e.que)+'</b>'+
+    (e.doc && e.efecto ? '<span class="ef">Según la fuente: '+esc(e.efecto)+'</span>' : '')+nuestro(e)+(e.url ? '<a href="'+esc(e.url)+'" target="_blank" rel="noopener">'+esc(e.fuente)+' ↗</a>' : '')+'</div></div>';
+  const ev2 = e => '<div class="ev"><time>'+fechaEv(e.f)+'</time><i style="background:'+CATS[e.c][1]+'"></i><div><b>'+esc(e.que)+'</b>'+(e.url ? '<a href="'+esc(e.url)+'" target="_blank" rel="noopener">'+esc(e.fuente)+' ↗</a>' : '')+'</div></div>';
+  const pl = (tit, a) => a.length ? '<details class="ctx-mas"><summary>'+tit+' · '+a.length+'</summary>'+a.map(ev2).join('')+'</details>' : '';
+  return '<div class="caja ancha" data-propia="1"><h2><span>Contexto · '+esc(D.nats[n][0])+'</span>'+infoP('Eventos del país verificados con fuente pública y, junto a cada uno, lo que registran nuestras bases 30 días antes y después. Que coincidan en el tiempo no prueba que uno cause el otro.')+'</h2>'+
+    '<span class="mini">Qué pasó en el país y qué muestran nuestros registros</span><div class="ctx-lista">'+
+    (cerca.length ? cerca.map(ev).join('') : '<span class="mini">Ningún evento cae dentro o cerca del periodo de nuestras bases ('+fechaISO(D.inicio)+' – '+fechaISO(D.corte)+').</span>')+
+    pl('Después del periodo de nuestras bases', despues)+pl('Antes del periodo de nuestras bases', antes)+'</div>'+
+    '<div class="cats">'+Object.keys(CATS).map(c => '<span><i style="background:'+CATS[c][1]+'"></i>'+CATS[c][0]+'</span>').join('')+'</div>'+
+    '<span class="nota">Coincidir en el tiempo no prueba la causa. El efecto migratorio solo se escribe cuando la fuente lo documenta.</span></div>';
+}
 function htmlEventos(lista, n){ return lista.map(e => '<div class="ev"><time>'+fechaEv(e.f)+'</time><i style="background:'+CATS[e.c][1]+'" title="'+CATS[e.c][0]+'"></i><div>'+
   '<b>'+esc(e.que)+'</b><span class="ef">→ '+esc(e.efecto)+(e.doc ? '' : ' <em>efecto inferido</em>')+'</span>'+cifraEvento(e, n)+
   (e.url ? '<a href="'+esc(e.url)+'" target="_blank" rel="noopener">'+esc(e.fuente)+' ↗</a>' : '')+'</div></div>').join(''); }
@@ -1210,15 +1246,10 @@ function pintarBajo(){
   if (S.ind) cajas.push(htmlComp(S.ind, F));
   if (F.n==null && (S.ind==='ing' || S.ind==='resc' || S.ind==='pres')) cajas.push(cajaCruce(S.ind, F));
   // 5) Contexto: aparece al elegir una nacionalidad
-  if (F.n!=null){ const ctx = CTX[D.nats[F.n][1]] || [], reg = CTX.reg.slice(0,4);
-    cajas.push('<div class="caja ancha"><h2><span>Contexto · '+esc(D.nats[F.n][0])+'</span><small>qué pasó y cómo se tradujo en migración</small></h2>'+
-      '<div class="ctx-lista">'+(ctx.length ? htmlEventos(ctx, F.n) : '<span class="mini">Aún sin eventos propios en el catálogo.</span>')+
-      '<hr class="sep"><span class="mini"><b>En la región</b></span>'+htmlEventos(reg, F.n)+'</div><span class="mini">'+(ctx.length+reg.length)+' eventos · desliza para ver más</span>'+
-      '<div class="cats">'+Object.keys(CATS).map(k=>'<span><i style="background:'+CATS[k][1]+'"></i>'+CATS[k][0]+'</span>').join('')+'</div>'+
-      '<span class="nota">Cada evento enlaza a su fuente. «Efecto inferido»: la fuente no mide el efecto migratorio. Coincidir en el tiempo no prueba la causa.</span></div>'); }
+  if (F.n!=null && contextoDe(F.n)) cajas.push(cajaContexto(F.n));
   $('bajo').innerHTML = cajas.join('');
   const cl = document.querySelector('.ctx-lista');       // el contexto muestra de inicio los primeros 4 eventos
-  if (cl){ const ev = cl.querySelectorAll('.ev'); if (ev.length>4) cl.style.maxHeight = ev[4].offsetTop+'px'; }
+  if (cl){ const ev = cl.querySelectorAll(':scope > .ev'); if (ev.length>4) cl.style.maxHeight = ev[4].offsetTop+'px'; }
 }
 function pintarCtl(){
   const x = '<svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
@@ -1248,6 +1279,7 @@ function pintarTodo(soloTiempo){
   const av = $('aviso-pasado'); if (av) av.hidden = actual;
   pintarCtl(); if (!soloTiempo) pintarAnalisis(); if (!soloTiempo) pintarDocs(); pintarKpis(); pintarTiempo(); pintarMapa(); pintarBajo(); marcarFiltro();
   if (SALA.on) pintarSala(soloTiempo);
+  pintarFicha();
 }
 // Con una nacionalidad, estado, grupo o punto elegido, cada tarjeta que cambió lleva una franja y el nombre
 function marcarFiltro(){
@@ -1399,9 +1431,11 @@ const cortoK = v => v>=1e6 ? (v/1e6).toFixed(2)+' M' : v>=1e4 ? (v/1e3).toFixed(
 const cifraG = v => { const s = cortoK(v), m = s.match(/^(.*) ([Mk])$/); return m ? m[1]+'<small>'+m[2]+'</small>' : s; };
 // Cifras que se mueven: de lo que muestran a su nuevo valor (como los indicadores del Pulso)
 function mover(el, v, fmt, dur){
-  if (!el) return; const de = el._v==null ? 0 : el._v; el._v = v; cancelAnimationFrame(el._raf || 0);
-  if (reducido() || de===v){ el.innerHTML = fmt(v); return; }
-  const t0 = performance.now(), paso = t => { const e = Math.min(1, (t-t0)/dur), f = 1-Math.pow(1-e,3); el.innerHTML = fmt(de + (v-de)*f); if (e<1) el._raf = requestAnimationFrame(paso); };
+  if (!el) return; if (el._anim && el._v===v) return;                   // ya va hacia ese valor
+  const de = el._cur==null ? 0 : el._cur; el._v = v; cancelAnimationFrame(el._raf || 0);
+  if (reducido() || de===v){ el._cur = v; el._anim = false; el.innerHTML = fmt(v); return; }
+  el._anim = true; const t0 = performance.now(), paso = t => { const e = Math.min(1, Math.max(0, (t-t0)/dur)), f = 1-Math.pow(1-e,3); el._cur = de + (v-de)*f; el.innerHTML = fmt(el._cur);
+    if (e<1) el._raf = requestAnimationFrame(paso); else el._anim = false; };
   el._raf = requestAnimationFrame(paso);
 }
 // Periodos disponibles para comparar: meses completos y, cuando haya datos, antes y con Trump
@@ -1538,7 +1572,7 @@ function pintarSala(soloTiempo){
     const xi = IND_SALA.find(x => x[0]===(k || '')) || [k, '', IND[k] ? IND[k].n : k, ''];
     $('sl-indb').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(k ? ICONO[k] : ICONO_PAN)+'"/></svg><span>'+esc(xi[2])+'</span><em>▾</em>';
     $('sl-im').querySelectorAll('[data-ind]').forEach(o => { const on = o.dataset.ind===(k || ''); o.classList.toggle('on', on); o.setAttribute('aria-selected', on); });
-    if (!S.sel && document.activeElement!==$('sl-q')){ $('sl-q').value = ''; $('sl-qx').hidden = true; }
+    if (document.activeElement!==$('sl-q')){ $('sl-q').value = S.sel && S.sel.t!=='p' ? nombreSel() : ''; $('sl-qx').hidden = !S.sel; }
     $('sl-seg').innerHTML = [['shein','Sheinbaum'],['trump','Trump'],['cmp','Comparar']].map(o => { const ok = o[0]==='trump' ? hayTrump() : true, on = o[0]==='cmp' ? SALA.cmp : !SALA.cmp && S.per===o[0];
       return '<button type="button" data-sp="'+o[0]+'" class="'+(on?'on':'')+'"'+(ok ? '' : ' disabled title="Sin datos del periodo Trump: las bases llegan al '+fechaISO(D.corte)+'"')+'>'+o[1]+'</button>'; }).join('');
     $('sl-cmpb').innerHTML = SALA.cmp ? '<button type="button" id="sl-cmpe" class="sl-dd sl-cb"><small>Comparación</small><span>'+nomCortoR(SALA.A)+' <em>→</em> '+nomCortoR(SALA.B)+' <i>▾</i></span></button>' : '';
@@ -1779,6 +1813,42 @@ function ayudaHerramientas(){
 // Repatriados por punto entre los días a y b de las bases completas (los puntos traen semanas)
 function puntoRango(pt, a, b){ const w = D0.wks.find(o => o.obj===pt); if (!w) return 0; const E0 = D0.ends; let t = 0;
   for (let i=0; i<E0.length; i++){ const wa = i ? E0[i-1] : 0, wb = E0[i], x = Math.max(wa,a), y = Math.min(wb,b); if (y>x) t += w.wk[i]*(y-x)/(wb-wa); } return t; }
+// Ficha anclada: al elegir un país o un estado, una ventanita translúcida con sus datos clave, unida por una línea al lugar
+function fichaDatos(){
+  const sel = S.sel; if (!sel || (sel.t!=='n' && sel.t!=='e')) return null;
+  const F = filtro(), ks = S.ind ? [S.ind] : ['ing','resc'], nat = sel.t==='n', xy = nat ? xyNat(sel.i) : xyEst(sel.i); if (!xy) return null;
+  const filas = ks.filter(k => nat ? IND[k].nat : true).map(k => { const n = nat ? sel.i : nFde(k, F), ss = nat ? F.ss : [sel.i], v = (SALA.on ? valAcum : acum)(k, ss, n), va = variaTxt(diario(k, nat ? {ss:F.ss, n:sel.i, nd:sel.i} : {ss:[sel.i], n:null, nd:null}));
+    return '<div class="fi-r"><span>'+esc(SALA.on ? cap1(PALABRA[k]) : IND[k].n)+'</span><b>'+corto(v)+'</b>'+(va ? '<em class="'+(va.indexOf('▲')===0 ? 'sube' : 'baja')+'">'+va+'</em>' : '')+'</div>'; }).join('');
+  const k0 = ks[0], top = nat ? topEsts(s => sumaSem(k0, 0, NW-1, [s], sel.i), 1)[0] : (IND[k0].nat ? topNats(n => sumaSem(k0, 0, NW-1, [sel.i], n), 1)[0] : null);
+  const dest = top ? (nat ? 'Principal O.R.: <b>'+esc(ESTC[top[0]])+'</b>' : 'Principal nacionalidad: <b>'+esc(D.nats[top[0]][0])+'</b>') : '';
+  return { xy:xy, html:'<button type="button" class="fi-x" aria-label="Quitar">×</button><span class="fi-k">'+(nat ? 'País' : 'Estado · O.R.')+'</span><b class="fi-n">'+esc(nombreSel())+'</b>'+filas+(dest ? '<span class="fi-d">'+dest+'</span>' : '')+'<span class="fi-c">'+(alFinal() ? 'periodo completo' : 'al '+fechaDia(S.dia-1))+' · '+esc(textoCmp())+'</span>' };
+}
+function pintarFicha(){
+  let el = $('ficha'); const d = fichaDatos();
+  if (!d || $('lz').clientWidth<700){ if (el) el.hidden = true; FICHA.xy = null; return; }
+  if (!el){ el = document.createElement('div'); el.id = 'ficha'; el.className = 'ficha'; el.setAttribute('role','status'); $('lz').appendChild(el);
+    el.addEventListener('click', e => { if (e.target.closest('.fi-x')) fijarSel(null, false); }); }
+  if (el._h!==d.html){ el._h = d.html; el.innerHTML = d.html; } FICHA.xy = d.xy; el.hidden = false;
+}
+const FICHA = { xy:null };
+// Cada cuadro: la ficha sigue al lugar en el mapa y se acomoda donde no tape nada; la línea la une con el punto
+function moverFicha(){
+  const el = $('ficha'); if (!el || el.hidden || !FICHA.xy) return;
+  const vis = CAM.vuela ? 0 : CAM.vis; el.style.opacity = vis.toFixed(2); if (vis<0.05) return;
+  const pa = chart.convertToPixel('geo', FICHA.xy); if (!pa) return;
+  const W = $('lz').clientWidth, H = $('lz').clientHeight, w = el.offsetWidth, h = el.offsetHeight, m = 12;
+  const tapas = (SALA.on && SALA.tapas ? SALA.tapas : []).concat([[ $('m-her').offsetLeft-6, 0, W, H ]].filter(() => !SALA.on && false));
+  const choca = (x, y) => x<m || y<m || x+w>W-56 || y+h>H-m || tapas.some(t => x < t[2] && x+w > t[0] && y < t[3] && y+h > t[1]);
+  const lugares = [[pa[0]+44, pa[1]-h-34], [pa[0]-w-44, pa[1]-h-34], [pa[0]+44, pa[1]+30], [pa[0]-w-44, pa[1]+30], [pa[0]+60, pa[1]-h/2], [pa[0]-w-60, pa[1]-h/2]];
+  let p = lugares.find(q => !choca(q[0], q[1])) || lugares[0];
+  p = [Math.max(m, Math.min(W-w-56, p[0])), Math.max(m, Math.min(H-h-m, p[1]))];
+  el.style.transform = 'translate('+Math.round(p[0])+'px,'+Math.round(p[1])+'px)';
+  // línea guía: del punto a la esquina más cercana de la ficha
+  const cx = pa[0] < p[0] ? p[0] : p[0]+w, cy = pa[1] < p[1] ? p[1]+10 : p[1]+h-10;
+  const t = TM[S.tema]; ctxF.globalAlpha = 0.85*vis; ctxF.strokeStyle = t.tinta; ctxF.lineWidth = 1.2*E; ctxF.setLineDash([]);
+  ctxF.beginPath(); ctxF.moveTo(pa[0], pa[1]); ctxF.lineTo(cx, cy); ctxF.stroke();
+  ctxF.fillStyle = t.tinta; ctxF.beginPath(); ctxF.arc(pa[0], pa[1], 3.2*E, 0, 6.283); ctxF.fill(); ctxF.globalAlpha = 1;
+}
 const alfa = (c, a) => /^#/.test(c) ? 'rgba('+hex(c).join(',')+','+a+')' : c;
 
 /* ==== [12] ARRANQUE =============================================== */
@@ -1800,12 +1870,19 @@ function iniciar(){
     const clave = (p.seriesId || '')+':'+(p.dataIndex!=null ? p.dataIndex : p.name);
     if (TACTIL && tocado!==clave){ tocado = clave; return; }       // primer toque: solo la tarjeta; segundo toque: selecciona
     tocado = null;
-    if (p.seriesId==='bub' || p.seriesId==='lat') fijarSel({t:'n', i:p.data.nat}, false);
+    const mismo = sel => S.sel && S.sel.t===sel.t && S.sel.i===sel.i && S.sel.a===sel.a && S.sel.q===sel.q;      // segundo clic en lo mismo: se quita
+    const elegirMapa = (sel, volar) => mismo(sel) ? fijarSel(null, false) : fijarSel(sel, volar);
+    if (p.seriesId==='bub' || p.seriesId==='lat') elegirMapa({t:'n', i:p.data.nat}, false);
     else if (p.seriesId==='pts') fijarSel({t:'p', tipo:p.data.pTipo, i:p.data.pt}, false);
     else if (p.seriesId==='car'){ S.carSel = p.data.fin!=null ? p.data.fin : null; pintarMapa(); }
     else if (p.name && p.name.indexOf('MX_')===0){ const s = ECLAVE.indexOf(p.name); if (s<0) return;
-      if (S.agr!=='e' && AGR[S.agr].de[s]>=0) fijarSel({t:'g', a:S.agr, q:AGR[S.agr].de[s]}, false); else fijarSel({t:'e', i:s}, false); }
+      if (S.agr!=='e' && AGR[S.agr].de[s]>=0) elegirMapa({t:'g', a:S.agr, q:AGR[S.agr].de[s]}, false); else elegirMapa({t:'e', i:s}, false); }
+    else if (p.name && /^(W_)?P_\d+$/.test(p.name)){ const n = natDePais(p.name); if (n>=0) elegirMapa({t:'n', i:n}, true); }
   });
+  // clic en el mar (fuera de países, estados y círculos): quita la selección; si se arrastró el mapa, no
+  { let x0 = 0, y0 = 0; const zr = chart.getZr();
+    zr.on('mousedown', e => { x0 = e.offsetX; y0 = e.offsetY; });
+    zr.on('click', e => { if (e.target || !S.sel || Math.hypot(e.offsetX-x0, e.offsetY-y0) > 5) return; fijarSel(null, false); }); }
   let espera = 0;
   chart.on('georoam', () => { S.modoVista = 'libre'; clearTimeout(espera); espera = setTimeout(() => { const z = chart.getOption().geo[0].zoom/KMX(); if (Math.abs(z-S.zoom)/S.zoom > 0.04){ S.zoom = z; pintarMapa(); } }, 160); });
   new ResizeObserver(() => { const cambio = escala(); reencuadrar(); ajustarLienzo(); if (cambio) rehacerMapa(); else { pintarTiempo(); if (SALA.on){ if (SALA.gr) SALA.gr.resize(); pintarSala(true); } } }).observe($('lz'));
