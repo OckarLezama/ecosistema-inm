@@ -615,23 +615,23 @@ function vistaTramites(){
 }
 // ---- Ayuda (i): qué muestra, de dónde sale y cómo leerlo
 const INFO = {
-  hz:'<b>Titulares del periodo.</b> Los tres datos que más conviene saber, calculados solos con cada carga de datos: cuánto subieron o bajaron los trámites, la nacionalidad que más cambió y la oficina con más rechazos de lo esperado. Respetan el periodo, el «Comparar con» y los filtros. Toca uno para ver la explicación.',
-  evo:'<b>Trámites concluidos en el INM</b> (con o sin documento: tarjetas, constancias, oficios, y también rechazados o cancelados) en el periodo elegido. <br>• <b>Franja verde:</b> lo normal, calculado con las semanas fuera de vacaciones. Si un punto sale de la franja, es un cambio real. <br>• <b>Sombra gris:</b> temporada vacacional; ahí bajar es esperado. <br>• <b>Punto hueco:</b> semana con pocos días de datos. <br>Toca cualquier punto y a la derecha verás qué cambió ahí. Con «Ver» separas las 5 líneas principales por documento, nacionalidad u O.R.',
+  hz:'<b>Titulares:</b> cuánto subieron o bajaron los trámites contra el periodo de comparación, la nacionalidad que más cambió y la oficina con más rechazos de lo esperado.',
+  evo:'<b>Trámites concluidos en el INM:</b> todos los que terminaron en el periodo, con o sin documento (tarjetas, constancias, oficios, rechazos y cancelaciones), en total o por documento, nacionalidad u O.R.<br>• <b>Franja verde:</b> rango habitual, calculado con las semanas fuera de vacaciones; un punto fuera de la franja es un cambio real.<br>• <b>Sombra gris:</b> temporada vacacional, cuando una baja es lo esperado.<br>• <b>Punto hueco:</b> periodo con pocos días de datos.',
   nv:'<b>Personas que se documentan por primera vez</b>: regularizaciones, visas y tarjetas de visitante regional o trabajador fronterizo. No incluye renovaciones, cambios de condición ni avisos. El % sobre el stock compara contra las personas con documento vigente al último corte.',
   of:'<b>Las 10 oficinas con más trámites.</b> La barra muestra positivos (verde), negativos (rojo) y otros. El ⚠ marca a las oficinas que rechazan más de lo que se esperaría por el tipo de trámites que atienden. Los % son sobre trámites ya resueltos.',
-  dvt:'<b>Personas con documento vigente</b> por estado o por nacionalidad, con hombres, mujeres y cada tipo de documento. Toca una tarjeta de arriba (por ejemplo «Vis. Regional») o un encabezado para ordenar la tabla; la tarjeta también filtra los rankings y el detalle por ese documento.',
-  dvm:'<b>Dónde viven y de dónde son.</b> Cada celda cruza un estado con un país: más oscuro = más personas. Al pasar el cursor se iluminan su fila, su columna y sus totales. Los rankings ordenan países o estados de mayor a menor. Toca para ver el detalle a la derecha.',
-  dvd:'<b>Detalle de un estado o un país.</b> Escribe o toca uno: si es estado, verás de qué países son sus residentes; si es país, en qué estados viven.',
-  vah:'<b>Titulares de la semana.</b> Volumen y cambio en la composición matrimonio/nacimiento, nacionalidades que concentran las solicitudes (y cuántas veces su peso en los trámites) y actas reportadas por una O.R. de otro estado.',
-  vae:'<b>Solicitudes de validación por día.</b> Pasa el cursor por una línea para ver solo esa y su % del total; sobre «Total» se ven todas. «123» muestra los valores.',
-  van:'<b>Nacionalidades que más piden validación.</b> «×» compara su parte de las validaciones contra su parte de todos los trámites migratorios: ×3 o más significa que validan mucho más de lo que pesan.',
-  vax:'<b>Actas registradas en un estado y reportadas por la O.R. de otro.</b> No incluye la DGRAM, que es oficina central. Es una señal para revisar, no una conclusión.',
-  vaf:'<b>Del Registro Civil donde se registró el acta (izquierda) a la O.R. que la reporta (derecha).</b> Verde = mismo estado; rojo = otro estado; gris = DGRAM. Toca una franja para resaltarla; toca fuera para soltarla.',
-  vaa:'<b>Días entre el registro del acta y la solicitud.</b> Un matrimonio de 30 días o menos es una señal para revisar.',
-  tot:'<b>Totales del periodo, de mayor a menor.</b> Elige con los botones: por documento, por nacionalidad (las 30 principales y el resto sumado) o por O.R. (las 32). Aplica los demás filtros y resalta en rojo lo que elegiste en esa misma dimensión, para ver qué lugar ocupa. Si comparas 2 o 3 O.R. o nacionalidades, cada barra se divide en una por cada una.',
-  tipo:'<b>Tipos de trámite con más volumen</b> en el periodo y con los filtros elegidos.',
-  edad:'<b>Personas por grupo de edad y sexo</b> (sin trámites de empleadores).',
-  mz:'<b>Qué documento obtiene cada grupo.</b> «Sin documento» = el trámite se rechazó, se canceló o la persona desistió, así que no se le entregó ningún documento. Cada barra es el 100% de los trámites de una nacionalidad (u O.R., oficina o edad), repartido por el documento emitido. Pasa el cursor o toca un color: a la derecha verás su % y el lugar que ocupa ese grupo en ese documento. Clic para ordenar.'
+  dvt:'<b>Personas con documento vigente</b> al último corte, por estado o por nacionalidad, con hombres, mujeres y cada tipo de documento.',
+  dvm:'<b>Dónde viven y de dónde son</b> las personas con documento vigente: cada celda cruza un estado con un país; más oscuro = más personas. Los rankings ordenan países y estados de mayor a menor.',
+  dvd:'<b>Detalle de un estado o de un país:</b> para un estado, de qué países son sus residentes; para un país, en qué estados viven.',
+  vah:'<b>Titulares de la semana:</b> volumen de solicitudes y cambio en la proporción matrimonio/nacimiento, nacionalidades que concentran las solicitudes (y cuántas veces su peso en los trámites) y actas reportadas por una O.R. de otro estado.',
+  vae:'<b>Solicitudes de validación por día</b>, en total y por tipo de acta (matrimonio y nacimiento).',
+  van:'<b>Nacionalidades que más piden validación de actas.</b> El «×» compara su parte de las validaciones con su parte de todos los trámites migratorios: ×3 o más significa que validan mucho más de lo que pesan en los trámites.',
+  vax:'<b>Actas registradas en un estado y reportadas por la O.R. de otro.</b> No incluye a la DGRAM, que es oficina central. Es una señal para revisar, no una conclusión.',
+  vaf:'<b>Del Registro Civil donde se registró el acta (izquierda) a la O.R. que la reporta (derecha).</b> Verde = mismo estado; rojo = otro estado; gris = DGRAM.',
+  vaa:'<b>Días entre el registro del acta y la solicitud de validación.</b> Un matrimonio registrado 30 días o menos antes de la solicitud es una señal para revisar.',
+  tot:'<b>Trámites por documento, nacionalidad u O.R.</b>, de mayor a menor: las 30 nacionalidades principales con el resto sumado, y las 32 O.R. Con 2 o 3 O.R. o nacionalidades en comparación, cada barra se divide en una por cada una.',
+  tipo:'<b>Tipos de trámite con más volumen</b> en el periodo y su parte del total.',
+  edad:'<b>Personas por grupo de edad y sexo</b> que realizaron un trámite (sin trámites de empleadores).',
+  mz:'<b>Qué documento obtiene cada grupo.</b> Cada barra es el 100% de los trámites de una nacionalidad (u O.R., oficina o grupo de edad), repartido por el documento emitido. «Sin documento» = el trámite se rechazó, se canceló o la persona desistió.'
 };
 const info = k => '<button class="rg-i" data-rinfo="'+k+'" aria-label="Qué muestra esta sección">i</button>';
 let infoFija = false;

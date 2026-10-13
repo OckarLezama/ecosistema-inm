@@ -385,13 +385,13 @@ function pintarDs(){
 
 /* ==== [6] MONTAJE Y EVENTOS ======================================= */
 const INFO = {
-  tr:'<b>Repatriados en el tiempo</b>, o la medida que elegiste en las tarjetas: el total con su rango habitual, o desglosado por modalidad, grupo, O.R. o punto. Elige día, semana o mes; «123» muestra el valor de cada punto. Toca un punto de la gráfica para ver a la derecha quiénes llegaron ese día, semana o mes.',
-  tp:'<b>Quiénes llegan y por dónde</b> en el periodo o en el punto que tocaste de la gráfica: hombres y mujeres adultos y NNA acompañados y no acompañados (toca uno para analizarlo), las O.R. y los puntos de repatriación. Con un periodo elegido, cuánto cambió cada uno contra el anterior.',
-  perfil:'<b>De cada 100 personas que recibe cada punto</b>, cuántas son hombres adultos, mujeres adultas, NNA acompañados y NNA no acompañados. Muestra la especialización de cada punto: unos reciben casi solo adultos y otros concentran a los NNA que llegan solos. Toca un punto para filtrar.',
-  prim:'<b>Cada barra es un día con llegada de vuelos PRIM al AIFA</b> (la modalidad aérea del archivo), con adultos y NNA. El archivo no trae el número de vuelos: por eso se cuentan días con llegada. Un día muy arriba del promedio puede ser más de un vuelo.',
-  tot:'<b>Totales de mayor a menor</b> por punto de repatriación u O.R. Con «Repatriados» elegido, cada barra se divide en hombres y mujeres adultos y NNA acompañados y no acompañados. Toca una barra para filtrar.',
-  ds:'<b>Promedio por día de la semana</b>: cuántas personas se repatrían en promedio cada lunes, martes, etc., por garitas y puentes y por vuelos PRIM. Sirve para planear la atención en los puntos.',
-  hz:'<b>Titulares automáticos</b>: cómo cambió la medida elegida en la comparación, el punto donde más NNA llegan sin acompañante y los días con llegada de vuelos PRIM.'
+  tr:'<b>Mexicanos repatriados de EE. UU. en el tiempo</b> por día, semana o mes, en total o por modalidad (terrestre o vuelos PRIM), grupo, O.R. o punto. La franja marca el rango habitual (calculado fuera de vacaciones) y la sombra gris, las temporadas vacacionales.',
+  tp:'<b>Quién llega en el periodo:</b> hombres y mujeres adultos, NNA acompañados y no acompañados, y las O.R. y los puntos de repatriación con más llegadas, con su cambio contra el periodo anterior de la misma duración.',
+  perfil:'<b>De cada 100 personas que recibe cada punto</b>, cuántas son hombres adultos, mujeres adultas, NNA acompañados y NNA no acompañados. Muestra a quién atiende cada punto: unos reciben casi solo adultos y otros concentran a los NNA que llegan solos.',
+  prim:'<b>Días con llegada de vuelos PRIM al AIFA</b> (modalidad aérea), con adultos y NNA, y el promedio por día. El archivo no trae el número de vuelos; un día muy por encima del promedio puede corresponder a más de un vuelo.',
+  tot:'<b>Repatriados por punto de repatriación u O.R.</b>, de mayor a menor, divididos en hombres y mujeres adultos y NNA acompañados y no acompañados.',
+  ds:'<b>Promedio de repatriados por día de la semana</b>, por garitas y puentes (terrestre) y por vuelos PRIM (aérea).',
+  hz:'<b>Titulares:</b> el cambio de los repatriados contra el periodo de comparación, el punto donde más NNA llegan sin acompañante y el resumen de los vuelos PRIM.'
 };
 let popFija = false;
 function mostrarInfo(b){ let p = $('pm-pop'); if (!p){ p = document.createElement('div'); p.id = 'pm-pop'; p.className = 'rg-pop fija'; p.setAttribute('role','dialog'); document.body.appendChild(p); }

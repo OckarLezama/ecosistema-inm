@@ -956,7 +956,7 @@ function pintarTiempo(){
   sv.setAttribute('viewBox','0 0 '+W+' '+H); sv.innerHTML = h; moverCursor(S.play ? S.t : S.dia);
   sv.setAttribute('aria-valuenow', S.dia); sv.setAttribute('aria-valuetext','al '+fechaDia(S.dia-1));
   const cua = c => '<i class="t-c" style="background:'+c+'"></i>';
-  $('t-tit').innerHTML = infoP('Cada barra es un día. Sin indicador elegido: ingresos hacia arriba y rescatados hacia abajo, cada uno con su escala. La línea es el promedio de 7 días y la franja dorada, las vacaciones SEP. Pasa el cursor o toca para ver la fecha y el dato; arrastra para moverte en el tiempo; ▶ reproduce el periodo.')+(dos ? cua(t.reg)+'<b>Ingresos</b> '+corto(tot.ing)+' &nbsp; '+cua(t.irr)+'<b>Rescatados</b> '+corto(tot.resc)+' <span class="t-n">por día · cada serie con su escala</span>'
+  $('t-tit').innerHTML = infoP('Registros por día en el periodo. Sin un indicador activo se muestran ingresos (hacia arriba) y rescatados (hacia abajo), cada uno con su escala. La línea es el promedio de 7 días y la franja dorada, las vacaciones SEP.')+(dos ? cua(t.reg)+'<b>Ingresos</b> '+corto(tot.ing)+' &nbsp; '+cua(t.irr)+'<b>Rescatados</b> '+corto(tot.resc)+' <span class="t-n">por día · cada serie con su escala</span>'
                              : cua(t[IND[S.ind].g])+'<b>'+IND[S.ind].n+'</b> '+corto(tot[S.ind])+' <span class="t-n">por día</span>');
   $('t-ley').innerHTML = '<span style="display:inline-block;width:14px;height:4px;border-radius:2px;background:#BDB58D;margin-right:4px;vertical-align:middle"></span>vacaciones SEP · <svg width="20" height="6" viewBox="0 0 20 6" style="vertical-align:middle"><line x1="0" y1="3" x2="20" y2="3" stroke="'+t.tinta+'" stroke-width="2"/></svg> promedio de 7 días';
   $('play').innerHTML = S.play ? '<svg width="14" height="14" viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" fill="currentColor"/></svg>' : '<svg width="14" height="14" viewBox="0 0 16 16"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>';
@@ -1008,7 +1008,7 @@ function pintarDocs(){
 function pintarAnalisis(){
   const F = filtro(); AVISOS = analizar(F).filter(a => !S.ind || a.k===S.ind || (a.t==='car' && S.ind==='resc'));   // con un indicador elegido, solo sus cambios
   const quien = (S.ind ? IND[S.ind].n+' · ' : '')+(nombreFiltro() || 'todo el país');
-  $('analisis').innerHTML = '<h2><span>Lo que cambió</span>'+infoP('Cambios recientes que conviene atender: indicadores que subieron o bajaron más de lo normal, nacionalidades o estados que se movieron y caravanas. Compara según «Comparar con». Solo aparece cuando el periodo llega a hoy.')+(AVISOS.length ? '<small class="av-n">'+AVISOS.length+' hallazgos</small>' : '')+'</h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
+  $('analisis').innerHTML = '<h2><span>Lo que cambió</span>'+infoP('Cambios recientes que conviene atender: indicadores que subieron o bajaron más de lo normal, nacionalidades o estados que se movieron y caravanas. La comparación es contra el periodo de «Comparar con». Solo aparece cuando el periodo llega a hoy.')+(AVISOS.length ? '<small class="av-n">'+AVISOS.length+' hallazgos</small>' : '')+'</h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
     (AVISOS.length ? '<div class="avisos-lista">'+AVISOS.map(filaAviso).join('')+'</div>' : '<span class="mini">Sin cambios relevantes con este filtro.</span>');
 }
 const barrasNat = (l, color) => { const mx = l.length?l[0][1]:1; return l.map(r => '<button class="barra" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+color+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); };
@@ -1022,7 +1022,7 @@ function htmlBreve(n){                          // datos clave de una nacionalid
 }
 function htmlTops(F, k){
   const l = topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, TOP);
-  return '<div class="caja"><h2><span>Principales nacionalidades · '+nomInd(k)+'</span>'+infoP('Las nacionalidades con más registros de este indicador en el periodo, con su parte del total. Toca una para filtrar todo el tablero por ella.')+(S.region ? '<small>'+REGIONES[S.region][0]+'</small>' : '')+'</h2>'+
+  return '<div class="caja"><h2><span>Principales nacionalidades · '+nomInd(k)+'</span>'+infoP('Las nacionalidades con más registros de este indicador en el periodo, y su parte del total.')+(S.region ? '<small>'+REGIONES[S.region][0]+'</small>' : '')+'</h2>'+
     '<span class="mini">'+(S.dia<ND ? 'Acumulado al '+fechaDia(S.dia-1) : 'Periodo completo')+'</span>'+
     (barrasNat(l, colG(IND[k].g)) || '<span class="mini">Sin registros.</span>')+'</div>';
 }
@@ -1058,7 +1058,7 @@ function cajaCruce(k, F){
     resc:{ kc:'resc_rei', cats:['primera vez','reincidentes'], tit:'Nacionalidades · ', de:'de sus rescates (eventos)' },
     pres:{ kc:'pres_est', cats:D.estaciones.map((x,i)=>nomEst(i)), tit:'Nacionalidades en ', de:'de sus presentados' } }[k];
   const tot = n => comp(cfg.kc,F.ss,n), l = topNats(n => enRegion(n) ? tot(n)[q] : 0, TOP), mx = l.length ? l[0][1] : 1;
-  return '<div class="caja"><h2><span>'+cfg.tit+esc(cfg.cats[q])+'</span>'+infoP('Las principales nacionalidades dentro de la categoría elegida en «Composición». El % es su parte de esa categoría.')+'</h2><span class="mini">Se cambia desde Composición · periodo completo · el % es la parte '+cfg.de+'</span>'+
+  return '<div class="caja"><h2><span>'+cfg.tit+esc(cfg.cats[q])+'</span>'+infoP('Principales nacionalidades de la categoría activa en «Composición» y su parte dentro de esa categoría.')+'</h2><span class="mini">Se cambia desde Composición · periodo completo · el % es la parte '+cfg.de+'</span>'+
     (l.map(r => { const t = tot(r[0]).reduce((a,b)=>a+b,0);
       return '<button class="barra pc" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+' <small>'+pct(r[1],t)+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>'; }).join('') || '<span class="mini">Sin registros.</span>')+'</div>';
 }
@@ -1097,7 +1097,7 @@ function htmlComp(k, F){
   else if (k==='resc'){ const a = comp('resc_rei',s,n), d = comp('resc_des',s,n);
     h = elegible('Primera vez o reincidente','resc',[['Primera vez',a[0],c2],['Reincidente',a[1]]]) + grupo('Destino',[['Estación migr.',d[0]],['DIF',d[1]],['Sin destino',d[2],c2]]); }
   else if (k==='pres'){ const v = comp('pres_est',s,n).map((x,i)=>[i,x]).filter(r=>r[1]>0).sort((x,y)=>y[1]-x[1]).slice(0,TOP), mx = v.length ? v[0][1] : 1; sub = 'Estaciones con más presentados · clic para ver sus nacionalidades';
-    return '<div class="caja"><h2><span>Composición · Presentados</span>'+infoP('Cómo se reparten las personas presentadas ante el INM. Toca una categoría para ver sus nacionalidades en la tarjeta de al lado.')+'</h2><span class="mini">'+sub+' · periodo completo</span>'+
+    return '<div class="caja"><h2><span>Composición · Presentados</span>'+infoP('Cómo se reparten las personas presentadas ante el INM, por estación o categoría.')+'</h2><span class="mini">'+sub+' · periodo completo</span>'+
       (v.map(r => '<button class="barra'+(S.cruce.pres===r[0]?' on':'')+'" data-cruce="pres:'+r[0]+'"><span>'+esc(nomEst(r[0]))+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join('') || '<span class="mini">Sin registros con este filtro.</span>')+'</div>'; }
   else if (k==='can'){ const v = comp('can_nna',s,n), a = comp('can_ad',s,n), g2 = f => v.reduce((t,x,i)=>t+(f(i)?x:0),0); sub = 'Niñas, niños y adolescentes, y sus acompañantes';
     h = grupo('NNA por sexo',[['Niñas',g2(i=>i>=6)],['Niños',g2(i=>i<6),c2]]) + grupo('NNA por edad',[['0 a 11 años',g2(i=>Math.floor(i/3)%2===0)],['12 a 17 años',g2(i=>Math.floor(i/3)%2===1),c2]]) +
@@ -1108,7 +1108,7 @@ function htmlComp(k, F){
     h = anillo('recib_edad', s, n, [['Menores',1,c,'son menores'],['Adultos',0,c2,'adultos']]); }
   else if (k==='rep'){ const v = comp('rep_comp',s,null); sub = 'Sexo y edad de los mexicanos repatriados';
     h = grupo('Adultos',[['Hombres',v[0],c2],['Mujeres',v[1]]]) + grupo('Menores',[['Niños',v[2],c2],['Niñas',v[3]]]) + grupo('Menores, con o sin compañía',[['Acompañados',v[4],c2],['Solos',v[5]]]) + grupo('Modalidad',[['Terrestre',v[6],c2],['Aérea',v[7]]]); }
-  return '<div class="caja"><h2><span>Composición · '+(k==='rech' ? '2da revisión' : IND[k].n)+'</span>'+infoP('Cómo se reparte el indicador por tipo (vía, edad, sexo u otro). Toca una categoría para ver sus nacionalidades.')+'</h2><span class="mini">'+sub+' · periodo completo</span><div class="cgrid">'+(h || '<span class="mini">Sin registros con este filtro.</span>')+'</div></div>';
+  return '<div class="caja"><h2><span>Composición · '+(k==='rech' ? '2da revisión' : IND[k].n)+'</span>'+infoP('Cómo se reparte el indicador por tipo: vía, edad, sexo u otro.')+'</h2><span class="mini">'+sub+' · periodo completo</span><div class="cgrid">'+(h || '<span class="mini">Sin registros con este filtro.</span>')+'</div></div>';
 }
 function cajaLugares(k, F){                      // un indicador repartido por estado, cinturón o CECO
   const nF = IND[k].nat ? F.nd : null, c = colG(IND[k].g); let filas, tit;
@@ -1122,7 +1122,7 @@ function cajaLugares(k, F){                      // un indicador repartido por e
     const mx = Math.max(sin, Math.max.apply(null,tot), 1); tit = (F.nd!=null ? IND[k].donde : nomInd(k))+' por '+ag.n.toLowerCase();
     filas = ag.nombres.map((nom,q) => '<button class="barra" data-g="'+S.agr+q+'"><span>'+nom+'</span><span class="b"><i style="width:'+(tot[q]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(tot[q])+'</span></button>').join('')+
             '<div class="barra"><span>'+ag.sin+'</span><span class="b"><i style="width:'+(Math.max(sin,0)/mx*100).toFixed(1)+'%;background:'+cssv('--ink3')+'"></i></span><span class="x">'+corto(Math.max(sin,0))+'</span></div>'; }
-  return '<div class="caja"><h2><span>'+esc(tit)+'</span>'+infoP('Total por estado (o por el grupo elegido en el mapa) en el periodo. Toca un estado para filtrar todo el tablero.')+'</h2><span class="mini">'+(S.dia<ND?'Acumulado al '+fechaDia(S.dia-1):'Periodo completo')+(S.agr!=='e'&&(!F.ss||F.todo)?' · clic en un grupo para filtrar solo ese':'')+'</span>'+(filas || '<span class="mini">Sin registros.</span>')+'</div>';
+  return '<div class="caja"><h2><span>'+esc(tit)+'</span>'+infoP('Total por estado en el periodo, o por la agrupación activa en el mapa (cinturón o CECO).')+'</h2><span class="mini">'+(S.dia<ND?'Acumulado al '+fechaDia(S.dia-1):'Periodo completo')+(S.agr!=='e'&&(!F.ss||F.todo)?' · clic en un grupo para filtrar solo ese':'')+'</span>'+(filas || '<span class="mini">Sin registros.</span>')+'</div>';
 }
 function fechaEv(f){ const p = f.split('-'); return (p[2] ? (+p[2])+' ' : '')+MES12[+p[1]-1]+' '+p[0]; }
 // Lo que se ve en nuestras cifras: 4 semanas después del evento contra las 4 anteriores (si cae dentro del periodo de las bases)

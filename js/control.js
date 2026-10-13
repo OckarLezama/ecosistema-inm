@@ -665,35 +665,35 @@ function pintarCp(){
 
 /* ==== [8] MONTAJE Y EVENTOS ======================================= */
 const INFO = {
-  tre:'<b>La medida que elegiste en las tarjetas</b> (rescatados, primera vez, reincidentes, presentados, canalizados, retornos o deportaciones) en el tiempo. Con «Presentados» se dibuja también la otra fuente para ver la diferencia. Toca un punto para ver a la derecha de quién se trata en ese periodo.',
-  pe:'<b>De quién se trata</b> en el periodo o en el punto que tocaste: nacionalidades, O.R. y, si aplica, estaciones; con un periodo elegido, cuánto cambió cada una contra el periodo anterior.',
-  dif:'<b>Dos registros de presentados.</b> La O.R. reporta a quien envía a una estación tras un rescate (archivo de rescates de DGCOR); el sistema de DGCVM registra a quien quedó presentado. No miden lo mismo ni con el mismo corte, por eso no se suman: la columna «Sistema / O.R.» muestra qué tanto del reporte aparece en el sistema.',
-  rein:'<b>Reincidencia</b>: de cada 100 personas rescatadas de una nacionalidad, cuántas ya habían sido rescatadas antes. Solo la cuenta la O.R. que registra reincidencia; las demás reportan 0 y no se incluyen. «Más reincidentes» ordena por cantidad; «Mayor proporción», por cuántos de cada 100.',
-  hze:'<b>Titulares automáticos</b>: cómo cambiaron los rescates y los presentados en la comparación elegida, y la nacionalidad con más reincidencia.',
-  hzc:'<b>Titulares automáticos</b>: cómo cambiaron los canalizados y los no acompañados en la comparación elegida, y la nacionalidad que más cambió.',
-  cp:'<b>Qué pasó</b> en el periodo o en el punto que tocaste: cómo salieron (motivo de salida), de qué nacionalidad y en qué O.R.; con un periodo elegido, cuánto cambió cada uno contra el anterior.',
-  cor:'<b>O.R. que canaliza</b>, de mayor a menor, apilado por condición (NNA) o por sexo (adultos). Toca una barra para filtrar.',
-  rec:'<b>Extranjeros que EE. UU. entregó a México</b>, según el reporte de las O.R. de la frontera norte, separados en adultos y menores. Es otra fuente: no se suma a SIRENNA.',
-  tr:'<b>Internaciones legales al país</b> en el periodo, con el mismo formato que «Trámites concluidos» de Regulación migratoria: el total con su rango habitual, o desglosado por vía, nacionalidad u O.R. Elige día, semana o mes; «123» muestra el valor de cada punto. Toca un punto para ver a la derecha quién entró ese día, semana o mes.',
-  tp:'<b>Quién entra</b> en el periodo o en el punto que tocaste: el reparto por vía (toca una para filtrar), las 10 nacionalidades, los estados (O.R.) y los puntos con más internaciones.',
-  ctend:'<b>Canalizados en el tiempo</b>: el total, o desglosado por motivo de salida, condición, nacionalidad u O.R. La línea punteada son los NNA que las O.R. reportan como canalizados al DIF tras un rescate (archivo de DGCOR): otra fuente, no se suma.',
-  tot:'<b>Totales de mayor a menor</b> por nacionalidad (30 principales y el resto sumado), punto u O.R. Aplica los demás filtros y resalta lo elegido; con 2 o 3 nacionalidades u O.R., una barra por cada una.',
-  tote:'<b>Totales de la medida elegida en las tarjetas</b> por nacionalidad, O.R. o estación, de mayor a menor. Toca una barra para filtrar.',
-  perfil:'<b>Qué parte del total nacional le toca a cada O.R.</b> en internaciones, rechazos, presentados, retornos y canalizados. Muestra a qué se dedica cada O.R.: una frontera sur se carga a presentados y NNA; un aeropuerto, a internaciones y rechazos.',
-  disp:'<b>Cada círculo es una nacionalidad o un punto.</b> A la derecha, más llegadas; arriba, mayor % rechazado (las dos escalas son logarítmicas para que quepan juntos los grandes y los chicos). El tamaño es el número de rechazos. Rojo: arriba del promedio; verde: abajo. Toca uno para filtrar todo por él.',
+  tre:'<b>Rescates en el tiempo</b> por día, semana o mes, con el rango habitual y las temporadas vacacionales. Los presentados se muestran con sus dos fuentes: el reporte de las O.R. (DGCOR) y el sistema (DGCVM).',
+  pe:'<b>Composición del periodo:</b> nacionalidades, O.R. y estaciones con más registros, y su cambio contra el periodo anterior de la misma duración.',
+  dif:'<b>Dos registros de presentados.</b> El reporte de las O.R. (DGCOR) cuenta a quienes se envían a una estación tras un rescate; el sistema de DGCVM cuenta a quienes quedan presentados. Miden cosas distintas y con cortes distintos, por eso no se suman. La columna «Sistema / O.R.» indica qué parte del reporte aparece en el sistema.',
+  rein:'<b>Reincidencia:</b> de cada 100 personas rescatadas de una nacionalidad, cuántas ya habían sido rescatadas antes. Solo se calcula con las O.R. que registran reincidencia; las demás reportan 0. «Más reincidentes» ordena por número de personas y «Mayor proporción», por cuántas de cada 100.',
+  hze:'<b>Titulares:</b> el cambio de los rescates y de los presentados contra el periodo de comparación, y la nacionalidad con más reincidencia.',
+  hzc:'<b>Titulares:</b> el cambio de los canalizados y de los NNA no acompañados contra el periodo de comparación, y la nacionalidad que más cambió.',
+  cp:'<b>Composición del periodo:</b> cómo concluyó la canalización (motivo de salida), nacionalidades y O.R., y su cambio contra el periodo anterior de la misma duración.',
+  cor:'<b>O.R. que canalizan</b>, de mayor a menor, divididas por condición de los NNA (acompañados, no acompañados o separados) o por sexo de los adultos.',
+  rec:'<b>Extranjeros que EE. UU. entregó a México</b>, adultos y menores, según el reporte de las O.R. de la frontera norte (DGCOR). Es otra fuente: no se suma a los canalizados de SIRENNA.',
+  tr:'<b>Internaciones legales de extranjeros</b> por día, semana o mes, en total o por vía, nacionalidad u O.R. La franja marca el rango habitual (calculado fuera de vacaciones) y la sombra gris, las temporadas vacacionales. No incluye mexicanos.',
+  tp:'<b>Quién entra en el periodo:</b> el reparto por vía (aérea, terrestre y marítima), las 10 nacionalidades, los estados (O.R.) y los puntos de internación con más internaciones.',
+  ctend:'<b>Canalizados en el tiempo</b> (SIRENNA), en total o por motivo de salida, condición, nacionalidad u O.R. La línea punteada son los NNA que las O.R. reportan como canalizados al DIF tras un rescate (DGCOR): es otra fuente y no se suma.',
+  tot:'<b>Internaciones por nacionalidad, O.R. o punto</b>, de mayor a menor: las 30 principales y el resto sumado en «Otras». No incluye mexicanos.',
+  tote:'<b>Totales por nacionalidad, O.R. o estación</b>, de mayor a menor: las 30 principales y el resto sumado en «Otras».',
+  perfil:'<b>Qué parte del total nacional corresponde a cada O.R.</b> en internaciones, rechazos, presentados, retornos y canalizados. Muestra el perfil de cada O.R.: una frontera sur concentra presentados y NNA; un aeropuerto, internaciones y rechazos.',
+  disp:'<b>Llegadas y rechazos por nacionalidad o punto.</b> Cada círculo es una nacionalidad o un punto de internación: hacia la derecha, más llegadas; hacia arriba, mayor % de rechazo; el tamaño es el número de rechazos. Rojo: arriba del promedio nacional; verde: abajo. Las escalas son logarítmicas para comparar volúmenes grandes y chicos. Llegadas = internados + rechazados, por aire y tierra.',
   emb:() => { const t = tablaRech('n').filter(x => x.r>=100), may = t.slice().sort((a,b) => b.r-a.r)[0], alt = t.slice().sort((a,b) => b.t-a.t)[0], f = v => v>=10 ? Math.round(v) : v.toFixed(1);
     return '<b>¿Por qué «de cada 1,000»?</b> Si solo se cuentan rechazos, siempre ganan las nacionalidades que más viajan. Medirlo de cada 1,000 personas que llegan permite comparar a todas en la misma escala.'+
       (may && alt && may.k!==alt.k ? '<br><br>Ejemplo: <b>'+esc(nomN(may.k))+'</b> tiene más rechazos ('+miles(may.r)+') que <b>'+esc(nomN(alt.k))+'</b> ('+miles(alt.r)+'), pero de cada 1,000 que llegan se rechaza a <b>'+f(may.r/may.ll*1000)+'</b> de '+esc(nomN(may.k))+' y a <b>'+f(alt.r/alt.ll*1000)+'</b> de '+esc(nomN(alt.k))+': proporcionalmente, a quien llega de '+esc(nomN(alt.k))+' se le rechaza más.' : '')+
-      '<br><br>«Llegan» = se internaron + fueron rechazadas, por aire y tierra. Solo se listan nacionalidades con 100 rechazos o más, para que unos cuantos casos no exageren la proporción. Toca una para ver su ficha.'; },
-  sem:'<b>Casos de segunda revisión por semana</b> (lunes a domingo), según su resultado: rechazo o internación. Las semanas incompletas del principio y del final van en tono claro.',
-  pto:'<b>Puntos de internación</b> ordenados por rechazos, por % rechazado o por llegadas. Los cruceros no se cuentan como llegadas. Toca uno para filtrar todo por ese punto.',
-  hz:'<b>Titulares automáticos:</b> el punto que más rechaza en proporción a sus llegadas, la nacionalidad que concentra más rechazos y el mayor cambio semanal.',
-  fuentes:'<b>Dos fuentes distintas.</b> «Sistema» es lo registrado por DGCVM; «Reportado por las O.R.» es lo que cada Oficina de Representación informa tras un rescate (archivo de DGCOR). Miden cosas parecidas con criterios diferentes, por eso no se suman ni se restan.',
-  pr:'<b>Presentados y retornos por nacionalidad</b>, del sistema DGCVM: presentados, retornos asistidos y deportaciones. «Retornan de cada 100» dice cuántos salen del país por cada 100 que se presentan; no es seguimiento de las mismas personas.',
-  mx:'<b>Dónde se presenta cada nacionalidad</b> (sistema DGCVM), por estación o por O.R. Al pasar el cursor sobre una celda, su fila y su columna quedan a todo color y el resto se atenúa. Con 2 o 3 nacionalidades u O.R. elegidas, arriba se resume dónde se concentra cada una.',
-  sal:'<b>Cómo concluye la canalización</b>, de cada 100 personas, y semana a semana para el motivo principal. Toca una tarjeta de condición para ver solo ese grupo.',
-  edad:'<b>Edad a la fecha del evento</b>, por grupos. La fecha de nacimiento nunca se publica.',
-  cnat:'<b>Totales</b> de canalizados por nacionalidad u O.R., apilados por condición (NNA) o por sexo (adultos). Toca una barra para filtrar.'
+      '<br><br>«Llegan» = se internaron + fueron rechazadas, por aire y tierra. Solo se listan nacionalidades con 100 rechazos o más, para que unos cuantos casos no exageren la proporción.'; },
+  sem:'<b>Casos de segunda revisión por semana</b> (lunes a domingo) y su resultado: rechazo o internación. Las semanas incompletas del inicio y del final van en tono claro.',
+  pto:'<b>Puntos de internación</b> ordenados por número de rechazos o por rechazos de cada 1,000 llegadas. No incluye cruceros, que no pasan por segunda revisión.',
+  hz:'<b>Titulares:</b> el cambio de las internaciones contra el periodo de comparación, el punto que más rechaza en proporción a sus llegadas y la nacionalidad que concentra más rechazos.',
+  fuentes:'<b>Dos fuentes distintas.</b> «Sistema» es lo registrado por DGCVM; «Reporte de las O.R.» es lo que cada Oficina de Representación informa tras un rescate (DGCOR). Miden cosas parecidas con criterios diferentes, por eso no se suman ni se restan.',
+  pr:'<b>Presentados y retornos por nacionalidad u O.R.</b> (sistema DGCVM): presentados, retornos asistidos y deportaciones. «Retornan de cada 100» indica cuántos salen del país por cada 100 presentados; no da seguimiento a las mismas personas.',
+  mx:'<b>Dónde se presenta cada nacionalidad</b> (sistema DGCVM): presentados por estación u O.R. y por nacionalidad. Más oscuro = más personas.',
+  sal:'<b>Cómo concluye la canalización:</b> de cada 100 personas, cuántas salen por cada motivo (retorno asistido, regularización, abandono, etc.), y la evolución semanal del motivo principal.',
+  edad:'<b>Edad y sexo de los canalizados</b>, por grupo de edad a la fecha del evento. La fecha de nacimiento no se publica.',
+  cnat:'<b>Canalizados por nacionalidad</b>, de mayor a menor, divididos por condición (NNA) o por sexo (adultos).'
 };
 let popFija = false;
 function mostrarInfo(b){ let p = $('cv-pop'); if (!p){ p = document.createElement('div'); p.id = 'cv-pop'; p.className = 'rg-pop fija'; p.setAttribute('role','dialog'); document.body.appendChild(p); }
