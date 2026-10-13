@@ -261,7 +261,7 @@ async function hacerPDF(){
     pdf.setFontSize(9); pdf.setTextColor(92, 89, 82); pdf.text(tit, m, m); pdf.text('Hoja '+(p+1), W-m, m, { align:'right' });
     pdf.addImage(c.toDataURL('image/jpeg', .9), 'JPEG', m, m+8, W-2*m, h*esc2);
   }
-  return { pdf:pdf, nombre:('IA-NAMI_'+tituloVista()).replace(/[^\wÁÉÍÓÚáéíóúñÑ]+/g,'_').replace(/_+$/,'')+'.pdf', tit:tit };
+  return { pdf:pdf, nombre:('IA-NAMI_'+tituloVista()).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w]+/g,'_').replace(/_+$/,'')+'.pdf', tit:tit };
 }
 async function compartir(modo){
   const b = $('b-comp'), txt = b.innerHTML; $('menu-comp').hidden = true; b.disabled = true; b.textContent = 'Generando PDF…';
@@ -1378,6 +1378,7 @@ function irA(v){
   const F0 = {ss:null, n:null}; let h = '';
   if (v==='dir' && DIRS[S.dir || 0].k==='regulacion' && window.IANAMI_REGULACION){ window.IANAMI_REGULACION.pintar($('vista-otra')); return; }   // Regulación tiene su propia vista
   if (v==='dir' && DIRS[S.dir || 0].k==='control' && window.IANAMI_CONTROL){ window.IANAMI_CONTROL.pintar($('vista-otra')); return; }      // Control migratorio también
+  if (v==='dir' && DIRS[S.dir || 0].k==='proteccion' && window.IANAMI_PROTECCION){ window.IANAMI_PROTECCION.pintar($('vista-otra')); return; }   // Protección al migrante
   if (v==='dir') h = htmlDireccion(DIRS[S.dir || 0]);
   else if (v==='bases') h = '<h1>Bases</h1><p>Estado de cada base según la última conversión ('+esc(D.generado)+'). La carga con usuario y contraseña se agrega después.</p>'+
     '<div class="caja"><div class="tb-w"><table class="tb"><thead><tr><th>Base</th><th>Datos hasta</th><th>Cargada</th><th>Renglones</th><th>Días sin datos</th><th>Observaciones</th></tr></thead><tbody>'+

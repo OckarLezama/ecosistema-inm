@@ -802,3 +802,5 @@ div.rg-hz-i{cursor:default}
 /* Control migratorio · «Ver detalle»: el contenedor no altera la rejilla */
 .cv-det{display:contents}.cv-det[hidden]{display:none}
 .cv-det-b{margin:0}
+.pm-vl{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rg-vistas button:disabled{opacity:.5;cursor:not-allowed}.rg-vistas button small{display:block;font-size:10px;color:var(--ink3);font-weight:400}

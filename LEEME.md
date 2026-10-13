@@ -19,6 +19,8 @@ Página principal (Pulso) y convertidor de bases.
 | `js/regulacion.js` | Vista Procesos › Regulación migratoria (DGRAM) |
 | `robot/control.py` | Genera `datos/control.js` (internaciones, segunda revisión, presentados, retornos, canalizados, rescates y recibidos) |
 | `js/control.js` | Vista Procesos › Control migratorio (DGCVM y DGCOR) |
+| `robot/proteccion.py` | Genera `datos/proteccion.js` (mexicanos repatriados de EE. UU.) y revisa que las sumas cuadren |
+| `js/proteccion.js` | Vista Procesos › Protección al migrante (DGPMV) |
 | `robot/catalogos.py` | Nacionalidades, estados y coordenadas de puntos |
 | `DATA/` | Bases en xlsx, tal como las entrega cada área |
 
@@ -32,6 +34,7 @@ Página principal (Pulso) y convertidor de bases.
    python robot/convertir.py
    python robot/regulacion.py
    python robot/control.py
+   python robot/proteccion.py
    ```
 
 3. Revisar `datos/reporte.txt` y las notas de calidad que imprime `control.py`, y subir todo lo de `datos/`.
@@ -48,7 +51,7 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 
 - **Control migratorio** · DGCVM y DGCOR (internaciones, segunda revisión, presentados, retornos, canalizados, rescates y recibidos)
 - **Regulación migratoria** · DGRAM (trámites, documentos vigentes, actas)
-- **Protección al migrante** · DGPMV (en construcción)
+- **Protección al migrante** · DGPMV (repatriados; vuelos comerciales y Guatemala-Honduras se activan cuando el área envíe los archivos corregidos)
 
 ## Reglas de los datos
 
@@ -74,3 +77,6 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 
 - Mapa de calor: se quitó de Pulso; queda para otra sección.
 - Mover los xlsx de `DATA/` a un repositorio privado.
+- Protección: DGPMV COMERCIALES trae fechas en 2027 y 2024, meses cambiados y fechas como texto; se pidió al área corregirlo. Cada archivo de DGPMV tendrá su propio periodo y fecha de corte.
+- Protección: confirmar qué significa «PAÍS» en DGPMV GUATEMALA-HONDURAS y si de verdad no hay menores.
+- Protección: pedir el número de vuelos PRIM por día (hoy solo se cuentan días con llegada).
