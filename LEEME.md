@@ -64,7 +64,16 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - «Ingresos de extranjeros» descuenta a los mexicanos (en el Pulso, Ingresos los incluye).
 - Se ajusta a cualquier pantalla: todo se mide contra el rectángulo 16:9 que cabe (ancho y alto a la vez). En pantallas angostas, verticales o de menos de 560 px de alto pasa a una columna con desplazamiento. Probado de 390×844 a 3840×2160, con y sin pantalla táctil.
 - El botón claro/oscuro solo está en pantalla completa; al salir, el Pulso regresa al tono que tenía.
+- Entra limpia, en «Panorama»: regular (ingresos de extranjeros), irregular (rescates) y desde EE. UU. (mexicanos repatriados). La consulta que había en el Pulso no se arrastra y regresa al salir. En Panorama los estados se pintan por rescates.
+- La barra de tiempo con el play queda siempre a la vista, también en el modo columna (se probó con escalas de Windows de 125 %, 150 % y 175 % y tabletas Android).
 - «Ver todo» (aquí y en el Pulso) detiene la reproducción y regresa al periodo completo. Un periodo largo se recorre en unos 30 segundos.
+
+## Mapa del Pulso
+
+- Al buscar o elegir un país, estado o región: se apagan líneas y círculos, la cámara vuela y al llegar las líneas salen del origen hacia su destino y los círculos crecen. Cada círculo tiene identidad fija por país, así no se desliza de un país a otro al reproducir.
+- Al reproducir con un indicador, los estados se pintan con el promedio de los últimos 7 días (escala fija del periodo).
+- La barra de tiempo nombra cada temporada (vacaciones de invierno, Semana Santa, vacaciones de verano; Acción de Gracias de EE. UU. aparte).
+- Los íconos del mapa tienen su propia ayuda (nombre, qué muestran y si están encendidos); en pantalla táctil aparece al tocarlos.
 
 ## Pregunta a INAMI
 
