@@ -56,6 +56,14 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - **Regulación migratoria** · DGRAM (trámites, documentos vigentes, actas)
 - **Protección al migrante** · DGPMV (repatriados; vuelos comerciales y Guatemala-Honduras se activan cuando el área envíe los archivos corregidos)
 
+## Pantalla completa del Pulso
+
+- El botón ⛶ de la barra del mapa abre el mapa a toda la pantalla con lo principal encima: «Estás viendo», la cifra grande, cuatro datos, la frase de un vistazo, la gráfica de barras y la barra de tiempo. Esc o ✕ regresan al Pulso tal como estaba.
+- Usa el mismo motor del Pulso (periodo, filtro y día del cursor): el mapa, las cifras y la reproducción siempre coinciden. Al reproducir, la intensidad de los estados y las cifras avanzan día por día.
+- Buscador de país o estado (O.R.), región, indicador y periodo: Sheinbaum, Trump (se activa cuando las bases lleguen a 2025) y Comparar (dos periodos, por día; el mapa muestra el segundo).
+- «Ingresos de extranjeros» descuenta a los mexicanos (en el Pulso, Ingresos los incluye).
+- «Ver todo» (aquí y en el Pulso) detiene la reproducción y regresa al periodo completo. Un periodo largo se recorre en unos 30 segundos.
+
 ## Pregunta a INAMI
 
 - La consulta se arma con **Qué, Desglosar por, Periodo y Filtros**; cada combo solo ofrece lo que existe en la base del indicador. Los valores (nacionalidades, O.R., puntos, documentos…) se leen de los datos, así que una base nueva o un valor nuevo aparecen solos.

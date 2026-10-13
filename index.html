@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>IA-NAMI · Inteligencia migratoria</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="css/estilos.css?v=20261013i">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=Big+Shoulders+Display:wght@800;900&display=swap">
+<link rel="stylesheet" href="css/estilos.css?v=20261013j">
 </head>
 <body>
 <!-- ==================================================================
@@ -57,6 +57,7 @@
           <canvas id="flujo" aria-hidden="true"></canvas>
           <div class="acop m-tit" id="m-tit"></div>
           <div class="acop m-her" id="m-her">
+            <button data-a="sala" class="sala-b" aria-label="Pantalla completa" title="Pantalla completa: lo principal en un vistazo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button><hr>
             <button data-a="mas" aria-label="Acercar" title="Acercar"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 8h10M8 3v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
             <button data-a="menos" aria-label="Alejar" title="Alejar"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 8h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
             <button data-a="mundo" aria-label="Ver el mundo" title="Ver el mundo completo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.3"></circle><ellipse cx="8" cy="8" rx="2.7" ry="6.3"></ellipse><path d="M1.7 8h12.6"></path></svg></button>
@@ -73,6 +74,7 @@
         </div>
         <div class="tiempo esc">
           <button class="play" id="play" aria-label="Reproducir el periodo"></button>
+          <button class="todo" id="vertodo" title="Regresa al periodo completo" hidden>Ver todo</button>
           <div class="t-cuerpo"><div class="t-tip" id="t-tip" hidden></div>
             <div class="t-cab"><span id="t-tit"></span><span id="t-ley"></span></div>
             <svg id="tgraf" role="slider" tabindex="0" aria-label="Día del periodo" aria-valuemin="1"></svg>
@@ -101,18 +103,18 @@
 
 <!-- ============ [8] PROGRAMAS ============ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
-<script src="datos/datos.js?v=20261013i"></script>
-<script src="js/geo.js?v=20261013i"></script>
-<script src="js/contexto.js?v=20261013i"></script>
-<script src="js/temporadas.js?v=20261013i"></script>
-<script src="datos/regulacion.js?v=20261013i"></script>
-<script src="js/regulacion.js?v=20261013i"></script>
-<script src="datos/control.js?v=20261013i"></script>
-<script src="js/control.js?v=20261013i"></script>
-<script src="datos/proteccion.js?v=20261013i"></script>
-<script src="js/proteccion.js?v=20261013i"></script>
-<script src="datos/vocabulario.js?v=20261013i"></script>
-<script src="js/consulta.js?v=20261013i"></script>
-<script src="js/app.js?v=20261013i"></script>
+<script src="datos/datos.js?v=20261013j"></script>
+<script src="js/geo.js?v=20261013j"></script>
+<script src="js/contexto.js?v=20261013j"></script>
+<script src="js/temporadas.js?v=20261013j"></script>
+<script src="datos/regulacion.js?v=20261013j"></script>
+<script src="js/regulacion.js?v=20261013j"></script>
+<script src="datos/control.js?v=20261013j"></script>
+<script src="js/control.js?v=20261013j"></script>
+<script src="datos/proteccion.js?v=20261013j"></script>
+<script src="js/proteccion.js?v=20261013j"></script>
+<script src="datos/vocabulario.js?v=20261013j"></script>
+<script src="js/consulta.js?v=20261013j"></script>
+<script src="js/app.js?v=20261013j"></script>
 </body>
 </html>

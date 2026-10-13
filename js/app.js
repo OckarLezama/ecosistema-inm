@@ -92,7 +92,8 @@ const CAJA_MUNDO = [[CORTE-358,80],[CORTE-2,-56]];      // el mundo completo, si
 const VISTA_MX = {c:[-93.5,19], z:1};                    // z = 1 es el encuadre de México; los demás zooms se miden contra él
 const REGIONES = { NA:['Norteamérica',[-100,45]], CA:['Centroamérica y Caribe',[-80,15]], SA:['Sudamérica',[-60,-18]],
                    EU:['Europa',[15,50]], AF:['África',[18,2]], AS:['Asia',[95-360,30]], OC:['Oceanía',[140-360,-25]] };
-const VEL = 5;                                         // días por segundo al reproducir
+const VEL = 5;                                         // días por segundo al reproducir (mínimo)
+const velocidad = () => Math.max(VEL, ND/30);         // un periodo largo se recorre en unos 30 segundos
 // Colores del mapa por tema (independientes del tema de la página)
 const TACTIL = matchMedia('(hover: none)').matches;   // pantallas táctiles: el primer toque muestra la tarjeta
 const TM = {
@@ -519,19 +520,19 @@ function opcionBase(){
     series:[
       { id:'bub', type:'scatter', coordinateSystem:'geo', data:[],
         label:Object.assign({ show:true, position:'right', distance:6*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et),
-        labelLayout:{hideOverlap:true}, emphasis:{scale:1.12} },
+        labelLayout:etiquetaLibre, emphasis:{scale:1.12} },
       { id:'pts', type:'scatter', coordinateSystem:'geo', data:[],
-        label:Object.assign({ show:false, position:'right', distance:5*E, formatter:p=>p.data.et, fontSize:11*E }, et), labelLayout:{hideOverlap:true} },
+        label:Object.assign({ show:false, position:'right', distance:5*E, formatter:p=>p.data.et, fontSize:11*E }, et), labelLayout:etiquetaLibre },
       { id:'cbp', type:'effectScatter', coordinateSystem:'geo', data:[], symbol:'circle', showEffectOn:'render', rippleEffect:{ brushType:'stroke', scale:2.2, period:4, number:2 },
-        label:Object.assign({ show:false, position:'top', distance:4*E, formatter:p=>p.data.et, fontSize:11*E, fontWeight:600 }, et), labelLayout:{hideOverlap:true} },
+        label:Object.assign({ show:false, position:'top', distance:4*E, formatter:p=>p.data.et, fontSize:11*E, fontWeight:600 }, et), labelLayout:etiquetaLibre },
       { id:'grp', type:'scatter', coordinateSystem:'geo', data:[], symbolSize:1, silent:true, itemStyle:{opacity:0},
         label:Object.assign({ show:true, position:'inside', formatter:p=>p.data.et, fontSize:13*E, fontWeight:600 }, et, {fontFamily:'Barlow Condensed, Barlow, sans-serif'}) },
       { id:'lat', type:'effectScatter', coordinateSystem:'geo', data:[], showEffectOn:'render',          // latido: dónde están, sin flujo
         rippleEffect:{ brushType:'stroke', scale:2.6, period:3.6, number:2 },
-        label:Object.assign({ show:true, position:'right', distance:6*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et), labelLayout:{hideOverlap:true} },
+        label:Object.assign({ show:true, position:'right', distance:6*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et), labelLayout:etiquetaLibre },
       { id:'car', type:'effectScatter', coordinateSystem:'geo', data:[], showEffectOn:'render', zlevel:1,     // caravanas: salida que late
         rippleEffect:{ brushType:'fill', scale:3.2, period:2.6, number:3 },
-        label:Object.assign({ show:true, position:'left', distance:7*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et), labelLayout:{hideOverlap:true} }
+        label:Object.assign({ show:true, position:'left', distance:7*E, formatter:p=>p.data.et||'', fontSize:11.5*E, fontWeight:600 }, et), labelLayout:etiquetaLibre }
     ]
   };
 }
@@ -596,7 +597,8 @@ function pintarMapa(){
   const burbuja = (n, v, mx, c, et, fijo, late) => { const xy = xyNat(n); if (!xy) return;
     // sin flujos, los círculos laten
     (late || !S.flujos ? lat : bub).push({ value:[xy[0],xy[1],v], nat:n, et:et, symbolSize: (fijo || (7 + 30*Math.sqrt(Math.min(1, v/Math.max(mx,1)))))*E*fz,
-               itemStyle:{ color:c, opacity:.72, borderColor:(F.n===n?t.tinta:t.halo), borderWidth:(F.n===n?2.5:1)*E } }); };
+               itemStyle: SALA.on ? { color:alfa(c,.24), opacity:1, borderColor:c, borderWidth:(F.n===n?2.6:1.6)*E }      // en pantalla completa: contorno y relleno translúcido
+                         : { color:c, opacity:.72, borderColor:(F.n===n?t.tinta:t.halo), borderWidth:(F.n===n?2.5:1)*E } }); };
   const flujo = (id, a, b, v, mx, c) => { if (a && b) fl.push({ id:id, a:a, b:b, c:c, w: 1 + 3.4*Math.sqrt(Math.min(1, v/Math.max(mx,1))) }); };
   const destinoDe = (k, n) => { if (F.ss && !F.todo) return [xyGrupo(F.ss), 'F']; const r = topEsts(s => !F.ss || F.ss.indexOf(s)>=0 ? sumaSem(k,0,NW-1,[s],n) : 0, 1)[0]; return r ? [xyEst(r[0]), r[0]] : [null,null]; };
   // Puntos de internación principales de una nacionalidad (ingresos y rechazos), dentro del filtro de estados
@@ -757,6 +759,7 @@ function tarjeta(p){
 }
 let vuelo = 0;
 function volar(c, zr){                          // zr: zoom medido contra el encuadre de México
+  if (SALA.on){ const r = encuadreSala(c, zr); c = r[0]; zr = r[1]; }
   const g = chart.getOption().geo[0], c0 = g.center, z0 = g.zoom, z = zr*KMX();
   cancelAnimationFrame(vuelo);
   if (reducido()){ chart.setOption({geo:{center:c, zoom:z}}); S.zoom = zr; pintarMapa(); return; }
@@ -779,6 +782,7 @@ function herramienta(a){
   else if (a==='menos'){ S.modoVista = 'libre'; volar(g.center, Math.max(vistaMundo().z*0.6, g.zoom/KMX()/1.7)); }
   else if (a==='mx'){ S.modoVista = 'mx'; volar(VISTA_MX.c, VISTA_MX.z); }
   else if (a==='mundo'){ const v = vistaMundo(); S.modoVista = 'mundo'; volar(v.c, v.z); }
+  else if (a==='sala'){ if (SALA.on) cerrarSala(); else abrirSala(); }
   else if (a==='tema'){ S.tema = S.tema==='oscuro'?'claro':'oscuro'; $('mapa').dataset.m = S.tema; rehacerMapa(); }
   else { S[a] = !S[a]; const b = document.querySelector('#m-her [data-a="'+a+'"]'); b.classList.toggle('on', S[a]); b.setAttribute('aria-pressed', S[a]);
     if (a==='car'){ S.carSel = null; pintarTiempo(); }
@@ -961,6 +965,7 @@ function pintarTiempo(){
   $('t-ley').innerHTML = '<span style="display:inline-block;width:14px;height:4px;border-radius:2px;background:#BDB58D;margin-right:4px;vertical-align:middle"></span>vacaciones SEP · <svg width="20" height="6" viewBox="0 0 20 6" style="vertical-align:middle"><line x1="0" y1="3" x2="20" y2="3" stroke="'+t.tinta+'" stroke-width="2"/></svg> promedio de 7 días';
   $('play').innerHTML = S.play ? '<svg width="14" height="14" viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" fill="currentColor"/></svg>' : '<svg width="14" height="14" viewBox="0 0 16 16"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>';
   $('play').setAttribute('aria-label', S.play ? 'Pausar' : 'Reproducir el periodo');
+  $('vertodo').hidden = S.dia>=ND && !S.play;                // regresa al periodo completo sin esperar a que termine
 }
 // Temporadas que tocan el periodo: vacaciones SEP (invierno, Semana Santa, verano), Navidad y Acción de Gracias (EE. UU.)
 function temporadas(){
@@ -972,7 +977,8 @@ function temporadas(){
   }
   return o;
 }
-function moverCursor(d){ const c = document.getElementById('cursor'); if (c) c.setAttribute('transform','translate('+Math.min(Wt-1, d*Wt/ND).toFixed(2)+',0)'); }
+function moverCursor(d){ const c = document.getElementById('cursor'); if (c) c.setAttribute('transform','translate('+Math.min(Wt-1, d*Wt/ND).toFixed(2)+',0)');
+  const sc = document.getElementById('sl-cur'); if (sc){ const w = $('sl-tg').viewBox.baseVal.width || 1; sc.setAttribute('transform','translate('+Math.min(w-1, d*w/ND).toFixed(2)+',0)'); } }
 function fijarDia(d){ d = Math.max(1, Math.min(ND, Math.round(d))); if (d===S.dia) return; S.dia = d; S.t = d; pintarTodo(true); }
 function diaDesdeX(ev){ const r = $('tgraf').getBoundingClientRect(); return (ev.clientX-r.left)/r.width*ND + 0.5; }
 let ultimo = 0;
@@ -982,7 +988,7 @@ function reproducir(){
 }
 function cuadroPlay(ahora){
   if (!S.play) return;
-  S.t = Math.min(ND, S.t + (ahora-ultimo)/1000*VEL); ultimo = ahora; moverCursor(S.t);
+  S.t = Math.min(ND, S.t + (ahora-ultimo)/1000*velocidad()); ultimo = ahora; moverCursor(S.t);
   const d = Math.floor(S.t); if (d!==S.dia){ S.dia = d; pintarTodo(true); }
   if (S.t>=ND){ detener(); return; }
   requestAnimationFrame(cuadroPlay);
@@ -1198,6 +1204,7 @@ function pintarTodo(soloTiempo){
   if (m && m.classList.contains('pasado')===actual){ m.classList.toggle('pasado', !actual); setTimeout(() => window.dispatchEvent(new Event('resize')), 520); }
   const av = $('aviso-pasado'); if (av) av.hidden = actual;
   pintarCtl(); if (!soloTiempo) pintarAnalisis(); if (!soloTiempo) pintarDocs(); pintarKpis(); pintarTiempo(); pintarMapa(); pintarBajo(); marcarFiltro();
+  if (SALA.on) pintarSala(soloTiempo);
 }
 // Con una nacionalidad, estado, grupo o punto elegido, cada tarjeta que cambió lleva una franja y el nombre
 function marcarFiltro(){
@@ -1311,6 +1318,302 @@ function ajustarAlto(){
 }
 function escala(){ const n = window.innerWidth>=2200 ? Math.min(4, window.innerWidth/1920) : 1; if (Math.abs(n-E)<0.02) return false; E = n; document.documentElement.style.setProperty('--e', E.toFixed(3)); return true; }
 
+/* ==== [13] PANTALLA COMPLETA (MODO SALA) =========================== */
+// El mapa a toda la pantalla con lo principal encima: una cifra grande, cuatro datos, una frase de un vistazo,
+// una gráfica de barras y la barra de tiempo. Usa el mismo motor del Pulso (periodo, filtro, día del cursor),
+// así que el mapa, las cifras y la reproducción siempre dicen lo mismo. Al salir, el Pulso queda como estaba.
+const SALA = { on:false, cmp:false, A:null, B:null, guarda:null, gr:null, anim:{} };
+const PALABRA = { ing:'ingresos de extranjeros', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados' };
+const ORDEN_SALA = ['ing','resc','rep','rech','can','pres'];
+const MES_L = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+// Suma de un indicador entre los días a y b (de las bases completas), con estados ss y nacionalidad n (número, lista o null)
+function rangoBase(k, a, b, ss, n){
+  if (Array.isArray(n)){ let t = 0; n.forEach(x => t += rangoBase(k, a, b, ss, x)); return t; }
+  let t = 0; a = Math.max(0, a); b = Math.min(D0.dias, b);
+  if (ss && n!=null){ const C = CUBO0[k], E0 = D0.ends;            // estado × nacionalidad: por semana, prorrateado
+    for (let w=0; w<E0.length; w++){ const wa = w ? E0[w-1] : 0, wb = E0[w], x = Math.max(wa,a), y = Math.min(wb,b); if (y<=x) continue;
+      let s = 0; ss.forEach(e => s += C[(w*NS+e)*NN+n]); t += s*(y-x)/(wb-wa); } return t; }
+  if (ss){ const A = D0.ds[k]; for (let d=a; d<b; d++) for (let j=0;j<ss.length;j++) t += A[d*NS+ss[j]]; return t; }
+  if (n!=null){ const A = D0.dn[k]; for (let d=a; d<b; d++) t += A[d*NN+n]; return t; }
+  const A = D0.daily[k]; for (let d=a; d<b; d++) t += A[d]; return t;
+}
+// «Ingresos» en el Pulso incluye a los mexicanos que regresan; aquí la cifra dice «extranjeros», así que se descuentan
+const sinMx = (k, n) => k==='ing' && n==null;
+const valAcum = (k, ss, n) => acum(k, ss, n) - (sinMx(k, n) ? acum(k, ss, MX) : 0);
+const valRango = (k, a, b, ss, n) => rangoBase(k, a, b, ss, n) - (sinMx(k, n) ? rangoBase(k, a, b, ss, MX) : 0);
+const nFde = (k, F) => IND[k].nat ? F.nd : null;
+const salaInd = () => S.ind || 'ing';
+const nomRango = (a, b) => { const f0 = fechaBase(a), f1 = fechaBase(b-1);
+  if (f0.getDate()===1 && isoDe(new Date(f1.getFullYear(), f1.getMonth(), f1.getDate()+1)).slice(8)==='01' && f0.getMonth()===f1.getMonth() && f0.getFullYear()===f1.getFullYear()) return MES_L[f0.getMonth()]+' '+f0.getFullYear();
+  return f0.getDate()+' '+MES12[f0.getMonth()]+(f0.getFullYear()!==f1.getFullYear() ? ' '+f0.getFullYear() : '')+' – '+f1.getDate()+' '+MES12[f1.getMonth()]+' '+f1.getFullYear(); };
+const nomCortoR = r => { const t = nomRango(r[0], r[1]); return /^[a-z]+ \d{4}$/.test(t) ? t.slice(0,3)+' '+t.slice(-4) : t; };
+const cortoK = v => v>=1e6 ? (v/1e6).toFixed(2)+' M' : v>=1e4 ? (v/1e3).toFixed(1)+' k' : miles(v);
+const cifraG = v => { const s = cortoK(v), m = s.match(/^(.*) ([Mk])$/); return m ? m[1]+'<small>'+m[2]+'</small>' : s; };
+// Cifras que se mueven: de lo que muestran a su nuevo valor (como los indicadores del Pulso)
+function mover(el, v, fmt, dur){
+  if (!el) return; const de = el._v==null ? 0 : el._v; el._v = v; cancelAnimationFrame(el._raf || 0);
+  if (reducido() || de===v){ el.innerHTML = fmt(v); return; }
+  const t0 = performance.now(), paso = t => { const e = Math.min(1, (t-t0)/dur), f = 1-Math.pow(1-e,3); el.innerHTML = fmt(de + (v-de)*f); if (e<1) el._raf = requestAnimationFrame(paso); };
+  el._raf = requestAnimationFrame(paso);
+}
+// Periodos disponibles para comparar: meses completos y, cuando haya datos, antes y con Trump
+function mesesBase(){ const l = []; let f = new Date(INICIO0.getFullYear(), INICIO0.getMonth(), 1);
+  while (true){ const a = idxBase(isoDe(f)), sig = new Date(f.getFullYear(), f.getMonth()+1, 1), b = idxBase(isoDe(sig)); if (a>=D0.dias) break;
+    if (a>=0 && b<=D0.dias) l.push([a, b]); f = sig; } return l; }
+const hayTrump = () => idxBase('2025-01-20') < D0.dias - 27;
+function cmpInicial(){
+  if (hayTrump()) return [[idxBase('2024-10-01'), idxBase('2025-01-20')], [idxBase('2025-01-20'), D0.dias]];
+  const m = mesesBase(); return m.length>=2 ? [m[m.length-2], m[m.length-1]] : null;
+}
+function abrirSala(){
+  if (SALA.on) return; if (S.play) detener();
+  SALA.guarda = { per:S.per, desde:S.desde, hasta:S.hasta, anio:S.anio, mes:S.mes, ind:S.ind, sel:S.sel, region:S.region, agr:S.agr, p:[P0, P1], dia:S.dia };
+  SALA.on = true; SALA.cmp = false; SALA.anim = {};
+  if (!S.ind) S.ind = 'ing';
+  const m = $('mapa'); m.classList.add('sala'); document.body.classList.add('en-sala');
+  if (m.requestFullscreen && !reducido()) m.requestFullscreen().catch(() => {});
+  const L = document.createElement('div'); L.className = 'sl'; L.id = 'sala'; L.setAttribute('role','region'); L.setAttribute('aria-label','Pulso en pantalla completa');
+  L.innerHTML =
+    '<header class="sl-h">'+
+      '<div class="sl-lo">IA-NAMI<small>Pulso migratorio</small></div>'+
+      '<div class="sl-bus"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'+
+        '<input id="sl-q" type="search" autocomplete="off" placeholder="Busca un país o un estado (O.R.)" aria-label="Buscar país o estado"><button type="button" id="sl-qx" aria-label="Quitar" hidden>×</button><div class="sl-res" id="sl-res" hidden></div></div>'+
+      '<label class="sl-dd"><small>Región</small><select id="sl-reg"></select></label>'+
+      '<label class="sl-dd"><small>Indicador</small><select id="sl-ind"></select></label>'+
+      '<div class="sl-per"><small>Periodo</small><div class="sl-seg" id="sl-seg"></div></div>'+
+      '<div class="sl-cmpb" id="sl-cmpb"></div>'+
+      '<div class="sl-corte" id="sl-corte"></div>'+
+      '<button type="button" class="sl-x" id="sl-x" aria-label="Salir de pantalla completa" title="Salir (Esc)"><svg width="14" height="14" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>'+
+    '</header>'+
+    '<div class="sl-pop" id="sl-pop" hidden></div>'+
+    '<div class="sl-ctx sl-e" style="--d:.05s" id="sl-ctx"></div>'+
+    '<section class="sl-a"><div class="sl-big sl-e" style="--d:.12s" id="sl-big">0</div><div class="sl-cap sl-e" style="--d:.2s" id="sl-cap"></div><div class="sl-dl sl-e" style="--d:.24s" id="sl-dl"></div>'+
+      '<div class="sl-g" id="sl-g"></div></section>'+
+    '<p class="sl-fr sl-e" style="--d:.3s" id="sl-fr"></p>'+
+    '<section class="sl-q sl-e" style="--d:.38s"><div class="sl-qt" id="sl-qt"></div><div class="sl-qs" id="sl-qs"></div><div class="sl-qc" id="sl-qc"></div></section>'+
+    '<section class="sl-t sl-e" style="--d:.44s"><div class="sl-tl" id="sl-tl"></div>'+
+      '<div class="sl-tb"><button type="button" class="sl-pl" id="sl-pl" aria-label="Reproducir el periodo"></button><button type="button" class="sl-todo" id="sl-todo" title="Regresa al periodo completo">Ver todo</button></div>'+
+      '<svg id="sl-tg" role="slider" tabindex="0" aria-label="Día del periodo"></svg><div class="sl-fte" id="sl-fte"></div></section>';
+  $('lz').appendChild(L);
+  $('sl-reg').innerHTML = '<option value="">Todo el mundo</option>'+Object.keys(REGIONES).map(r => '<option value="'+r+'">'+REGIONES[r][0]+'</option>').join('');
+  $('sl-ind').innerHTML = INDS.filter(m => m.k!=='tram' || window.IANAMI_DATOS).map(m => '<option value="'+m.k+'">'+m.n+'</option>').join('');
+  L.addEventListener('click', clicSala); L.addEventListener('change', cambioSala);
+  $('sl-q').addEventListener('input', buscarSala); $('sl-q').addEventListener('keydown', e => { if (e.key==='Enter'){ elegirSala(0); e.preventDefault(); } if (e.key==='Escape'){ if (!$('sl-res').hidden){ $('sl-res').hidden = true; e.stopPropagation(); } else e.target.blur(); } });
+  const tg = $('sl-tg'); tg.addEventListener('pointerdown', e => { if (S.play) detener(); fijarDia(diaSala(e)); tg.setPointerCapture(e.pointerId); });
+  tg.addEventListener('pointermove', e => { if (e.buttons) fijarDia(diaSala(e)); });
+  tg.addEventListener('keydown', e => { if (e.key==='ArrowLeft'){ fijarDia(S.dia-1); e.preventDefault(); } if (e.key==='ArrowRight'){ fijarDia(S.dia+1); e.preventDefault(); } });
+  setTimeout(() => { reencuadrar(); ajustarLienzo(); rehacerMapa(); }, 60);    // rehacerMapa vuelve a pintar todo, sala incluida
+}
+function cerrarSala(){
+  if (!SALA.on) return; if (S.play) detener();
+  SALA.on = false; const g = SALA.guarda; if (SALA.gr){ SALA.gr.dispose(); SALA.gr = null; }
+  const L = $('sala'); if (L) L.remove();
+  $('mapa').classList.remove('sala'); document.body.classList.remove('en-sala');
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  Object.assign(S, { per:g.per, desde:g.desde, hasta:g.hasta, anio:g.anio, mes:g.mes, ind:g.ind, sel:g.sel, region:g.region, agr:g.agr });
+  aplicarPeriodo(g.p[0], g.p[1]); S.dia = Math.min(g.dia, ND); S.t = S.dia; $('tgraf').setAttribute('aria-valuemax', ND);
+  setTimeout(() => { ajustarAlto(); reencuadrar(); ajustarLienzo(); rehacerMapa(); }, 60);
+}
+// ---- controles
+function clicSala(e){
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id==='sl-x'){ cerrarSala(); return; }
+  if (b.id==='sl-pl'){ reproducir(); return; }
+  if (b.id==='sl-todo'){ verTodo(); return; }
+  if (b.id==='sl-qx'){ S.sel = null; $('sl-q').value = ''; b.hidden = true; pintarTodo(); const v = vistaMundo(); S.modoVista = 'mundo'; volar(v.c, v.z); return; }
+  if (b.dataset.sr!=null){ elegirSala(+b.dataset.sr); return; }
+  if (b.dataset.sp){ const p = b.dataset.sp;
+    if (p==='cmp'){ abrirComparar(); return; }
+    SALA.cmp = false; $('sl-pop').hidden = true; S.per = p; cambiarPeriodo(); return; }
+  if (b.id==='sl-cmpe'){ abrirComparar(); return; }
+  if (b.id==='sl-cmpok'){ const A = $('sl-ca').value.split(',').map(Number), B = $('sl-cb').value.split(',').map(Number);
+    if (A[0]>=B[0] && A[0]<B[1]){ $('sl-cmsg').textContent = 'El periodo de referencia tiene que ser anterior al que comparas.'; return; }
+    aplicarComparar(A, B); return; }
+  if (b.dataset.cpre){ const c = cmpInicial(); if (c){ aplicarComparar(c[0], c[1]); } return; }
+  if (b.id==='sl-cmpno'){ $('sl-pop').hidden = true; return; }
+}
+function cambioSala(e){
+  const id = e.target.id;
+  if (id==='sl-reg'){ S.region = e.target.value || null; if (S.sel && S.sel.t==='n') S.sel = null; pintarTodo(); if (S.region) volarConMexico(REGIONES[S.region][1]); else { const v = vistaMundo(); S.modoVista = 'mundo'; volar(v.c, v.z); } }
+  if (id==='sl-ind'){ S.ind = e.target.value; if (S.ind==='rep' && S.sel && S.sel.t==='n') S.sel = null; pintarTodo(); }
+}
+function opcionesCmp(sel){ return mesesBase().map(m => '<option value="'+m[0]+','+m[1]+'"'+(sel && sel[0]===m[0] && sel[1]===m[1] ? ' selected' : '')+'>'+nomRango(m[0], m[1])+'</option>').join(''); }
+function abrirComparar(){
+  const c = SALA.cmp ? [SALA.A, SALA.B] : cmpInicial(), p = $('sl-pop'); if (!c){ return; }
+  const trumpTxt = hayTrump() ? '<button type="button" data-cpre="1" class="sl-pre">Antes de Trump contra con Trump</button>' : '<p class="sl-nota">«Antes de Trump contra con Trump» se activa cuando las bases lleguen a 2025 (hoy terminan el '+fechaISO(D.corte)+').</p>';
+  p.innerHTML = '<b>Comparar dos periodos</b><p class="sl-nota">Las cifras se comparan por día, así los periodos pueden durar distinto.</p>'+trumpTxt+
+    '<label>Referencia<select id="sl-ca">'+opcionesCmp(c[0])+'</select></label><label>Contra<select id="sl-cb">'+opcionesCmp(c[1])+'</select></label>'+
+    '<span class="sl-cmsg" id="sl-cmsg"></span><div class="sl-pb"><button type="button" id="sl-cmpno">Cancelar</button><button type="button" id="sl-cmpok" class="pri">Comparar</button></div>';
+  p.hidden = false;
+}
+function aplicarComparar(A, B){
+  SALA.cmp = true; SALA.A = A; SALA.B = B; $('sl-pop').hidden = true;
+  if (S.play) S.play = false; S.per = 'pers'; S.desde = isoDe(fechaBase(B[0])); S.hasta = isoDe(fechaBase(B[1]-1));
+  aplicarPeriodo(B[0], B[1]); S.dia = ND; S.t = ND; $('tgraf').setAttribute('aria-valuemax', ND); pintarTodo();
+}
+function verTodo(){ S.play = false; S.dia = ND; S.t = ND; pintarTodo(); }
+// ---- buscador: países y estados (las O.R. son por estado)
+let hallSala = [];
+function buscarSala(){
+  const q = sinAcento($('sl-q').value.trim()), el = $('sl-res'); $('sl-qx').hidden = !$('sl-q').value && !S.sel;
+  if (!q){ el.hidden = true; return; }
+  const L = INDICE.filter(x => x.t==='Nacionalidad' || x.t==='Estado');
+  hallSala = L.filter(x => x.q.indexOf(q)===0).concat(L.filter(x => x.q.indexOf(q)>0)).slice(0,7);
+  el.innerHTML = hallSala.length ? hallSala.map((x,i) => '<button type="button" data-sr="'+i+'" class="'+(i?'':'act')+'"><span>'+esc(x.n)+'</span><small>'+(x.t==='Estado' ? 'estado · O.R.' : 'país')+'</small></button>').join('') : '<span class="sl-nada">Sin coincidencias</span>';
+  el.hidden = false;
+}
+function elegirSala(i){
+  const x = hallSala[i]; if (!x) return; $('sl-res').hidden = true; $('sl-q').value = x.n; $('sl-qx').hidden = false;
+  if (x.sel.t==='n'){                                         // el indicador principal pasa al que más registros tiene ese país
+    const F = { ss:null, n:x.sel.i, nd:x.sel.i }, mejor = ORDEN_SALA.filter(k => IND[k].nat).map(k => [k, sumaSem(k,0,NW-1,null,x.sel.i)]).sort((a,b) => b[1]-a[1])[0];
+    if (mejor && mejor[1]>0) S.ind = mejor[0]; S.region = null; }
+  fijarSel(x.sel, true);
+}
+const diaSala = e => { const r = $('sl-tg').getBoundingClientRect(); return (e.clientX-r.left)/r.width*ND + 0.5; };
+// ---- pintar
+function pintarSala(soloTiempo){
+  const L = $('sala'); if (!L) return;
+  const F = filtro(), k = salaInd(), t = TM[S.tema], nF = nFde(k, F), fin = S.dia>=ND && !S.play;
+  const ent = S.sel ? nombreSel() : S.region ? nombreRegion() : 'todo el mundo';
+  const per = nomRango(P0, P1);
+  // controles
+  if (!soloTiempo){
+    $('sl-reg').value = S.region || ''; $('sl-ind').value = k;
+    if (!S.sel && document.activeElement!==$('sl-q')){ $('sl-q').value = ''; $('sl-qx').hidden = true; }
+    $('sl-seg').innerHTML = [['shein','Sheinbaum'],['trump','Trump'],['cmp','Comparar']].map(o => { const ok = o[0]==='trump' ? hayTrump() : true, on = o[0]==='cmp' ? SALA.cmp : !SALA.cmp && S.per===o[0];
+      return '<button type="button" data-sp="'+o[0]+'" class="'+(on?'on':'')+'"'+(ok ? '' : ' disabled title="Sin datos del periodo Trump: las bases llegan al '+fechaISO(D.corte)+'"')+'>'+o[1]+'</button>'; }).join('');
+    $('sl-cmpb').innerHTML = SALA.cmp ? '<button type="button" id="sl-cmpe" class="sl-dd sl-cb"><small>Comparación</small><span>'+nomCortoR(SALA.A)+' <em>→</em> '+nomCortoR(SALA.B)+' <i>▾</i></span></button>' : '';
+    const ah = new Date();
+    $('sl-corte').innerHTML = '<span>Datos al <b>'+fechaISO(D.corte)+'</b></span><span>consultado '+ah.getDate()+' '+MES12[ah.getMonth()]+' '+ah.getFullYear()+', '+String(ah.getHours()).padStart(2,'0')+':'+String(ah.getMinutes()).padStart(2,'0')+'</span>';
+    $('sl-ctx').innerHTML = '<span class="k">Estás viendo</span><b>'+cap1(PALABRA[k])+'</b><i>·</i>'+esc(ent)+'<i>·</i>'+(SALA.cmp ? esc(nomRango(SALA.B[0], SALA.B[1]))+' contra '+esc(nomRango(SALA.A[0], SALA.A[1]))+', por día' : esc(per));
+    $('sl-fte').textContent = 'Fuentes: '+fuentesSala(k)+' · el mapa muestra '+(SALA.cmp ? nomRango(SALA.B[0], SALA.B[1]) : 'el periodo')+(fin ? '' : ' hasta el '+fechaLarga(S.dia-1));
+  }
+  // cifra principal
+  const dur = S.play ? 200 : SALA.anim.big ? 650 : 1100; SALA.anim.big = true;
+  let pa = null, pb = null;
+  if (SALA.cmp){ pa = valRango(k, SALA.A[0], SALA.A[1], F.ss, nF)/(SALA.A[1]-SALA.A[0]); pb = valRango(k, SALA.B[0], SALA.B[1], F.ss, nF)/(SALA.B[1]-SALA.B[0]);
+    mover($('sl-big'), pb, cifraG, dur);
+    $('sl-cap').innerHTML = cap1(PALABRA[k])+' <u>por día</u> en '+esc(nomRango(SALA.B[0], SALA.B[1]));
+    $('sl-dl').innerHTML = pa>0 ? flecha(pa, pb)+' contra '+esc(nomRango(SALA.A[0], SALA.A[1]))+', que tuvo '+cortoK(pa)+' por día' : 'sin registros en '+esc(nomRango(SALA.A[0], SALA.A[1]));
+  } else {
+    const v = valAcum(k, F.ss, nF), dias = Math.max(1, Math.min(S.dia, finDatos(k)));
+    mover($('sl-big'), v, cifraG, dur);
+    $('sl-cap').innerHTML = cap1(PALABRA[k])+(fin ? ' en el periodo' : ' hasta el '+fechaLarga(S.dia-1));
+    $('sl-dl').innerHTML = '<b>'+cortoK(v/dias)+'</b> por día · '+dias+' días';
+  }
+  // cuatro datos
+  const otros = ORDEN_SALA.filter(x => x!==k && (F.nd==null || IND[x].nat) && x!=='tram').slice(0,4), G = $('sl-g');
+  if (G.dataset.k!==otros.join()){ G.dataset.k = otros.join(); G.innerHTML = otros.map((x,i) => '<div class="sl-m sl-e" style="--d:'+(.3+i*.06)+'s"><div class="v" style="color:'+t[IND[x].g==='usa' ? 'usa' : IND[x].g]+'" data-m="'+x+'">0</div><div class="n">'+PALABRA[x]+(SALA.cmp ? ' por día' : '')+'</div><div class="d"></div></div>').join(''); }
+  otros.forEach(x => { const el = G.querySelector('[data-m="'+x+'"]'), nx = nFde(x, F), d = el.parentNode.querySelector('.d');
+    if (SALA.cmp){ const a = valRango(x, SALA.A[0], SALA.A[1], F.ss, nx)/(SALA.A[1]-SALA.A[0]), b = valRango(x, SALA.B[0], SALA.B[1], F.ss, nx)/(SALA.B[1]-SALA.B[0]);
+      mover(el, b, cifraG, dur); d.innerHTML = a>0 ? flecha(a, b)+' contra '+esc(nomRango(SALA.A[0], SALA.A[1])) : 'sin registros antes'; }
+    else { const v = valAcum(x, F.ss, nx); mover(el, v, cifraG, dur); d.innerHTML = cortoK(v/Math.max(1, Math.min(S.dia, finDatos(x))))+' por día'; } });
+  // frase de un vistazo
+  $('sl-fr').innerHTML = fraseSala(k, F, nF, pa, pb, otros);
+  tapasSala();
+  pintarBarrasSala(k, F, nF);
+  pintarTiempoSala(k, F);
+}
+const cap1 = s => s.charAt(0).toUpperCase()+s.slice(1);
+function flecha(a, b){ const x = (b/a-1)*100; if (Math.abs(x)<0.5) return '<span class="ig">= sin cambio</span>'; return '<span class="'+(x<0?'baja':'sube')+'">'+(x<0?'▼ ':'▲ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%</span>'; }
+function fuentesSala(k){ const f = { ing:'DGCVM', rech:'DGCVM', tram:'DGRAM', resc:'DGCOR', pres:'DGCVM', can:'SIRENNA', ret:'DGCOR', recib:'DGCOR', rep:'DGPMV' };
+  const l = [...new Set([k].concat(ORDEN_SALA).map(x => f[x]))]; return l.slice(0,-1).join(', ')+' y '+l[l.length-1]; }
+function fraseSala(k, F, nF, pa, pb, otros){
+  const ent = S.sel ? (S.sel.t==='n' ? ' de '+nombreSel() : ' en '+nombreSel()) : S.region ? ' de '+nombreRegion() : '';
+  if (SALA.cmp){
+    const A = nomRango(SALA.A[0], SALA.A[1]), B = nomRango(SALA.B[0], SALA.B[1]);
+    if (!pa) return 'En '+B+' hubo '+cortoK(pb)+' '+PALABRA[k]+ent+' por día; en '+A+' no hubo registros.';
+    const x = (pb/pa-1)*100, dir = Math.abs(x)<0.5 ? 'igual que' : Math.abs(x).toFixed(0)+'% '+(x<0 ? 'menos que' : 'más que');
+    const cam = otros.map(o => { const n = nFde(o, F), a = valRango(o, SALA.A[0], SALA.A[1], F.ss, n)/(SALA.A[1]-SALA.A[0]), b = valRango(o, SALA.B[0], SALA.B[1], F.ss, n)/(SALA.B[1]-SALA.B[0]); return [o, a, b, a>0 ? (b/a-1)*100 : 0]; })
+      .filter(c => c[1]*(SALA.A[1]-SALA.A[0])>=100).sort((a,b) => Math.abs(b[3])-Math.abs(a[3]))[0];
+    return 'En '+B+' hubo <b>'+cortoK(pb)+' '+PALABRA[k]+ent+' por día</b>, '+dir+' en '+A+'.'+(cam && Math.abs(cam[3])>=5 ? ' Lo que más cambió: <b>'+PALABRA[cam[0]]+'</b> ('+(cam[3]<0 ? '−' : '+')+Math.abs(cam[3]).toFixed(0)+'%).' : '');
+  }
+  const v = valAcum(k, F.ss, nF), top = AVISOS.find(a => a.t==='cambio' || a.t==='nac' || a.t==='est');
+  return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+' se registraron <b>'+cortoK(v)+' '+PALABRA[k]+ent+'</b>.'+(top && S.dia>=ND ? ' Lo que más cambió ('+textoCmp()+'): '+textoAviso(top) : '');
+}
+// Barras verticales: en un periodo, los 8 con más registros; al comparar, el cambio por día de cada uno.
+// Con un país elegido se reparte por estado (O.R.); si no, por nacionalidad. Repatriados siempre por estado.
+function pintarBarrasSala(k, F, nF){
+  const porEst = (S.sel && S.sel.t==='n') || !IND[k].nat, t = TM[S.tema], cs = getComputedStyle($('sala'));
+  const INK = t.tinta, I2 = cs.getPropertyValue('--s-ink2').trim(), LN = cs.getPropertyValue('--s-grid').trim(), VC = t[IND[k].g], RC = t.irr;
+  const ssF = F.ss, lista = [];
+  if (porEst){ for (let s=0;s<NS;s++){ if (ssF && ssF.indexOf(s)<0) continue; lista.push([ESTC[s], s, null]); } }
+  else { const l = F.nd==null ? null : (Array.isArray(F.nd) ? F.nd : [F.nd]); for (let n=0;n<OT;n++){ if (l && l.indexOf(n)<0) continue; lista.push([D.nats[n][0], null, n]); } }
+  let datos, tit, sub, cmp = SALA.cmp;
+  const nomCorto = s => s.replace('Estados Unidos','EE. UU.').replace('Ciudad de México','CDMX').replace('Edo. de México','Edomex').replace('Quintana Roo','Q. Roo').replace('Baja California S.','BCS').replace('Baja California','B. C.').replace('Indonesia','Indon.').replace('Filipinas','Filip.').replace('República Dominicana','Rep. Dom.');
+  if (cmp){ const dA = SALA.A[1]-SALA.A[0], dB = SALA.B[1]-SALA.B[0];
+    const r = lista.map(x => { const ss = x[1]!=null ? [x[1]] : ssF, n = x[2]!=null ? x[2] : nF, a = valRango(k, SALA.A[0], SALA.A[1], ss, n), b = valRango(k, SALA.B[0], SALA.B[1], ss, n); return [x[0], a/dA, b/dB, a]; });
+    const mx = Math.max(...r.map(x => x[3]), 1);
+    datos = r.filter(x => x[3]>=Math.max(60, mx*0.01)).sort((a,b) => b[2]-a[2]).slice(0,8).map(x => [x[0], x[1], x[2], (x[2]/x[1]-1)*100]).sort((a,b) => b[3]-a[3]);
+    tit = 'Cambio por '+(porEst ? 'estado (O.R.)' : 'nacionalidad'); sub = PALABRA[k]+' por día, '+nomRango(SALA.B[0], SALA.B[1])+' contra '+nomRango(SALA.A[0], SALA.A[1])+' · solo los que tuvieron al menos 60 registros antes';
+  } else {
+    const r = lista.map(x => [x[0], porEst ? valAcum(k, [x[1]], nF) : valAcum(k, ssF, x[2])]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]);
+    const tot = r.reduce((s,x) => s+x[1], 0); datos = r.slice(0,8).map(x => [x[0], x[1], tot]);
+    tit = (porEst ? 'Por estado (O.R.)' : 'Por nacionalidad'); sub = PALABRA[k]+' · los '+datos.length+' con más registros'+(S.dia<ND ? ' hasta el '+fechaDia(S.dia-1) : '');
+  }
+  $('sl-qt').textContent = tit; $('sl-qs').textContent = sub;
+  const el = $('sl-qc'); if (!datos.length){ if (SALA.gr){ SALA.gr.dispose(); SALA.gr = null; } el.innerHTML = '<p class="sl-nada">Sin registros suficientes para comparar.</p>'; return; }
+  if (!SALA.gr || SALA.gr.getDom()!==el){ el.innerHTML = ''; SALA.gr = echarts.init(el); }
+  const fam = 'Barlow Condensed, Barlow, sans-serif', BIG = 'Big Shoulders Display, Barlow Condensed, sans-serif';
+  let op;
+  if (cmp){ const mxp = Math.max(10, ...datos.map(d => d[3])), mnp = Math.min(0, ...datos.map(d => d[3])), paso = [5,10,25,50,100,200,500,1000].find(x => (mxp-mnp)/x<=5) || 2000;
+    op = { yAxis:{ type:'value', min:Math.floor(mnp/paso)*paso, max:Math.ceil(mxp/paso)*paso, interval:paso, splitLine:{ lineStyle:{ color:LN } }, axisLabel:{ color:I2, fontFamily:fam, fontSize:12, formatter:v => (v>0?'+':'')+v+'%' } },
+      series:[{ type:'bar', barMaxWidth:30, data:datos.map(d => ({ value:+d[3].toFixed(1), itemStyle:{ color:d[3]>=0 ? VC : RC, borderRadius:d[3]>=0 ? [4,4,0,0] : [0,0,4,4] }, label:{ position:d[3]>=0 ? 'top' : 'bottom' } })),
+        label:{ show:true, color:INK, fontFamily:BIG, fontWeight:900, fontSize:17, formatter:p => (p.value>0?'+':'')+Math.round(p.value)+'%' } }],
+      tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => { const d = datos[p[0].dataIndex]; return '<b>'+esc(d[0])+'</b><br>'+cortoK(d[1])+' → '+cortoK(d[2])+' por día'; } } };
+  } else {
+    op = { yAxis:{ type:'value', splitLine:{ lineStyle:{ color:LN } }, axisLabel:{ color:I2, fontFamily:fam, fontSize:12, formatter:v => cortoK(v) } },
+      series:[{ type:'bar', barMaxWidth:30, data:datos.map(d => d[1]), itemStyle:{ color:VC, borderRadius:[4,4,0,0] },
+        label:{ show:true, position:'top', color:INK, fontFamily:BIG, fontWeight:800, fontSize:16, formatter:p => cortoK(p.value) } }],
+      tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => { const d = datos[p[0].dataIndex]; return '<b>'+esc(d[0])+'</b><br>'+miles(d[1])+' · '+pct(d[1], d[2])+'% del total'; } } };
+  }
+  SALA.gr.setOption(Object.assign({ animationDuration:900, animationDurationUpdate:S.play ? 180 : 600, animationEasing:'cubicOut', textStyle:{ fontFamily:fam },
+    grid:{ left:46, right:8, top:30, bottom:cmp ? 50 : 34 },
+    xAxis:{ type:'category', data:datos.map(d => nomCorto(d[0])), axisLine:{ lineStyle:{ color:I2 } }, axisTick:{ show:false }, splitLine:{ show:true, lineStyle:{ color:LN } },
+      axisLabel:{ color:INK, fontFamily:fam, fontSize:13, fontWeight:600, interval:0, lineHeight:15, rich:{ s:{ color:I2, fontSize:11, fontFamily:fam, fontWeight:500 } },
+        formatter:(v,i) => cmp ? v+'\n{s|'+cortoK(datos[i][2])+'/día}' : v } } }, op), true);
+}
+// Barra de tiempo de la sala: el indicador hacia arriba y un segundo indicador hacia abajo, cada uno con su escala.
+// Al comparar, la línea punteada es el promedio por día del periodo de referencia.
+function pintarTiempoSala(k, F){
+  const sv = $('sl-tg'); if (!sv) return; const W = Math.max(200, sv.clientWidth), H = 92, t = TM[S.tema], pw = W/ND;
+  const k2 = k==='resc' ? 'ing' : 'resc', capas = [[k, 50, 44, 1], [k2, 52, 24, -1]];
+  const serie = x => { const d = diario(x, IND[x].nat || F.nd==null ? F : { ss:F.ss, n:null, nd:null });
+    if (sinMx(x, F.nd)){ const m = diario(x, { ss:F.ss, n:MX, nd:MX }); return d.map((v,i) => Math.max(0, v - m[i])); } return d; };
+  let h = '';
+  const cada = Math.ceil(MESES_INI.length*56/W);
+  MESES_INI.forEach((m,i) => { const x = (m[0]*pw).toFixed(1); h += '<line x1="'+x+'" y1="2" x2="'+x+'" y2="78" stroke="'+t.tinta+'" stroke-opacity=".14"/>'+(i%cada ? '' : '<text x="'+(m[0]*pw+5).toFixed(1)+'" y="90" font-size="12.5" font-weight="600" fill="'+t.tinta+'" fill-opacity=".65" font-family="Barlow Condensed, Barlow, sans-serif">'+esc(m[1])+'</text>'); });
+  capas.forEach(c => { const x = c[0], d = serie(x), mx = Math.max.apply(null, d) || 1, col = t[IND[x].g], U = finDatos(x);
+    d.forEach((v,i) => { if (i>=U) return; const bh = Math.max(0.6, v/mx*c[2]); h += '<rect x="'+(i*pw+0.4).toFixed(1)+'" y="'+(c[3]>0 ? c[1]-bh : c[1]).toFixed(1)+'" width="'+Math.max(1,pw-1.2).toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="1" fill="'+col+'" fill-opacity="'+(i<S.dia ? 0.85 : 0.22)+'"/>'; });
+    if (SALA.cmp && c[3]>0){ const a = valRango(x, SALA.A[0], SALA.A[1], F.ss, nFde(x, F))/(SALA.A[1]-SALA.A[0]), y = c[1]-Math.min(c[2], a/mx*c[2]);
+      if (a>0) h += '<line x1="0" y1="'+y.toFixed(1)+'" x2="'+W+'" y2="'+y.toFixed(1)+'" stroke="'+t.tinta+'" stroke-width="1.4" stroke-dasharray="5 4" stroke-opacity=".8"/><text x="'+(W-4)+'" y="'+(y-4).toFixed(1)+'" text-anchor="end" font-size="11.5" font-weight="600" fill="'+t.tinta+'" font-family="Barlow Condensed, Barlow, sans-serif">promedio por día en '+esc(nomRango(SALA.A[0], SALA.A[1]))+'</text>'; }
+  });
+  h += '<line x1="0" y1="51" x2="'+W+'" y2="51" stroke="'+t.tinta+'" stroke-opacity=".3"/>';
+  h += '<g id="sl-cur"><line x1="0" y1="0" x2="0" y2="78" stroke="'+t.tinta+'" stroke-width="2"/><circle cx="0" cy="76" r="5" fill="'+t.tinta+'" stroke="'+t.mar+'" stroke-width="2"/></g>';
+  sv.setAttribute('viewBox', '0 0 '+W+' '+H); sv.innerHTML = h; moverCursor(S.play ? S.t : S.dia);
+  sv.setAttribute('aria-valuemin', 1); sv.setAttribute('aria-valuemax', ND); sv.setAttribute('aria-valuenow', S.dia); sv.setAttribute('aria-valuetext', 'al '+fechaLarga(S.dia-1));
+  const cua = c => '<i style="background:'+c+'"></i>';
+  $('sl-tl').innerHTML = '<span>'+cua(t[IND[k].g])+IND[k].n+' por día</span><span>'+cua(t[IND[k2].g])+IND[k2].n+' por día</span><span class="m">cada uno con su escala'+(SALA.cmp ? '' : ' · ▶ recorre el periodo')+'</span>';
+  $('sl-pl').innerHTML = S.play ? '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" fill="currentColor"/></svg>' : '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>';
+  $('sl-pl').setAttribute('aria-label', S.play ? 'Pausar' : 'Reproducir el periodo');
+  $('sl-todo').hidden = S.dia>=ND && !S.play;
+}
+
+// En pantalla completa, las etiquetas del mapa que caerían debajo de las cifras, la frase o la gráfica no se dibujan
+function tapasSala(){ const lz = $('lz').getBoundingClientRect(); SALA.tapas = ['.sl-a','.sl-fr','.sl-q','.sl-t','.sl-h','.sl-ctx'].map(q => document.querySelector('#sala '+q)).filter(Boolean)
+  .map(el => { const r = el.getBoundingClientRect(); return [r.left-lz.left-8, r.top-lz.top-6, r.right-lz.left+8, r.bottom-lz.top+6]; }); }
+function etiquetaLibre(p){ const r = p.labelRect; if (!SALA.on || !SALA.tapas || !r) return { hideOverlap:true };
+  const tapa = SALA.tapas.some(t => r.x < t[2] && r.x+r.width > t[0] && r.y < t[3] && r.y+r.height > t[1]);
+  return tapa ? { x:-9999, y:-9999 } : { hideOverlap:true }; }
+// En pantalla completa el destino del vuelo se acomoda en la zona libre (entre las cifras y la gráfica), algo más alejado
+function encuadreSala(c, zr){
+  const g = chart.getOption().geo[0], lz = $('lz'), W = lz.clientWidth, H = lz.clientHeight, z = zr*0.64;
+  const p1 = chart.convertToPixel('geo', g.center), p2 = chart.convertToPixel('geo', [g.center[0]+1, g.center[1]-1]); if (!p1 || !p2) return [c, z];
+  const k = (z*KMX())/g.zoom, gx = (p2[0]-p1[0])*k, gy = (p2[1]-p1[1])*k;            // píxeles por grado al zoom de llegada
+  return [[c[0] + 0.03*W/gx, c[1] - 0.09*H/gy], z];
+}
+const alfa = (c, a) => /^#/.test(c) ? 'rgba('+hex(c).join(',')+','+a+')' : c;
+
 /* ==== [12] ARRANQUE =============================================== */
 function iniciar(){
   escala();
@@ -1338,13 +1641,16 @@ function iniciar(){
   });
   let espera = 0;
   chart.on('georoam', () => { S.modoVista = 'libre'; clearTimeout(espera); espera = setTimeout(() => { const z = chart.getOption().geo[0].zoom/KMX(); if (Math.abs(z-S.zoom)/S.zoom > 0.04){ S.zoom = z; pintarMapa(); } }, 160); });
-  new ResizeObserver(() => { const cambio = escala(); reencuadrar(); ajustarLienzo(); if (cambio) rehacerMapa(); else pintarTiempo(); }).observe($('lz'));
+  new ResizeObserver(() => { const cambio = escala(); reencuadrar(); ajustarLienzo(); if (cambio) rehacerMapa(); else { pintarTiempo(); if (SALA.on){ pintarTiempoSala(salaInd(), filtro()); tapasSala(); if (SALA.gr) SALA.gr.resize(); } } }).observe($('lz'));
   window.addEventListener('resize', () => { if (escala()) rehacerMapa(); ajustarAlto(); pintarAnalisis(); });
   if (window.innerHeight<=520) S.kpiModo = 'compacto';        // teléfono acostado: indicadores compactos
   ajustarLienzo();
 
   $('m-her').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) herramienta(b.dataset.a); });
   $('play').addEventListener('click', reproducir);
+  $('vertodo').addEventListener('click', verTodo);
+  document.addEventListener('keydown', e => { if (e.key==='Escape' && SALA.on && !(window.IANAMI_CONSULTA && document.getElementById('cq') && !document.getElementById('cq').hidden)){ const p = $('sl-pop'); if (p && !p.hidden) p.hidden = true; else cerrarSala(); } });
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && SALA.on) cerrarSala(); });
   $('tgraf').addEventListener('pointermove', tipTiempo); $('tgraf').addEventListener('pointerleave', () => tipTiempo(null)); $('tgraf').addEventListener('pointerup', e => { if (e.pointerType==='touch') setTimeout(() => tipTiempo(null), 1800); });
   const tg = $('tgraf'); let arr = false, pend = 0;
   const arrastre = e => { const d = diaDesdeX(e); cancelAnimationFrame(pend); pend = requestAnimationFrame(() => fijarDia(d)); };
