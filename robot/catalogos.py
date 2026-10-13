@@ -1017,3 +1017,34 @@ NOMBRE_CORTO = {4: 'Afganistán',
  840: 'EE. UU.',
  860: 'Uzbekistán',
  862: 'Venezuela'}
+
+# ==== [8] VOCABULARIO PARA CONSULTAR ==============================
+# Lo usa robot/vocabulario.py para que Consultar entienda cómo pregunta la gente.
+# GENTILICIOS: raíz del gentilicio (sin acentos, minúsculas) → nombre corto de la nacionalidad.
+GENTILICIOS = {
+    'venezolan': 'Venezuela', 'colombian': 'Colombia', 'guatemaltec': 'Guatemala', 'hondure': 'Honduras',
+    'salvadoren': 'El Salvador', 'cuban': 'Cuba', 'haitian': 'Haití', 'ecuatorian': 'Ecuador', 'nicaraguens': 'Nicaragua',
+    'estadounidens': 'EE. UU.', 'norteamerican': 'EE. UU.', 'chin': 'China', 'perua': 'Perú', 'dominican': 'Rep. Dominicana',
+    'brasilen': 'Brasil', 'hindu': 'India', 'senegales': 'Senegal', 'mauritan': 'Mauritania', 'uzbek': 'Uzbekistán',
+    'chilen': 'Chile', 'argentin': 'Argentina', 'canadiens': 'Canadá', 'rus': 'Rusia', 'espanol': 'España', 'frances': 'Francia',
+    'aleman': 'Alemania', 'italian': 'Italia', 'britanic': 'Reino Unido', 'ingles': 'Reino Unido', 'japones': 'Japón',
+    'corean': 'Corea del Sur', 'filipin': 'Filipinas', 'indonesi': 'Indonesia', 'vietnamit': 'Vietnam', 'turc': 'Turquía',
+    'egipci': 'Egipto', 'ghanes': 'Ghana', 'camerunes': 'Camerún', 'angolen': 'Angola', 'afgan': 'Afganistán',
+    'pakistan': 'Pakistán', 'banglades': 'Bangladés', 'nepales': 'Nepal', 'georgian': 'Georgia', 'armeni': 'Armenia',
+    'bolivian': 'Bolivia', 'paraguay': 'Paraguay', 'uruguay': 'Uruguay', 'panamen': 'Panamá', 'costarricens': 'Costa Rica',
+    'belice': 'Belice', 'belicen': 'Belice', 'jamaiquin': 'Jamaica',
+}
+# SINONIMOS: palabra que la gente usa → palabra que Consultar entiende (se pueden agregar sin tocar código)
+SINONIMOS = {
+    'infantes': 'nna', 'infancias': 'nna',
+    'migrantes': '', 'personas': '', 'extranjeros': '', 'gente': '',
+    'deportaciones': 'deportados', 'expulsados': 'deportados', 'regresados': 'retornados',
+    'entradas': 'internaciones', 'ingresos': 'internaciones', 'llegadas': 'internaciones',
+    'inadmitidos': 'rechazos', 'rechazadas': 'rechazos', 'negados': 'rechazos',
+    'detenidos': 'presentados', 'asegurados': 'presentados',
+    'repatriaciones': 'repatriados', 'devueltos': 'repatriados',
+    'aeropuerto': 'aereo', 'aeropuertos': 'aereo', 'avion': 'aereo', 'aviones': 'aereo',
+    'mensuales': 'mensual', 'semanal': 'semanal', 'diarios': 'diario',
+    'oficinas de representacion': 'o r', 'delegacion': 'o r', 'delegaciones': 'o r', 'entidad': 'estado', 'entidades': 'estados',
+    'paises': 'nacionalidad', 'pais': 'nacionalidad', 'origen': 'nacionalidad',
+}

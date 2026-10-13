@@ -20,7 +20,9 @@ Página principal (Pulso) y convertidor de bases.
 | `robot/control.py` | Genera `datos/control.js` (internaciones, segunda revisión, presentados, retornos, canalizados, rescates y recibidos) |
 | `js/control.js` | Vista Procesos › Control migratorio (DGCVM y DGCOR) |
 | `robot/proteccion.py` | Genera `datos/proteccion.js` (mexicanos repatriados de EE. UU.) y revisa que las sumas cuadren |
+| `robot/vocabulario.py` | Genera `datos/vocabulario.js`: nombres, abreviaturas, gentilicios y sinónimos que usa Pregunta a INAMI para entender la búsqueda y corregir errores de escritura. Se edita en `catalogos.py`, sección [8] |
 | `js/proteccion.js` | Vista Procesos › Protección al migrante (DGPMV) |
+| `js/consulta.js` | Ventana Pregunta a INAMI: combos, texto libre, hoja de una página (PDF, imagen y compartir por WhatsApp), deshacer y nueva pregunta y «Profundizar en el tablero» |
 | `robot/catalogos.py` | Nacionalidades, estados y coordenadas de puntos |
 | `DATA/` | Bases en xlsx, tal como las entrega cada área |
 
@@ -35,6 +37,7 @@ Página principal (Pulso) y convertidor de bases.
    python robot/regulacion.py
    python robot/control.py
    python robot/proteccion.py
+   python robot/vocabulario.py --destino datos
    ```
 
 3. Revisar `datos/reporte.txt` y las notas de calidad que imprime `control.py`, y subir todo lo de `datos/`.
@@ -52,6 +55,16 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - **Control migratorio** · DGCVM y DGCOR (internaciones, segunda revisión, presentados, retornos, canalizados, rescates y recibidos)
 - **Regulación migratoria** · DGRAM (trámites, documentos vigentes, actas)
 - **Protección al migrante** · DGPMV (repatriados; vuelos comerciales y Guatemala-Honduras se activan cuando el área envíe los archivos corregidos)
+
+## Pregunta a INAMI
+
+- La consulta se arma con **Qué, Desglosar por, Periodo y Filtros**; cada combo solo ofrece lo que existe en la base del indicador. Los valores (nacionalidades, O.R., puntos, documentos…) se leen de los datos, así que una base nueva o un valor nuevo aparecen solos.
+- El **texto libre** llena esos combos y avisa lo que no reconoció o lo que la base no trae (por ejemplo, sexo en rescatados).
+- La respuesta es una **hoja de una página** con cinco plantillas según la consulta: proporción («de X, ¿cuántos Y?»), ranking, tiempo, comparación (2 o 3 valores) y fuentes (rescatados de la O.R. contra sistema DGCVM y SIRENNA).
+- Se descarga en **PDF** o como **imagen** (horizontal 2400×1350 o vertical 9:16 de 1620×2880, el formato de estado de WhatsApp). En el celular la imagen se comparte con el menú del teléfono.
+- **Ver en el tablero** abre el proceso que corresponde con los mismos filtros.
+- Cifras de NNA de 1 a 4 se publican como «menos de 5».
+- Los indicadores, partes y sinónimos están en la sección [2] de `js/consulta.js`.
 
 ## Reglas de los datos
 

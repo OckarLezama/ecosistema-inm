@@ -434,5 +434,8 @@ function eventos(cont){
   document.addEventListener('click', e => { if (e.target.closest('[data-ppopx]') || (!e.target.closest('#pm-pop, [data-pinfo]') && popFija)) mostrarInfo(null); });
 }
 let listo = false;
-window.IANAMI_PROTECCION = { pintar(cont){ if (!listo){ eventos(cont); listo = true; } montar(cont); } };
+// Recibe filtros desde Pregunta a INAMI («Profundizar en el tablero»)
+function fijar(p){ const ix = (l, nombres) => (nombres || []).map(n => l.indexOf(n)).filter(i => i>=0);
+  Q.ests = ix(DIC.e, p.ests).slice(0,3); const pt = ix(DIC.p, p.ptos); Q.pto = pt.length===1 ? pt[0] : -1; Q.mod = p.mod!=null ? p.mod : -1; Q.em = p.em || 'v'; Q.sel = null; if (p.d0 && p.d1){ Q.per = 'pers'; Q.d0 = Math.max(0, diaDe(p.d0)); Q.d1 = Math.min(CV.dias, diaDe(p.d1)+1); if (Q.d1<=Q.d0) Q.d1 = Q.d0+1; } }
+window.IANAMI_PROTECCION = { pintar(cont){ if (!listo){ eventos(cont); listo = true; } montar(cont); }, fijar:fijar };
 })();

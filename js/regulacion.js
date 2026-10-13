@@ -955,5 +955,8 @@ function eventos(cont){
     if (id==='rg-d0' || id==='rg-d1'){ Q.d0 = Math.max(0, diaDe($('rg-d0').value)); Q.d1 = Math.min(RG.dias, diaDe($('rg-d1').value)+1); if (Q.d1<=Q.d0) Q.d1 = Q.d0+1; tramites(); } });
 }
 let listo = false;
-window.IANAMI_REGULACION = { pintar(cont){ if (!listo){ eventos(cont); listo = true; } montar(cont); } };
+// Recibe filtros desde Pregunta a INAMI («Profundizar en el tablero»)
+function fijar(p){ const ix = (l, nombres) => (nombres || []).map(n => l.indexOf(n)).filter(i => i>=0);
+  Q.vista = 'tram'; Q.nats = ix(DIC.n, p.nats).slice(0,3); Q.ests = ix(DIC.e, p.ests).slice(0,3); Q.ofiF = p.ofi!=null ? p.ofi : -1; Q.doc = p.doc!=null ? p.doc : -1; Q.desg = Q.nats.length>=2 ? 'nat' : Q.ests.length>=2 ? 'or' : 'tot'; Q.pv = 'res'; if (p.d0 && p.d1){ Q.per = 'pers'; Q.d0 = Math.max(0, diaDe(p.d0)); Q.d1 = Math.min(RG.dias, diaDe(p.d1)+1); if (Q.d1<=Q.d0) Q.d1 = Q.d0+1; } }
+window.IANAMI_REGULACION = { pintar(cont){ if (!listo){ eventos(cont); listo = true; } montar(cont); }, fijar:fijar };
 })();

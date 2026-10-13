@@ -6,7 +6,7 @@
 <title>IA-NAMI · Inteligencia migratoria</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="css/estilos.css?v=20261012i">
+<link rel="stylesheet" href="css/estilos.css?v=20261013i">
 </head>
 <body>
 <!-- ==================================================================
@@ -24,7 +24,7 @@
     <nav class="nav" id="nav" aria-label="Secciones"></nav>
     <div class="top-der">
       <span class="comp-w"><button class="b-consulta" id="b-comp" aria-haspopup="menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/></svg>Compartir</button><div class="menu-comp" id="menu-comp" role="menu" hidden></div></span>
-      <button class="b-consulta" id="b-consulta" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"></path><path d="M9 10.5h6"></path></svg>Consultar</button>
+      <button class="b-consulta" id="b-consulta" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"></path><path d="M9 10.5h6"></path></svg><span>Pregunta<span class="bq-x"> a INAMI</span></span></button>
       <span id="corte"></span>
 </div>
     <div class="menu" id="menu-dir" role="menu" hidden></div>
@@ -97,35 +97,22 @@
   <div id="vista-otra" class="otra esc" hidden></div>
   <div class="kpi-tip" id="kpi-tip" role="tooltip" hidden></div>
 
-  <!-- ============ VENTANA DE CONSULTA ============ -->
-  <div class="consulta" id="consulta" role="dialog" aria-modal="true" aria-labelledby="q-tit" hidden>
-    <div class="q-caja">
-      <div class="q-top"><h2 id="q-tit">Consultar</h2><button class="q-x" data-q-cerrar aria-label="Cerrar">×</button></div>
-      <form id="q-form" class="q-form"><input id="q-txt" type="text" autocomplete="off" placeholder="Ej. trámites por nacionalidad en Chiapas en 2024" aria-label="Escribe tu consulta"><button type="submit">Consultar</button></form>
-      <div class="q-ej"><span>Ejemplos:</span>
-        <button type="button" data-ej="rescatados por estado">rescatados por estado</button>
-        <button type="button" data-ej="trámites por nacionalidad en Chiapas">trámites por nacionalidad en Chiapas</button>
-        <button type="button" data-ej="ingresos de Colombia por mes">ingresos de Colombia por mes</button>
-        <button type="button" data-ej="rechazos de Sudamérica por nacionalidad top 15">rechazos de Sudamérica top 15</button>
-      </div>
-      <div class="q-ent" id="q-ent" aria-label="Lo que se entendió"></div>
-      <div class="q-res" id="q-res" aria-live="polite"></div>
-    </div>
-  </div>
 </div>
 
 <!-- ============ [8] PROGRAMAS ============ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
-<script src="datos/datos.js?v=20261012i"></script>
-<script src="js/geo.js?v=20261012i"></script>
-<script src="js/contexto.js?v=20261012i"></script>
-<script src="js/temporadas.js?v=20261012i"></script>
-<script src="datos/regulacion.js?v=20261012i"></script>
-<script src="js/regulacion.js?v=20261012i"></script>
-<script src="datos/control.js?v=20261012i"></script>
-<script src="js/control.js?v=20261012i"></script>
-<script src="datos/proteccion.js?v=20261012i"></script>
-<script src="js/proteccion.js?v=20261012i"></script>
-<script src="js/app.js?v=20261012i"></script>
+<script src="datos/datos.js?v=20261013i"></script>
+<script src="js/geo.js?v=20261013i"></script>
+<script src="js/contexto.js?v=20261013i"></script>
+<script src="js/temporadas.js?v=20261013i"></script>
+<script src="datos/regulacion.js?v=20261013i"></script>
+<script src="js/regulacion.js?v=20261013i"></script>
+<script src="datos/control.js?v=20261013i"></script>
+<script src="js/control.js?v=20261013i"></script>
+<script src="datos/proteccion.js?v=20261013i"></script>
+<script src="js/proteccion.js?v=20261013i"></script>
+<script src="datos/vocabulario.js?v=20261013i"></script>
+<script src="js/consulta.js?v=20261013i"></script>
+<script src="js/app.js?v=20261013i"></script>
 </body>
 </html>

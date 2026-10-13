@@ -755,5 +755,9 @@ function eventos(cont){
   document.addEventListener('click', e => { if (e.target.closest('[data-cpopx]') || (!e.target.closest('#cv-pop, [data-cinfo]') && popFija)) mostrarInfo(null); });
 }
 let listo = false;
-window.IANAMI_CONTROL = { pintar(cont){ if (!listo){ eventos(cont); listo = true; } montar(cont); } };
+// Recibe filtros desde Pregunta a INAMI («Profundizar en el tablero»): nombres de nacionalidad, O.R. y punto, periodo y vista
+function fijar(p){ const ix = (l, nombres) => (nombres || []).map(n => l.indexOf(n)).filter(i => i>=0);
+  if (p.vista) Q.vista = p.vista; Q.nats = ix(DIC.n, p.nats).slice(0,3); Q.ests = ix(DIC.e, p.ests).slice(0,3); const pt = ix(DIC.p, p.ptos); Q.pto = pt.length===1 ? pt[0] : -1;
+  Q.via = p.via!=null ? p.via : -1; if (p.em) Q.em = p.em; if (p.can) Q.can = p.can; Q.cls = -1; Q.sel = null; if (p.d0 && p.d1){ Q.per = 'pers'; Q.d0 = Math.max(0, diaDe(p.d0)); Q.d1 = Math.min(CV.dias, diaDe(p.d1)+1); if (Q.d1<=Q.d0) Q.d1 = Q.d0+1; } }
+window.IANAMI_CONTROL = { pintar(cont){ if (!listo){ eventos(cont); listo = true; } montar(cont); }, fijar:fijar };
 })();

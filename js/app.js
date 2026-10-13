@@ -1211,108 +1211,18 @@ function marcarFiltro(){
   });
 }
 
-/* ==== [12] VENTANA DE CONSULTA ==================================== */
-// Se escribe la pregunta; la página reconoce indicador, desglose, lugar, nacionalidad y periodo,
-// muestra lo que entendió (editable) y responde con los datos de las bases. Sin servicios externos.
-const Q = { k:'tram', por:'n', s:-1, n:-1, r:'', d0:D.inicio, d1:D.corte, top:10 };
-const SINON = { ing:['ingreso','entrada','internacion'], rech:['rechaz','inadmi'], tram:['tramite','documento','residen','visa'], resc:['rescat','rescate'],
-                pres:['presentad'], can:['canalizad','nna','menores'], ret:['retornad','retorno','deportad'], recib:['recibid'], rep:['repatriad','repatriacion'] };
-function entender(txt){
-  const t = ' '+sinAcento(txt).replace(/[^a-z0-9ñ ]/g,' ').replace(/\s+/g,' ')+' ', q = Object.assign({}, Q, {s:-1, n:-1, r:'', d0:D.inicio, d1:D.corte, top:10});
-  Object.keys(SINON).forEach(k => { if (SINON[k].some(w => t.indexOf(' '+w)>=0)) q.k = k; });
-  const dicho = /por (estado|entidad|oficina)|en que estado|donde/.test(t) ? 'e' : /por mes|mensual|cada mes|por meses/.test(t) ? 'm' : /por (dia|fecha)|diari/.test(t) ? 'd' : /por (nacionalidad|pais|paises|origen)/.test(t) ? 'n' : '';
-  q.por = dicho || 'n';
-  EST.map((e,i) => [sinAcento(e), i]).concat([['cdmx', EST.indexOf('Ciudad de México')], ['edomex', EST.indexOf('Estado de México')]]).sort((a,b) => b[0].length-a[0].length)
-     .some(x => { if (t.indexOf(' '+x[0]+' ')>=0){ q.s = x[1]; return true; } return false; });
-  const alias = [['estados unidos',D.nats.findIndex(x => x[1]===840)], ['eeuu',D.nats.findIndex(x => x[1]===840)], ['eua',D.nats.findIndex(x => x[1]===840)]];
-  D.nats.slice(0,OT).map((x,i) => [sinAcento(x[0]).replace(/\./g,'').trim(), i]).concat(alias).filter(x => x[0].length>3 && x[1]>=0).sort((a,b) => b[0].length-a[0].length)
-     .some(x => { if (t.indexOf(' '+x[0]+' ')>=0 && !(q.s>=0 && sinAcento(EST[q.s]).indexOf(x[0])>=0)){ q.n = x[1]; return true; } return false; });
-  Object.keys(REGIONES).forEach(r => { const w = sinAcento(REGIONES[r][0]).split(' ')[0]; if (t.indexOf(' '+w)>=0) q.r = r; });
-  const anio = t.match(/ (20[12]\d) /), mes = MES12.findIndex(m => new RegExp(' '+m+'[a-z]* ').test(t));
-  if (/sheinbaum/.test(t)) q.d0 = '2024-10-01';
-  if (/trump/.test(t)) q.d0 = '2025-01-20';
-  if (anio){ const y = +anio[1]; if (mes>=0){ q.d0 = isoDe(new Date(y,mes,1)); q.d1 = isoDe(new Date(y,mes+1,0)); } else { q.d0 = y+'-01-01'; q.d1 = y+'-12-31'; } }
-  else if (mes>=0){ const y = fechaBase(D0.dias-1).getFullYear(); q.d0 = isoDe(new Date(y,mes,1)); q.d1 = isoDe(new Date(y,mes+1,0)); }
-  const top = t.match(/ (?:top|principales|primer[oa]s) (\d{1,2}) /); if (top) q.top = Math.max(3, Math.min(50, +top[1]));
-  if (!dicho && q.n>=0) q.por = q.s>=0 ? 'm' : 'e';           // con país y estado elegidos, lo útil es verlo en el tiempo
-  if (!dicho && q.s>=0 && q.n<0 && !IND[q.k].nat) q.por = 'm';
-  if (q.d0<D.inicio) q.d0 = D.inicio; if (q.d1>D.corte) q.d1 = D.corte;   // el rango no puede salir de lo que traen las bases
-  return q;
-}
-// Suma de un indicador en [q0, q1) de las bases completas, con estado y nacionalidad opcionales
-function sumaQ(k, ss, nn, q0, q1){
-  let t = 0;
-  if (ss && nn){ const E0 = D0.ends, L = NS*NN, A = CUBO0[k];        // estado × nacionalidad: por semana, la parte que cae en el rango
-    for (let w=0; w<E0.length; w++){ const a = w ? E0[w-1] : 0, b = E0[w], f = (Math.min(b,q1)-Math.max(a,q0))/(b-a); if (f<=0) continue;
-      ss.forEach(s => nn.forEach(n => { t += A[w*L + s*NN + n]*f; })); }
-    return t; }
-  for (let d=q0; d<q1; d++){
-    if (ss) ss.forEach(s => { t += D0.ds[k][d*NS+s]; });
-    else if (nn) nn.forEach(n => { t += D0.dn[k][d*NN+n]; });
-    else t += D0.daily[k][d]; }
-  return t;
-}
-function responder(q){
-  const q0 = Math.max(0, idxBase(q.d0)), q1 = Math.min(D0.dias, idxBase(q.d1)+1), ss = q.s>=0 ? [q.s] : null, k = q.k, m = IND[k];
-  const nn = !m.nat ? null : q.n>=0 ? [q.n] : q.r ? LISTA_REG[q.r] : null;
-  if (q1<=q0) return { filas:[], tot:0, vacio:'Las bases no tienen datos en ese periodo (cubren del '+fechaISO(D.inicio)+' al '+fechaISO(D.corte)+').' };
-  let filas = [];
-  if (q.por==='n' && m.nat){ for (let n=0;n<OT;n++){ if (q.r && D.nats[n][2]!==q.r) continue; if (q.n>=0 && n!==q.n) continue; const v = sumaQ(k, ss, [n], q0, q1); if (v>0) filas.push([D.nats[n][0], v]); } }
-  else if (q.por==='e'){ for (let s=0;s<NS;s++){ if (q.s>=0 && s!==q.s) continue; const v = sumaQ(k, [s], nn, q0, q1); if (v>0) filas.push([EST[s], v]); } }
-  else { const porMes = q.por==='m', grupos = {};
-    for (let d=q0; d<q1; d++){ const f = fechaBase(d), clave = porMes ? f.getFullYear()*12+f.getMonth() : d; grupos[clave] = (grupos[clave]||0) + sumaQ(k, ss, nn, d, d+1); }
-    filas = Object.keys(grupos).map(Number).sort((a,b)=>a-b).map(c => [porMes ? MES12[c%12]+' '+Math.floor(c/12) : fechaLarga(c-idxBase(isoDe(INICIO))), grupos[c]]); }
-  const orden = q.por==='n' || q.por==='e', suma = filas.reduce((a,b)=>a+b[1],0), tot = q.por==='n' ? sumaQ(k, ss, nn && q.n<0 && !q.r ? null : nn, q0, q1) : suma;
-  if (q.por==='n' && tot-suma >= 1) filas.push(['Sin nacionalidad u otras', tot-suma]);     // empleadores, «Otras» y mexicanos: el total siempre cuadra
-  if (orden) filas.sort((a,b)=>b[1]-a[1]);
-  return { filas: orden ? filas.slice(0, q.top) : filas, todas: filas, tot: tot, resto: orden ? Math.max(0, filas.length-q.top) : 0 };
-}
-function tituloQ(q){
-  const por = {n:'por nacionalidad', e:'por estado', m:'por mes', d:'por día'}[q.por];
-  return nomInd(q.k)+' '+por+(q.s>=0 ? ' · '+EST[q.s] : '')+(q.n>=0 ? ' · '+D.nats[q.n][0] : q.r ? ' · '+REGIONES[q.r][0] : '')+' · '+fechaISO(q.d0)+' – '+fechaISO(q.d1);
-}
-function pintarConsulta(){
-  const q = Q, r = responder(q), c = colG(IND[q.k].g), mx = r.filas.reduce((a,b)=>Math.max(a,b[1]),1);
-  const op = (v, l, sel) => '<option value="'+v+'"'+(sel?' selected':'')+'>'+esc(l)+'</option>';
-  $('q-ent').innerHTML =
-    '<label>Indicador<select data-q="k">'+INDS.map(m => op(m.k, m.n, q.k===m.k)).join('')+'</select></label>'+
-    '<label>Desglose<select data-q="por">'+[['n','por nacionalidad'],['e','por estado'],['m','por mes'],['d','por día']].filter(x => x[0]!=='n' || IND[q.k].nat).map(x => op(x[0], x[1], q.por===x[0])).join('')+'</select></label>'+
-    '<label>Estado<select data-q="s">'+op(-1,'Todo el país',q.s<0)+EST.map((e,i) => op(i, e, q.s===i)).join('')+'</select></label>'+
-    (IND[q.k].nat ? '<label>Nacionalidad<select data-q="n">'+op(-1,'Todas',q.n<0)+D.nats.slice(0,OT).map((x,i)=>[x[0],i]).sort((a,b)=>a[0].localeCompare(b[0],'es')).map(x => op(x[1], x[0], q.n===x[1])).join('')+'</select></label>' : '')+
-    '<label>Desde<input type="date" data-q="d0" value="'+q.d0+'" min="'+D.inicio+'" max="'+D.corte+'"></label><label>Hasta<input type="date" data-q="d1" value="'+q.d1+'" min="'+D.inicio+'" max="'+D.corte+'"></label>';
-  $('q-res').innerHTML = '<div class="q-cab"><div><b>'+esc(tituloQ(q))+'</b><span>Total: <b class="num">'+miles(r.tot)+'</b>'+(r.resto ? ' · se muestran los '+q.top+' principales de '+r.todas.length : '')+'</span></div>'+
-      (r.filas.length ? '<button class="q-csv" id="q-csv">Descargar CSV</button>' : '')+'</div>'+
-    (r.vacio ? '<p class="mini">'+esc(r.vacio)+'</p>' : !r.filas.length ? '<p class="mini">Sin registros con esos criterios.</p>' :
-      '<div class="q-tabla">'+r.filas.map((f,i) => '<div class="barra pc"><span>'+(q.por==='n'||q.por==='e' ? (i+1)+'. ' : '')+esc(f[0])+' <small>'+(r.tot ? (f[1]/r.tot*100).toFixed(1) : 0)+'%</small></span><span class="b"><i style="width:'+(f[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+miles(f[1])+'</span></div>').join('')+'</div>')+
-    '<p class="q-nota">Datos de las bases'+(q.s>=0 && q.n>=0 ? ' · el cruce estado × nacionalidad se guarda por semana: en un rango que corta semanas, esa parte se reparte por día' : '')+'.</p>';
-}
-function abrirConsulta(abrir){
-  $('consulta').hidden = !abrir; document.body.classList.toggle('modal', abrir);
-  if (abrir){ pintarConsulta(); setTimeout(() => $('q-txt').focus(), 30); }
-}
-function descargarCSV(){
-  const r = responder(Q), filas = [['Concepto', IND[Q.k].n]].concat(r.todas.map(f => [f[0], Math.round(f[1])]));
-  const txt = '﻿'+filas.map(f => f.map(x => '"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], {type:'text/csv;charset=utf-8'}));
-  a.download = 'ia-nami_'+sinAcento(tituloQ(Q)).replace(/[^a-z0-9]+/g,'_').slice(0,70)+'.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-}
+/* ==== [12] CONSULTAR Y COMPARTIR ================================== */
+// Pregunta a INAMI vive en js/consulta.js; aquí solo se abre y se le da la navegación hacia los procesos.
 function iniciarConsulta(){
-  $('b-consulta').addEventListener('click', () => abrirConsulta(true));
+  $('b-consulta').addEventListener('click', () => { if (window.IANAMI_CONSULTA) window.IANAMI_CONSULTA.abrir(); });
   $('b-comp').addEventListener('click', e => { e.stopPropagation(); menuComp($('menu-comp').hidden); });
   $('menu-comp').addEventListener('click', e => { const b = e.target.closest('[data-comp]'); if (b) compartir(b.dataset.comp); });
   document.addEventListener('click', e => { if (!e.target.closest('#menu-comp, #b-comp')) menuComp(false); });
-  $('consulta').addEventListener('click', e => {
-    if (e.target.id==='consulta' || e.target.closest('[data-q-cerrar]')){ abrirConsulta(false); return; }
-    const ej = e.target.closest('[data-ej]'); if (ej){ $('q-txt').value = ej.dataset.ej; Object.assign(Q, entender(ej.dataset.ej)); pintarConsulta(); return; }
-    if (e.target.closest('#q-csv')) descargarCSV();
-  });
-  $('q-form').addEventListener('submit', e => { e.preventDefault(); Object.assign(Q, entender($('q-txt').value)); pintarConsulta(); });
-  $('q-ent').addEventListener('change', e => { const x = e.target.dataset.q; if (!x) return;
-    Q[x] = x==='k' || x==='por' ? e.target.value : x==='d0' || x==='d1' ? e.target.value : +e.target.value;
-    if (x==='k' && !IND[Q.k].nat){ Q.n = -1; if (Q.por==='n') Q.por = 'e'; }
-    if (Q.d0>Q.d1){ const t = Q.d0; Q.d0 = Q.d1; Q.d1 = t; } pintarConsulta(); });
-  document.addEventListener('keydown', e => { if (e.key==='Escape' && !$('consulta').hidden) abrirConsulta(false); });
 }
+// Abre un proceso con filtros (los usa «Profundizar en el tablero» de Pregunta a INAMI)
+window.IANAMI_NAV = { ir(k, p){ const i = DIRS.findIndex(d => d.k===k); if (i<0) return; S.dir = i;
+  const M = { control:window.IANAMI_CONTROL, regulacion:window.IANAMI_REGULACION, proteccion:window.IANAMI_PROTECCION }[k];
+  if (M && M.fijar) M.fijar(p || {}); irA('dir'); window.scrollTo(0,0); } };
 
 /* ==== [11] BUSCADOR, SECCIONES Y AVISOS =========================== */
 const INDICE = [];
