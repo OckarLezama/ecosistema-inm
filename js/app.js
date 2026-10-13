@@ -1629,7 +1629,8 @@ function repartos(k, F){ const z = (key) => compSala(key, F);
     if (SALA.perfil!=='regulacion') return [sx];
     const ti = z('tram_tipo').map((x,i) => [CORTO_TRAM(D.tramTipos[i]), x, D.tramTipos[i]]).filter(r => r[2]!=='Otros').sort((a,b) => b[1]-a[1]), T = z('tram_tipo').reduce((a,x) => a+x, 0);
     const tp = ti.slice(0,2).map(r => [r[0], r[1]]).concat([['Otros', T - ti[0][1] - ti[1][1]]]); tp.t = 'Tipo'; tp.propios = true;
-    const r = z('tram_res'), rs = [['Positiva',r[0]],['Negativa',r[1]],['Otra',r[2]]]; rs.t = 'Resolución'; sx.t = 'Sexo'; return [tp, rs, sx]; }
+    const dt = docTram(F), dc = dt ? [['Tarjeta',dt.tar],['Constancia u oficio',dt.co],['Sin expedición',dt.sin]] : null; if (dc) dc.t = 'Documento que salió';
+    const r = z('tram_res'), rs = [['Positiva',r[0]],['Negativa',r[1]],['Otra',r[2]]]; rs.t = 'Resolución'; sx.t = 'Sexo'; return dc ? [dc, tp, sx] : [tp, rs, sx]; }
   if (k==='resc'){ const a = z('resc_rei'), d = z('resc_des'); return [[['Primera vez',a[0]],['Reincidentes',a[1]]], [['A estación migratoria',d[0]],['Al DIF',d[1]],['Sin destino',d[2]]]]; }
   if (k==='rep'){ const v = comp('rep_comp', F.ss, null); return [[['Adultos',v[0]+v[1]],['NNA',v[2]+v[3]]]]; }
   if (k==='rech'){ const v = z('rech_det'), r = [['Internación',v[0]],['Rechazo',v[1]]]; r.t = 'Segunda revisión'; return [r]; }
@@ -1658,6 +1659,16 @@ function panoramaSala(F, t, dur){
       : x[0]==='rech' ? (r => r[1] ? '<div class="sl-ex"><span>Tasa de rechazo <b>'+(r[0]/r[1]*100).toFixed(2)+'%</b> de los que llegan por aire o tierra</span></div>' : '')(rechazoExt(F.ss, F.nd)) : '';
     const html = rp + extra; const c = box.querySelector('.sl-rp'); if (c._h!==html){ c._h = html; c.innerHTML = html; } });
 }
+// Documento que salió de cada trámite (base de DGRAM): tarjetas, constancias y oficios, o sin expedición. Respeta periodo, día del cursor y filtro.
+const RGD = { mapE:null, mapN:null };
+function docTram(F){ const R = window.IANAMI_REG; if (!R || !R.cols) return null; const C = R.cols, off = idxBase(R.inicio), a = P0, b = P0 + Math.min(S.dia, ND);
+  if (!RGD.mapE){ const ie = {}, in_ = {}; EST.forEach((e,i) => ie[sinAcento(e)] = i); D.nats.forEach((x,i) => in_[sinAcento(x[0])] = i);
+    RGD.mapE = R.dic.e.map(e => ie[sinAcento(e)]!=null ? ie[sinAcento(e)] : -1); RGD.mapN = R.dic.n.map(x => in_[sinAcento(x)]!=null ? in_[sinAcento(x)] : -1); }
+  const nl = F.nd==null ? null : (Array.isArray(F.nd) ? F.nd : [F.nd]), v = new Array(R.condiciones.length).fill(0);
+  for (let i=0; i<C.c.length; i++){ const d = off + C.d[i]; if (d<a || d>=b) continue;
+    if (F.ss && F.ss.indexOf(RGD.mapE[C.e[i]])<0) continue; if (nl && nl.indexOf(RGD.mapN[C.n[i]])<0) continue; v[C.c[i]] += C.v ? C.v[i] : 1; }
+  const T = R.tarjetas, tar = v.slice(0,T).reduce((x,y) => x+y, 0), sin = v[v.length-1], otros = v.slice(T, v.length-1).map((x,j) => [R.condiciones[T+j], x]);
+  return { tar:tar, co:otros.reduce((x,y) => x+y[1], 0), sin:sin, otros:otros }; }
 function docsVig(F){ const d = D.docs; if (!d) return [0,0,0];
   if (F.nd!=null && !Array.isArray(F.nd)){ const r = d.nat && d.nat[F.nd]; return r ? r : [0,0,0]; }
   if (F.ss){ return [F.ss.reduce((a,s) => a+(d.est[s]||0), 0), null, null]; }
@@ -1683,7 +1694,8 @@ PERFILES.regulacion = { nom:'Regulación migratoria', ctx:'Panorama: trámites d
   inds:[['', 'Resumen', 'Panorama', 'Trámites y documentos en un vistazo'], ['tram', 'Trámites', 'Trámites', 'Trámites migratorios concluidos']],
   pan:[['tram','Trámites concluidos','reg','en el periodo','Lo que se tramitó en el periodo'], ['docs','Con documento vigente','reg','extranjeros','Lo que hay al corte', DOCS_ITEM]],
   frase:(F, ent, v) => { const r = compSala('tram_res', F), ti = compSala('tram_tipo', F).map((x,i) => [x, D.tramTipos[i]]).filter(x => x[1]!=='Otros').sort((a,b) => b[0]-a[0])[0], dv = docsVig(F)[0];
-    return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' se concluyeron <b>'+v('tram')+' trámites</b>'+(r[0]+r[1] ? ', '+Math.round(r[0]/(r[0]+r[1]+r[2])*100)+'% con resolución positiva' : '')+(ti && ti[0] ? '; el que más se hace es <b>'+esc(CORTO_TRAM(ti[1]).toLowerCase())+'</b>' : '')+
+    const dt = docTram(F), T = dt ? dt.tar+dt.co+dt.sin : 0;
+    return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' se concluyeron <b>'+v('tram')+' trámites</b>'+(T ? ': '+Math.round(dt.tar/T*100)+'% salió con tarjeta y '+Math.round(dt.co/T*100)+'% con constancia u oficio' : (r[0]+r[1] ? ', '+Math.round(r[0]/(r[0]+r[1]+r[2])*100)+'% con resolución positiva' : ''))+(ti && ti[0] ? '; el que más se hace es <b>'+esc(CORTO_TRAM(ti[1]).toLowerCase())+'</b>' : '')+
       '.'+(dv ? ' Al último corte, <b>'+cortoK(dv)+' extranjeros</b> tienen documento migratorio vigente.' : ''); } };
 const perfilSala = () => PERFILES[SALA.perfil] || PERFILES.pulso;
 function frasePanorama(F){
@@ -1736,6 +1748,8 @@ function desgloseSala(k, F, t, dur){
   const nnaT = k==='can' ? l[1][1] : 0;
   l.forEach((x,i) => { const el = G.querySelector('[data-m="'+i+'"]'); if (!el) return; mover(el, x[1], cifraG, dur);
     el.parentNode.querySelector('.d').textContent = x[3] ? (nnaT ? Math.round(x[1]/nnaT*100)+'% de los NNA' : '') : (k==='rech' && i===0) ? 'segunda revisión' : base ? (x[1]/base*100<1 && x[1]>0 ? (x[1]/base*100).toFixed(2) : Math.round(x[1]/base*100))+'% '+(k==='rech' ? 'de los revisados' : 'del total') : ''; });
+  if (k==='tram' && SALA.perfil==='regulacion'){ const dt = docTram(F); let n = G.querySelector('.sl-gn'); if (!n){ n = document.createElement('div'); n.className = 'sl-gn'; G.appendChild(n); }
+    const T = dt ? dt.tar+dt.co+dt.sin : 0; n.innerHTML = T ? 'Documento que salió: <b>'+Math.round(dt.tar/T*100)+'%</b> tarjeta · <b>'+Math.round(dt.co/T*100)+'%</b> constancia u oficio ('+dt.otros.filter(x => x[1]>0).sort((a,b) => b[1]-a[1]).map(x => esc(x[0].toLowerCase().replace('s.r.e.','S.R.E.'))+' '+cortoK(x[1])).join(', ')+') · <b>'+Math.round(dt.sin/T*100)+'%</b> sin expedición' : ''; }
   if (k==='rech'){ const r = rechazoExt(F.ss, F.nd); let n = G.querySelector('.sl-gn'); if (!n){ n = document.createElement('div'); n.className = 'sl-gn'; G.appendChild(n); }
     n.innerHTML = r[1] ? 'Tasa de rechazo: <b>'+(r[0]/r[1]*100).toFixed(2)+'%</b> de los extranjeros que llegan por aire o tierra (sin mexicanos ni cruceros, como en Control migratorio).' : ''; }
 }

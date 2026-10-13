@@ -132,7 +132,9 @@ const FORMAS = ('rescatados rescatadas rescates rescate presentados presentadas 
   'repatriados repatriadas tramites tramite documentos documento retornados deportados recibidos adultos adultas menores mujeres hombres acompanados '+
   'solos separados aereo aerea aereos vuelos terrestre cruceros maritimo nacionalidad nacionalidades estado estados punto puntos estacion estaciones '+
   'oficina oficinas modalidad condicion motivo sexo edad resultado tipo mes meses semana semanas dia dias mensual semanal diario contra comparado '+
-  'sistema sirenna reincidentes primera vez destino visas residentes regularizacion retorno asistido positivos negativos cancelados principales top').split(' ');
+  'sistema sirenna reincidentes primera vez destino visas residentes regularizacion retorno asistido positivos negativos cancelados principales top '+
+  'crecio crecieron crecimiento subio subieron aumento aumentaron incremento disminuyo disminuyeron disminucion cayo cayeron caida bajaron variacion cambio cambiaron cambios '+
+  'mayor menor trimestre quincena segunda tercer porque dos tres cuatro cinco seis').split(' ');
 let DICC = null;   // palabras conocidas, se arma la primera vez
 function diccionario(){
   if (DICC) return DICC; const w = new Set(FORMAS.concat(MES));
@@ -172,6 +174,8 @@ function entender(txt){
   const tomaRaiz = r => { const m = t.match(new RegExp(' ('+r+'[a-zñ]*)')); if (!m) return false; return toma(m[1]); };
   const tomaTodo = r => { let k = 0; while (tomaRaiz(r)) k++; return k>0; };
   const filtro = (dim, i, at) => { q.filtros[dim] = q.filtros[dim] || []; if (q.filtros[dim].indexOf(i)<0 && q.filtros[dim].length<3){ q.filtros[dim].push(i); pos[dim+':'+i] = at; } };
+  // 0. quincena: se lee antes que todo («primera» no es «vuelos PRIM»)
+  const quin = t.match(/ (primera|segunda) quincena /); if (quin){ toma(quin[1]); toma('quincena'); }
   // 1. indicador: el que aparece primero; se consume solo esa palabra (las demás pueden ser partes, como «deportados»)
   const cand = IND.map(x => { let at = 1e9, w = ''; x.sin.forEach(s => { const m = t.match(new RegExp(' ('+s+'[a-zñ]*)')); if (m && m.index<at){ at = m.index; w = m[1]; } }); return [x, at, w]; }).filter(x => x[1]<1e9).sort((a,b) => a[1]-b[1]);
   if (cand.length){ q.ind = cand[0][0].k; toma(cand[0][2]);
@@ -196,13 +200,32 @@ function entender(txt){
   if (B.dims.n) Object.keys(GENT).forEach(g => { const m = t.match(new RegExp(' ('+g+'[a-zñ]*)')); if (m){ const i = B.dims.n.vals.indexOf(GENT[g]); if (i>=0){ filtro('n', i, m.index); toma(m[1]); } } });
   if (B.dims.doc) DOCK.forEach(([w,txt]) => { const m = t.match(new RegExp(' ('+w+'[a-zñ]*)')); if (m){ const i = B.dims.doc.vals.findIndex(v => v.indexOf(txt)>=0); if (i>=0){ filtro('doc', i, m.index); toma(m[1]); tomaRaiz('visa') || tomaRaiz('tarjeta') || tomaRaiz('residen'); } } });
   Object.keys(q.filtros).forEach(d => q.filtros[d].sort((a,b) => pos[d+':'+a]-pos[d+':'+b]));
-  // 5. periodo
-  const anio = t.match(/ (20\d\d) /), mes = MES.findIndex(m => t.indexOf(' '+m+' ')>=0);
-  if (mes>=0){ toma(MES[mes]); const y = anio ? +anio[1] : fecha0(FIN).getFullYear(); if (anio) toma(anio[1]); q.d0 = iso(new Date(y, mes, 1)); q.d1 = iso(new Date(y, mes+1, 0)); }
+  // 5. periodo (uno o dos meses; con dos meses se comparan)
+  const anio = t.match(/ (20\d\d) /), finB = fecha0(finBase(B)), ms = MES.map((m,i) => [i, t.indexOf(' '+m+' ')]).filter(x => x[1]>=0).sort((a,b) => a[1]-b[1]), mes = ms.length ? ms[0][0] : -1;
+  const rangoMes = m => { let y = anio ? +anio[1] : finB.getFullYear(); if (!anio && new Date(y, m, 1)>finB) y--; return [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))]; };
+  if (ms.length>=2){ ms.forEach(x => toma(MES[x[0]])); if (anio) toma(anio[1]); const r2 = ms.slice(0,2).map(x => rangoMes(x[0])).sort((a,b) => a[0]<b[0] ? -1 : 1); q.cmpA = r2[0]; q.d0 = r2[1][0]; q.d1 = r2[1][1]; q.dir = 'ambos'; }
+  else if (mes>=0){ toma(MES[mes]); if (anio) toma(anio[1]); const r1 = rangoMes(mes); q.d0 = r1[0]; q.d1 = r1[1];
+    if (quin){ if (quin[1]==='primera') q.d1 = sumaDias(q.d0, 14); else q.d0 = sumaDias(q.d0, 15); } }
   else if (anio){ toma(anio[1]); q.d0 = anio[1]+'-01-01'; q.d1 = anio[1]+'-12-31'; }
   if (toma('sheinbaum')){ q.d0 = '2024-10-01'; }
   if (/ ultim[oa] mes /.test(t)){ tomaRaiz('ultim'); toma('mes'); q.d0 = iso(new Date(fecha0(FIN).getFullYear(), fecha0(FIN).getMonth(), 1)); }
   if (/ ultima semana /.test(t)){ tomaRaiz('ultim'); toma('semana'); q.d0 = sumaDias(FIN, -6); }
+  const NUM = { dos:2, tres:3, cuatro:4, cinco:5, seis:6 }, rel = t.match(/ ultim[oa]s (\d{1,3}|dos|tres|cuatro|cinco|seis) (dias|semanas|meses) /);
+  if (rel){ const k = NUM[rel[1]] || +rel[1]; tomaRaiz('ultim'); toma(rel[1]); toma(rel[2]); const f = finBase(B);
+    if (rel[2]==='dias'){ q.d0 = sumaDias(f, -(k-1)); } else if (rel[2]==='semanas'){ q.d0 = sumaDias(f, -(7*k-1)); } else { const x = fecha0(f); q.d0 = iso(new Date(x.getFullYear(), x.getMonth()-k+1, 1)); } q.d1 = f; }
+  if (/ ultimo trimestre /.test(t)){ tomaRaiz('ultim'); toma('trimestre'); const x = fecha0(finBase(B)); q.d0 = iso(new Date(x.getFullYear(), x.getMonth()-2, 1)); q.d1 = finBase(B); }
+  // 5b. cambio: «qué nacionalidad creció más», «cuáles bajaron», «cambio en noviembre»
+  const PAL = / (crecio|crecieron|crecimiento|subio|subieron|aumento|aumentaron|incremento|disminuyo|disminuyeron|disminucion|cayo|cayeron|caida|bajaron|variacion|cambio|cambiaron|cambios) /, cm = t.match(PAL);
+  if (cm || q.cmpA){ if (cm){ toma(cm[1]); while (t.match(PAL)) toma(t.match(PAL)[1]); }
+    if (!q.dir) q.dir = cm && /(disminu|cay|caida|bajaron)/.test(cm[1]) ? 'baja' : cm && /(crec|sub|aument|increment)/.test(cm[1]) ? 'sube' : 'ambos';
+    if (!q.cmpA){ const fb = fecha0(q.d1<finBase(B) ? q.d1 : finBase(B)); let y = fb.getFullYear(), m = fb.getMonth();
+      if (mes<0 && iso(new Date(y, m+1, 0))>finBase(B)){ m--; if (m<0){ m = 11; y--; } }          // sin mes dicho: el último mes completo
+      if (mes<0){ q.d0 = iso(new Date(y, m, 1)); q.d1 = iso(new Date(y, m+1, 0)); }
+      const a = fecha0(q.d0); q.cmpA = [iso(new Date(a.getFullYear(), a.getMonth()-1, 1)), iso(new Date(a.getFullYear(), a.getMonth(), 0))]; }
+    [['nacionalidad','n'],['nacionalidades','n'],['pais','n'],['paises','n'],['o r','e'],['estado','e'],['estados','e'],['entidad','e'],['punto','p'],['puntos','p'],['estacion','est'],['estaciones','est'],['oficina','of'],['oficinas','of']]
+      .forEach(([w,d]) => { if (!q.desg && t.indexOf(' '+w+' ')>=0 && B.dims[d]){ toma(w); q.desg = d; } }); }
+  // 5c. «por qué»: se responde con cifras, no con causas
+  if (/ (porque|por que) /.test(' '+norm(txt)+' ') && /^\s*(por que|porque)/.test(norm(txt))){ toma('porque'); avisos.push('Pregunta a INAMI responde con las cifras de las bases; no explica causas. Para lo que pasó en un país, elige la nacionalidad en el Pulso y revisa su Contexto.'); }
   // 6. comparar, fuente y top
   if (/ (sistema|sirenna) /.test(t) && q.ind==='resc'){ q.fuente = 'cmp'; toma('sistema'); toma('sirenna'); tomaRaiz('compar'); }
   if (/ (vs|contra|comparad|compara|frente a) /.test(t)){ q.cmp = true; ['vs','contra','frente'].forEach(w => { while (toma(w)); }); tomaRaiz('compar'); }
@@ -219,8 +242,9 @@ function entender(txt){
   let resto = t.split(' ').filter(w => w && !/^_+$/.test(w) && !VACIAS.has(w) && !/^\d+$/.test(w));
   if (resto.length){ const inv = {}; pre.fix.forEach(f => { inv[f[1]] = f[0]; }); pre.fix = pre.fix.filter(f => resto.indexOf(f[1])<0); resto = resto.map(w => inv[w] || w); }
   if (resto.length) avisos.unshift('No reconocí: «'+resto.join(' ')+'». La respuesta no lo toma en cuenta.');
-  if (!cand.length) avisos.unshift('No reconocí qué quieres ver; se muestra '+ind.nom+'. Elígelo en «Qué».');
-  limitar(q); q.avisos = avisos; q.entendi = usado; q.fix = pre.fix; return q;
+  if (!cand.length) avisos.unshift('No reconocí qué quieres ver; se muestra '+ind.nom+'. Elígelo en «Qué» o prueba una de las sugerencias.');
+  limitar(q);
+  if (!cand.length){ const fx = fraseFiltros(q), per = mes>=0 ? ' en '+MES[mes] : ''; q.sugs = ['rescatados','internaciones','NNA canalizados'].map(x => x+(fx ? ' '+fx : '')+per); } q.avisos = avisos; q.entendi = usado; q.fix = pre.fix; return q;
 }
 
 /* ==== [5] HOJA (plantillas) ======================================= */
@@ -233,7 +257,7 @@ const minus = s => String(s).split(' ').map(w => /^[A-ZÁÉÍÓÚÑ.]{2,}$/.test
 // NNA: cifras de 1 a 4 se publican como «menos de 5» para no identificar a nadie
 const cifra = (v, nna) => nna && v>0 && v<5 ? 'menos de 5' : miles(v);
 
-function nuevaQ(){ return { ind:IND[0].k, partes:[], desg:'', gran:'auto', filtros:{}, d0:INI, d1:FIN, cmp:false, top:10, fuente:'or', fmt:'h' }; }
+function nuevaQ(){ return { ind:IND[0].k, partes:[], desg:'', gran:'auto', filtros:{}, d0:INI, d1:FIN, cmp:false, top:10, fuente:'or', fmt:'h', cmpA:null, dir:'' }; }
 // Ajusta la consulta a lo que existe: rango dentro de la base, partes y desglose válidos
 function limitar(q){
   const ind = INDK[q.ind], B = BASES[ind.b];
@@ -242,8 +266,10 @@ function limitar(q){
   Object.keys(q.filtros).forEach(k => { if (!B.dims[k] || !q.filtros[k].length) delete q.filtros[k]; });
   if (q.d0<B.inicio) q.d0 = B.inicio; if (q.d1>finBase(B)) q.d1 = finBase(B); if (q.d1<q.d0) q.d1 = q.d0;
   if (!(q.ind==='resc' && q.partes.some(k => k==='pre' || k==='can'))) q.fuente = 'or';
+  if (q.cmpA){ if (q.cmpA[0]<B.inicio) q.cmpA[0] = B.inicio; if (q.cmpA[1]>=q.d0) q.cmpA[1] = sumaDias(q.d0, -1); if (q.cmpA[1]<q.cmpA[0]) q.cmpA = null; }
+  if (q.desg==='t' && q.cmpA) q.desg = '';
 }
-const plantilla = q => q.fuente==='cmp' ? 'fuentes' : q.partes.length ? 'prop' : q.desg==='t' ? 'tiempo' : q.cmp && Object.values(q.filtros).some(v => v.length>=2) ? 'comp' : 'rank';
+const plantilla = q => q.fuente==='cmp' ? 'fuentes' : q.cmpA ? 'cambio' : q.partes.length ? 'prop' : q.desg==='t' ? 'tiempo' : q.cmp && Object.values(q.filtros).some(v => v.length>=2) ? 'comp' : 'rank';
 // Dimensiones de las listas: la elegida y una segunda útil
 function dimsLista(q, base){ const B = BASES[INDK[q.ind].b], orden = (q.partes.length ? ['e','n'] : ['n','e']).concat(['p','est','mod','doc','via','cond','mot','sexo','edad','tipo','of','res']);
   const l = []; if (q.desg && q.desg!=='t') l.push(q.desg);
@@ -267,9 +293,24 @@ function calcular(q){
     r.cdim = dim; r.cols = q.filtros[dim].map((v,j) => { const f = Object.assign({}, q.filtros, { [dim]:[v] }), o = Object.assign({}, base, { filtros:f });
       return { nom:B.dims[dim].vals[v], col:COLV[j], v:total(o), serie:serie(o, r.Cc || (r.Cc = cubetas(q.d0, q.d1, 'auto'))), antes:r.antes!=null ? total(Object.assign({}, o, { d0:a0, d1:a1 })) : null, top: otra ? porDim(o, otra).slice(0,3).map(([k,x]) => [B.dims[otra].vals[k], x]) : [], otra:otra ? B.dims[otra].nom : '' }; }); }
   if (r.tipo==='fuentes') fuentes(r);
+  if (r.tipo==='cambio') cambio(r);
   r.nomF = ind.nom+(fraseFiltros(q, r.cdim) ? ' '+fraseFiltros(q, r.cdim) : '');
-  r.hallazgo = hallazgo(r);
+  r.hallazgo = r.tipo==='cambio' ? '' : hallazgo(r);
+  r.resp = respuesta(r);
   return r;
+}
+// Cambio entre dos periodos (por día, así pueden durar distinto): total y por la dimensión elegida
+function cambio(r){
+  const q = r.q, B = r.B, A = q.cmpA, baseA = Object.assign({}, r.base, { d0:A[0], d1:A[1] }), dA = difDias(A[0], A[1])+1, dB = difDias(q.d0, q.d1)+1;
+  const dim = q.desg && q.desg!=='t' ? q.desg : (dimsLista(Object.assign({}, q, { desg:'' }), r.base)[0] || null), tA = total(baseA);
+  const c = { A:A, dA:dA, dB:dB, tA:tA, tB:r.total, dim:dim, nomDim:dim ? B.dims[dim].nom : '', filas:[] };
+  if (dim){ const mA = new Map(porDim(baseA, dim)), mB = new Map(porDim(r.base, dim)), ks = new Set([...mA.keys(), ...mB.keys()]), umbral = Math.max(20, tA*0.005);
+    ks.forEach(k => { const vA = mA.get(k) || 0, vB = mB.get(k) || 0; if (vA<umbral && vB<umbral) return; const a = vA/dA, b = vB/dB;
+      c.filas.push({ nom:B.dims[dim].vals[k], vA:vA, vB:vB, a:a, b:b, d:b-a, pct:vA>=umbral ? (b/a-1)*100 : null }); });
+    const conP = c.filas.filter(f => f.pct!=null);
+    c.filas = q.dir==='sube' ? conP.filter(f => f.pct>0).sort((x,y) => y.pct-x.pct) : q.dir==='baja' ? conP.filter(f => f.pct<0).sort((x,y) => x.pct-y.pct) : conP.sort((x,y) => Math.abs(y.d)-Math.abs(x.d));
+    c.nuevos = q.dir!=='baja' ? [...ks].filter(k => (mA.get(k) || 0)<umbral && (mB.get(k) || 0)>=umbral*2).map(k => B.dims[dim].vals[k]) : []; }
+  r.cam = c; if (r.listas.length && dim && r.listas[0].dim!==dim) r.listas.unshift({ dim:dim, nom:B.dims[dim].nom, filas:[] });
 }
 // Rescatados (O.R.) contra presentados del sistema y canalizados de SIRENNA, por O.R. y nacionalidad
 function fuentes(r){
@@ -283,6 +324,23 @@ function fuentes(r){
     const b = new Map(porDim(o2, dim).map(([k,v]) => [BASES[B2].dims[dim].vals[k], v]));
     return [...a.entries()].sort((x,y) => y[1]-x[1]).slice(0,5).map(([nom,v]) => ({ nom:nom, or:v, sis:b.get(nom) || 0 })); };
   r.fl = [{ nom:'Por O.R.', filas:idx('e','pre',oPre) }, { nom:'Por nacionalidad', filas:idx('n','pre',oPre) }];
+}
+// Respuesta en una frase: lo que preguntaste, contestado arriba de la hoja
+// Un mes completo se nombra como mes («diciembre 2024»); cualquier otro rango, con sus fechas
+const nomPer = (a, b) => { const x = fecha0(a), y = fecha0(b); return a.slice(8)==='01' && x.getMonth()===y.getMonth() && x.getFullYear()===y.getFullYear() && fecha0(sumaDias(b, 1)).getDate()===1 ? MES[x.getMonth()]+' '+x.getFullYear() : rangoTxt(a, b); };
+const pct1 = x => (x>=0 ? '+' : '−')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%';
+function respuesta(r){
+  const q = r.q, T = r.total, nna = r.ind.nna, nf = esc(r.nomF), rg = rangoTxt(q.d0, q.d1), dias = difDias(q.d0, q.d1)+1, L = r.listas[0];
+  if (!T && r.tipo!=='cambio') return 'No hay registros de '+nf+' del '+rg+'.';
+  const vsAntes = r.antes!=null && r.antes>=30 ? ', '+Math.abs((T/r.antes-1)*100).toFixed(0)+'% '+(T>=r.antes ? 'más' : 'menos')+' que en los '+dias+' días anteriores' : '';
+  if (r.tipo==='cambio'){ const c = r.cam, a = c.tA/c.dA, b = c.tB/c.dB, f0 = c.filas[0], mov = q.dir==='baja' ? 'bajó' : q.dir==='sube' ? 'subió' : 'cambió';
+    return cap(nf)+' por día: <b>'+cifra(a, nna)+'</b> ('+nomPer(c.A[0], c.A[1])+') → <b>'+cifra(b, nna)+'</b> ('+nomPer(q.d0, q.d1)+')'+(a ? ', '+pct1((b/a-1)*100) : '')+'.'+
+      (f0 ? ' Lo que más '+mov+': <b>'+esc(f0.nom)+'</b> ('+(f0.pct!=null ? pct1(f0.pct) : '')+(q.dir==='ambos' ? ', '+(f0.d>=0 ? '+' : '−')+cifra(Math.abs(f0.d), nna)+' por día' : '')+').' : (c.dim ? ' Ninguna '+min(c.nomDim)+' '+(q.dir==='baja' ? 'bajó' : 'subió')+' con volumen suficiente.' : '')); }
+  if (r.tipo==='prop' && r.partes.length) return 'De <b>'+cifra(T, nna)+'</b> '+nf+' ('+rg+'), '+r.partes.map(x => '<b>'+cifra(x.v, nna)+'</b> '+esc(minus(x.p.nom))+(T>=30 ? ' ('+deCien(x.v, T)+' de cada 100)' : '')).join(' y ')+'.';
+  if (r.tipo==='comp') return r.cols.map(c => esc(c.nom)+': <b>'+cifra(c.v, nna)+'</b>').join(' · ')+' ('+rg+').';
+  if (r.tipo==='fuentes') return 'Rescatados presentados según las O.R.: <b>'+miles(r.v.pre)+'</b>; en el sistema: <b>'+miles(r.sis.pre)+'</b>. Canalizados según las O.R.: <b>'+miles(r.v.can)+'</b>; en SIRENNA: <b>'+miles(r.sis.nna+r.sis.adu)+'</b>.';
+  const lider = L && L.filas.length>1 && r.tipo!=='tiempo' ? ' Encabeza <b>'+esc(L.filas[0].nom)+'</b> con '+cifra(L.filas[0].v, nna)+' ('+deCien(L.filas[0].v, T)+'%).' : '';
+  return '<b>'+cifra(T, nna)+'</b> '+nf+' del '+rg+' ('+cifra(T/dias, nna)+' por día)'+vsAntes+'.'+lider;
 }
 // Hallazgo automático: solo si hay algo notable; nunca causas
 function hallazgo(r){
@@ -316,6 +374,7 @@ function fraseFiltros(q, quitar){
 }
 function titulo(r){
   const q = r.q, ind = r.ind, L = r.listas[0], f = fraseFiltros(q, r.tipo==='comp' ? r.cdim : null), sf = f ? ' '+f : '';
+  if (r.tipo==='cambio'){ const c = r.cam, nm = x => nomPer(x[0], x[1]); return 'Cambio en '+ind.nom+sf+(c.dim ? ', por '+min(c.nomDim) : '')+': '+nm([q.d0, q.d1])+' contra '+nm(c.A); }
   if (r.tipo==='prop' || r.tipo==='fuentes'){ const ps = r.partes.map(x => x.p.q); return 'De '+ind.art+' '+ind.nom+sf+', ¿'+ind.cu+' '+ps.join(' y ¿'+ind.cu+' ').replace(/ y ¿/g,' y ')+'?'; }
   if (r.tipo==='tiempo') return cap(ind.nom)+sf+(sf ? ', por ' : ' por ')+{d:'día',s:'semana',m:'mes'}[r.C.g];
   if (r.tipo==='comp') return cap(ind.nom)+': '+r.cols.map(c => c.nom).join(' contra ')+(f ? ' ('+f.replace(/^· /,'')+')' : '');
@@ -371,6 +430,17 @@ function opLinea(C, series, nna, banda){
   return { grid:{ left:48, right:16, top:series.length>1 ? 30 : 16, bottom:28 }, legend:series.length>1 ? { top:0, right:0, icon:'roundRect', itemWidth:14, itemHeight:4, textStyle:{ fontSize:11 }, data:series.map(s => s.nom) } : { show:false },
     tooltip:{ trigger:'axis', formatter:ps => '<b>'+nomCub(C, ps[0].dataIndex)+'</b><br>'+ps.filter(p => p.seriesName.indexOf('banda')<0).map(p => p.marker+esc(p.seriesName)+': <b>'+cifra(typeof p.value==='object' ? p.value.value : p.value, nna)+'</b>').join('<br>') },
     xAxis:eje({ type:'category', data:lab, boundaryGap:false, axisLabel:{ interval:'auto', hideOverlap:true } }), yAxis:eje({ type:'value', axisLabel:{ formatter:v => corto(v) } }), series:out }; }
+// Cambio (%): barras divergentes, verde si sube y rojo si baja
+function opCambio(l){ const v = l.map(f => +f.pct.toFixed(1)), mx = Math.max(10, ...v.map(Math.abs)), todosSuben = v.every(x => x>=0), todosBajan = v.every(x => x<=0);
+  return { grid:{ left:8, right:46, top:6, bottom:6, containLabel:true }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => { const f = l[p[0].dataIndex]; return '<b>'+esc(f.nom)+'</b><br>'+corto(f.a)+' → '+corto(f.b)+' por día<br>'+pct1(f.pct); } },
+    xAxis:eje({ type:'value', min:todosSuben ? 0 : -mx*1.1, max:todosBajan ? 0 : mx*1.1, axisLabel:{ formatter:x => Math.round(x)+'%' } }), yAxis:eje({ type:'category', inverse:true, data:l.map(f => f.nom), splitLine:{ show:false }, axisLabel:{ color:'#2B2926', fontSize:11 } }),
+    series:[{ type:'bar', barMaxWidth:18, data:v.map(x => ({ value:x, itemStyle:{ color:x>=0 ? VERDE : ROJO, borderRadius:x>=0 ? [0,3,3,0] : [3,0,0,3] } })),
+      label:{ show:true, position:'right', fontSize:10.5, fontWeight:600, color:'#2B2926', formatter:p => pct1(p.value) } }] }; }
+// Antes y después, por día
+function opAB(l, nna, nA, nB){ return { grid:{ left:8, right:40, top:24, bottom:6, containLabel:true }, legend:{ top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11 }, data:[nA, nB] },
+  tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } }, xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:l.map(f => f.nom), splitLine:{ show:false }, axisLabel:{ color:'#2B2926', fontSize:11 } }),
+  series:[{ name:nA, type:'bar', barMaxWidth:9, data:l.map(f => +f.a.toFixed(1)), itemStyle:{ color:'#B7C2BD' } }, { name:nB, type:'bar', barMaxWidth:9, data:l.map(f => +f.b.toFixed(1)), itemStyle:{ color:VERDE },
+    label:{ show:true, position:'right', fontSize:9.5, formatter:p => etiq(p.value, nna) } }] }; }
 // Fuentes: cuántos registra el sistema por cada 100 que reporta la O.R.
 function opIndice(filas){ return { grid:{ left:8, right:40, top:6, bottom:6, containLabel:true }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => { const f = filas[p[0].dataIndex]; return '<b>'+esc(f.nom)+'</b><br>Reporte O.R.: '+miles(f.or)+'<br>Sistema: '+miles(f.sis); } },
   xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:filas.map(f => f.nom), splitLine:{ show:false }, axisLabel:{ color:'#2B2926', fontSize:11 } }),
@@ -420,6 +490,17 @@ function hoja(r, fmt, angosta){
     cuerpo = (r.Cc.l.length>1 ? tarjetaCh(mk(opLinea(r.Cc, r.cols.map(c => ({ nom:c.nom, v:c.serie, col:c.col })), nna, false)), 'Por '+{d:'día',s:'semana',m:'mes'}[r.Cc.g], 'cada línea es uno de los comparados') : '')+
              (opG ? tarjetaCh(mk(opG), otra+' principal', 'de cada uno de los comparados') : '');
   }
+  else if (r.tipo==='cambio'){
+    const c = r.cam, a = c.tA/c.dA, b = c.tB/c.dB, nA = cap(nomPer(c.A[0], c.A[1])), nB = cap(nomPer(q.d0, q.d1));
+    eti = cap(r.ind.nom)+(fraseFiltros(q) ? ' '+fraseFiltros(q) : '')+' · por día';
+    kpis = tarjeta(nA, 'antes', cifra(a, nna), cifra(c.tA, nna)+' en '+c.dA+' días', SALVIA)+tarjeta(nB, 'después', cifra(b, nna), cifra(c.tB, nna)+' en '+c.dB+' días', '#2B2926', true)+
+           tarjeta('Cambio por día', '', a ? pct1((b/a-1)*100) : '—', a ? (b>=a ? 'más' : 'menos')+' que antes' : 'sin registros antes', b>=a ? VERDE : ROJO);
+    const l = c.filas.slice(0, fmt==='v' ? 6 : 10);
+    cuerpo = c.dim && l.length ? tarjetaCh(mk(opCambio(l)), 'Cambio por '+min(c.nomDim), (q.dir==='sube' ? 'las que más subieron' : q.dir==='baja' ? 'las que más bajaron' : 'las de mayor cambio')+' · % por día · solo con volumen suficiente')+
+               tarjetaCh(mk(opAB(l, nna, nA, nB)), 'Por día, antes y después', 'mismas '+min(c.nomDim)+(c.nuevos && c.nuevos.length ? ' · aparecen: '+esc(c.nuevos.slice(0,3).join(', ')) : ''))
+             : '<div class="cq-vacio">'+(c.dim ? 'Ninguna '+min(c.nomDim)+' cumple con volumen suficiente para comparar.' : 'Esta base no tiene un desglose para comparar.')+'</div>';
+    una = !(c.dim && l.length);
+  }
   else if (r.tipo==='fuentes'){
     eti = 'Rescatados'+(fraseFiltros(q) ? ' '+fraseFiltros(q) : '')+' · reporte de las O.R. comparado con el sistema';
     const sir = r.sis.nna+r.sis.adu;
@@ -459,7 +540,7 @@ function dibujar(cont, ops, anim){
 /* ==== [6] VENTANA ================================================== */
 const $ = id => document.getElementById(id);
 let Q = null, R = null, abierto = false, GR = [], menuDe = null;
-const EJ = ['de los rescatados cuántos fueron canalizados', 'NNA de Colombia por O.R.', 'repatriados por punto en noviembre', 'internaciones de Venezuela contra Colombia'];
+const EJ = ['de los rescatados cuántos fueron canalizados', 'NNA de Colombia por O.R.', 'qué nacionalidad de rescatados creció más', 'internaciones noviembre contra diciembre'];
 function montar(){
   if ($('cq')) return;
   const m = document.createElement('div'); m.id = 'cq'; m.className = 'cq'; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); m.setAttribute('aria-labelledby','cq-t'); m.hidden = true;
@@ -493,7 +574,8 @@ function pintar(){
   R = calcular(Q); if (!deshaciendo){ const k = JSON.stringify(Q); if (HIST[HIST.length-1]!==k) HIST.push(k); if (HIST.length>30) HIST.shift(); } $('cq-inicio').hidden = true; $('cq-res').hidden = false; $('cq-caja').classList.add('con');
   pintarFrase();
   const fix = (Q.fix || []).map(x => 'Entendí «'+x[0]+'» como «'+x[1]+'».'), av = fix.concat(R.avisos);
-  $('cq-av').innerHTML = av.length ? '<div class="cq-avisos">'+av.map(a => '<div>'+esc(a)+'</div>').join('')+'</div>' : '';
+  $('cq-av').innerHTML = (R.resp ? '<p class="cq-resp">'+R.resp+'</p>' : '')+(av.length ? '<div class="cq-avisos">'+av.map(a => '<div>'+esc(a)+'</div>').join('')+'</div>' : '')+
+    (Q.sugs && Q.sugs.length ? '<div class="cq-ej cq-quis"><span>¿Quisiste decir?</span>'+Q.sugs.map(e => '<button type="button" data-cqej="'+esc(e)+'">'+esc(e)+'</button>').join('')+'</div>' : '');
   document.querySelectorAll('[data-cqfmt]').forEach(b => b.classList.toggle('on', b.dataset.cqfmt===Q.fmt));
   $('cq-ir').textContent = 'Profundizar en el tablero ›'; $('cq-ir').title = 'Abre '+R.ind.proc+' con esta consulta'; $('cq-nt').textContent = notaTablero();
   const hw = $('cq-hw'); hw.className = 'cq-hw'+(Q.fmt==='v' ? ' vert' : ''); GR.forEach(c => c.dispose());
@@ -516,6 +598,7 @@ function pintarFrase(){
   if (vivos.some(d => prin.indexOf(d)<0)) h += pz('fil', '+ más filtros', 'mas', true);
   const dsc = Q.desg==='t' ? { auto:'tiempo', d:'día', s:'semana', m:'mes' }[Q.gran] : Q.desg ? min(B.dims[Q.desg].nom) : (R.listas[0] ? min(R.listas[0].nom) : 'sin desglose');
   h += '<span class="cq-cj">por</span>'+pz('desg', esc(dsc))+'<span class="cq-cj">·</span>'+pz('per', esc(rangoTxt(Q.d0, Q.d1)));
+  if (Q.cmpA) h += '<span class="cq-cj">contra</span><button type="button" class="cq-pz fil" data-cqsincmp title="Quitar la comparación">'+esc(rangoTxt(Q.cmpA[0], Q.cmpA[1]))+' <small>×</small></button>';
   if (Object.values(Q.filtros).some(v => v.length>=2)) h += '<button type="button" class="cq-pz'+(Q.cmp ? ' on' : '')+'" data-cqcmp>'+(Q.cmp ? '✓ ' : '')+'lado a lado</button>';
   if (Q.ind==='resc' && Q.partes.some(k => k==='pre' || k==='can')) h += pz('fte', Q.fuente==='cmp' ? 'comparado con el sistema' : 'según el reporte de las O.R.');
   $('cq-frase').innerHTML = h;
@@ -552,7 +635,8 @@ function elegir(k, v){
   else if (k==='desg'){ if (v.startsWith('t:')){ Q.desg = 't'; Q.gran = v.slice(2); } else Q.desg = v; }
   else if (k==='per'){ if (v==='todo'){ Q.d0 = B.inicio; Q.d1 = finBase(B); } else if (v==='pers'){ const a = $('cq-d0').value, b = $('cq-d1').value; if (a && b){ Q.d0 = a<b ? a : b; Q.d1 = a<b ? b : a; } } else { Q.d0 = v; Q.d1 = iso(new Date(fecha0(v).getFullYear(), fecha0(v).getMonth()+1, 0)); } }
   else if (k==='fte') Q.fuente = v;
-  Q.avisos = []; Q.fix = []; cerrarMenu(); limitar(Q); pintar();
+  if (k==='per' && Q.cmpA){ const n = difDias(Q.d0, Q.d1)+1, a = fecha0(Q.d0); Q.cmpA = Q.d0.slice(8)==='01' && n>=28 ? [iso(new Date(a.getFullYear(), a.getMonth()-1, 1)), iso(new Date(a.getFullYear(), a.getMonth(), 0))] : [sumaDias(Q.d0, -n), sumaDias(Q.d0, -1)]; }
+  Q.avisos = []; Q.fix = []; Q.sugs = []; cerrarMenu(); limitar(Q); pintar();
 }
 // Sugerencias mientras se escribe: completan la última palabra con lo que existe en las bases
 let SUG = [], sAct = 0;
@@ -586,8 +670,9 @@ function clic(e){
   cerrarMenu();
   if ((b = T('[data-cqej]'))){ consultar(entender(b.dataset.cqej)); return; }
   if ((b = T('[data-cqquita]'))){ const [k,i] = b.dataset.cqquita.split(':'); Q.filtros[k] = Q.filtros[k].filter(x => x!==+i); if (!Q.filtros[k].length) delete Q.filtros[k]; Q.avisos = []; Q.fix = []; pintar(); return; }
-  if ((b = T('[data-cqquitap]'))){ Q.partes = Q.partes.filter(k => k!==b.dataset.cqquitap); Q.avisos = []; Q.fix = []; limitar(Q); pintar(); return; }
+  if ((b = T('[data-cqquitap]'))){ Q.partes = Q.partes.filter(k => k!==b.dataset.cqquitap); Q.avisos = []; Q.fix = []; Q.sugs = []; limitar(Q); pintar(); return; }
   if (T('[data-cqcmp]')){ Q.cmp = !Q.cmp; pintar(); return; }
+  if (T('[data-cqsincmp]')){ Q.cmpA = null; Q.dir = ''; Q.avisos = []; limitar(Q); pintar(); return; }
   if ((b = T('[data-cqfmt]'))){ Q.fmt = b.dataset.cqfmt; pintar(); return; }
   if ((b = T('[data-cqacc]'))) accion(b.dataset.cqacc);
   if (T('[data-cqdes]')){ deshacer(); return; }

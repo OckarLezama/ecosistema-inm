@@ -75,7 +75,7 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 
 - Control migratorio y Regulación migratoria tienen su botón «Pantalla completa» junto al título. Usan la misma pieza que el Pulso (js/app.js, sección [13], objeto PERFILES): cada perfil define su panorama, sus indicadores, su frase y qué se compara. Protección al migrante se agrega cuando sus datos estén validados.
 - Control: dos cadenas que no se mezclan. Regular (ingresos con su vía; rechazos con el resultado de la segunda revisión y la tasa de rechazo, sin mexicanos ni cruceros) e irregular (rescatados con condición y destino según el reporte de las O.R.; presentados según el sistema, por estación; canalizados NNA/adultos; retornados asistido/deportación). Ingresos por punto de internación descuenta a los mexicanos de cada punto.
-- Regulación: lo que se tramitó en el periodo (tipo, resolución y sexo) y lo que hay al corte (extranjeros con documento vigente, por tipo y sexo; no cambia con el periodo y lo dice). El mapa pinta los estados por trámites. Las oficinas como puntos requieren su catálogo de ubicaciones (pendiente).
+- Regulación: lo que se tramitó en el periodo (documento que salió: tarjeta, constancia u oficio, o sin expedición; tipo y sexo) y lo que hay al corte (extranjeros con documento vigente, por tipo y sexo; no cambia con el periodo y lo dice). El mapa pinta los estados por trámites. Las oficinas como puntos requieren su catálogo de ubicaciones (pendiente).
 
 ## Librerías, tipografías y pruebas
 
@@ -91,6 +91,14 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - Al elegir un país o un estado aparece una ficha translúcida unida por una línea al lugar: cifras clave, cambio contra la comparación y principal O.R. (o nacionalidad). Sigue al mapa y se acomoda donde no tape nada; en pantallas angostas no se muestra.
 - Contexto (al elegir una nacionalidad): solo si el país tiene eventos propios en js/contexto.js. Primero los que caen dentro o cerca del periodo de las bases, cada uno con lo que registran nuestras bases 30 días antes y después; el resto, plegado. El efecto migratorio solo se escribe si la fuente lo documenta; los eventos regionales solo si mencionan al país.
 - Los íconos del mapa tienen su propia ayuda (nombre, qué muestran y si están encendidos); en pantalla táctil aparece al tocarlos.
+
+## Pregunta a INAMI (fase 1)
+
+- Responde en una frase arriba de la hoja (cifra, periodo, por día y comparación con los días anteriores).
+- Entiende cambios entre periodos: «qué nacionalidad creció más», «cuáles bajaron por O.R.», «internaciones noviembre contra diciembre». Compara por día (los periodos pueden durar distinto) y solo con volumen suficiente; sin mes dicho, toma el último mes completo contra el anterior. La comparación aparece en la frase de piezas y se quita con ×.
+- Fechas relativas: «últimos 30 días», «últimas 2 semanas», «últimos 3 meses», «último trimestre», «primera/segunda quincena de noviembre».
+- Si no reconoce qué ver, ofrece tres preguntas parecidas («¿Quisiste decir?»). A «¿por qué…?» responde con cifras y aclara que no explica causas.
+- pruebas/consultas.js verifica 47 preguntas contra sumas independientes de los datos crudos.
 
 ## Pregunta a INAMI
 

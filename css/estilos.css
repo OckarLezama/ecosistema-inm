@@ -1124,3 +1124,8 @@ body.en-sala{overflow:hidden}
 .sl-bl .t{color:var(--s-ink);font-weight:600;margin-right:2px}
 .sl-gn{grid-column:1/-1;font:500 max(10.5px,calc(var(--u)*.8))/1.4 var(--f-txt,Barlow),sans-serif;color:var(--s-ink2)}.sl-gn b{color:var(--s-ink);font-weight:600}
 @media (max-width:760px), (max-aspect-ratio:5/4), (max-height:560px){ .sl-tri.dos{grid-template-columns:1fr;width:auto} .sl-tri.dos .sl-tr .v{font-size:calc(var(--c)*36)} .sl-tri.dos .sl-tg{font-size:calc(var(--c)*12)} }
+
+/* Pregunta a INAMI: respuesta en una frase y sugerencias */
+.cq-resp{margin:2px 0 10px;font:500 15.5px/1.45 var(--f-txt);color:var(--ink)}.cq-resp b{font-weight:600}
+.cq-quis{margin:6px 0 10px}.cq-quis span{font-weight:600;color:var(--ink)}
+.t-cambio .cq-cuerpo{grid-template-columns:1fr 1fr}
