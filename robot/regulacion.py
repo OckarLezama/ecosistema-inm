@@ -26,6 +26,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import catalogos as C  # noqa: E402
+import lector  # noqa: E402
 
 # ==== [1] UTILIDADES ==============================================
 def norm(x):
@@ -52,6 +53,7 @@ DOCUMENTOS = [
     ("TARJETA DE VISITANTE REGIONAL", "Vis. Regional"),
     ("TARJETA DE VISITANTE TRABAJADOR FRONTERIZO", "Vis. Trab. Fronterizo"),
     ("TARJETA DE VISITANTE CON FINES DE ADOPCION", "Vis. Adopción"),
+    ("TARJETA SIN TIPO REGISTRADO", "Tarjeta sin tipo"),    # terminó con tarjeta, pero la base no dice cuál
     ("CONSTANCIA DE INSCRIPCION DE EMPLEADOR", "Constancia de empleador"),
     ("OFICIO DE AUTORIZACION S.R.E.", "Oficio S.R.E."),
     ("OFICIO DE NOTIFICACION DE CAMBIO", "Oficio de cambio"),
@@ -59,23 +61,21 @@ DOCUMENTOS = [
     ("SIN EXPEDICION DE DOCUMENTO MIGRATORIO", "Sin expedición"),
 ]
 CONDICIONES = [d[1] for d in DOCUMENTOS]
-TARJETAS = 7
+TARJETAS = 8                                       # las primeras 8 son tarjetas; luego constancias y oficios; al final «Sin expedición»
 EDADES = ["00", "12", "18", "25", "35", "45", "55", "65"]
 
 
 # ==== [2] LECTURA Y CODIFICACIÓN ==================================
 def leer(origen):
-    for ruta in sorted(glob.glob(os.path.join(origen, "*.xlsx"))):
-        t = pd.read_excel(ruta, nrows=2)
-        cols = {norm(c) for c in t.columns}
-        if {"TIPO DE TRAMITE", "PAIS / EMPLEADOR", "OFICINA DE TRAMITES"} <= cols:
-            return pd.read_excel(ruta), os.path.basename(ruta)
+    t, archivos = lector.leer_por_columnas(origen, {"TIPO DE TRAMITE", "PAIS / EMPLEADOR", "OFICINA DE TRAMITES"}, "Trámites")
+    if t is not None:
+        return t, ", ".join(archivos)
     sys.exit("No se encontró la base de trámites migratorios en " + origen)
 
 
 def codificar(t):
     t.columns = [norm(c) for c in t.columns]
-    docs = list(t.columns[list(t.columns).index("RANGOS DE EDAD") + 1:])
+    t, docs = lector.documentos_tramite(t)
     t["DIA"] = pd.to_datetime(t["DIA"], errors="coerce", dayfirst=True).dt.normalize()
     t = t[t["DIA"].notna()]
     m = t.melt(id_vars=["DIA", "O.R.", "OFICINA DE TRAMITES", "PAIS / EMPLEADOR", "SEXO", "RANGOS DE EDAD", "TIPO DE TRAMITE", "TIPO DE RESOLUCION ESPECIFICA", "TIPO DE RESOLUCION GENERAL"],
@@ -104,6 +104,9 @@ def vigentes(origen):
     """Documentos vigentes: estado × países (los 25 que trae el archivo) y tipo de tarjeta × sexo."""
     o = {}
     for ruta in sorted(glob.glob(os.path.join(origen, "*.xlsx"))):
+        fila0 = [norm(x) for x in lector.primera_fila(ruta)]
+        if not ("OTROS PAISES" in fila0 or (fila0 and fila0[0] in ("NACIONALIDAD", "O.R.") and "TOTAL GENERAL" in fila0)):
+            continue                                         # solo se abren completos los archivos de documentos vigentes
         t = pd.read_excel(ruta, header=None)
         fila0 = [norm(x) for x in t.iloc[0].tolist()]
         if "OTROS PAISES" in fila0:
@@ -144,8 +147,7 @@ def vigentes(origen):
 def validaciones(origen):
     """Validación de actas del Registro Civil. Nunca se publican número de acta, oficialía, libro ni municipio."""
     for ruta in sorted(glob.glob(os.path.join(origen, "*.xlsx"))):
-        t = pd.read_excel(ruta, nrows=2)
-        if "RESULTADO DE LA VALIDACION" not in {norm(c) for c in t.columns}:
+        if "RESULTADO DE LA VALIDACION" not in {norm(c) for c in lector.primera_fila(ruta)}:
             continue
         t = pd.read_excel(ruta)
         t.columns = [norm(c) for c in t.columns]
@@ -198,6 +200,7 @@ def main():
     with open(os.path.join(a.destino, "regulacion.js"), "w", encoding="utf-8") as f:
         f.write("window.IANAMI_REG=" + txt + ";\n")
     print(f"regulacion.js: {len(g):,} renglones · {len(txt.encode('utf-8')) / 1e6:.2f} MB")
+    lector.guardar(a.destino, "regulacion")
 
 
 if __name__ == "__main__":

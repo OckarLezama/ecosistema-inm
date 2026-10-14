@@ -19,6 +19,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import catalogos as C  # noqa: E402
+import lector  # noqa: E402
 
 
 # ==== [1] UTILIDADES ==============================================
@@ -54,6 +55,8 @@ def punto(x):
     s = re.sub(r"^Aeropuerto Internacional (de la |de |del )?", "Aerop. ", s)
     s = re.sub(r"(Sub )?Representación Local ", "", s)
     s = re.sub(r"\s*Punto de [Ii]nternación\s*", " ", s).strip()
+    if not s or s.lower() == "nan":
+        return "Sin punto registrado"                    # se cuenta y se avisa en la sección Bases
     s = s[0].upper() + s[1:]
     return s.title() if s.isupper() else s
 
@@ -80,16 +83,12 @@ class Dic:
 
 
 # ==== [2] LECTURA =================================================
-def leer(origen, columnas, sin=frozenset()):
-    """Encuentra el archivo por sus columnas, no por su nombre."""
-    for ruta in sorted(glob.glob(os.path.join(origen, "*.xlsx"))):
-        cols = {norm(c) for c in pd.read_excel(ruta, nrows=2).columns}
-        if columnas <= cols and not (sin & cols):
-            t = pd.read_excel(ruta)
-            t.columns = [norm(c) for c in t.columns]
-            t["DIA"] = pd.to_datetime(t["DIA"], errors="coerce", dayfirst=True).dt.normalize()
-            return t[t["DIA"].notna()].copy(), os.path.basename(ruta)
-    sys.exit("No se encontró el archivo con columnas " + ", ".join(sorted(columnas)))
+def leer(origen, columnas, sin=frozenset(), base=""):
+    """Encuentra la base por sus columnas, no por su nombre; junta hojas y archivos (robot/lector.py)."""
+    t, archivos = lector.leer_por_columnas(origen, columnas, base, sin)
+    if t is None:
+        sys.exit("No se encontró el archivo con columnas " + ", ".join(sorted(columnas)))
+    return t[t["DIA"].notna()].copy(), ", ".join(archivos)
 
 
 # ==== [3] TABLAS ==================================================
@@ -98,13 +97,19 @@ def main():
     ap.add_argument("--origen", default="DATA")
     ap.add_argument("--destino", default="datos")
     a = ap.parse_args()
-    ing, f_ing = leer(a.origen, {"PUNTO DE INTERNACION", "TIPO", "TOTAL"}, {"DETERMINACION"})
-    seg, f_seg = leer(a.origen, {"DETERMINACION", "PUNTO DE INTERNACION"})
-    pre, f_pre = leer(a.origen, {"PRESENTADOS", "ESTACION O ESTANCIA MIGRATORIA"})
-    ret, f_ret = leer(a.origen, {"RETORNADOS A SU PAIS", "DEPORTADOS"})
-    nna, f_nna = leer(a.origen, {"FECHA DE NACIMIENTO", "CLASIFICACION", "MOTIVO DE SALIDA"})
-    adu, f_adu = leer(a.origen, {"SEXO", "MOTIVO DE SALIDA"}, {"FECHA DE NACIMIENTO"})
-    res, f_res = leer(a.origen, {"1RA VEZ", "REINCIDENTES", "CANALIZADOS AL DIF"})
+    ing, f_ing = leer(a.origen, {"PUNTO DE INTERNACION", "TIPO", "TOTAL"}, {"DETERMINACION"}, "Ingresos")
+    sp = ing["PUNTO DE INTERNACION"].isna() | (ing["PUNTO DE INTERNACION"].astype(str).str.strip().isin(["", "nan"]))
+    if sp.any():
+        for _, r in ing[sp].head(5).iterrows():
+            lector.avisar("Ingresos", "Registro sin punto de internación: {}, {}, {} personas (se cuenta como «Sin punto registrado»).".format(r["DIA"].date(), r["O.R."], int(pd.to_numeric(r["TOTAL"], errors="coerce") or 0)))
+        if sp.sum() > 5:
+            lector.avisar("Ingresos", "{:,} registros sin punto de internación en total.".format(int(sp.sum())))
+    seg, f_seg = leer(a.origen, {"DETERMINACION", "PUNTO DE INTERNACION"}, base="Segunda revisión")
+    pre, f_pre = leer(a.origen, {"PRESENTADOS", "ESTACION O ESTANCIA MIGRATORIA"}, base="Presentados")
+    ret, f_ret = leer(a.origen, {"RETORNADOS A SU PAIS", "DEPORTADOS"}, base="Retornados")
+    nna, f_nna = leer(a.origen, {"FECHA DE NACIMIENTO", "CLASIFICACION", "MOTIVO DE SALIDA"}, base="Canalizados NNA")
+    adu, f_adu = leer(a.origen, {"SEXO", "MOTIVO DE SALIDA"}, {"FECHA DE NACIMIENTO"}, "Canalizados adultos")
+    res, f_res = leer(a.origen, {"1RA VEZ", "REINCIDENTES", "CANALIZADOS AL DIF"}, base="Rescates")
     tablas = (ing, seg, pre, ret, nna, adu)
     ini, fin = min(t["DIA"].min() for t in tablas), max(t["DIA"].max() for t in tablas)
     dia = lambda s: (s - ini).dt.days.astype(int)
@@ -117,6 +122,7 @@ def main():
     mal = pn.str.contains("AEROPUERTO") & ~pn.str.contains("TERRESTRE") & (ing["vi"] != 0)
     if mal.sum():
         calidad.append("%d personas entraron por aeropuertos registrados como vía terrestre (por confirmar con el área)." % int(ing.loc[mal, "TOTAL"].sum()))
+        lector.avisar("Ingresos", "{:,} personas entraron por aeropuertos registrados como vía terrestre (por confirmar con el área).".format(int(ing.loc[mal, "TOTAL"].sum())))
     g = ing.assign(d=dia(ing["DIA"]), e=ing["O.R."].map(estado), p=ing["PUNTO DE INTERNACION"].map(punto), n=ing["NACIONALIDAD"].map(nacionalidad)) \
            .groupby(["d", "e", "p", "vi", "n"], as_index=False)["TOTAL"].sum()
     ING = {"d": g["d"].tolist(), "e": [E(x) for x in g["e"]], "p": [P(x) for x in g["p"]], "vi": g["vi"].tolist(),
@@ -131,6 +137,7 @@ def main():
     mx = int(seg.loc[seg["NACIONALIDAD"].map(norm) == "MEXICO", "TOTAL"].sum())
     if mx:
         calidad.append("%d casos de segunda revisión vienen con nacionalidad mexicana; no se cuentan." % mx)
+        lector.avisar("Segunda revisión", "{:,} casos vienen con nacionalidad mexicana; no se cuentan.".format(mx))
 
     # Presentados en estación o estancia
     g = pre.assign(d=dia(pre["DIA"]), e=pre["O.R."].map(estado), s=pre["ESTACION O ESTANCIA MIGRATORIA"].map(estacion), n=pre["NACIONALIDAD"].map(nacionalidad)) \
@@ -149,6 +156,7 @@ def main():
     mayores = int((nna["ge"] == 3).sum())
     if mayores:
         calidad.append("%d registros del archivo de NNA tienen 18 años o más a la fecha del evento; no se cuentan como NNA." % mayores)
+        lector.avisar("Canalizados NNA", "{:,} registros tienen 18 años o más a la fecha del evento; no se cuentan como NNA.".format(mayores))
     g = nna.assign(d=dia(nna["DIA"]), e=nna["O.R."].map(estado), n=nna["NACIONALIDAD"].map(nacionalidad), sx=nna["SEXO"].map(lambda x: 1 if norm(x) == "MUJER" else 0),
                    c=nna["CLASIFICACION"].map(lambda x: next((i for i, m in enumerate(CLASES) if norm(m) == norm(x)), 0)), m=nna["MOTIVO DE SALIDA"].map(motivo)) \
            .groupby(["d", "e", "n", "sx", "ge", "c", "m"], as_index=False).size()
@@ -168,7 +176,7 @@ def main():
            "rei": g["REINCIDENTES"].astype(int).tolist(), "pre": g["PRESENTADOS EN ESTACIONES MIGRATORIAS"].astype(int).tolist(), "can": g["CANALIZADOS AL DIF"].astype(int).tolist()}
 
     # Extranjeros recibidos de EE. UU. (reporte de las O.R.): adultos y menores
-    rec, f_rec = leer(a.origen, {"EXTRANJEROS RECIBIDOS DE EE.UU.", "MENORES"})
+    rec, f_rec = leer(a.origen, {"EXTRANJEROS RECIBIDOS DE EE.UU.", "MENORES"}, base="Recibidos de EE. UU.")
     rec = rec[(rec["DIA"] >= ini) & (rec["DIA"] <= fin)]
     g = rec.assign(d=dia(rec["DIA"]), e=rec["O.R."].map(estado), n=rec["NACIONALIDAD"].map(nacionalidad)).groupby(["d", "e", "n"], as_index=False)[["ADULTOS", "MENORES"]].sum()
     REC = {"d": g["d"].tolist(), "e": [E(x) for x in g["e"]], "n": [N(x) for x in g["n"]], "ad": g["ADULTOS"].astype(int).tolist(), "me": g["MENORES"].astype(int).tolist()}
@@ -179,6 +187,8 @@ def main():
            "dic": {"e": E.l, "n": N.l, "p": P.l, "s": S.l}, "vias": ["Aérea", "Terrestre", "Cruceros"],
            "motivos": MOTIVOS, "clases": CLASES, "edades": ["0–5", "6–11", "12–17", "18 o más"], "calidad": calidad,
            "ing": ING, "seg": SEG, "pre": PRE, "ret": RET, "nna": NNA, "adu": ADU, "orr": ORR, "rec": REC}
+    # último día con datos de cada tabla: cada base tiene su propio corte (Pregunta a INAMI cuenta «últimos 30 días» desde ahí)
+    out["fin"] = {k: (max(T["d"]) if T["d"] else 0) for k, T in (("ing", ING), ("seg", SEG), ("pre", PRE), ("ret", RET), ("nna", NNA), ("adu", ADU), ("orr", ORR), ("rec", REC))}
     os.makedirs(a.destino, exist_ok=True)
     ruta = os.path.join(a.destino, "control.js")
     with open(ruta, "w", encoding="utf-8") as f:
@@ -186,6 +196,7 @@ def main():
     print("Escrito", ruta, "·", os.path.getsize(ruta) // 1024, "KB")
     for c in calidad:
         print("Calidad:", c)
+    lector.guardar(a.destino, "control")
 
 
 if __name__ == "__main__":

@@ -18,7 +18,9 @@ Requiere: pandas, numpy, openpyxl.
 
 Reglas
   · Cada base se reconoce por sus columnas, no por el nombre del archivo.
-  · Se lee solo la primera hoja visible de cada archivo.
+  · Una base puede venir en varias hojas o en varios archivos (por año,
+    semana o día): se juntan con robot/lector.py, que también corrige
+    encabezados mal escritos, resuelve días repetidos y recorta al 1 oct 2024.
   · Los nombres de columnas, estados y nacionalidades se comparan sin
     acentos, sin mayúsculas y sin espacios sobrantes.
   · La fecha de nacimiento de NNA se convierte a grupo de edad y nunca
@@ -54,6 +56,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import catalogos as C  # noqa: E402
+import lector  # noqa: E402
 
 warnings.filterwarnings("ignore")
 TIPOS_TRAM = []
@@ -119,7 +122,9 @@ FIRMAS = [
     ("pres",       {"PRESENTADOS", "ESTACION O ESTANCIA MIGRATORIA"}, set()),
     ("ret",        {"RETORNADOS A SU PAIS"}, set()),
     ("recib",      {"EXTRANJEROS RECIBIDOS DE EE.UU."}, set()),
-    ("rep",        {"MEXICANOS REPATRIADOS"}, set()),
+    ("rep",        {"MEXICANOS REPATRIADOS", "PUNTO_REPATRIACION"}, set()),
+    ("rep_com",    {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"}, {"PAIS"}),
+    ("rep_gh",     {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION", "PAIS"}, set()),
     ("docs_cruce", {"OTROS PAISES"}, set()),
     ("docs_est",   {"O.R.", "TOTAL GENERAL"}, set()),
     ("docs_nat",   {"NACIONALIDAD", "TOTAL GENERAL"}, set()),
@@ -128,11 +133,15 @@ NOMBRES = {"ing": "Ingresos", "seg": "Segunda revisión", "tram": "Trámites", "
            "pres": "Presentados", "can_nna": "Canalizados NNA", "can_ad": "Canalizados adultos",
            "ret": "Retornados", "recib": "Recibidos de EE. UU.", "rep": "Repatriados",
            "cbp": "Encuentros CBP", "car": "Caravanas", "docs_est": "Documentos vigentes por estado",
-           "docs_nat": "Documentos vigentes por país", "docs_cruce": "Documentos vigentes estado × país"}
+           "docs_nat": "Documentos vigentes por país", "docs_cruce": "Documentos vigentes estado × país",
+           "rep_com": "Repatriados en vuelos comerciales", "rep_gh": "Repatriados desde Guatemala y Honduras"}
+# Bases reconocidas que todavía no entran al tablero (el área está corrigiendo el archivo)
+PENDIENTES = {"rep_com": "Pendiente: el área corrige fechas (años 2027, meses cambiados y fechas como texto). No se usa todavía.",
+              "rep_gh": "Pendiente: confirmar qué significa «PAÍS» y si no hay menores. No se usa todavía."}
 
 
-def reconocer(tabla):
-    columnas = {norm(c) for c in tabla.iloc[0].tolist()}
+def reconocer(tabla, columnas=None):
+    columnas = columnas or {norm(c) for c in tabla.iloc[0].tolist()}
     for clave, pide, excluye in FIRMAS:
         if pide <= columnas and not (excluye & columnas):
             return clave
@@ -246,7 +255,11 @@ def cargar_seg(t):
 def cargar_tram(t):
     """Un renglón puede traer varios documentos: se suman las columnas de documento."""
     columnas = list(t.columns)
-    docs = columnas[columnas.index("RANGOS DE EDAD") + 1:]
+    despues = columnas[columnas.index("RANGOS DE EDAD") + 1:]
+    t, docs = lector.documentos_tramite(t)                      # solo columnas de documento, con los errores de captura corregidos
+    otras = [c for c in despues if c not in docs]
+    if otras:
+        lector.avisar("Trámites", "Columnas nuevas que todavía no se usan: " + ", ".join(c.capitalize() for c in otras) + ".")
     t["PAIS / EMPLEADOR"] = t["PAIS / EMPLEADOR"].fillna("SIN DATO")
     t = preparar("tram", t, "PAIS / EMPLEADOR")
     t["v"] = t[docs].apply(entero).sum(axis=1)
@@ -602,18 +615,38 @@ def main():
 
     # -- Leer y reconocer cada archivo
     tablas, archivos, cargas, ocultas = {}, {}, {}, {}
-    sin_reconocer = []
+    sin_reconocer, grupos = [], {}
     for ruta in sorted(glob.glob(os.path.join(a.origen, "*.xlsx"))):
         if os.path.basename(ruta).startswith("~$"):
             continue
-        tabla, oc = leer_hoja(ruta)
-        clave = reconocer(tabla)
+        clave = reconocer(None, set(lector.encabezados(lector.primera_fila(ruta))))
         if not clave:
             sin_reconocer.append(os.path.basename(ruta))
             continue
-        if clave in tablas:
-            sys.exit(f"Hay dos archivos de la misma base ({NOMBRES[clave]}): {archivos[clave]} y {os.path.basename(ruta)}")
-        tablas[clave], archivos[clave], cargas[clave], ocultas[clave] = tabla, os.path.basename(ruta), fecha_de_carga(ruta), oc
+        grupos.setdefault(clave, []).append((ruta, None, None))
+    for clave, l in grupos.items():
+        archivos[clave] = ", ".join(os.path.basename(r) for r, _, _ in l)
+        cargas[clave] = max(fecha_de_carga(r) for r, _, _ in l)
+        if clave in PENDIENTES:
+            lector.avisar(NOMBRES[clave], PENDIENTES[clave])
+            continue
+        if "DIA" not in lector.encabezados(lector.primera_fila(l[0][0])):   # sin fechas (documentos vigentes, caravanas): el último archivo, tal cual
+            if len(l) > 1:
+                lector.avisar(NOMBRES[clave], "Hay " + str(len(l)) + " archivos de esta base; se usa el último: " + os.path.basename(l[-1][0]) + ".")
+            tablas[clave], ocultas[clave] = leer_hoja(l[-1][0])
+            continue
+        partes = []
+        for ruta, _, _ in l:                                   # todas las hojas visibles con las mismas columnas
+            t, fuera = lector.tabla_de(ruta, NOMBRES[clave])
+            if fuera:
+                lector.avisar(NOMBRES[clave], os.path.basename(ruta) + ": no se leyeron las hojas " + ", ".join(fuera) + " (ocultas o con otras columnas).")
+            partes.append((os.path.basename(ruta), t))
+        orig = partes[0][1].attrs.get("orig") or list(partes[0][1].columns)
+        t = lector.juntar(partes, NOMBRES[clave])
+        t = t[[c for c in partes[0][1].columns]]
+        tablas[clave] = pd.concat([pd.DataFrame([orig], columns=t.columns), t], ignore_index=True)
+        tablas[clave].columns = range(t.shape[1])
+        ocultas[clave] = []
     faltan = [NOMBRES[k] for k in CARGAR if k not in tablas]
     if faltan:
         sys.exit("Faltan bases en " + a.origen + ": " + ", ".join(faltan))
@@ -654,8 +687,14 @@ def main():
     salida["bases"] = []
     lineas = ["IA-NAMI · REPORTE DE CONVERSIÓN", f"Generado: {salida['generado']}",
               f"Periodo de las bases: {salida['inicio']} a {salida['corte']} ({dias} días)", ""]
-    for k in list(CARGAR) + ["docs_est", "docs_nat", "docs_cruce", "cbp", "car"]:
-        if k not in tablas:
+    for k in list(CARGAR) + ["docs_est", "docs_nat", "docs_cruce", "cbp", "car"] + list(PENDIENTES):
+        if k not in tablas and k not in PENDIENTES:
+            continue
+        if k in PENDIENTES:
+            if k in archivos:
+                lineas.append(f"== {NOMBRES[k]}  ·  {archivos[k]}  ·  {PENDIENTES[k]}")
+                salida["bases"].append({"k": k, "n": NOMBRES[k], "archivo": archivos[k], "cargado": cargas[k], "pendiente": True, "obs": lector.avisos_de(NOMBRES[k]), "avisos": 1})
+                lineas.append("")
             continue
         info = {"k": k, "n": NOMBRES[k], "archivo": archivos[k], "cargado": cargas[k]}
         lineas.append(f"== {NOMBRES[k]}  ·  {archivos[k]}  ·  cargado {cargas[k]}")
@@ -673,9 +712,11 @@ def main():
             lineas.append(f"   {len(salida['caravanas'])} caravanas · del {salida['caravanas'][0]['f']} al {salida['caravanas'][-1]['f']}" if salida["caravanas"] else "   Sin caravanas")
         if ocultas.get(k):
             avisar(k, "El archivo trae hojas ocultas que no se leen: " + ", ".join(ocultas[k]))
-        for x in AVISOS.get(k, []):
+        obs = AVISOS.get(k, []) + lector.avisos_de(NOMBRES[k])
+        for x in obs:
             lineas.append("   · " + x)
-        info["avisos"] = len(AVISOS.get(k, []))
+        info["avisos"] = len(obs)
+        info["obs"] = obs
         salida["bases"].append(info)
         lineas.append("")
     if sin_reconocer:
@@ -689,6 +730,7 @@ def main():
         f.write("\n".join(lineas) + "\n")
     print("\n".join(lineas))
     print(f"datos.js: {len(texto.encode('utf-8')) / 1e6:.2f} MB")
+    lector.guardar(a.destino, "convertir")
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ const { chromium } = require('playwright'); const path=require('path'); const di
   for (const [vw,vh] of [[1366,800],[400,800]]){
     const p=await (await b.newContext({viewport:{width:vw,height:vh}})).newPage(); p.on('pageerror',e=>errs.push(e.message+' '+(e.stack||'').split('\n')[1]));
     await p.route('**/*', r=>{ const u=r.request().url(); if(u.startsWith('file://')) return r.continue(); return r.abort(); });
-    await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500); await p.click('#b-consulta'); await p.waitForTimeout(300);
+    await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500); await p.click('#b-consulta'); await p.waitForSelector('#cq-q', {timeout:120000}); await p.waitForTimeout(300);
     await p.click('[data-cqi]'); await p.waitForTimeout(200); await p.screenshot({path:__dirname+'/capturas/ayuda-'+vw+'.png'});
     const fuera = await p.evaluate(() => { const a = document.getElementById('cq-ay').getBoundingClientRect(); return a.bottom > innerHeight || a.right > innerWidth || a.left < 0; });
     if (fuera) errs.push('la ayuda se sale de la pantalla en '+vw);

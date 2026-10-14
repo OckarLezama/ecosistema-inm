@@ -492,8 +492,9 @@ div.rg-nr{cursor:default}
 .rg-tog b{font-size:16px;color:var(--ink)}.rg-tog i{font-style:normal;font-size:16px;line-height:1;transition:transform .3s}
 .rg-tog:hover,.rg-tog.on{background:var(--panel2);border-color:var(--ink3);border-style:solid}
 .rg-kpis.ancho{overflow-x:auto;scroll-behavior:smooth;scrollbar-width:thin}
-.rg .rg-kpis .kg{min-width:max-content}
-.rg .rg-kpis .kg>div{grid-auto-columns:minmax(150px,1fr)}
+.rg .rg-kpis .kg{min-width:0}
+.rg .rg-kpis .kg>div{grid-auto-columns:minmax(0,1fr)}       /* las tarjetas se reparten el ancho: nunca se salen de la pantalla */
+.rg .rg-kpis .g-reg .kc-n{white-space:normal;line-height:1.15}   /* el nombre largo baja a dos renglones en vez de empujar */
 .rg-mas{flex:0 0 auto !important;min-width:0 !important;max-width:0;opacity:0;overflow:hidden;transform:translateX(40px);transition:max-width .6s cubic-bezier(.2,.8,.2,1),opacity .45s ease .12s,transform .6s cubic-bezier(.2,.8,.2,1);pointer-events:none}
 .rg-mas>div{grid-auto-columns:150px !important;width:max-content}
 .rg-mas.abierto{max-width:900px;opacity:1;transform:none;pointer-events:auto}
@@ -1164,3 +1165,11 @@ button.pc:hover{outline:2px solid #2B2926}.pc-al{background:transparent;border:1
 .cq-hw.vert .t-perfil .pf{grid-template-columns:1fr;gap:calc(1*var(--u))}.cq-hw.vert .t-perfil .pg.uno .pg-cs{grid-template-columns:1fr 1fr}
 .cq-hw.vert .t-perfil .pc-d,.cq-hw.vert .t-perfil .pc-al .pc-d{display:none}.cq-hw.vert .t-perfil .pc-v{font-size:calc(2.2*var(--u))}.cq-hw.vert .t-perfil .pc-sp{height:calc(1.5*var(--u))}
 @container (max-width:640px){ .cq-hw:not(.fijo):not(.vert) .t-perfil .pf{grid-template-columns:1fr} .cq-hw:not(.fijo):not(.vert) .t-perfil .pg.uno .pg-cs{grid-template-columns:1fr 1fr} }
+
+/* Carga diferida de Control, Regulación, Protección y Pregunta a INAMI: aviso discreto mientras se bajan sus datos */
+.cargando{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:90;padding:9px 16px;border-radius:99px;background:var(--ink,#2B2926);color:#fff;font:600 13px Barlow,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.cargando[hidden]{display:none}
+/* Sección Bases */
+.tb.bs td{vertical-align:top}.bs-obs{min-width:280px;max-width:520px;font-size:12.5px;color:var(--ink2)}.bs-obs ul{margin:0;padding-left:16px;display:grid;gap:3px}.bs-obs summary{cursor:pointer;font-weight:600;color:var(--ink)}
+.bs-tag{display:inline-block;padding:1px 8px;border-radius:99px;background:#F3E3C3;color:#7A5A12;font:600 11px Barlow,sans-serif}.bs-pend td{opacity:.8}
+.bs-alerta{background:#FBF1DC;border:1px solid #E9D3A3;border-radius:10px;padding:10px 14px;font-size:13.5px}

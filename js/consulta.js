@@ -38,6 +38,8 @@ if (CV){
   base('adu', Object.assign({}, c, { fuente:'SIRENNA', T:T.adu, dims:{ e:E, n:N, sexo:{nom:'Sexo', col:'s', vals:SEXO}, mot:{nom:'Motivo de salida', col:'m', vals:CV.motivos} } }));
   base('orr', Object.assign({}, c, { fuente:'DGCOR', T:T.orr, reiOR:reiOR, dims:{ e:E, n:N } }));
   base('rec', Object.assign({}, c, { fuente:'DGCOR', T:T.rec, dims:{ e:E, n:N } }));
+  // cada base con su propio corte: las que llegan menos lejos no se cuentan como ceros
+  if (CV.fin) Object.keys(CV.fin).forEach(k => { if (BASES[k]){ BASES[k].dias = CV.fin[k]+1; } });
 }
 if (PM) base('rep', { inicio:PM.inicio, dias:PM.dias, fuente:'DGPMV', T:tabla(PM.rep), dims:{ e:{nom:'O.R.', col:'e', vals:PM.dic.e}, p:{nom:'Punto de repatriación', col:'p', vals:PM.dic.p}, mod:{nom:'Modalidad', col:'m', vals:['Terrestre','Aérea (vuelos PRIM)']} } });
 if (RG) base('tram', { inicio:RG.inicio, dias:RG.dias, fuente:'DGRAM', T:tabla(RG.cols), dims:{ e:{nom:'Estado', col:'e', vals:RG.dic.e}, n:{nom:'Nacionalidad', col:'n', vals:RG.dic.n}, of:{nom:'Oficina', col:'o', vals:RG.dic.o},

@@ -18,6 +18,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import catalogos as C  # noqa: E402
+import lector  # noqa: E402
 
 
 # ==== [1] UTILIDADES ==============================================
@@ -61,13 +62,9 @@ class Dic:
 def leer(origen):
     """Encuentra el archivo por sus columnas, no por su nombre."""
     pide = {"PUNTO_REPATRIACION", "MODALIDAD", "MEXICANOS REPATRIADOS"}
-    for ruta in sorted(glob.glob(os.path.join(origen, "*.xlsx"))):
-        cols = {norm(c) for c in pd.read_excel(ruta, nrows=2).columns}
-        if pide <= cols:
-            t = pd.read_excel(ruta)
-            t.columns = [norm(c) for c in t.columns]
-            t["DIA"] = pd.to_datetime(t["DIA"], errors="coerce", dayfirst=True).dt.normalize()
-            return t, os.path.basename(ruta)
+    t, archivos = lector.leer_por_columnas(origen, pide, "Repatriados")
+    if t is not None:
+        return t, ", ".join(archivos)
     sys.exit("No se encontró el archivo de repatriados (columnas " + ", ".join(sorted(pide)) + ")")
 
 
@@ -121,6 +118,8 @@ def main():
     print(f"proteccion.js: {len(t)} registros, {int(t['MEXICANOS REPATRIADOS'].sum()):,} repatriados, {ini:%d/%m/%Y} – {fin:%d/%m/%Y}")
     for x in calidad:
         print("  ·", x)
+        lector.avisar("Repatriados", x)
+    lector.guardar(a.destino, "proteccion")
 
 
 if __name__ == "__main__":

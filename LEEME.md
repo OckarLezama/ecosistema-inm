@@ -27,11 +27,17 @@ Página principal (Pulso) y convertidor de bases.
 | `pruebas/` | Pruebas automáticas (Playwright) |
 | `js/consulta.js` | Ventana Pregunta a INAMI: combos, texto libre, hoja de una página (PDF, imagen y compartir por WhatsApp), deshacer y nueva pregunta y «Profundizar en el tablero» |
 | `robot/catalogos.py` | Nacionalidades, estados y coordenadas de puntos |
+| `robot/lector.py` | Lectura común de las bases: junta hojas y archivos de una misma base, corrige encabezados mal escritos, resuelve días repetidos, recorta al 1 oct 2024 y escribe `datos/observaciones.js` |
 | `DATA/` | Bases en xlsx, tal como las entrega cada área |
 
 ## Actualizar los datos
 
-1. Subir o reemplazar los xlsx en `DATA/`. El nombre del archivo es libre: cada base se reconoce por sus columnas.
+1. Subir los xlsx a `DATA/` (GitHub Desktop: Pull origin → copiar → Commit → Push origin). Cada base se reconoce por sus columnas, no por el nombre.
+   - Nombre sugerido: `FUENTE BASE AAAA-MM-DD a AAAA-MM-DD.xlsx` (primer y último día que trae). Las fotos al corte (documentos vigentes) llevan `al AAAA-MM-DD`.
+   - Una base puede venir en varias hojas (si pasa del millón de renglones de Excel) o en varios archivos (por año, semana o día): el robot los junta. Los archivos semanales o diarios se van sumando; no se borran los anteriores.
+   - Si dos archivos traen el mismo día, se toma el que llega más lejos en fechas (un reenvío corregido reemplaza, no suma).
+   - Todo se toma desde el 1 oct 2024; lo anterior se avisa y no se usa.
+   - Las hojas ocultas o con otras columnas no se leen (se avisa).
 2. Desde la raíz del repositorio:
 
    ```
@@ -44,7 +50,7 @@ Página principal (Pulso) y convertidor de bases.
    python robot/indices.py          # una vez al año, con los archivos oficiales en DATA/indices/
    ```
 
-3. Revisar `datos/reporte.txt` y las notas de calidad que imprime `control.py`, y subir todo lo de `datos/`.
+3. Revisar la sección **Bases** de la página (o `datos/reporte.txt`): periodo de cada base, días sin datos y observaciones. Subir todo lo de `datos/`.
 
 El periodo de la página se toma de las fechas que traen las bases.
 
@@ -59,6 +65,17 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - **Control migratorio** · DGCVM y DGCOR (internaciones, segunda revisión, presentados, retornos, canalizados, rescates y recibidos)
 - **Regulación migratoria** · DGRAM (trámites, documentos vigentes, actas)
 - **Protección al migrante** · DGPMV (repatriados; vuelos comerciales y Guatemala-Honduras se activan cuando el área envíe los archivos corregidos)
+
+## Carga de la página
+
+- El Pulso abre solo con `datos/datos.js`. Control, Regulación, Protección y Pregunta a INAMI bajan sus datos la primera vez que se abren (aviso «Cargando…» abajo al centro) y quedan en memoria. Con dos años de datos, abrir todo de golpe pesaría unos 50 MB; así, el Pulso abre en un par de segundos.
+- Los servidores web comprimen los archivos (gzip): datos.js de 11.7 MB viaja como 3.3 MB; control.js 20.5 → 2.1 MB; regulacion.js 18.3 → 1.9 MB.
+
+## Trámites (DGRAM): cómo se cuentan
+
+- Desde 2026 la base trae un renglón por trámite y marca con 1 cada documento. Se cuenta un trámite por renglón (oct–dic 2024 da 105,679, igual que la base anterior).
+- Errores de captura que el robot corrige y avisa: trámites con tarjeta que también marcan «Sin expedición» (cuenta solo la tarjeta) y trámites sin ningún documento marcado («Tarjeta sin tipo registrado» si terminaron con tarjeta; «Sin expedición» si no).
+- Columnas nuevas que todavía no se usan: plazo normativo, días de resolución, dentro o fuera de plazo y motivo de estancia (base para un indicador de tiempos de resolución).
 
 ## Pantalla completa del Pulso
 
@@ -133,13 +150,14 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 
 ## Pendientes
 
+- Bases: pedir al área las actualizadas de canalizados (NNA y adultos), repatriados y encuentros CBP (llegan al 31 dic 2024).
+- DGRAM: confirmar por qué los trámites con tarjeta marcan «Sin expedición» y los 47,617 sin documento; el reparto por documento de oct–dic 2024 cambió respecto a la base anterior (oficios S.R.E. 8,019 → 10,790).
 - Índices: correr `robot/indices.py` con los archivos oficiales (desde aquí no se pudieron descargar).
 
 - Vigentes: pedir al área un archivo estado × país × tipo de documento para el cruce de tres (hoy los archivos cruzan de dos en dos).
 - Vigentes: que el robot guarde cada corte semanal para medir la variación del stock.
 - Validación: confirmar si el archivo semanal trae solo solicitudes nuevas o el acumulado con resultados actualizados.
 - Trámites: confirmar con el área el cierre de oficinas del 20 al 31 de diciembre y la clasificación «personas nuevas».
-- Control: solo Chiapas registra reincidentes; confirmar con el área si las demás O.R. no los capturan.
 - Control: presentados según las O.R. (≈397 mil) contra el sistema (≈50 mil); Tabasco reporta 2% y Coahuila y Chihuahua 0 en el sistema.
 - Control: confirmar si «canalizados al DIF» del reporte de rescates incluye adultos, y la definición de «abandono de PAM».
 - Control: aeropuertos registrados como vía terrestre y casos de segunda revisión con nacionalidad mexicana (los avisa `control.py`).

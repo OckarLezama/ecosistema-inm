@@ -7,8 +7,19 @@ const dia = (ini, s) => Math.round((new Date(s+'T00:00:00') - new Date(ini+'T00:
 const S = (T, f, col) => { let t=0; const v=T[col||'v']; for (let i=0;i<T.d.length;i++) if (f(i)) t+=v[i]; return t; };
 const enR = (T, ini, a, b) => i => T.d[i]>=dia(ini,a) && T.d[i]<=dia(ini,b);
 const MX = C.dic.n.indexOf('México'), n = x => C.dic.n.indexOf(x), e = x => C.dic.e.indexOf(x);
-const A='2024-10-01', Z='2024-12-31', NOV=['2024-11-01','2024-11-30'];
+// Las fechas esperadas se calculan desde el corte de cada tabla (igual que la página), no fijas: así la prueba sirve con cualquier actualización
+const iso = f => f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0')+'-'+String(f.getDate()).padStart(2,'0');
+const masD = (s, k) => { const f = new Date(s+'T00:00:00'); f.setDate(f.getDate()+k); return iso(f); };
+const finT = (T, ini, fin) => fin!=null ? masD(ini, fin) : masD(ini, Math.max(...T.d));
+const mesR = (m, fin) => { const F = new Date(fin+'T00:00:00'); let y = F.getFullYear(); if (new Date(y, m, 1) > F) y--; return [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))]; };
+const ultMes = fin => { const F = new Date(fin+'T00:00:00'); let y = F.getFullYear(), m = F.getMonth(); if (iso(new Date(y, m+1, 0)) > fin){ m--; if (m<0){ m = 11; y--; } } return [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))]; };
+const antMes = r => { const a = new Date(r[0]+'T00:00:00'); return [iso(new Date(a.getFullYear(), a.getMonth()-1, 1)), iso(new Date(a.getFullYear(), a.getMonth(), 0))]; };
+const FC = k => finT(C[k], C.inicio, C.fin && C.fin[k]), FP = finT(P.rep, P.inicio), FG = masD(G.inicio, G.dias-1);
+const A = C.inicio, Z = FC('orr'), NOV = mesR(10, FC('ing')), NOVr = mesR(10, FP), NOVs = mesR(10, FC('seg')), DICg = mesR(11, FG);
+const UM = ultMes(FC('orr')), UMa = antMes(UM), DICi = mesR(11, FC('ing')), NOVi = mesR(10, FC('ing'));
+const T3 = (() => { const F = new Date(FC('nna')+'T00:00:00'); return [iso(new Date(F.getFullYear(), F.getMonth()-2, 1)), FC('nna')]; })();
 const orr = (f, col) => S(C.orr, i => enR(C.orr, C.inicio, A, Z)(i) && f(i), col);
+const REI = new Set(C.orr.e.filter((x,i) => C.orr.rei[i]>0));       // O.R. que registran reincidencia (la página limita el total a esas)
 const sdf = i => Math.max(0, C.orr.v[i]-C.orr.pre[i]-C.orr.can[i]);
 const casos = [
  ['de los rescatados cuántos fueron presentados y cuántos canalizados', {ind:'resc', partes:['pre','can']}, { total:orr(()=>1), p0:orr(()=>1,'pre'), p1:orr(()=>1,'can') }],
@@ -16,7 +27,7 @@ const casos = [
  ['rescatados venezolanos en Chiapas', {ind:'resc'}, { total:orr(i=>C.orr.e[i]===e('Chiapas') && C.orr.n[i]===n('Venezuela')) }],
  ['rescatados de Venezuela en Chiapas', {ind:'resc'}, { total:orr(i=>C.orr.e[i]===e('Chiapas') && C.orr.n[i]===n('Venezuela')) }],
  ['de los rescatados cuántos no tienen destino', {ind:'resc'}, { total:orr(()=>1) }],
- ['de los rescatados cuantos reincidentes', {ind:'resc', partes:['rei']}, { total:orr(i=>C.orr.e[i]===e('Chiapas')), p0:orr(()=>1,'rei') }],
+ ['de los rescatados cuantos reincidentes', {ind:'resc', partes:['rei']}, { total:orr(i=>REI.has(C.orr.e[i])), p0:orr(()=>1,'rei') }],
  ['rescatados mujeres', {ind:'resc'}, { total:orr(()=>1), aviso:true }],
  ['internaciones por vía', {ind:'ing', desg:'via'}, { total:S(C.ing, i=>C.ing.n[i]!==MX) }],
  ['internaciones de Venezuela contra Colombia', {ind:'ing', cmp:true}, { total:S(C.ing, i=>C.ing.n[i]===n('Venezuela')||C.ing.n[i]===n('Colombia')) }],
@@ -33,7 +44,7 @@ const casos = [
  ['NNA de Honduras por mes', {ind:'nna', desg:'t'}, { total:S(C.nna, i=>C.nna.n[i]===n('Honduras')) }],
  ['adultos acompañantes cuántos mujeres', {ind:'adu', partes:['muj']}, { total:S(C.adu,()=>1), p0:S(C.adu, i=>C.adu.s[i]===1) }],
  ['recibidos de EE. UU. cuántos menores', {ind:'rec', partes:['me']}, { total:S(C.rec,()=>1,'ad')+S(C.rec,()=>1,'me'), p0:S(C.rec,()=>1,'me') }],
- ['repatriados por punto en noviembre', {ind:'rep', desg:'p'}, { total:S(P.rep, i=>enR(P.rep, P.inicio, ...NOV)(i)) }],
+ ['repatriados por punto en noviembre', {ind:'rep', desg:'p'}, { total:S(P.rep, i=>enR(P.rep, P.inicio, ...NOVr)(i)) }],
  ['de los repatriados cuántos NNA no acompañados', {ind:'rep', partes:['na']}, { total:S(P.rep,()=>1), p0:S(P.rep,()=>1,'na') }],
  ['repatriados en vuelos PRIM por semana', {ind:'rep', partes:['aer']}, { total:S(P.rep,()=>1), p0:S(P.rep, i=>P.rep.m[i]===1) }],
  ['repatriados en Matamoros', {ind:'rep'}, { total:S(P.rep, i=>P.dic.p[P.rep.p[i]]==='Matamoros') }],
@@ -41,29 +52,29 @@ const casos = [
  ['trámites por documento en Chiapas', {ind:'tram', desg:'doc'}, { total:S(G.cols, i=>G.cols.e[i]===G.dic.e.indexOf('Chiapas')) }],
  ['trámites de mujeres', {ind:'tram', partes:['muj']}, { total:S(G.cols,()=>1), p0:S(G.cols, i=>G.cols.s[i]===1) }],
  ['trámites de Cuba contra Venezuela contra Haití', {ind:'tram', cmp:true}, { total:['Cuba','Venezuela','Haití'].reduce((t,x)=>t+S(G.cols, i=>G.cols.n[i]===G.dic.n.indexOf(x)),0) }],
- ['trámites por oficina en diciembre', {ind:'tram', desg:'of'}, { total:S(G.cols, i=>enR(G.cols, G.inicio, '2024-12-01','2024-12-31')(i)) }],
+ ['trámites por oficina en diciembre', {ind:'tram', desg:'of'}, { total:S(G.cols, i=>enR(G.cols, G.inicio, ...DICg)(i)) }],
  ['de los rescatados cuántos fueron presentados comparado con el sistema', {ind:'resc', partes:['pre'], tipo:'fuentes'}, { total:orr(()=>1), p0:orr(()=>1,'pre'), sis:S(C.pre,()=>1) }],
  ['cuántas visas humanitarias', {ind:'tram'}, { total:S(G.cols, i=>G.cols.c[i]===G.condiciones.indexOf('Vis. Humanitario')) }],
  ['repatriados mujeres por punto', {ind:'rep', partes:['am'], desg:'p'}, { total:S(P.rep,()=>1), p0:S(P.rep,()=>1,'am') }],
  ['NNA canalizados en Chiapas contra Tabasco', {ind:'nna', cmp:true}, { total:S(C.nna, i=>C.nna.e[i]===e('Chiapas')||C.nna.e[i]===e('Tabasco')) }],
  ['trámites de Cuba por mes', {ind:'tram', desg:'t'}, { total:S(G.cols, i=>G.cols.n[i]===G.dic.n.indexOf('Cuba')) }],
  ['internaciones por punto top 15', {ind:'ing', desg:'p'}, { total:S(C.ing, i=>C.ing.n[i]!==MX) }],
- ['rechazos de hondureños en noviembre', {ind:'rech'}, { total:S(C.seg, i=>C.seg.n[i]===n('Honduras') && C.seg.r[i]===1 && enR(C.seg, C.inicio, ...NOV)(i)) }],
+ ['rechazos de hondureños en noviembre', {ind:'rech'}, { total:S(C.seg, i=>C.seg.n[i]===n('Honduras') && C.seg.r[i]===1 && enR(C.seg, C.inicio, ...NOVs)(i)) }],
  ['deportados por nacionalidad', {ind:'ret', partes:['dep']}, { total:S(C.ret,()=>1,'dep')+S(C.ret,()=>1,'ra'), p0:S(C.ret,()=>1,'dep') }],
  ['algo sin sentido xyz', {}, { aviso:true }],
  // Fase 1: cambio entre periodos, fechas relativas y quincenas
- ['qué nacionalidad de rescatados creció más', {ind:'resc', tipo:'cambio', desg:'n', d0:'2024-12-01', d1:'2024-12-31'}, { total:orr(i=>enR(C.orr, C.inicio, '2024-12-01','2024-12-31')(i)), tA:orr(i=>enR(C.orr, C.inicio, ...NOV)(i)) }],
- ['internaciones noviembre contra diciembre', {ind:'ing', tipo:'cambio', d0:'2024-12-01', d1:'2024-12-31'}, { total:S(C.ing, i=>C.ing.n[i]!==MX && enR(C.ing, C.inicio, '2024-12-01','2024-12-31')(i)), tA:S(C.ing, i=>C.ing.n[i]!==MX && enR(C.ing, C.inicio, ...NOV)(i)) }],
- ['rescatados que más bajaron por O.R.', {ind:'resc', tipo:'cambio', desg:'e'}, { total:orr(i=>enR(C.orr, C.inicio, '2024-12-01','2024-12-31')(i)) }],
- ['rescatados últimos 30 días', {ind:'resc', d0:'2024-12-02', d1:'2024-12-31'}, { total:orr(i=>enR(C.orr, C.inicio, '2024-12-02','2024-12-31')(i)) }],
- ['NNA canalizados en el último trimestre', {ind:'nna', d0:'2024-10-01', d1:'2024-12-31'}, { total:S(C.nna,()=>1) }],
- ['repatriados primera quincena de noviembre', {ind:'rep', partes:[], d0:'2024-11-01', d1:'2024-11-15'}, { total:S(P.rep, i=>enR(P.rep, P.inicio, '2024-11-01','2024-11-15')(i)) }],
+ ['qué nacionalidad de rescatados creció más', {ind:'resc', tipo:'cambio', desg:'n', d0:UM[0], d1:UM[1]}, { total:orr(i=>enR(C.orr, C.inicio, ...UM)(i)), tA:orr(i=>enR(C.orr, C.inicio, ...UMa)(i)) }],
+ ['internaciones noviembre contra diciembre', {ind:'ing', tipo:'cambio', d0:DICi[0], d1:DICi[1]}, { total:S(C.ing, i=>C.ing.n[i]!==MX && enR(C.ing, C.inicio, ...DICi)(i)), tA:S(C.ing, i=>C.ing.n[i]!==MX && enR(C.ing, C.inicio, ...NOVi)(i)) }],
+ ['rescatados que más bajaron por O.R.', {ind:'resc', tipo:'cambio', desg:'e'}, { total:orr(i=>enR(C.orr, C.inicio, ...UM)(i)) }],
+ ['rescatados últimos 30 días', {ind:'resc', d0:masD(Z,-29), d1:Z}, { total:orr(i=>enR(C.orr, C.inicio, masD(Z,-29), Z)(i)) }],
+ ['NNA canalizados en el último trimestre', {ind:'nna', d0:T3[0], d1:T3[1]}, { total:S(C.nna, enR(C.nna, C.inicio, ...T3)) }],
+ ['repatriados primera quincena de noviembre', {ind:'rep', partes:[], d0:NOVr[0], d1:masD(NOVr[0],14)}, { total:S(P.rep, i=>enR(P.rep, P.inicio, NOVr[0], masD(NOVr[0],14))(i)) }],
  ['por qué subieron los rescates', {ind:'resc', tipo:'cambio'}, { aviso:true }]
 ];
 (async()=>{ const b=await chromium.launch({executablePath:process.env.CHROMIUM || undefined}); const errs=[]; let ok=0, mal=0;
   const p=await (await b.newContext({viewport:{width:1366,height:900}})).newPage(); p.on('pageerror',e=>errs.push(e.message));
   await p.route('**/*', r=>{ const u=r.request().url(); if(u.startsWith('file://')) return r.continue(); return r.abort(); });
-  await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500); await p.click('#b-consulta'); await p.waitForTimeout(300);
+  await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500); await p.click('#b-consulta'); await p.waitForSelector('#cq-q', {timeout:120000}); await p.waitForTimeout(300);
   for (const [txt, esp, num] of casos){
     const r = await p.evaluate(t => { const X = window.IANAMI_CONSULTA._prueba, q = X.entender(t), R = X.calcular(q);
       return { ind:q.ind, partes:q.partes, desg:q.desg, cmp:q.cmp, filtros:q.filtros, d0:q.d0, d1:q.d1, total:R.total, p:R.partes.map(x=>x.v), top:R.listas[0] && R.listas[0].filas[0] ? [R.listas[0].filas[0].nom, R.listas[0].filas[0].v] : null, tipo:R.tipo, tA:R.cam ? R.cam.tA : null, resp:R.resp, sis:R.sis ? R.sis.pre : null, avisos:R.avisos, tit:X.titulo(R) }; }, txt);

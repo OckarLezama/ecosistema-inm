@@ -4,7 +4,7 @@ const { chromium } = require('playwright'); const fs=require('fs'); const path=r
   for (const [vw, fmts, tag] of [[1366,['h','v'],'d'],[400,['h','v'],'m']]){
     const p=await (await b.newContext({viewport:{width:vw,height:900}})).newPage(); p.on('pageerror',e=>errs.push(e.message+' '+(e.stack||'').split('\n')[1]));
     await p.route('**/*', r=>{ const u=r.request().url(); if(u.startsWith('file://')) return r.continue(); return r.abort(); });
-    await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500); await p.click('#b-consulta'); await p.waitForTimeout(300);
+    await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500); await p.click('#b-consulta'); await p.waitForSelector('#cq-q', {timeout:120000}); await p.waitForTimeout(300);
     for (let i=0;i<QS.length;i++){ await p.evaluate(t => { document.getElementById('cq-q').value = t; document.getElementById('cq-f').requestSubmit(); }, QS[i]);
       for (const f of fmts){ await p.evaluate(f => document.querySelector('[data-cqfmt="'+f+'"]').click(), f); await p.waitForTimeout(120);
         const o = await p.evaluate(() => { const h = document.querySelector('.cq-hoja'), H = h.getBoundingClientRect();

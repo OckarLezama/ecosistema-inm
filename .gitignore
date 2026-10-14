@@ -1,0 +1,6 @@
+# Archivos temporales que no van al repositorio
+__pycache__/
+*.pyc
+~$*
+pruebas/capturas/
+pruebas/node_modules

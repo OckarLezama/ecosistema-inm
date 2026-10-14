@@ -1320,15 +1320,35 @@ function marcarFiltro(){
 }
 
 /* ==== [12] CONSULTAR Y COMPARTIR ================================== */
+// Carga diferida: con dos años de datos, Control, Regulación y Protección pesan decenas de MB. El Pulso abre solo
+// con datos/datos.js; lo demás se baja la primera vez que se abre esa parte y queda en memoria.
+const VERSION = ((document.querySelector('script[src*="js/app.js"]') || {}).src || '').split('?')[1] || '';
+const MODULOS = { control:['datos/control.js','js/control.js'], regulacion:['datos/regulacion.js','js/regulacion.js'], proteccion:['datos/proteccion.js','js/proteccion.js'],
+  consulta:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js'] };
+const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI' };
+const LISTO_MOD = { control:'IANAMI_CONTROL', regulacion:'IANAMI_REGULACION', proteccion:'IANAMI_PROTECCION', consulta:'IANAMI_CONSULTA' };
+const BAJADOS = {};
+const modListo = k => !!window[LISTO_MOD[k]];
+function bajarJS(src){ return BAJADOS[src] || (BAJADOS[src] = new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src+(VERSION ? '?'+VERSION : '');
+  s.onload = ok; s.onerror = () => { delete BAJADOS[src]; s.remove(); mal(new Error(src)); }; document.body.appendChild(s); })); }
+function cargarModulo(k){
+  if (modListo(k)) return Promise.resolve();
+  const av = $('cargando'); av.textContent = 'Cargando '+NOM_MOD[k]+'…'; av.hidden = false;
+  return (MODULOS[k] || []).reduce((p, src) => p.then(() => bajarJS(src)), Promise.resolve())
+    .then(() => { av.hidden = true; }, e => { av.textContent = 'No se pudo cargar '+NOM_MOD[k]+'. Revisa tu conexión e inténtalo de nuevo.'; setTimeout(() => { av.hidden = true; }, 4500); throw e; });
+}
+window.IANAMI_CARGAR = cargarModulo;
 // Pregunta a INAMI vive en js/consulta.js; aquí solo se abre y se le da la navegación hacia los procesos.
 function iniciarConsulta(){
-  $('b-consulta').addEventListener('click', () => { if (window.IANAMI_CONSULTA) window.IANAMI_CONSULTA.abrir(); });
+  $('b-consulta').addEventListener('click', () => { cargarModulo('consulta').then(() => { if (window.IANAMI_CONSULTA) window.IANAMI_CONSULTA.abrir(); }, () => {}); });
   $('b-comp').addEventListener('click', e => { e.stopPropagation(); menuComp($('menu-comp').hidden); });
   $('menu-comp').addEventListener('click', e => { const b = e.target.closest('[data-comp]'); if (b) compartir(b.dataset.comp); });
   document.addEventListener('click', e => { if (!e.target.closest('#menu-comp, #b-comp')) menuComp(false); });
 }
 // Abre un proceso con filtros (los usa «Profundizar en el tablero» de Pregunta a INAMI)
-window.IANAMI_NAV = { ir(k, p){ const i = DIRS.findIndex(d => d.k===k); if (i<0) return; S.dir = i;
+window.IANAMI_NAV = { ir(k, p){ const i = DIRS.findIndex(d => d.k===k); if (i<0) return;
+  if (!modListo(k)){ cargarModulo(k).then(() => window.IANAMI_NAV.ir(k, p), () => {}); return; }
+  S.dir = i;
   const M = { control:window.IANAMI_CONTROL, regulacion:window.IANAMI_REGULACION, proteccion:window.IANAMI_PROTECCION }[k];
   if (M && M.fijar) M.fijar(p || {}); irA('dir'); window.scrollTo(0,0); } };
 
@@ -1396,21 +1416,36 @@ function irA(v){
   S.vista = v; pintarNav(); const pulso = v==='pulso'; $('vista-pulso').hidden = !pulso; $('vista-otra').hidden = pulso;
   if (pulso){ ajustarAlto(); reencuadrar(); ajustarLienzo(); pintarTodo(); return; }
   if (S.play) detener();
+  if (v==='dir'){ const k = DIRS[S.dir || 0].k; if (MODULOS[k] && !modListo(k)){ $('vista-otra').innerHTML = '<p class="mini" style="padding:24px 0">Cargando '+esc(NOM_MOD[k])+'…</p>';
+    cargarModulo(k).then(() => { if (S.vista==='dir' && DIRS[S.dir || 0].k===k) irA('dir'); }, () => {}); return; } }
   const F0 = {ss:null, n:null}; let h = '';
   if (v==='dir' && DIRS[S.dir || 0].k==='regulacion' && window.IANAMI_REGULACION){ window.IANAMI_REGULACION.pintar($('vista-otra')); return; }   // Regulación tiene su propia vista
   if (v==='dir' && DIRS[S.dir || 0].k==='control' && window.IANAMI_CONTROL){ window.IANAMI_CONTROL.pintar($('vista-otra')); return; }      // Control migratorio también
   if (v==='dir' && DIRS[S.dir || 0].k==='proteccion' && window.IANAMI_PROTECCION){ window.IANAMI_PROTECCION.pintar($('vista-otra')); return; }   // Protección al migrante
   if (v==='dir') h = htmlDireccion(DIRS[S.dir || 0]);
-  else if (v==='bases') h = '<h1>Bases</h1><p>Estado de cada base según la última conversión ('+esc(D.generado)+'). La carga con usuario y contraseña se agrega después.</p>'+
-    '<div class="caja"><div class="tb-w"><table class="tb"><thead><tr><th>Base</th><th>Datos hasta</th><th>Cargada</th><th>Renglones</th><th>Días sin datos</th><th>Observaciones</th></tr></thead><tbody>'+
-    D.bases.map(b => '<tr><td><b>'+esc(b.n)+'</b><br><span class="mini">'+esc(b.archivo)+'</span></td><td class="x">'+(b.hasta ? fechaISO(b.hasta) : '—')+'</td><td class="x">'+fechaISO(b.cargado)+'</td><td class="x">'+(b.filas!=null ? miles(b.filas) : '—')+'</td><td class="x">'+(b.faltan!=null ? b.faltan : '—')+'</td><td class="x">'+(b.avisos || '—')+'</td></tr>').join('')+
-    '</tbody></table></div><span class="nota">El detalle de cada observación está en datos/reporte.txt.</span></div>';
+  else if (v==='bases') h = vistaBases();
   else { const T = {
       analizar:['Analizar','Cruces y comparaciones en un solo lugar.',['Cruzar dos bases por nacionalidad, estado o punto (por ejemplo, ingresos contra rechazos).','Comparar de 2 a 4 nacionalidades, estados, cinturones o CECO lado a lado, con base 100.','Calendario de calor por día y matriz nacionalidad × estado.']],
       prosp:['Prospectiva','Hacia dónde va cada flujo.',['Proyección a 4–8 semanas con su rango.','Fechas en que cambió el comportamiento.','Nacionalidades que se mueven igual y probabilidad de pasar a nivel alto.']],
       contexto:['Contexto','Lo que pasa fuera y explica lo de adentro.',['Línea de tiempo de eventos por país desde 2018, con fuente.','Caravanas: ubicación, tamaño y avance.','Encuentros de la CBP en EE. UU. y cruces por el Darién.','Índices por país: desarrollo humano, paz, fragilidad y riesgo.']] }[v];
     h = '<h1>'+T[0]+'</h1><p>'+T[1]+' Esta sección se construye después; esto es lo que llevará:</p><div class="rej"><div class="caja"><ul>'+T[2].map(x=>'<li>'+x+'</li>').join('')+'</ul></div></div>'; }
   $('vista-otra').innerHTML = h;
+}
+// ---- Sección Bases: qué trae cada base, hasta cuándo y qué se observó. Todo lo escriben los robots
+// (datos/datos.js → bases; datos/observaciones.js → lo que anotó cada robot). Nada se captura a mano.
+function obsDe(b){ const l = (b.obs || []).slice(), O = window.IANAMI_OBS || {};
+  Object.keys(O).forEach(r => (O[r][b.n] || []).forEach(x => { if (l.indexOf(x)<0) l.push(x); })); return l; }
+function vistaBases(){
+  const B = D.bases || [], conF = B.filter(b => b.hasta), max = conF.reduce((m,b) => b.hasta>m ? b.hasta : m, ''), atras = conF.filter(b => (new Date(max) - new Date(b.hasta))/864e5 > 7);
+  const fila = b => { const ob = obsDe(b), arch = String(b.archivo || '').split(', ');
+    return '<tr'+(b.pendiente ? ' class="bs-pend"' : '')+'><td><b>'+esc(b.n)+'</b>'+(b.pendiente ? ' <span class="bs-tag">Pendiente</span>' : '')+'<br><span class="mini">'+arch.map(esc).join('<br>')+'</span></td>'+
+      '<td class="x">'+(b.desde ? fechaISO(b.desde)+' – '+fechaISO(b.hasta) : b.pendiente ? '—' : b.k==='car' ? 'catálogo de eventos' : 'foto al corte')+'</td><td class="x">'+fechaISO(b.cargado)+'</td>'+
+      '<td class="x">'+(b.filas!=null ? miles(b.filas) : '—')+'</td><td class="x">'+(b.faltan!=null ? miles(b.faltan) : '—')+'</td>'+
+      '<td class="bs-obs">'+(ob.length ? (ob.length>2 ? '<details><summary>'+ob.length+' observaciones</summary>' : '')+'<ul>'+ob.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul>'+(ob.length>2 ? '</details>' : '') : '<span class="mini">Sin observaciones</span>')+'</td></tr>'; };
+  return '<h1>Bases</h1><p>Lo que trae cada base, hasta qué día llega y lo que se observó al convertirla (última conversión: '+esc(D.generado)+'). Las observaciones las escriben los robots; se corrigen en el archivo que entrega cada área.</p>'+
+    (atras.length ? '<p class="bs-alerta"><b>Cortes distintos:</b> la mayoría de las bases llega al '+fechaISO(max)+', pero '+atras.map(b => esc(b.n)+' (al '+fechaISO(b.hasta)+')').join(', ')+'. En el tablero, esas cifras solo cubren hasta su fecha.</p>' : '')+
+    '<div class="caja"><div class="tb-w"><table class="tb bs"><thead><tr><th>Base y archivos</th><th>Periodo</th><th>Cargada</th><th>Renglones</th><th>Días sin datos</th><th>Observaciones</th></tr></thead><tbody>'+
+    B.map(fila).join('')+'</tbody></table></div><span class="nota">Archivos nuevos: «FUENTE BASE AAAA-MM-DD a AAAA-MM-DD.xlsx». Una base puede venir en varias hojas o archivos (por año, semana o día): el robot los junta y, si dos traen el mismo día, toma el más reciente.</span></div>';
 }
 // El mapa ocupa el alto que queda de la pantalla, dejando asomar la franja de cajas.
 function ajustarAlto(){
