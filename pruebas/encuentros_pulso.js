@@ -17,6 +17,8 @@ const { chromium } = require('playwright'); const path=require('path'); const di
     const edo = await p.evaluate(() => { const k = document.querySelector('#kpis .kc[disabled] .kc-d'); return [...document.querySelectorAll('#kpis .kc[disabled]')].map(e => e.textContent.trim()).join(' | '); });
     await p.evaluate(() => window.IANAMI_PULSO.verInd('cbp','Venezuela')); await p.waitForTimeout(700);
     const ven = await p.evaluate(() => +document.querySelector('.kc[data-k="cbp"] .kc-v').dataset.v);
+    // lo esperado se suma directo de la base (venezolanos en todo el periodo)
+    const venEsperado = await p.evaluate(() => { const D = window.IANAMI_DATOS, T = D.cbpT, n = D.nats.findIndex(x => x[0]==='Venezuela'); let t = 0; for (let i=0;i<T.d.length;i++) if (T.n[i]===n) t += T.v[i]; return t; });
     // pantalla completa: Encuentros en el combo de indicadores, con reparto por sector
     await p.evaluate(() => { window.IANAMI_PULSO.sala('pulso'); }); await p.waitForTimeout(1500);
     const sala = await p.evaluate(async () => { const o = document.querySelector('#sl-im [data-ind="cbp"]'); if (!o) return { combo:false }; o.click(); await new Promise(r => setTimeout(r, 1500));
@@ -27,6 +29,6 @@ const { chromium } = require('playwright'); const path=require('path'); const di
     if (!sala.combo || !/Sector/.test(sala.qt)) errs.push('sala '+vw);
     console.log(vw+'x'+vh, 'sala', JSON.stringify(sala));
     console.log(vw+'x'+vh, 'orden', orden.join(' → '), '| no caben', JSON.stringify(cabe), '| capa', JSON.stringify(capa), '| con Chiapas:', edo, '| Venezuela', ven);
-    if (orden.join()!=='Recibidos,Repatriados,Encuentros' || cabe.length || capa.sectores<5 || Math.round(capa.total)!==Math.round(capa.kpi) || capa.boton || !/no aplica por O\.R\./.test(edo) || Math.round(ven)!==48092) errs.push('encuentros '+vw);
+    if (orden.join()!=='Recibidos,Repatriados,Encuentros' || cabe.length || capa.sectores<5 || Math.round(capa.total)!==Math.round(capa.kpi) || capa.boton || !/no aplica por O\.R\./.test(edo) || Math.round(ven)!==venEsperado) errs.push('encuentros '+vw);
     await p.close(); }
   console.log('errores', JSON.stringify(errs)); await b.close(); })();

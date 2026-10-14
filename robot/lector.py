@@ -79,19 +79,30 @@ def hojas(ruta):
     return [(h, pd.read_excel(ruta, sheet_name=h, header=None)) for h in vis], ocu
 
 
-def primera_fila(ruta):
-    """Encabezados de la primera hoja visible, sin leer todo el archivo."""
+def primera_fila(ruta, acepta=None):
+    """Encabezados de la primera hoja visible, sin leer todo el archivo. Con `acepta` (función sobre la lista de
+    encabezados), la primera hoja visible que la cumple: así una hoja de apoyo puesta antes que la base no estorba."""
     libro = openpyxl.load_workbook(ruta, read_only=True)
-    h = next((x for x in libro.worksheets if x.sheet_state == "visible"), None)
-    fila = next(h.iter_rows(max_row=1, values_only=True), ()) if h else ()
+    fila = ()
+    for h in libro.worksheets:
+        if h.sheet_state != "visible":
+            continue
+        f = [c for c in next(h.iter_rows(max_row=1, values_only=True), ()) if c is not None]
+        if acepta is None or acepta(f):
+            fila = f
+            break
     libro.close()
-    return [c for c in fila if c is not None]
+    return list(fila)
 
 
-def tabla_de(ruta, base=None):
-    """Junta las hojas visibles que traen las mismas columnas que la primera. Devuelve una tabla con
-    encabezados normalizados y la lista de hojas que no se leyeron."""
+def tabla_de(ruta, base=None, acepta=None):
+    """Junta las hojas visibles que traen las mismas columnas que la primera (o que la primera que cumple `acepta`).
+    Devuelve una tabla con encabezados normalizados y la lista de hojas que no se leyeron."""
     hs, ocultas = hojas(ruta)
+    if acepta is not None:
+        k = next((i for i, (_, t) in enumerate(hs) if len(t) and acepta([c for c in t.iloc[0].tolist() if pd.notna(c)])), None)
+        if k:
+            hs = hs[k:] + hs[:k]
     if not hs:
         return None, ocultas
     orig = [" ".join(str(c).split()) for c in hs[0][1].iloc[0].tolist()]

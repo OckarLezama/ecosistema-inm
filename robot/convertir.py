@@ -140,6 +140,10 @@ PENDIENTES = {"rep_com": "Pendiente: el área corrige fechas (años 2027, meses 
               "rep_gh": "Pendiente: confirmar qué significa «PAÍS» y si no hay menores. No se usa todavía."}
 
 
+# Una hoja es base si sus encabezados se reconocen (las hojas de apoyo, tablas dinámicas o formatos largos se saltan)
+ACEPTA = lambda fila: reconocer(None, set(lector.encabezados(fila))) is not None
+
+
 def reconocer(tabla, columnas=None):
     columnas = columnas if columnas is not None else {norm(c) for c in tabla.iloc[0].tolist()}
     for clave, pide, excluye in FIRMAS:
@@ -628,7 +632,7 @@ def main():
     for ruta in sorted(glob.glob(os.path.join(a.origen, "*.xlsx"))):
         if os.path.basename(ruta).startswith("~$"):
             continue
-        clave = reconocer(None, set(lector.encabezados(lector.primera_fila(ruta))))
+        clave = reconocer(None, set(lector.encabezados(lector.primera_fila(ruta, ACEPTA))))
         if not clave:
             sin_reconocer.append(os.path.basename(ruta))
             continue
@@ -639,14 +643,14 @@ def main():
         if clave in PENDIENTES:
             lector.avisar(NOMBRES[clave], PENDIENTES[clave])
             continue
-        if "DIA" not in lector.encabezados(lector.primera_fila(l[0][0])):   # sin fechas (documentos vigentes, caravanas): el último archivo, tal cual
+        if "DIA" not in lector.encabezados(lector.primera_fila(l[0][0], ACEPTA)):   # sin fechas (documentos vigentes, caravanas): el último archivo, tal cual
             if len(l) > 1:
                 lector.avisar(NOMBRES[clave], "Hay " + str(len(l)) + " archivos de esta base; se usa el último: " + os.path.basename(l[-1][0]) + ".")
             tablas[clave], ocultas[clave] = leer_hoja(l[-1][0])
             continue
         partes = []
         for ruta, _, _ in l:                                   # todas las hojas visibles con las mismas columnas
-            t, fuera = lector.tabla_de(ruta, NOMBRES[clave])
+            t, fuera = lector.tabla_de(ruta, NOMBRES[clave], ACEPTA)
             if fuera:
                 lector.avisar(NOMBRES[clave], os.path.basename(ruta) + ": no se leyeron las hojas " + ", ".join(fuera) + " (ocultas o con otras columnas).")
             partes.append((os.path.basename(ruta), t))
