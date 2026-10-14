@@ -42,6 +42,8 @@ const vEm = o => Object.assign({ v:Q.em }, o || {});
 /* ==== [2] UTILIDADES ============================================== */
 const $ = id => document.getElementById(id), MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const miles = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' k' : miles(n);
+// Cifra de las tarjetas: la misma regla en todo el tablero (completa hasta 999,999; millones con dos decimales), como en el Pulso
+const cifraKpi = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : miles(n);
 const pct = (a,b) => b ? (a/b*100).toFixed(1) : '0.0', esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tasa = (r, l) => l+r ? r/(l+r)*100 : 0, tasaTxt = x => x>=1 ? x.toFixed(1)+'%' : x>=0.1 ? x.toFixed(2)+'%' : x.toFixed(3)+'%';
 const fDia = d => new Date(INI.getFullYear(), INI.getMonth(), INI.getDate()+d);
@@ -81,7 +83,7 @@ const IC = { avion:'M2 16l20-6-20-6 3 6zM5 10h9', tierra:'M3 20h18M5 20V9l7-5 7 
              no:'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM6 6l12 12', tot:'M4 7h16M4 12h16M4 17h10', est:'M4 20V8l8-5 8 5v12zM9 20v-6h6v6', ret:'M20 12H5M11 6l-6 6 6 6', nino:'M12 4a2 2 0 1 0 0 4a2 2 0 0 0 0-4zM8 21v-7l-2-3 6-2 6 2-2 3v7', adulto:'M12 3a3 3 0 1 0 0 6a3 3 0 0 0 0-6zM6 21v-6a6 6 0 0 1 12 0v6' };
 const svgI = d => '<span class="kc-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>';
 function minibarras(v){ const mx = Math.max.apply(null,v)||1; return '<span class="kc-b" aria-hidden="true">'+v.map((x,i) => '<i class="'+(i===v.length-1?'h':'p')+'" style="height:'+Math.max(8,x/mx*100).toFixed(0)+'%"></i>').join('')+'</span>'; }
-function kc(o){ const tag = o.attr ? 'button' : 'div';
+function kc(o){ if (o.num!=null && o.val===corto(o.num)) o.val = cifraKpi(o.num); const tag = o.attr ? 'button' : 'div';
   return '<'+tag+' class="kc'+(o.on?' on':'')+'"'+(o.attr||'')+' style="--g:'+o.col+';--gs:'+o.col+'1F;--ga:'+o.col+'"'+(o.title ? ' title="'+esc(o.title)+'"' : '')+'>'+
     '<span class="kc-top">'+svgI(o.ic)+'<span class="kc-nf"><span class="kc-n">'+o.nom+'</span><span class="kc-f">'+(o.sub||'')+'</span></span></span>'+
     '<span class="kc-v num"'+(o.num!=null ? ' data-v="'+Math.round(o.num)+'"' : '')+'>'+o.val+'</span><span class="kc-pie">'+(o.d||'<span class="kc-d"></span>')+(o.b||'')+'</span></'+tag+'>'; }

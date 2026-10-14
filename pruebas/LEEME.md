@@ -4,3 +4,5 @@ Revisan que el tablero funcione antes de publicar un cambio: las 40 consultas de
 
 Instalar una vez: `npm install` y `npx playwright install chromium`.
 Correr todas: `npm run todas`. Las capturas quedan en `capturas/` (no se suben).
+
+También: `encuentros_pulso.js` (tarjeta de encuentros CBP, capa de sectores, sin O.R. y que las 10 tarjetas quepan) y `pregunta_temas_bullets.js` (temas nuevos de Pregunta a INAMI, viñetas y Compartir en celular y computadora).

@@ -1182,3 +1182,29 @@ body.en-sala{overflow:hidden}
   .fila-par>.caja:last-child{display:block;overflow-y:auto;scrollbar-width:thin;padding-top:0}
   .fila-par>.caja:last-child>h2{position:sticky;top:0;z-index:2;background:var(--panel);padding-top:12px;margin-top:0}
 }
+/* Detalle de «Ingresos de extranjeros»: el total del país = extranjeros + mexicanos */
+.tip-tot{display:block}.tip-b{display:block;height:6px;border-radius:3px;background:#B9A86A;margin-top:5px;overflow:hidden}.tip-b>i{display:block;height:100%;background:var(--reg,#2F6657)}
+.cv-totpais{margin:6px 16px 0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;font-size:13px;color:var(--ink2)}.cv-totpais b{color:var(--ink);font-weight:600}
+.rg-body>.cv-totpais{margin:-2px 16px -2px;max-width:none}
+.cv-tpb{flex:0 0 160px;height:6px;border-radius:3px;background:#B9A86A;overflow:hidden}.cv-tpb>i{display:block;height:100%;background:#2F6657}
+/* Compartir mientras se prepara la imagen */
+.cq-acc button.prep{opacity:.55;cursor:progress}
+/* Pregunta a INAMI · bullets: el resultado en viñetas para mandarlo como mensaje (mismo estilo de la plataforma) */
+#cq-res.bul .cq-fmtg{display:none}#cq-res:not(.bul) [data-cqacc="copiar"]{display:none}
+.cq-hw.bul{max-width:760px;margin:0 auto}
+.cq-bul{position:relative;background:#FCFBF7;color:#2B2926;border:1px solid #E5E2D3;border-radius:14px;padding:26px 30px 20px 34px;display:grid;gap:14px;box-shadow:0 10px 30px rgba(43,41,38,.07);overflow:hidden}
+.cq-bul::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}
+.cq-bul::after{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:var(--c);opacity:.06;pointer-events:none}
+.cq-bul header{display:grid;gap:4px}
+.cq-bul h2{font:700 26px/1.12 var(--f-num);margin:2px 0 0;text-wrap:balance}
+.cq-bul .per{font-size:13.5px;color:#5C5952;font-weight:500}
+.cq-bul ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.cq-bul li{position:relative;padding-left:22px;font-size:15.5px;line-height:1.45}
+.cq-bul li::before{content:"";position:absolute;left:2px;top:.55em;width:9px;height:9px;border-radius:2px;background:var(--c)}
+.cq-bul li b{font-family:var(--f-num);font-weight:700;font-size:1.12em;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cq-bul li.lead{font-size:19px;line-height:1.35;padding:12px 16px 12px 40px;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 11%,#fff),#fff);border:1px solid color-mix(in srgb,var(--c) 24%,#E5E2D3);border-radius:10px}
+.cq-bul li.lead::before{left:16px;top:1.05em;width:12px;height:12px;border-radius:3px}
+.cq-bul li.lead b{font-size:1.45em;color:var(--c)}
+.cq-bul .nota{margin:0;font-size:12.5px;color:#5C5952;font-style:italic}
+.cq-bul footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;border-top:1px solid #E5E2D3;padding-top:10px;font-size:12px;color:#5C5952}.cq-bul footer b{color:#2B2926}
+@media (max-width:560px){ .cq-bul{padding:18px 16px 14px 22px} .cq-bul h2{font-size:21px} .cq-bul li{font-size:14.5px} .cq-bul li.lead{font-size:16.5px;padding:10px 12px 10px 32px} .cq-bul li.lead::before{left:12px} }

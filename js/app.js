@@ -40,18 +40,21 @@ const INDS = [
   {k:'can',  n:'Canalizados', g:'irr', nat:true,  donde:'Dónde son canalizados'},
   {k:'ret',  n:'Retornados',  g:'irr', nat:true,  donde:'Desde dónde retornan'},
   {k:'recib',n:'Recibidos',   g:'usa', nat:true,  donde:'Dónde son recibidos'},
-  {k:'rep',  n:'Repatriados', g:'usa', nat:false, donde:'Dónde son repatriados'}
-];
+  {k:'rep',  n:'Repatriados', g:'usa', nat:false, donde:'Dónde son repatriados'},
+  // Encuentros: los registra la CBP en EE. UU. (no el INM); no tienen estado de México, se reparten por sector de la frontera
+  {k:'cbp',  n:'Encuentros',  g:'usa', nat:true, sinEdo:true, donde:'Dónde los encuentra la CBP'}
+].filter(m => D.cube[m.k] && (m.k!=='cbp' || (D.cbpT && D.cbp)));
 const IND = {}; INDS.forEach(m => IND[m.k] = m);
 // Indicadores que solo existen en la pantalla completa de Regulación (no están en el cubo; ver [13])
 IND.co = {k:'co', n:'Constancias y oficios', g:'reg', nat:true}; IND.va = {k:'va', n:'Validación de actas', g:'reg', nat:true};
-const GRUPOS = [['reg','Regular',3],['irr','Irregular',4],['usa','Desde EE. UU.',2]];
+const GRUPOS = [['reg','Regular',3],['irr','Irregular',4],['usa','Desde EE. UU.',IND.cbp ? 3 : 2]];
 const ICONO = {
   ing:'M3 12h12M11 7l5 5-5 5M20 4v16', rech:'M5.6 5.6l12.8 12.8M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18z', tram:'M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5',
   resc:'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM12 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6zM5.7 5.7l4.2 4.2M14.1 14.1l4.2 4.2M18.3 5.7l-4.2 4.2M9.900 14.100l-4.200 4.200',
   pres:'M4 21V9l8-5 8 5v12M9 21v-6h6v6', can:'M12 20s-7-4.300-7-9.400A4 4 0 0 1 12 8a4 4 0 0 1 7 2.600C19 15.700 12 20 12 20z',
   co:'M7 3h7l4 4v14H7zM14 3v4h4M10 11h5M12.5 15.5m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0', va:'M5 3h11l3 3v15H5zM9 9h6M9 13h3M13 16l2 2 4-4',
-  ret:'M21 12H9M13 7l-5 5 5 5M4 4v16', recib:'M12 4v10M8 10l4 4 4-4M5 19h14', rep:'M4 11l8-7 8 7M6 10v10h12V10M10 20v-5h4v5'
+  ret:'M21 12H9M13 7l-5 5 5 5M4 4v16', recib:'M12 4v10M8 10l4 4 4-4M5 19h14', rep:'M4 11l8-7 8 7M6 10v10h12V10M10 20v-5h4v5',
+  cbp:'M3 21V9l9-6 9 6v12M3 13h18M8 21v-4h8v4M12 3v4'
 };
 // Secciones del menú (las que aún no existen muestran qué llevarán)
 const SECCIONES = [['pulso','Pulso'],['dir','Procesos'],['analizar','Analizar'],['prosp','Prospectiva'],['contexto','Contexto'],['bases','Bases']];
@@ -157,6 +160,7 @@ const TODOS = EST.map((e,i)=>i);
 
 // ss = lista de estados (o null = todos); n = nacionalidad (o null = todas)
 function sumaSem(k, w0, w1, ss, n){
+  if (conEdo(ss) && sinEdo(k)) return 0;                  // encuentros: no hay estado de México
   if (Array.isArray(n)){ let t = 0; for (let i=0;i<n.length;i++) t += sumaSem(k,w0,w1,ss,n[i]); return t; }
   let t = 0;
   if (n==null){ const a = WS[k], l = ss || TODOS; for (let w=w0;w<=w1;w++) for (let j=0;j<l.length;j++) t += a[w*NS+l[j]]; return t; }
@@ -167,6 +171,7 @@ function sumaSem(k, w0, w1, ss, n){
 function semanal(k, ss, n){ const o = []; for (let w=0;w<NW;w++) o.push(sumaSem(k,w,w,ss,n)); return o; }
 function diario(k, F){                         // serie diaria con el filtro activo (lleva k y F para comparar con el año anterior)
   const o = new Array(ND).fill(0), n = 'nd' in F ? F.nd : F.n; o.k = k; o.F = F;
+  if (conEdo(F.ss) && sinEdo(k)) return o;
   if (F.ss && n!=null){                          // estado × nacionalidad solo existe por semana: se reparte en sus días
     for (let w=0;w<NW;w++){ const i0 = w ? D.ends[w-1] : 0, i1 = D.ends[w], v = sumaSem(k,w,w,F.ss,n)/(i1-i0); for (let d=i0;d<i1;d++) o[d] = v; }
     return o; }
@@ -198,6 +203,7 @@ function ritmo(k, ss, n){
   return a + (b-a)*f;
 }
 function acum(k, ss, n){
+  if (conEdo(ss) && sinEdo(k)) return 0;
   if (Array.isArray(n)){ let t = 0; for (let i=0;i<n.length;i++) t += acum(k,ss,n[i]); return t; }
   let t = 0;
   if (n==null){ if (!ss) return suma(D.daily[k],0,S.dia); const a = D.ds[k]; for (let d=0;d<S.dia;d++) for (let j=0;j<ss.length;j++) t += a[d*NS+ss[j]]; return t; }
@@ -207,6 +213,17 @@ function acum(k, ss, n){
     if (S.dia>=fin) t += sumaSem(k,w,w,ss,n); else { if (S.dia>ini) t += sumaSem(k,w,w,ss,n)*(S.dia-ini)/(fin-ini); break; } }
   return t;
 }
+// ---- Encuentros de la CBP por sector de la frontera (EE. UU.). a, b: días de las bases (como rangoBase); n: nacionalidad, lista o null.
+// Cada sector: total, mexicanos, por agencia [USBP, OFO, CBP ONE], por nacionalidad extranjera y por semana del periodo.
+const CBPT = D.cbpT && D.cbp ? D.cbpT : null, SECI = CBPT ? CBPT.sec.map(x => D.cbp.sectores.findIndex(P => P.n===x)) : [], AGI = CBPT ? CBPT.ag.map(x => ['USBP','OFO','CBP ONE'].indexOf(x)) : [];
+function sinEdo(k){ return !!(IND[k] && IND[k].sinEdo); }
+function conEdo(ss){ return !!ss && ss.length<NS; }
+function cbpSec(a, b, n){ const o = (D.cbp ? D.cbp.sectores : []).map(() => ({ v:0, mx:0, ag:[0,0,0], nat:{}, wk:new Array(NW).fill(0) })); if (!CBPT) return o;
+  const ns = n==null ? null : new Set(Array.isArray(n) ? n : [n]), T = CBPT;
+  for (let i=0; i<T.d.length; i++){ const d = T.d[i]; if (d<a || d>=b) continue; const nn = T.n[i]; if (ns && !ns.has(nn)) continue; const j = SECI[T.s[i]]; if (j<0) continue;
+    const x = o[j], v = T.v[i]; x.v += v; if (nn===MX) x.mx += v; else x.nat[nn] = (x.nat[nn] || 0) + v; if (AGI[T.a[i]]>=0) x.ag[AGI[T.a[i]]] += v; x.wk[semDe(d-P0+1)] += v; }
+  return o; }
+const cbpAhora = F => cbpSec(P0, P0+S.dia, F.nd);
 function topNats(fn, cuantas){ const o = []; for (let n=0;n<OT;n++){ const v = fn(n); if (v>0) o.push([n,v]); } return o.sort((a,b)=>b[1]-a[1]).slice(0,cuantas); }
 function topEsts(fn, cuantos){ const o = []; for (let s=0;s<NS;s++){ const v = fn(s); if (v>0) o.push([s,v]); } return o.sort((a,b)=>b[1]-a[1]).slice(0,cuantos); }
 function xyNat(n){ const iso = D.nats[n][1], c = ORIGEN[iso] || CEN['P_'+String(iso).padStart(3,'0')];
@@ -339,7 +356,7 @@ function nombreSel(){ const s = S.sel; if (!s) return ''; return s.t==='n'?D.nat
 let chart = null, AVISOS = [];
 
 function fijarInd(k){ S.ind = (S.ind===k ? null : k); pintarTodo(); if (S.ind) acercarSiMundo(); }   // segundo clic lo apaga
-function fijarSel(sel, volar){ S.sel = sel; if (S.ind==='rep' && sel && sel.t==='n') S.ind = null;
+function fijarSel(sel, volar){ S.sel = sel; if (S.ind==='rep' && sel && sel.t==='n') S.ind = null; if (S.ind && sinEdo(S.ind) && sel && sel.t!=='n') S.ind = null;
   if (volar && sel) prepararVuelo();                 // se apagan líneas y círculos; reaparecen al llegar
   if (sel && sel.t==='p' && !S.ind) S.ind = sel.tipo==='rep'?'rep':sel.tipo==='em'?'pres':'ing';
   pintarTodo(); if (volar && sel) volarA(sel); }
@@ -447,6 +464,7 @@ function pintarKpis(){
   $('kpis').innerHTML = GRUPOS.map(g => {
     return '<div class="kg g-'+g[0]+'" style="flex:'+g[2]+' 1 0"><div class="eti">'+g[1]+'</div><div>'+INDS.filter(m=>m.g===g[0]).map(m => {
       const ic = '<span class="kc-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+ICONO[m.k]+'"/></svg></span>';
+      if (m.sinEdo && conEdo(F.ss) && !F.todo) return '<button class="kc" disabled title="Los encuentros los registra la CBP en EE. UU.: no se reparten por O.R."><span class="kc-top">'+ic+'<span class="kc-n">'+m.n+'</span></span><span class="kc-v num">—</span><span class="kc-pie"><span class="kc-d">no aplica por O.R.</span></span></button>';
       if (F.nd!=null && !m.nat) return '<button class="kc" disabled><span class="kc-top">'+ic+'<span class="kc-n">'+m.n+'</span></span><span class="kc-v num">—</span><span class="kc-pie"><span class="kc-d">solo mexicanos</span></span></button>';
       const d = diario(m.k,F), v = suma(d,0,S.dia), va = variacion(d), fuerte = va.ok && Math.abs(va.dl)>=20;
       const sem = D.ends.map((e,i)=>suma(d, i?D.ends[i-1]:0, e)), mx = Math.max.apply(null,sem) || 1;
@@ -461,7 +479,7 @@ function pintarKpis(){
   if (S.estreno){ S.estreno = false; if (!reducido()) contar(); }
 }
 const DEF_IND = {
-  ing:'Entradas al país por puntos de internación aéreos, terrestres y marítimos (personas extranjeras y mexicanas).',
+  ing:'Entradas de personas extranjeras por puntos de internación aéreos, terrestres y marítimos. Los mexicanos que regresan se cuentan aparte.',
   rech:'Personas a las que, en segunda revisión, se les negó la internación al país.',
   tram:'Documentos migratorios resueltos en oficinas del INM (residencias, visas, regularizaciones y otros).',
   resc:'Personas extranjeras en situación irregular rescatadas, según el reporte de las oficinas de representación.',
@@ -469,10 +487,11 @@ const DEF_IND = {
   can:'Niñas, niños y adolescentes, y sus acompañantes, canalizados a la protección del DIF.',
   ret:'Personas extranjeras retornadas a su país, por deportación o retorno asistido.',
   recib:'Personas extranjeras recibidas en México desde EE. UU.',
-  rep:'Personas mexicanas repatriadas desde EE. UU.'
+  rep:'Personas mexicanas repatriadas desde EE. UU.',
+  cbp:'Encuentros que registra la CBP en la frontera de EE. UU. con México. Esta actividad la hace EE. UU., no el INM. Incluye mexicanos y no se reparte por O.R.: se ve por sector de la frontera.'
 };
-const BASE_IND = {ing:'ing', rech:'seg', tram:'tram', resc:'resc', pres:'pres', can:'can_nna', ret:'ret', recib:'recib', rep:'rep'};
-const FUENTE = {ing:['incluye mexicanos',null], resc:['eventos · O.R.','O.R.'], pres:['Sistema','Sistema']};     // [nota en la tarjeta, fuente en el detalle]
+const BASE_IND = {ing:'ing', rech:'seg', tram:'tram', resc:'resc', pres:'pres', can:'can_nna', ret:'ret', recib:'recib', rep:'rep', cbp:'cbp'};
+const FUENTE = {ing:['de extranjeros',null], resc:['eventos · O.R.','O.R.'], pres:['Sistema','Sistema'], cbp:['en EE. UU.','CBP (EE. UU.)']};     // [nota en la tarjeta, fuente en el detalle]
 const nomInd = k => IND[k].n+(k==='resc' ? ' (eventos)' : '');                 // nombre para títulos de listas
 // Último día con datos de cada indicador dentro del periodo: los días posteriores están pendientes, no son cero
 function finDatos(k){
@@ -480,10 +499,20 @@ function finDatos(k){
   if (!bs.length) return ND;
   return Math.max(0, Math.min(ND, Math.min.apply(null, bs.map(b => idxBase(b.hasta)+1)) - P0));
 }
+// Mexicanos que ingresaron (no entran en «Ingresos de extranjeros»): para mostrar el total completo del país
+function ingMx(ss, hasta){ const A = D0.ds.ing_mx, B2 = D0.daily.ing_mx; if (!A || !B2) return 0; const b = P0 + Math.min(hasta==null ? S.dia : hasta, ND); let t = 0;
+  if (!ss){ for (let d=P0; d<b; d++) t += B2[d] || 0; return t; }
+  for (let d=P0; d<b; d++) for (let j=0; j<ss.length; j++) t += A[d*NS+ss[j]]; return t; }
+function totalPais(ext, mx){ const T = ext+mx || 1;
+  return '<span class="tip-tot">Ingresaron al país <b>'+miles(ext+mx)+'</b> personas: extranjeros <b>'+miles(ext)+'</b> ('+(ext/T*100).toFixed(1)+'%) + mexicanos <b>'+miles(mx)+'</b> ('+(mx/T*100).toFixed(1)+'%)'+
+    '<i class="tip-b"><i style="width:'+(ext/T*100).toFixed(1)+'%"></i></i></span>'; }
+function cbpMx(t, mx){ const T = t || 1;
+  return '<span class="tip-tot">Encuentros <b>'+miles(t)+'</b>: otros países <b>'+miles(t-mx)+'</b> ('+((t-mx)/T*100).toFixed(1)+'%) + mexicanos <b>'+miles(mx)+'</b> ('+(mx/T*100).toFixed(1)+'%)'+
+    '<i class="tip-b"><i style="width:'+((t-mx)/T*100).toFixed(1)+'%;background:'+colG('usa')+'"></i></i></span>'; }
 function tipKpi(el){
   const k = el.dataset.k, m = IND[k], F = filtro(), va = variacion(diario(k,F)), b = D.bases.find(x => x.k===BASE_IND[k]) || {};
   const tot = acum(k,F.ss,m.nat ? F.nd : null) || 1, tn = m.nat && F.n==null ? topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 3) : [];
-  return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+
+  return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+(k==='ing' && F.n==null ? totalPais(acum('ing',F.ss,null), ingMx(F.ss)) : '')+(k==='cbp' && F.n==null ? cbpMx(acum('cbp',null,F.r ? F.nd : null), F.r ? 0 : acum('cbp',null,MX)) : '')+
     (va.ok ? '<span>'+(S.cmp==='aa' ? 'Este periodo' : S.cmp==='sem' ? 'Última semana completa' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(S.cmp==='aa' ? 'año anterior' : S.cmp==='sem' ? 'semana previa' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
     (U => U>0 ? '<span>Promedio: <b>'+miles(suma(diario(k,F),0,U)/U)+'</b> al día · <b>'+miles(suma(diario(k,F),0,U)/U*7)+'</b> a la semana'+(U>=60 ? ' · <b>'+miles(suma(diario(k,F),0,U)/U*30.4)+'</b> al mes' : '')+'</span>' : '')(finDatos(k))+
     (k==='resc' ? (r => '<span>Eventos: <b>'+miles(r[0]+r[1])+'</b> · personas (1ra vez): <b>'+miles(r[0])+'</b> · reincidentes: '+miles(r[1])+'</span>')(comp('resc_rei',F.ss,F.nd)) : '')+
@@ -512,7 +541,8 @@ function contar(){                              // las cifras suben una vez al a
 const COL = { act:{}, meta:{}, sucio:true };     // color actual y color meta de cada estado, para la transición suave
 function regiones(){
   const t = TM[S.tema], F = filtro(), rgb = c => 'rgb('+Math.round(c[0])+','+Math.round(c[1])+','+Math.round(c[2])+')';
-  const eu = S.cbp && D.cbp ? D.cbp.estados : {}, euMax = Math.max.apply(null, Object.values(eu).concat(1));
+  const eu = {}; let euMax = 1;
+  if (S.ind==='cbp' && CBPT){ const tod = cbpSec(P0, P1, F.nd), sec = cbpAhora(F), m = {}; D.cbp.sectores.forEach((P,i) => { eu[P.eu] = (eu[P.eu] || 0) + sec[i].v; m[P.eu] = (m[P.eu] || 0) + tod[i].v; }); euMax = Math.max(1, ...Object.values(m)); }
   return GEO.features.filter(f => f.properties.t==='m' || f.properties.t==='u').map(f => { const k = f.properties.key, mx = f.properties.t==='m';
     const s = mx ? ECLAVE.indexOf(k) : -1, sel = mx && F.ss && !F.todo && F.ss.indexOf(s)>=0, c = COL.act[k], enc = mx ? 0 : eu[k.slice(3)];
     const area = c ? rgb(c) : enc ? rgb(mezclaRGB(t.r_usa, 0.1+0.45*enc/euMax)) : (mx?t.mx:t.eu);
@@ -679,8 +709,8 @@ function pintarMapa(){
   }
   // -- Encuentros de la CBP por sector, del lado de EE. UU.
   const enc = [];
-  if (S.cbp && D.cbp){ const mxc = Math.max.apply(null, D.cbp.sectores.map(P => P.tot).concat(1));
-    D.cbp.sectores.forEach((P,i) => { const v = fin ? P.tot : suma(P.wk,0,semDe(S.dia)+1); if (v<=0) return;
+  if (S.ind==='cbp' && CBPT){ const tod = cbpSec(P0, P1, F.nd), sec = cbpAhora(F), mxc = Math.max(1, ...tod.map(x => x.v));     // escala fija del periodo: la reproducción es comparable
+    D.cbp.sectores.forEach((P,i) => { const v = sec[i].v; if (v<=0) return;
       enc.push({ value:[P.x,P.y,v], cb:i, et:P.n+' · '+corto(v), symbolSize:(8 + 20*Math.sqrt(v/mxc))*E, label:{ show:S.zoom>=0.75 },
                  itemStyle:{ color:t.usa, opacity:.9, borderColor:t.tinta, borderWidth:1.4*E } }); }); }
   // -- Caravanas: dónde salieron y, si se sabe, dónde se disolvieron
@@ -705,7 +735,8 @@ function pintarMapa(){
   if (kc){ const tot = acum(kc,F.ss,nF);
     h = '<b>'+esc(nomInd(kc)+quien)+'</b><span>'+(fin ? 'Periodo completo' : 'Ritmo semanal al '+fechaDia(S.dia-1))+'</span>'+
         '<div class="gr"><span class="num">'+corto(tot)+'</span>'+chispa(semanal(kc,F.ss,nF),88,26,col,semDe(S.dia))+'</div>'+
-        '<div class="rampa"><span>menos</span><i style="background:linear-gradient(90deg,'+rampa.join(',')+')"></i><span>'+corto(maxE)+'</span></div>'; }
+        (sinEdo(kc) ? '<span class="mini">Círculos y estados de EE. UU.: sectores de la frontera donde la CBP registra los encuentros. No se reparte por O.R.</span>'
+          : '<div class="rampa"><span>menos</span><i style="background:linear-gradient(90deg,'+rampa.join(',')+')"></i><span>'+corto(maxE)+'</span></div>'); }
   else h = '<b>Panorama'+esc(quien)+'</b><span>De dónde llegan'+(fin?'':' · al '+fechaDia(S.dia-1))+'. Elige un indicador para colorear los estados.</span>'+
            '<span class="lin"><i style="background:'+t.reg+'"></i>Ingresos (regular)</span><span class="lin"><i style="background:'+t.irr+'"></i>Rescatados (irregular, eventos)</span>'+
            '<span class="nota">Línea: del país al lugar de registro · círculo: tamaño según el total</span>';
@@ -714,7 +745,7 @@ function pintarMapa(){
   if (S.car){ const l = carPeriodo();
     h += '<span class="lin"><span style="display:inline-flex;width:14px;height:14px;color:'+t.irr+'"><svg width="14" height="14" viewBox="0 0 16 16">'+GLIFO_CAR+'</svg></span>'+
          (l.length ? 'Caravanas · '+l.length+' · ≈'+corto(l.reduce((x,c) => x+c.p, 0))+' personas' : 'Sin caravanas en el periodo')+'</span>'; }
-  if (S.cbp && D.cbp) h += '<span class="lin"><i style="background:'+t.usa+';width:9px;height:9px;border-radius:50%"></i>Encuentros CBP · '+corto(enc.reduce((x,y)=>x+y.value[2],0))+'</span>';
+  if (S.ind==='cbp' && CBPT) h += '<span class="lin"><i style="background:'+t.usa+';width:9px;height:9px;border-radius:50%"></i>Encuentros CBP · '+corto(enc.reduce((x,y)=>x+y.value[2],0))+'</span>';
   const vp = S.agr!=='e' ? S.agr : S.modoVista==='mundo' ? 'm' : S.modoVista==='mx' ? 'e' : '';   // si el usuario movió el mapa, ninguno de los dos
   h += '<div class="verpor" role="group" aria-label="Vista del mapa">'+[['m','Mundo'],['e','Estado'],['c','Cinturón'],['o','CECO']].map(x=>'<button data-agr="'+x[0]+'" class="'+(vp===x[0]?'on':'')+'" aria-pressed="'+(vp===x[0])+'">'+x[1]+'</button>').join('')+'</div>';
   if (F.n==null) h += '<label class="origen">Origen <select id="region" aria-label="Región de origen"><option value="">todas las regiones</option>'+
@@ -771,8 +802,8 @@ function tarjeta(p){
     return '<div class="tt"><b class="h">'+esc(D.nats[n][0])+'</b><span class="s">'+(kn ? IND[kn].n+' · ' : '')+cuando+(F.ss ? ' · en '+esc(nombreFiltro()) : '')+'</span>'+
       (kn ? soloKpi(kn, F.ss, n, tc, sem, breve) : perfil(F.ss, n, null, tc, breve))+pie(accion('abrir su ficha'))+'</div>'; }
   if (p.componentType==='geo'){
-    if (p.name.indexOf('US_')===0 && S.cbp && D.cbp && D.cbp.estados[p.name.slice(3)])
-      return '<div class="tt"><b class="h">'+esc(p.name.slice(3))+'</b><span class="s">Encuentros de la CBP · periodo completo</span><span class="v">'+miles(D.cbp.estados[p.name.slice(3)])+'</span><span class="f">'+pct(D.cbp.estados[p.name.slice(3)], D.cbp.total)+'% de los encuentros en la frontera</span></div>';
+    if (p.name.indexOf('US_')===0 && S.ind==='cbp' && CBPT){ const sec = cbpAhora(F), eu = p.name.slice(3); let v = 0, T = 0; D.cbp.sectores.forEach((P,i) => { T += sec[i].v; if (P.eu===eu) v += sec[i].v; });
+      if (v) return '<div class="tt"><b class="h">'+esc(eu)+'</b><span class="s">Encuentros de la CBP · '+cuando+(F.n!=null ? ' · '+esc(D.nats[F.n][0]) : '')+'</span><span class="v">'+miles(v)+'</span><span class="f">'+pct(v, T)+'% de los encuentros en la frontera</span></div>'; }
     if (/^(W_)?P_\d+$/.test(p.name)) return tarjetaPais(p.name, cuando);
     if (p.name.indexOf('MX_')!==0) return '';
     const s = ECLAVE.indexOf(p.name); if (s<0) return '';
@@ -796,11 +827,11 @@ function tarjeta(p){
       '<div class="cv cab"><span>Día</span><span>Caravana</span><span>Personas</span></div>'+
       l.map(c => '<div class="cv"><span>'+fechaEv(c.f).replace(/ \d{4}$/,'')+'</span><span>'+esc(c.n)+'</span><b>≈'+miles(c.p)+'</b></div>').join('')+
       '<span class="f">Ubicación aproximada</span></div>'; }
-  if (p.seriesId==='cbp'){ const P = D.cbp.sectores[p.data.cb], tot = P.tot || 1;
-    return '<div class="tt"><b class="h">'+esc(P.n)+'</b><span class="s">Encuentros de la CBP · '+esc(P.eu)+(P.mx>=0 ? ', frente a '+esc(EST[P.mx]) : '')+'</span><span class="v">'+miles(p.data.value[2])+'</span>'+chispa(P.wk,232,30,tc.usa,sem)+
-      '<div class="g">Quiénes</div>'+fila('Mexicanos', P.mex/tot, pct(P.mex,tot)+'%', tc.usa)+fila('Extranjeros', P.ext/tot, pct(P.ext,tot)+'%', tc.usa)+
-      '<div class="g">Agencia</div>'+[['USBP',0],['OFO',1],['CBP ONE',2]].filter(x => P.ag[x[1]]).map(x => fila(x[0], P.ag[x[1]]/tot, pct(P.ag[x[1]],tot)+'%', tc.usa)).join('')+
-      (breve || !P.top.length ? '' : '<div class="g">Principales nacionalidades extranjeras</div>'+P.top.slice(0,3).map(r => fila(esc(r[0]), r[1]/P.top[0][1], corto(r[1]), tc.usa)).join(''))+
+  if (p.seriesId==='cbp'){ const P = D.cbp.sectores[p.data.cb], X = cbpAhora(F)[p.data.cb], W = cbpSec(P0, P1, F.nd)[p.data.cb], tot = X.v || 1, top = Object.entries(X.nat).sort((a,b) => b[1]-a[1]).slice(0,3);
+    return '<div class="tt"><b class="h">'+esc(P.n)+'</b><span class="s">Encuentros de la CBP · '+esc(P.eu)+(P.mx>=0 ? ', frente a '+esc(EST[P.mx]) : '')+(F.n!=null ? ' · '+esc(D.nats[F.n][0]) : '')+'</span><span class="v">'+miles(X.v)+'</span>'+chispa(W.wk,232,30,tc.usa,sem)+
+      (F.n==null ? '<div class="g">Quiénes</div>'+fila('Mexicanos', X.mx/tot, pct(X.mx,tot)+'%', tc.usa)+fila('Otros países', (X.v-X.mx)/tot, pct(X.v-X.mx,tot)+'%', tc.usa) : '')+
+      '<div class="g">Agencia</div>'+[['Patrulla Fronteriza (USBP)',0],['Puertos de entrada (OFO)',1],['Citas CBP ONE',2]].filter(x => X.ag[x[1]]).map(x => fila(x[0], X.ag[x[1]]/tot, pct(X.ag[x[1]],tot)+'%', tc.usa)).join('')+
+      (breve || F.n!=null || !top.length ? '' : '<div class="g">Principales nacionalidades extranjeras</div>'+top.map(r => fila(esc(D.nats[+r[0]][0]), r[1]/top[0][1], corto(r[1]), tc.usa)).join(''))+
       '<span class="f">'+cuando+' · fuente: CBP</span></div>'; }
   return '';
 }
@@ -1168,7 +1199,7 @@ function htmlComp(k, F){
   let h = '', sub = 'Esta base no trae sexo ni edad';
   if (k==='ing'){ const v = comp('ing_via',s,n);
     h = elegible('Vía de ingreso','ing',[['Aérea',v[0]],['Terrestre',v[1]],['Marítima',v[2]]]);
-    if (n==null){ const mxv = sumaSem('ing',0,NW-1,s,MX), tot = sumaSem('ing',0,NW-1,s,null); h += grupo('Quién ingresa',[['Extranjeros',tot-mxv],['Mexicanos',mxv,c2]]); } }
+    if (n==null){ const tot = sumaSem('ing',0,NW-1,s,null), mxv = ingMx(s, ND); h += grupo('Quién ingresa al país',[['Extranjeros',tot],['Mexicanos que regresan',mxv,c2]]); } }
   else if (k==='rech'){ const v = comp('rech_det',s,n), tr = rechazoExt(s,n);
     h = grupo('Resultado de la segunda revisión',[['Rechazo',v[1]],['Internación',v[0],c2]]) + (tr[1] ? '<div><span class="mini"><b>'+(tr[0]/tr[1]*100).toFixed(2)+'%</b> de los extranjeros que llegan por aire o tierra termina en rechazo ('+miles(tr[0])+' de '+corto(tr[1])+'). Sin mexicanos ni cruceros, igual que en Control migratorio.</span></div>' : ''); }
   else if (k==='tram'){ const v = comp('tram_se',s,n), r = comp('tram_res',s,n), ed = ['0–11','12–17','18–24','25–34','35–44','45–54','55–64','65+'];
@@ -1188,11 +1219,18 @@ function htmlComp(k, F){
     h = anillo('ret_tipo', s, n, [['Retorno asistido',1,c,'por retorno asistido'],['Deportación',0,c2,'por deportación']]); }
   else if (k==='recib'){ const v = comp('recib_edad',s,n); sub = 'Esta base trae adultos y menores, sin sexo';
     h = anillo('recib_edad', s, n, [['Menores',1,c,'son menores'],['Adultos',0,c2,'adultos']]); }
+  else if (k==='cbp'){ const x = cbpAhora(F).reduce((a,y) => { a.v += y.v; a.mx += y.mx; y.ag.forEach((z,i) => a.ag[i] += z); return a; }, { v:0, mx:0, ag:[0,0,0] }); sub = 'Esta base no trae sexo ni edad';
+    h = (F.n==null ? grupo('Quiénes',[['Otros países',x.v-x.mx],['Mexicanos',x.mx,c2]]) : '') + grupo('Agencia de la CBP',[['Patrulla Fronteriza (USBP)',x.ag[0]],['Puertos de entrada (OFO)',x.ag[1],c2],['Citas CBP ONE',x.ag[2],cssv('--line')]]); }
   else if (k==='rep'){ const v = comp('rep_comp',s,null); sub = 'Sexo y edad de los mexicanos repatriados';
     h = grupo('Adultos',[['Hombres',v[0],c2],['Mujeres',v[1]]]) + grupo('Menores',[['Niños',v[2],c2],['Niñas',v[3]]]) + grupo('Menores, con o sin compañía',[['Acompañados',v[4],c2],['Solos',v[5]]]) + grupo('Modalidad',[['Terrestre',v[6],c2],['Aérea',v[7]]]); }
   return '<div class="caja"><h2><span>Composición · '+(k==='rech' ? '2da revisión' : IND[k].n)+'</span>'+infoP('Cómo se reparte el indicador por tipo: vía, edad, sexo u otro.')+'</h2><span class="mini">'+sub+' · periodo completo</span><div class="cgrid">'+(h || '<span class="mini">Sin registros con este filtro.</span>')+'</div></div>';
 }
+// Encuentros por sector de la frontera (no hay estado de México)
+function cajaSectores(F){ const sec = cbpAhora(F), l = D.cbp.sectores.map((P,i) => [P, sec[i].v]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]), mx = l.length ? l[0][1] : 1, c = colG('usa');
+  return '<div class="caja"><h2><span>'+esc(IND.cbp.donde)+' · por sector</span>'+infoP('Sectores de la frontera de EE. UU. con México donde la CBP registra los encuentros. No se reparten por O.R.: la actividad es de EE. UU.')+'</h2><span class="mini">'+(S.dia<ND?'Acumulado al '+fechaDia(S.dia-1):'Periodo completo')+'</span>'+
+    (l.map(x => '<div class="barra"><span>'+esc(x[0].n)+' <small>'+esc(x[0].eu)+'</small></span><span class="b"><i style="width:'+(x[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(x[1])+'</span></div>').join('') || '<span class="mini">Sin registros.</span>')+'</div>'; }
 function cajaLugares(k, F){                      // un indicador repartido por estado, cinturón o CECO
+  if (sinEdo(k)) return cajaSectores(F);
   const nF = IND[k].nat ? F.nd : null, c = colG(IND[k].g); let filas, tit;
   if (S.agr==='e' || (F.ss && !F.todo)){ const todos = topEsts(s => acum(k,[s],nF), NS), uno = F.ss && F.ss.length===1 ? F.ss[0] : -1;
     let lista = F.ss && F.ss.length>1 ? todos.filter(r => F.ss.indexOf(r[0])>=0).slice(0,TOP) : todos.slice(0,TOP);
@@ -1434,6 +1472,10 @@ window.IANAMI_PULSO = {
   rechazo: nom => rechazoExt(null, nom==null ? null : natPorNombre(nom)),   // [rechazos, llegadas] con la definición común
   verLugar(dim, nom){ if (dim==='n'){ const i = natPorNombre(nom); if (i<0) return false; S.ind = null; irA('pulso'); fijarSel({t:'n', i:i}, true); }   // perfil de Pregunta a INAMI: el Pulso en su Panorama, con el lugar elegido
     else { const i = EST.findIndex(e => sinAcento(e)===sinAcento(nom)); if (i<0) return false; S.ind = null; irA('pulso'); fijarSel({t:'e', i:i}, true); } window.scrollTo(0,0); return true; },
+  verInd(k, natNom){ if (!IND[k]) return false; S.ind = k; S.sel = null; irA('pulso'); const i = natNom ? natPorNombre(natNom) : -1;   // desde Pregunta a INAMI
+    if (i>=0) fijarSel({t:'n', i:i}, true); else { pintarTodo(); acercarSiMundo(); } window.scrollTo(0,0); return true; },
+  verCapa(a){ if (a!=='car') return false; S.ind = null; irA('pulso'); if (!S.car){ S.car = true; const b = document.querySelector('#m-her [data-a="car"]'); if (b){ b.classList.add('on'); b.setAttribute('aria-pressed', true); } }
+    S.carSel = null; pintarTodo(); volarCaravanas(); window.scrollTo(0,0); return true; },
   verNat(nom, ind){ const i = natPorNombre(nom); if (i<0) return false; S.ind = ind || 'ing'; irA('pulso'); fijarSel({t:'n', i:i}, true); window.scrollTo(0,0); return true; }
 };
 function irA(v){
@@ -1486,16 +1528,16 @@ function escala(){ const n = window.innerWidth>=2200 ? Math.min(4, window.innerW
 // una gráfica de barras y la barra de tiempo. Usa el mismo motor del Pulso (periodo, filtro, día del cursor),
 // así que el mapa, las cifras y la reproducción siempre dicen lo mismo. Al salir, el Pulso queda como estaba.
 const SALA = { on:false, cmp:false, A:null, B:null, guarda:null, gr:null, anim:{}, por:{}, fijo:false };
-const PALABRA = { ing:'ingresos de extranjeros', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados', co:'constancias y oficios', va:'solicitudes de validación de actas' };
+const PALABRA = { ing:'ingresos de extranjeros', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados', cbp:'encuentros de la CBP (EE. UU.)', co:'constancias y oficios', va:'solicitudes de validación de actas' };
 const ORDEN_SALA = ['ing','resc','rep','rech','can','pres'];
 const IND_SALA = [['', 'Resumen', 'Panorama', 'Lo principal de todo en un vistazo'], ['ing', 'Regular', 'Ingresos', 'Extranjeros que entraron al país'], ['tram', 'Regular', 'Trámites', 'Trámites migratorios concluidos'],
-  ['resc', 'Irregular', 'Rescatados', 'Personas en situación irregular'], ['can', 'Irregular', 'Canalizados', 'NNA y acompañantes al DIF'], ['rep', 'Desde EE. UU.', 'Repatriados', 'Mexicanos devueltos por EE. UU.']];
+  ['resc', 'Irregular', 'Rescatados', 'Personas en situación irregular'], ['can', 'Irregular', 'Canalizados', 'NNA y acompañantes al DIF'], ['rep', 'Desde EE. UU.', 'Repatriados', 'Mexicanos devueltos por EE. UU.']].concat(IND.cbp ? [['cbp', 'Desde EE. UU.', 'Encuentros', 'Los registra la CBP en EE. UU.']] : []);
 const ICONO_PAN = 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z';
 const MES_L = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 // Suma de un indicador entre los días a y b (de las bases completas), con estados ss y nacionalidad n (número, lista o null)
 function rangoBase(k, a, b, ss, n){
   if (Array.isArray(n)){ let t = 0; n.forEach(x => t += rangoBase(k, a, b, ss, x)); return t; }
-  let t = 0; a = Math.max(0, a); b = Math.min(D0.dias, b);
+  let t = 0; a = Math.max(0, a); b = Math.min(D0.dias, b); if (conEdo(ss) && sinEdo(k)) return 0;
   if (ss && n!=null){ const C = CUBO0[k], E0 = D0.ends;            // estado × nacionalidad: por semana, prorrateado
     for (let w=0; w<E0.length; w++){ const wa = w ? E0[w-1] : 0, wb = E0[w], x = Math.max(wa,a), y = Math.min(wb,b); if (y<=x) continue;
       let s = 0; ss.forEach(e => s += C[(w*NS+e)*NN+n]); t += s*(y-x)/(wb-wa); } return t; }
@@ -1597,7 +1639,7 @@ function clicSala(e){
   const b = e.target.closest('button'); if (!b) return;
   if (b.id==='sl-x'){ cerrarSala(); return; }
   if (b.id==='sl-indb'){ const m = $('sl-im'), ab = m.hidden; m.hidden = !ab; b.setAttribute('aria-expanded', ab); if (ab){ const on = m.querySelector('.on') || m.querySelector('button'); on.focus(); } return; }
-  if (b.dataset.ind!=null){ $('sl-im').hidden = true; $('sl-indb').setAttribute('aria-expanded', false); const v = b.dataset.ind || null; SALA.extra = v==='co' || v==='va' ? v : null; S.ind = SALA.extra ? 'tram' : v; if (SALA.extra==='va' && S.play) detener(); if (S.ind==='rep' && S.sel && S.sel.t==='n') S.sel = null; pintarTodo(); return; }
+  if (b.dataset.ind!=null){ $('sl-im').hidden = true; $('sl-indb').setAttribute('aria-expanded', false); const v = b.dataset.ind || null; SALA.extra = v==='co' || v==='va' ? v : null; S.ind = SALA.extra ? 'tram' : v; if (SALA.extra==='va' && S.play) detener(); if (S.ind==='rep' && S.sel && S.sel.t==='n') S.sel = null; if (S.ind && sinEdo(S.ind) && S.sel && S.sel.t!=='n') S.sel = null; pintarTodo(); return; }
   if (b.dataset.por){ SALA.por[salaInd() || 'resc'] = b.dataset.por; pintarSala(false); return; }
   if (b.id==='sl-pl'){ reproducir(); return; }
   if (b.id==='sl-todo'){ verTodo(); return; }
@@ -1702,11 +1744,12 @@ const cap1 = s => s.charAt(0).toUpperCase()+s.slice(1);
 const relevante = a => a.k && a.t!=='car' && (a.t==='cambio' || a.t==='pico' || Math.max(a.a||0, a.b||0)*cmpN() >= 300);
 const ventanaCmp = () => textoCmp().replace(' contra la anterior','');
 function flecha(a, b){ const x = (b/a-1)*100; if (Math.abs(x)<0.5) return '<span class="ig">= sin cambio</span>'; return '<span class="'+(x<0?'baja':'sube')+'">'+(x<0?'▼ ':'▲ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%</span>'; }
-function fuentesSala(k){ const f = { co:'DGRAM', va:'DGRAM', ing:'DGCVM', rech:'DGCVM', tram:'DGRAM', resc:'DGCOR', pres:'DGCVM', can:'SIRENNA', ret:'DGCOR', recib:'DGCOR', rep:'DGPMV' };
+function fuentesSala(k){ const f = { co:'DGRAM', va:'DGRAM', ing:'DGCVM', rech:'DGCVM', tram:'DGRAM', resc:'DGCOR', pres:'DGCVM', can:'SIRENNA', ret:'DGCOR', recib:'DGCOR', rep:'DGPMV', cbp:'CBP' };
   const l = [...new Set([k].concat(perfilSala().orden).map(x => f[x]))]; return l.length>1 ? l.slice(0,-1).join(', ')+' y '+l[l.length-1] : l[0]; }
 // Reparto de un indicador en el periodo (sin mexicanos en ingresos, para que cuadre con «extranjeros»)
 function compSala(key, F){ const ss = F.ss, n = F.nd, v = comp(key, ss, n);
   if ((key==='ing_via' || (key==='rech_det' && SALA.perfil==='control')) && n==null){ const m = comp(key, ss, MX); return v.map((x,i) => Math.max(0, x - m[i])); } return v; }
+function cbpTotal(F){ return cbpAhora(F).reduce((a,y) => { a.v += y.v; a.mx += y.mx; y.ag.forEach((z,i) => a.ag[i] += z); return a; }, { v:0, mx:0, ag:[0,0,0] }); }
 function repartos(k, F){ const z = (key) => compSala(key, F);
   if (k==='ing'){ const v = z('ing_via'); return [[['Aérea',v[0]],['Terrestre',v[1]],['Marítima',v[2]]]]; }
   if (k==='tram'){ const v = z('tram_se'), sx = [['Hombres',suma(v,0,8)],['Mujeres',suma(v,8,16)]];
@@ -1717,6 +1760,7 @@ function repartos(k, F){ const z = (key) => compSala(key, F);
     const r = z('tram_res'), rs = [['Positiva',r[0]],['Negativa',r[1]],['Otra',r[2]]]; rs.t = 'Resolución'; sx.t = 'Sexo'; return dc ? [dc, tp, sx] : [tp, rs, sx]; }
   if (k==='resc'){ const a = z('resc_rei'), d = z('resc_des'); return [[['Primera vez',a[0]],['Reincidentes',a[1]]], [['A estación migratoria',d[0]],['Al DIF',d[1]],['Sin destino',d[2]]]]; }
   if (k==='rep'){ const v = comp('rep_comp', F.ss, null); return [[['Adultos',v[0]+v[1]],['NNA',v[2]+v[3]]]]; }
+  if (k==='cbp'){ const x = cbpTotal(F), a = [['Patrulla Fronteriza',x.ag[0]],['Puertos de entrada',x.ag[1]],['CBP ONE',x.ag[2]]]; a.t = 'Agencia'; a.propios = true; return F.nd==null ? [[['Otros países',x.v-x.mx],['Mexicanos',x.mx]], a] : [a]; }
   if (k==='rech'){ const v = z('rech_det'), r = [['Internación',v[0]],['Rechazo',v[1]]]; r.t = 'Segunda revisión'; return [r]; }
   if (k==='pres'){ const v = z('pres_est').map((x,i) => [nomEst(i), x]).sort((a,b) => b[1]-a[1]), r = v.slice(0,2).concat([['Otras', v.slice(2).reduce((a,x) => a+x[1], 0)]]); r.t = 'Por estación'; r.propios = true; return [r]; }
   if (k==='can'){ const v = z('can_nna'), a = z('can_ad'); return [[['NNA',v.reduce((s,x) => s+x, 0)],['Adultos acompañantes',a[0]+a[1]]]]; }
@@ -1878,11 +1922,12 @@ function desgloseSala(k, F, t, dur){
   else if (k==='ret'){ tit = 'Tipo de retorno'; const v = z('ret_tipo'); l = [['Retorno asistido',v[1]],['Deportación',v[0]]]; }
   else if (k==='co'){ tit = 'Qué documento salió'; const v = coRango(P0, P0+Math.min(S.dia, ND), F.ss, F.nd, true); l = coFilas().nom.map((x,i) => [NOM_CO[x] || x, v[i]]).sort((a,b) => b[1]-a[1]); }
   else if (k==='va'){ tit = 'Tipo de acta y señales'; l = vaDesglose(F); }
+  else if (k==='cbp'){ tit = 'Quiénes y cómo'; const x = cbpTotal(F); l = (F.nd==null ? [['Otros países',x.v-x.mx],['Mexicanos',x.mx]] : []).concat([['Patrulla Fronteriza',x.ag[0],'Entre puertos (USBP)'],['Puertos de entrada',x.ag[1],'Oficina de Operaciones de Campo (OFO)'],['Citas CBP ONE',x.ag[2]]]); }
   else if (k==='rep'){ tit = 'Quiénes y por dónde'; const v = comp('rep_comp', F.ss, null); l = [['Adultos',v[0]+v[1]],['NNA',v[2]+v[3]],['Vía aérea (PRIM)',v[7],'Vía aérea: vuelos del Procedimiento de Repatriación al Interior de México (personas, no vuelos)'],['Vía terrestre',v[6]]]; }
   const G = $('sl-g'), key = k+'|'+l.map(x => x[0]).join(), c = t[IND[k].g];
   if (G.dataset.k!==key){ G.dataset.k = key; G.innerHTML = '<div class="sl-gt">'+tit+(k==='va' ? ' · periodo propio' : SALA.cmp ? ' · '+esc(nomRango(SALA.B[0], SALA.B[1])) : ' · periodo completo')+'</div>'+
     l.map((x,i) => '<div class="sl-m sl-e" style="--d:'+(.28+i*.05)+'s"><div class="v" style="color:'+c+'" data-m="'+i+'">0</div><div class="n"'+(x[2] ? ' title="'+esc(x[2])+'"' : '')+'>'+esc(x[0])+'</div><div class="d"></div></div>').join(''); }
-  const tot = k==='va' ? l[0][1]+l[1][1] : k==='rep' ? l[0][1]+l[1][1] : k==='can' ? l[0][1]+l[1][1] : k==='resc' ? l[0][1]+l[1][1] : k==='rech' ? l[0][1] : l.reduce((a,x) => a+x[1], 0) || 1;
+  const tot = k==='cbp' ? cbpTotal(F).v || 1 : k==='va' ? l[0][1]+l[1][1] : k==='rep' ? l[0][1]+l[1][1] : k==='can' ? l[0][1]+l[1][1] : k==='resc' ? l[0][1]+l[1][1] : k==='rech' ? l[0][1] : l.reduce((a,x) => a+x[1], 0) || 1;
   const base = k==='tram' ? compSala('tram_tipo', F).reduce((a,x) => a+x, 0) : k==='pres' ? compSala('pres_est', F).reduce((a,x) => a+x, 0) : tot;
   const nnaT = k==='can' ? l[1][1] : 0;
   l.forEach((x,i) => { const el = G.querySelector('[data-m="'+i+'"]'); if (!el) return; mover(el, x[1], cifraG, dur);
@@ -1909,7 +1954,7 @@ function fraseSala(k, F, nF, pa, pb, otros){
 }
 // Barras verticales: en un periodo, los 8 con más registros; al comparar, el cambio por día de cada uno.
 // Con un país elegido se reparte por estado (O.R.); si no, por nacionalidad. Repatriados siempre por estado.
-function opcionesPor(k){ if (k==='rep') return [['e','O.R.'],['p','Punto']]; const l = [];
+function opcionesPor(k){ if (k==='rep') return [['e','O.R.'],['p','Punto']]; if (k==='cbp') return (S.sel && S.sel.t==='n' ? [] : [['n','Nacionalidad']]).concat([['s','Sector']]); const l = [];
   if (!(S.sel && S.sel.t==='n')) l.push(['n','Nacionalidad']); if (!(S.sel && S.sel.t!=='n')) l.push(['e','O.R.']);
   if (k==='ing' && perfilSala().puntoIng && !S.sel) l.push(['p','Punto']); return l; }
 function pintarBarrasSala(k, F, nF){
@@ -1922,7 +1967,13 @@ function pintarBarrasSala(k, F, nF){
   else { const l = F.nd==null ? null : (Array.isArray(F.nd) ? F.nd : [F.nd]); for (let n=0;n<OT;n++){ if (l && l.indexOf(n)<0) continue; lista.push([D.nats[n][0], null, n]); } }
   const nomCorto = s => s.replace('Estados Unidos','EE. UU.').replace('Ciudad de México','CDMX').replace('Edo. de México','Edomex').replace('Quintana Roo','Q. Roo').replace('Baja California S.','BCS').replace('Baja California','B. C.').replace('Indonesia','Indon.').replace('Filipinas','Filip.').replace('República Dominicana','Rep. Dom.');
   let datos, tit, sub, cmp = SALA.cmp && k!=='va';
-  if (k==='va'){ const V = vaFilas(F), DV = window.IANAMI_REG.va_dic, c = {}; V.forEach(r => { const x = porEst ? DV.ofr[r[2]] : DV.n[r[4]]; c[x] = (c[x]||0) + 1; });
+  if (por==='s'){ const nom = D.cbp.sectores.map(P => P.n);
+    if (cmp){ const dA = SALA.A[1]-SALA.A[0], dB = SALA.B[1]-SALA.B[0], A = cbpSec(SALA.A[0], SALA.A[1], nF), B = cbpSec(SALA.B[0], SALA.B[1], nF), mx = Math.max(1, ...A.map(x => x.v));
+      datos = nom.map((n,i) => [n, A[i].v/dA, B[i].v/dB, A[i].v]).filter(x => x[3]>=Math.max(60, mx*0.01)).map(x => [x[0], x[1], x[2], (x[2]/x[1]-1)*100]).sort((a,b) => b[3]-a[3]);
+      tit = 'Cambio por sector'; sub = PALABRA[k]+' por día, '+nomRango(SALA.B[0], SALA.B[1])+' contra '+nomRango(SALA.A[0], SALA.A[1]); }
+    else { const X = cbpAhora(F), r = nom.map((n,i) => [n, X[i].v]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]), tot = r.reduce((s,x) => s+x[1], 0);
+      datos = r.slice(0,9).map(x => [x[0], x[1], tot]); tit = 'Por sector de la frontera'; sub = PALABRA[k]+' · '+datos.length+' sectores'+(S.dia<ND ? ' hasta el '+fechaDia(S.dia-1) : ''); } }
+  else if (k==='va'){ const V = vaFilas(F), DV = window.IANAMI_REG.va_dic, c = {}; V.forEach(r => { const x = porEst ? DV.ofr[r[2]] : DV.n[r[4]]; c[x] = (c[x]||0) + 1; });
     datos = Object.entries(c).sort((a,b) => b[1]-a[1]).slice(0,8).map(x => [x[0], x[1], V.length]); tit = porEst ? 'Por O.R.' : 'Por nacionalidad'; sub = 'solicitudes de validación · periodo propio de la base'; }
   else if (cmp){ const dA = SALA.A[1]-SALA.A[0], dB = SALA.B[1]-SALA.B[0];
     const r = lista.map(x => { if (x[3]){ const a = puntoRango(x[3], SALA.A[0], SALA.A[1]), b = puntoRango(x[3], SALA.B[0], SALA.B[1]); return [x[0], a/dA, b/dB, a]; }
@@ -2103,7 +2154,7 @@ function iniciar(){
   if (window.innerWidth<=620 && window.innerHeight>window.innerWidth){ S.modoVista = 'mx'; S.zoom = 1; S.centro = VISTA_MX.c; }   // teléfono vertical: arranca en México
   else { const v = vistaMundo(); S.zoom = v.z; S.centro = v.c; }        // la primera vista es el mundo completo
   chart.setOption(opcionBase());
-  if (!D.cbp) $('b-cbp').hidden = true;
+
   if (!(D.caravanas || []).length) $('b-car').hidden = true;
   let tocado = null;
   chart.on('click', p => {

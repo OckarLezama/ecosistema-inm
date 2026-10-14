@@ -249,6 +249,10 @@ def cargar_seg(t):
     t["v"] = entero(t["TOTAL"])
     t["det"] = t["DETERMINACION"].map(lambda x: 1 if norm(x).startswith("RECH") else 0)
     t["punto"] = t["PUNTO DE INTERNACION"].map(norm)
+    mx = t["n"] == MEXICO
+    if mx.any():
+        avisar("seg", f"{int(t.loc[mx, 'v'].sum()):,} casos ({int(mx.sum()):,} renglones) vienen con nacionalidad mexicana; no se cuentan "
+                      "en segunda revisión ni en rechazos (igual que Control migratorio)")
     return t
 
 
@@ -324,7 +328,12 @@ def cargar_ret(t):
     t = preparar("ret", t)
     for c in ("RETORNADOS A SU PAIS", "DEPORTADOS", "RETORNOS ASISTIDOS"):
         t[c] = entero(t[c])
-    t["v"] = t["RETORNADOS A SU PAIS"]
+    # total = deportados + retornos asistidos (así el desglose cuadra con el total en todas las vistas)
+    t["v"] = t["DEPORTADOS"] + t["RETORNOS ASISTIDOS"]
+    dif = t["v"] != t["RETORNADOS A SU PAIS"]
+    if dif.any():
+        avisar("ret", f"{int(dif.sum()):,} renglones donde deportados + retornos asistidos no es igual a «Retornados a su país» "
+                      f"(diferencia {int((t['v'] - t['RETORNADOS A SU PAIS'])[dif].sum()):+,}); se usa la suma")
     return t
 
 
@@ -662,9 +671,15 @@ def main():
     cortes = semanas(inicio, dias)
 
     # -- Indicadores de la página
-    rech = B["seg"][B["seg"]["det"] == 1]
+    # Segunda revisión y rechazos: solo extranjeros, igual que Control migratorio (a un mexicano no se le niega la entrada;
+    # los renglones con nacionalidad mexicana se avisan en la base y no se cuentan)
+    seg_ext = B["seg"][B["seg"]["n"] != MEXICO]
+    rech = seg_ext[seg_ext["det"] == 1]
     can = pd.concat([B["can_nna"][["DIA", "s", "n", "v"]], B["can_ad"][["DIA", "s", "n", "v"]]])
-    indicadores = {"ing": B["ing"], "rech": rech, "tram": B["tram"], "resc": B["resc"], "pres": B["pres"],
+    # Ingresos: el tablero cuenta extranjeros; los mexicanos que regresan van aparte (ing_mx) para mostrar el total completo
+    ing_ext, ing_mx = B["ing"][B["ing"]["n"] != MEXICO], B["ing"][B["ing"]["n"] == MEXICO]
+    BX = dict(B, ing=ing_ext, seg=seg_ext)
+    indicadores = {"ing": ing_ext, "ing_mx": ing_mx, "rech": rech, "tram": B["tram"], "resc": B["resc"], "pres": B["pres"],
                    "can": can, "ret": B["ret"], "recib": B["recib"], "rep": B["rep"]}
     salida = {"inicio": inicio.date().isoformat(), "corte": fin.date().isoformat(), "dias": dias,
               "generado": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -674,13 +689,35 @@ def main():
         r = resumir(t, inicio, dias, cortes)
         for parte in ("cube", "daily", "ds", "dn"):
             salida[parte][k] = r[parte]
-    salida["comp"], salida["estaciones"] = composiciones(B)
+    salida["comp"], salida["estaciones"] = composiciones(BX)
     salida["tramTipos"] = TIPOS_TRAM
-    salida["puntos"], salida["repPuntos"], salida["emPuntos"], salida["ingPunto"], salida["rechPunto"] = puntos(B, inicio, cortes)
+    salida["puntos"], salida["repPuntos"], salida["emPuntos"], salida["ingPunto"], salida["rechPunto"] = puntos(BX, inicio, cortes)
     salida["docs"] = documentos(tablas, cargas)
     salida["cbp"] = None
     if "cbp" in tablas:
         B["cbp"], salida["cbp"] = encuentros(tablas["cbp"], inicio, dias, cortes)
+        # Encuentros como indicador (tarjeta del Pulso y Pregunta a INAMI): un renglón por día × sector × agencia × nacionalidad.
+        # No tiene estado de México (CBP reporta por sector de EE. UU.): «s» es 0 solo para el cubo y la página no lo usa por estado.
+        tc = B["cbp"]
+        fijas = ["DIA", "AGENCIA", "LOCATION", "CIUDAD EEUU", "CIUDAD MX", "TOTAL", "MEXICO", "EXTRANJEROS", "v", "sector"]
+        cols = [c for c in tc.columns if c not in fijas]                      # países y OTROS
+        largo = tc.drop(columns=["v"]).melt(id_vars=["DIA", "AGENCIA", "LOCATION"], value_vars=cols + ["MEXICO"], var_name="pais", value_name="v")
+        largo = largo[largo["v"] > 0].copy()
+        largo["n"] = largo["pais"].map(lambda k: MEXICO if k == "MEXICO" else OTRAS if k == "OTROS" else idx_nat(k))
+        largo["s"] = 0
+        dif = int(tc["TOTAL"].sum()) - int(largo["v"].sum())
+        if dif:
+            avisar("cbp", f"La suma por nacionalidad difiere del TOTAL en {dif:+,} encuentros")
+        r = resumir(largo, inicio, dias, cortes)
+        for parte in ("cube", "daily", "dn"):
+            salida[parte]["cbp"] = r[parte]
+        salida["ds"]["cbp"] = []
+        secs = sorted(largo["LOCATION"].astype(str).str.strip().unique())
+        ags = ["USBP", "OFO", "CBP ONE"]
+        salida["cbpT"] = {"sec": secs, "ag": ags, "d": [int(x) for x in (largo["DIA"] - inicio).dt.days],
+                          "s": [secs.index(str(x).strip()) for x in largo["LOCATION"]],
+                          "a": [ags.index(norm(x)) if norm(x) in ags else -1 for x in largo["AGENCIA"]],
+                          "n": [int(x) for x in largo["n"]], "v": [int(x) for x in largo["v"]]}
     salida["caravanas"] = caravanas(tablas["car"]) if "car" in tablas else []
 
     # -- Estado de cada base (para la sección Bases y el reporte)

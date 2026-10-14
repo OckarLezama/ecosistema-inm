@@ -30,10 +30,10 @@ const PV = (() => { const c = new Float64Array(NP*3); for (let i=0;i<ING.N;i++) 
 function agg(T, key, nk, o){
   o = o || {}; const out = new Float64Array(nk), d0 = o.d0!=null ? o.d0 : Q.d0, d1 = o.d1!=null ? o.d1 : Q.d1, v = o.v ? T[o.v] : T.v;
   const ns = (o.nats!==undefined ? o.nats : Q.nats), es = (o.ests!==undefined ? o.ests : Q.ests), sn = ns && ns.length && T.n ? new Set(ns) : null, se = es && es.length && T.e ? new Set(es) : null;
-  const pto = o.pto!==undefined ? o.pto : Q.pto, conP = pto>=0 && T.p, sinMx = T.n && (T===ING || T===SEG), ex = o.ex;
+  const pto = o.pto!==undefined ? o.pto : Q.pto, conP = pto>=0 && T.p, sinMx = T.n && (T===ING || T===SEG) && !o.soloMx, soloMx = o.soloMx && T.n, ex = o.ex;
   const via = o.via!==undefined ? o.via : Q.via, cls = o.cls!==undefined ? o.cls : Q.cls, conV = via>=0 && (T===ING || T===SEG), conC = cls>=0 && T===NNA;
   for (let i=0;i<T.N;i++){ const d = T.d[i]; if (d<d0 || d>=d1) continue;
-    if (sinMx && T.n[i]===MX) continue; if (sn && !sn.has(T.n[i])) continue; if (se && !se.has(T.e[i])) continue; if (conP && T.p[i]!==pto) continue; if (conV && (T===ING ? T.vi[i] : PV[T.p[i]])!==via) continue; if (conC && T.c[i]!==cls) continue; if (ex && !ex(i)) continue;
+    if (sinMx && T.n[i]===MX) continue; if (soloMx && T.n[i]!==MX) continue; if (sn && !sn.has(T.n[i])) continue; if (se && !se.has(T.e[i])) continue; if (conP && T.p[i]!==pto) continue; if (conV && (T===ING ? T.vi[i] : PV[T.p[i]])!==via) continue; if (conC && T.c[i]!==cls) continue; if (ex && !ex(i)) continue;
     out[key ? key(i) : 0] += v[i]; }
   return out;
 }
@@ -45,6 +45,8 @@ const rech = i => SEG.r[i]===1;
 /* ==== [2] UTILIDADES ============================================== */
 const $ = id => document.getElementById(id), MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const miles = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' k' : miles(n);
+// Cifra de las tarjetas: la misma regla en todo el tablero (completa hasta 999,999; millones con dos decimales), como en el Pulso
+const cifraKpi = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : miles(n);
 const pct = (a,b) => b ? (a/b*100).toFixed(1) : '0.0', esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tasa = (r, l) => l+r ? r/(l+r)*100 : 0, tasaTxt = x => x>=1 ? x.toFixed(1)+'%' : x>=0.1 ? x.toFixed(2)+'%' : x.toFixed(3)+'%';
 const fDia = d => new Date(INI.getFullYear(), INI.getMonth(), INI.getDate()+d);
@@ -85,7 +87,7 @@ const IC = { avion:'M2 16l20-6-20-6 3 6zM5 10h9', tierra:'M3 20h18M5 20V9l7-5 7 
              no:'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM6 6l12 12', tot:'M4 7h16M4 12h16M4 17h10', est:'M4 20V8l8-5 8 5v12zM9 20v-6h6v6', ret:'M20 12H5M11 6l-6 6 6 6', nino:'M12 4a2 2 0 1 0 0 4a2 2 0 0 0 0-4zM8 21v-7l-2-3 6-2 6 2-2 3v7', adulto:'M12 3a3 3 0 1 0 0 6a3 3 0 0 0 0-6zM6 21v-6a6 6 0 0 1 12 0v6' };
 const svgI = d => '<span class="kc-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>';
 function minibarras(v){ const mx = Math.max.apply(null,v)||1; return '<span class="kc-b" aria-hidden="true">'+v.map((x,i) => '<i class="'+(i===v.length-1?'h':'p')+'" style="height:'+Math.max(8,x/mx*100).toFixed(0)+'%"></i>').join('')+'</span>'; }
-function kc(o){ const tag = o.attr ? 'button' : 'div';
+function kc(o){ if (o.num!=null && o.val===corto(o.num)) o.val = cifraKpi(o.num); const tag = o.attr ? 'button' : 'div';
   return '<'+tag+' class="kc'+(o.on?' on':'')+'"'+(o.attr||'')+' style="--g:'+o.col+';--gs:'+o.col+'1F;--ga:'+o.col+'"'+(o.title ? ' title="'+esc(o.title)+'"' : '')+'>'+
     '<span class="kc-top">'+svgI(o.ic)+'<span class="kc-nf"><span class="kc-n">'+o.nom+'</span><span class="kc-f">'+(o.sub||'')+'</span></span></span>'+
     '<span class="kc-v num"'+(o.num!=null ? ' data-v="'+Math.round(o.num)+'"' : '')+'>'+o.val+'</span><span class="kc-pie">'+(o.d||'<span class="kc-d"></span>')+(o.b||'')+'</span></'+tag+'>'; }
@@ -287,6 +289,10 @@ function tablaRech(dim){
   const l = agg(ING, key(ING), nk, Object.assign({ ex:llegada }, o)), r = agg(SEG, key(SEG), nk, Object.assign({ ex:rech }, o)), s = agg(SEG, key(SEG), nk, o);
   const out = []; for (let k=0;k<nk;k++) if ((l[k] || r[k]) && k!==(dim==='n' ? MX : -1)) out.push({ k:k, l:l[k], r:r[k], s:s[k], ll:l[k]+r[k], t:tasa(r[k], l[k]) }); return out;
 }
+// Total del país = extranjeros (lo que mide Control) + mexicanos que regresan; con el periodo y filtros elegidos (no aplica al elegir nacionalidad)
+function totalPais(){ if (Q.nats.length) return ''; const ext = tot(ING, {}), mx = tot(ING, { soloMx:true }), T = ext+mx; if (!T) return '';
+  return '<p class="cv-totpais"><span>Ingresaron al país <b>'+cifraKpi(T)+'</b> = extranjeros <b>'+cifraKpi(ext)+'</b> ('+(ext/T*100).toFixed(1)+'%) + mexicanos que regresan <b>'+cifraKpi(mx)+'</b> ('+(mx/T*100).toFixed(1)+'%)</span>'+
+    '<i class="cv-tpb" aria-hidden="true"><i style="width:'+(ext/T*100).toFixed(1)+'%"></i></i><span class="mini">Las tarjetas y gráficas de esta sección cuentan solo extranjeros.</span></p>'; }
 function pintarInt(){
   const b = $('cv-body'), w = ventanas(), crucero = Q.via===2;
   const L = tot(ING, {ex:llegada}), R = tot(SEG, {ex:rech}), base = tasa(R, L);
@@ -297,7 +303,7 @@ function pintarInt(){
       '<div class="kg g-irr" style="flex:3 1 0;--g:'+ROJO+'"><div class="eti">Segunda revisión · aire y tierra</div><div>'+
         tarjeta('Casos', 'en segunda revisión', IC.lupa, OCRE, SEG, {})+tarjeta('Rechazos', 'no se internaron', IC.no, ROJO, SEG, {ex:rech})+
         kc({ nom:'% rechazado', sub:'de quienes llegan', ic:IC.no, col:VINO, val:crucero ? '—' : tasaTxt(base), d: crucero ? '<span class="kc-d">no aplica a cruceros</span>' : w ? chipD(tasa(tot(SEG, {ex:rech, d0:w[0][0], d1:w[0][1]}), tot(ING, {ex:llegada, d0:w[0][0], d1:w[0][1]}))*1e3, tasa(tot(SEG, {ex:rech, d0:w[1][0], d1:w[1][1]}), tot(ING, {ex:llegada, d0:w[1][0], d1:w[1][1]}))*1e3) : '' })+'</div></div>'+plegar()+'</section>'+
-    '<div class="rg-hz" id="cv-hz"></div>'+
+    totalPais()+'<div class="rg-hz" id="cv-hz"></div>'+
     '<div class="rg-g rg-g21 fila-par">'+cajaTend('cv-tr', 'tr')+'<div class="caja"><h2><span id="cv-tp-t"></span>'+info('tp')+'</h2><span class="q" id="cv-tp-q"></span><div id="cv-tp"></div></div></div>'+
     '<h3 class="cv-sec">Segunda revisión y rechazos <small>solo llegadas por aire y tierra</small></h3>'+
     (crucero ? '<p class="cv-cal" style="background:var(--panel2);color:var(--ink2)">Los pasajeros de crucero no pasan por segunda revisión. Quita el filtro de vía marítima para ver los rechazos.</p>' :

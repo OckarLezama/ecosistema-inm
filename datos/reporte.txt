@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-13 21:09
+Generado: 2026-10-14 11:31
 Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
 
 == Ingresos  ·  DGCVM INGRESOS.xlsx  ·  cargado 2026-10-13
@@ -7,12 +7,13 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    Días sin datos: 1 → 2026-10-13
    En «Otras» nacionalidades: 2,170 (0.0%)
    · 45 renglones con nacionalidad sin código (van a «Otras»): Islas Navidad, Islas Cocos, Timor-Leste, Islas Reunion, Islas Malvinas, Islas Azores, Islas Faroe, False
-   · 44 de 181 puntos de internación tienen coordenadas en el catálogo (97% de los ingresos); el resto no aparece como punto en el mapa
+   · 44 de 180 puntos de internación tienen coordenadas en el catálogo (96% de los ingresos); el resto no aparece como punto en el mapa
 
 == Segunda revisión  ·  DGCVM SEGUNDA REVISION_.xlsx  ·  cargado 2026-10-13
    41,207 renglones · total 111,729 · del 2024-10-01 al 2026-10-12
    Días sin datos: 4 → 2024-10-31, 2025-03-18, 2026-06-11, 2026-10-13
    En «Otras» nacionalidades: 2 (0.0%)
+   · 2,413 casos (1,768 renglones) vienen con nacionalidad mexicana; no se cuentan en segunda revisión ni en rechazos (igual que Control migratorio)
 
 == Trámites  ·  DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx  ·  cargado 2026-10-13
    935,189 renglones · total 935,189 · del 2024-10-02 al 2026-10-13
@@ -52,9 +53,10 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    En «Otras» nacionalidades: 0 (0.0%)
 
 == Retornados  ·  DGCVM RETORNADOS A SU PAIS.xlsx  ·  cargado 2026-10-13
-   6,196 renglones · total 28,797 · del 2024-10-01 al 2026-10-12
+   6,196 renglones · total 28,805 · del 2024-10-01 al 2026-10-12
    Días sin datos: 17 → 2024-10-13, 2024-10-20, 2024-10-27, 2024-11-02, 2024-11-04, 2024-12-01, 2024-12-08, 2024-12-15, 2024-12-25, 2025-01-01, 2025-01-02, 2025-01-03, 2025-02-23, 2025-11-16 …
    En «Otras» nacionalidades: 0 (0.0%)
+   · 3 renglones donde deportados + retornos asistidos no es igual a «Retornados a su país» (diferencia +8); se usa la suma
 
 == Recibidos de EE. UU.  ·  DGCOR RECIBIDOS.xlsx  ·  cargado 2026-10-13
    3,720 renglones · total 25,651 · del 2024-10-02 al 2026-10-12

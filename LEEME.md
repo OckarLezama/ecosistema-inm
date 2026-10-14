@@ -130,10 +130,18 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - **Ver en el tablero** abre el proceso que corresponde con los mismos filtros.
 - Cifras de NNA de 1 a 4 se publican como «menos de 5».
 - Los indicadores, partes y sinónimos están en la sección [2] de `js/consulta.js`.
+- Temas: además de los del Pulso, **encuentros CBP** (por sector, agencia, mexicanos y extranjeros), **caravanas** (cuántas y personas estimadas, por lugar de salida y nombre), **validación de actas del Registro Civil** (periodo propio de la base, corte semanal), **extranjeros con documento vigente** (foto al último corte: no sigue al periodo; los archivos cruzan de dos en dos, así que estado y nacionalidad juntos solo existen para las 25 nacionalidades principales), **mexicanos que ingresaron** y **todos los ingresos** (extranjeros + mexicanos). «Ingresos de México» se responde con mexicanos que ingresaron.
+- **Ficha o Bullets:** la misma consulta, como hoja con gráficas o en viñetas para mandar como mensaje. Las viñetas siguen el estilo de la Mesa de Seguridad (cifra en «2 MIL 771», «(75%) 2 MIL 070 mexicanos», cambio contra los días anteriores, acumulado desde el 1 oct 2024 y principales con su %), solo con cifras: sin causas ni interpretación. **WhatsApp** abre el chat con el texto listo; **Copiar texto**, **Imagen** y **PDF** también funcionan.
+- **Compartir la ficha:** en celular y tableta, la imagen se prepara en cuanto sale el resultado y al tocar Compartir abre el menú del teléfono con la imagen adjunta (el botón se ve atenuado mientras se prepara). En computadora abre WhatsApp Web y descarga la imagen para adjuntarla.
 
 ## Reglas de los datos
 
 - **% de rechazo:** rechazos ÷ (extranjeros que llegan por aire o tierra + rechazos). Sin mexicanos ni vía marítima (tripulación de cruceros). Es la misma cifra en Pulso y en Control migratorio.
+- **Ingresos:** las tarjetas cuentan extranjeros (76.51 M). Los mexicanos que regresan se muestran aparte y suman el total del país (extranjeros + mexicanos = 98.90 M) en la ayuda de la tarjeta del Pulso, en Control › Internaciones y en Pregunta a INAMI.
+- **Segunda revisión y rechazos:** solo extranjeros en todas las vistas; los casos con nacionalidad mexicana se avisan en Bases.
+- **Retornados:** deportados + retornos asistidos (así el desglose cuadra con el total); si la columna del total no coincide, se avisa en Bases.
+- **Cifras en las tarjetas:** número completo hasta 999,999; desde un millón, «x.xx M».
+- **Encuentros CBP:** los registra EE. UU. (no el INM), incluyen mexicanos y no tienen O.R.: en el Pulso la tarjeta está en «Desde EE. UU.» (recibidos → repatriados → encuentros), se desactiva al elegir un estado, funciona con nacionalidad y al elegirla el mapa muestra los sectores de la frontera. El análisis completo irá en Analizar.
 - **Rescates y recibidos:** vienen del reporte de las O.R. (DGCOR); presentados y canalizados, del sistema (DGCVM). Son fuentes distintas y no se suman.
 
 - **Documentos vigentes:** la fecha de corte es el día en que se subió el archivo al repositorio.
@@ -151,6 +159,8 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 ## Pendientes
 
 - Bases: pedir al área las actualizadas de canalizados (NNA y adultos), repatriados y encuentros CBP (llegan al 31 dic 2024).
+- Analizar: encuentros CBP completos y el producto «Mesa de Seguridad» (viñetas + gráficas).
+- Mover los Excel de DATA a un repositorio privado.
 - DGRAM: confirmar por qué los trámites con tarjeta marcan «Sin expedición» y los 47,617 sin documento; el reparto por documento de oct–dic 2024 cambió respecto a la base anterior (oficios S.R.E. 8,019 → 10,790).
 - Índices: correr `robot/indices.py` con los archivos oficiales (desde aquí no se pudieron descargar).
 

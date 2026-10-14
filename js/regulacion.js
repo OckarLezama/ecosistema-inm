@@ -44,6 +44,8 @@ const personas = i => K.s[i]!==EMP;
 /* ==== [2] UTILIDADES Y COLORES ==================================== */
 const $ = id => document.getElementById(id), MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const miles = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' k' : miles(n);
+// Cifra de las tarjetas: la misma regla en todo el tablero (completa hasta 999,999; millones con dos decimales), como en el Pulso
+const cifraKpi = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : miles(n);
 const pct = (a,b) => b ? (a/b*100).toFixed(1) : '0.0', esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fDia = d => new Date(INI.getFullYear(), INI.getMonth(), INI.getDate()+d);
 const fecha = d => { const f = fDia(d); return f.getDate()+' '+MES[f.getMonth()]; }, fechaA = d => { const f = fDia(d); return f.getDate()+' '+MES[f.getMonth()]+' '+f.getFullYear(); };
@@ -96,7 +98,7 @@ const IC = { tot:'M4 7h16M4 12h16M4 17h10', tarj:'M3 6h18v12H3zM3 10h18M7 15h4',
 const svgI = d => '<span class="kc-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>';
 function minibarras(v){ const mx = Math.max.apply(null,v)||1; return '<span class="kc-b" aria-hidden="true">'+v.map((x,i) => '<i class="'+(i===v.length-1?'h':'p')+'" style="height:'+Math.max(8,x/mx*100).toFixed(0)+'%"></i>').join('')+'</span>'; }
 // Tarjeta con el mismo marcado que las de Pulso: ícono, nombre, nota, cifra, variación y mini barras
-function kc(o){
+function kc(o){ if (o.num!=null && o.val===corto(o.num)) o.val = cifraKpi(o.num);
   const tag = o.attr ? 'button' : 'div';
   return '<'+tag+' class="kc'+(o.on?' on':'')+'"'+(o.attr||'')+' style="--g:'+o.col+';--gs:'+o.col+'1F;--ga:'+o.col+'"'+(o.title ? ' title="'+esc(o.title)+'"' : '')+'>'+
     '<span class="kc-top">'+svgI(o.ic)+(o.sub ? '<span class="kc-nf"><span class="kc-n">'+o.nom+'</span><span class="kc-f">'+o.sub+'</span></span>' : '<span class="kc-n">'+o.nom+'</span>')+'</span>'+
@@ -107,7 +109,7 @@ function contar(){
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const els = Array.prototype.slice.call(document.querySelectorAll('.rg .kc-v[data-v]')), t0 = performance.now(), dur = 900;
   const paso = t => { const e = Math.min(1,(t-t0)/dur), f = 1-Math.pow(1-e,3);
-    els.forEach(el => { if (el.isConnected){ const v = +el.dataset.v*f; el.textContent = el.dataset.f==='m' ? miles(v) : corto(v); } }); if (e<1) requestAnimationFrame(paso); };
+    els.forEach(el => { if (el.isConnected){ const v = +el.dataset.v*f; el.textContent = el.dataset.f==='m' ? miles(v) : cifraKpi(v); } }); if (e<1) requestAnimationFrame(paso); };
   requestAnimationFrame(paso);
 }
 const plegar = () => '<button class="plegar" data-rplegar aria-label="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'" title="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'"><svg width="12" height="12" viewBox="0 0 12 12"><path d="'+(Q.compacto?'M2 4l4 4 4-4':'M2 8l4-4 4 4')+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
@@ -958,6 +960,6 @@ function eventos(cont){
 let listo = false;
 // Recibe filtros desde Pregunta a INAMI («Profundizar en el tablero»)
 function fijar(p){ const ix = (l, nombres) => (nombres || []).map(n => l.indexOf(n)).filter(i => i>=0);
-  Q.vista = 'tram'; Q.nats = ix(DIC.n, p.nats).slice(0,3); Q.ests = ix(DIC.e, p.ests).slice(0,3); Q.ofiF = p.ofi!=null ? p.ofi : -1; Q.doc = p.doc!=null ? p.doc : -1; Q.desg = Q.nats.length>=2 ? 'nat' : Q.ests.length>=2 ? 'or' : 'tot'; Q.pv = 'res'; if (p.d0 && p.d1){ Q.per = 'pers'; Q.d0 = Math.max(0, diaDe(p.d0)); Q.d1 = Math.min(RG.dias, diaDe(p.d1)+1); if (Q.d1<=Q.d0) Q.d1 = Q.d0+1; } }
+  Q.vista = p.vista || 'tram'; Q.nats = ix(DIC.n, p.nats).slice(0,3); Q.ests = ix(DIC.e, p.ests).slice(0,3); Q.ofiF = p.ofi!=null ? p.ofi : -1; Q.doc = p.doc!=null ? p.doc : -1; Q.desg = Q.nats.length>=2 ? 'nat' : Q.ests.length>=2 ? 'or' : 'tot'; Q.pv = 'res'; if (p.d0 && p.d1){ Q.per = 'pers'; Q.d0 = Math.max(0, diaDe(p.d0)); Q.d1 = Math.min(RG.dias, diaDe(p.d1)+1); if (Q.d1<=Q.d0) Q.d1 = Q.d0+1; } }
 window.IANAMI_REGULACION = { pintar(cont){ if (!listo){ eventos(cont); listo = true; } montar(cont); }, fijar:fijar };
 })();
