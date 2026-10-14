@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-14 13:07
+Generado: 2026-10-14 13:57
 Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
 
 == Ingresos  ·  DGCVM INGRESOS.xlsx  ·  cargado 2026-10-13
@@ -42,16 +42,16 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    En «Otras» nacionalidades: 2 (0.0%)
 
 == Canalizados NNA  ·  DGCVM CANALIZADOS_NNA_.xlsx  ·  cargado 2026-10-14
-   21,109 renglones · total 21,109 · del 2024-10-01 al 2024-12-31
-   Días sin datos: 651 → 2025-01-01, 2025-01-02, 2025-01-03, 2025-01-04, 2025-01-05, 2025-01-06, 2025-01-07, 2025-01-08, 2025-01-09, 2025-01-10, 2025-01-11, 2025-01-12, 2025-01-13, 2025-01-14 …
-   En «Otras» nacionalidades: 3 (0.0%)
-   · 8 renglones sin fecha de nacimiento (se cuentan en el grupo 12 a 17)
+   41,513 renglones · total 41,513 · del 2024-10-01 al 2026-10-13
+   Días sin datos: 0
+   En «Otras» nacionalidades: 11 (0.0%)
+   · 5 renglones con nacionalidad sin código (van a «Otras»): ISLAS VÍRGENES DE EE.UU.
+   · 10 renglones sin fecha de nacimiento (se cuentan en el grupo 12 a 17)
 
 == Canalizados adultos  ·  DGCVM CANALIZADOS_ADULTOS ACOMPAÑANTES.xlsx  ·  cargado 2026-10-14
    26,491 renglones · total 26,491 · del 2024-10-01 al 2026-10-13
    Días sin datos: 0
    En «Otras» nacionalidades: 0 (0.0%)
-   · La base de adultos llega al 2026-10-13 y la otra al 2024-12-31: en «Canalizados» del Pulso se cuenta hasta el 2024-12-31 (12,732 registros posteriores quedan fuera hasta que llegue la otra base)
 
 == Retornados  ·  DGCVM RETORNADOS A SU PAIS.xlsx  ·  cargado 2026-10-13
    6,196 renglones · total 28,805 · del 2024-10-01 al 2026-10-12

@@ -1828,7 +1828,7 @@ function vaDesglose(F){ const VD = window.IANAMI_REG.va_dic, V = vaFilas(F), iM 
   return [['Matrimonio', n(r => r[6]===iM)], ['Nacimiento', n(r => r[6]===iN)],
     ['Matrimonio de ≤30 días', n(r => r[6]===iM && r[1]>=0 && r[1]<=30), 'Acta de matrimonio registrada 30 días o menos antes de la solicitud: señal para revisar, no una conclusión'],
     ['Acta de otro estado', n(r => VD.ofr[r[2]]!=='DGRAM' && VD.ofr[r[2]]!==VD.ent[r[3]]), 'El acta es de un estado distinto al de la O.R. que la reporta (la DGRAM es oficina central y no cuenta)'],
-    ['Pendientes', n(r => r[7]===iP), 'Validaciones que aún no tienen resultado']]; }
+    ['Pendientes', n(r => r[7]===iP), 'Validaciones que aún no tienen resultado']].concat(VD.res.indexOf('No válida')>=0 ? [['No válidas', n(r => r[7]===VD.res.indexOf('No válida')), 'El Registro Civil no localizó el acta o la reportó inexistente o no válida']] : []); }
 function pintarVa(F, t){
   const P = vaPeriodo(), V = vaFilas(F), l = vaDesglose(F), ent = S.sel ? nombreSel() : S.region ? nombreRegion() : 'todo el país', c = t[IND.va.g], cua = x => '<i style="background:'+x+'"></i>';
   $('sl-ctx').innerHTML = '<span class="k">Estás viendo</span><b>Validación de actas del Registro Civil</b><i>·</i>'+esc(ent)+'<i>·</i>'+P.txt+'<em class="sl-pp">periodo propio de esta base</em>';

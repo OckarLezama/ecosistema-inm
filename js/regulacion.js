@@ -782,20 +782,20 @@ function vistaValidacion(){
   const VD = RG.va_dic, iniV = new Date(RG.va_ini+'T00:00:00'), f = Q.vaF, nd = Math.max.apply(null, RG.va.map(r => r[0]))+1, B = Q.vaB;
   const V = B ? RG.va.filter(r => B.t==='n' ? VD.n[r[4]]===B.v : B.t==='s' ? VD.sol[r[8]]===B.v : VD.ent[r[3]]===B.v || VD.ofr[r[2]]===B.v) : RG.va;
   const fV = d => { const x = new Date(iniV.getFullYear(), iniV.getMonth(), iniV.getDate()+d); return x.getDate()+' '+MES[x.getMonth()]; };
-  const iMat = VD.acto.indexOf('Matrimonio'), iNac = VD.acto.indexOf('Nacimiento'), iVal = VD.res.indexOf('Válida'), iPen = VD.res.indexOf('Pendiente');
+  const iMat = VD.acto.indexOf('Matrimonio'), iNac = VD.acto.indexOf('Nacimiento'), iVal = VD.res.indexOf('Válida'), iPen = VD.res.indexOf('Pendiente'), iNov = VD.res.indexOf('No válida');
   const central = r => VD.ofr[r[2]]===CENTRAL, otroEdo = r => !central(r) && VD.ofr[r[2]]!==VD.ent[r[3]];
-  const FIL = { todos:null, mat:r => r[6]===iMat, nac:r => r[6]===iNac, rec:r => r[6]===iMat && r[1]>=0 && r[1]<=30, otro:otroEdo, val:r => r[7]===iVal, pen:r => r[7]===iPen };
+  const FIL = { todos:null, mat:r => r[6]===iMat, nac:r => r[6]===iNac, rec:r => r[6]===iMat && r[1]>=0 && r[1]<=30, otro:otroEdo, val:r => r[7]===iVal, pen:r => r[7]===iPen, nov:r => r[7]===iNov };
   const L = f ? V.filter(FIL[f]) : V, n = V.length, conBase = nd>=14;
   const porDia = fn => { const v = new Array(nd).fill(0); V.forEach(r => { if (!fn || fn(r)) v[r[0]]++; }); return v; };
-  const kp = [['todos','Solicitudes','#2B2926',IC.acta], ['mat','Matrimonio','#C4605A',IC.acta], ['nac','Nacimiento','#C4605A',IC.acta], ['rec','Matrimonio de ≤30 días','#C4605A',IC.reloj], ['otro','Acta de otro estado','#C4605A',IC.alerta], ['val','Válidas','#2F6657',IC.ok], ['pen','Pendientes','#2F6657',IC.reloj]];
-  const carta = x => { const v = porDia(FIL[x[0]]), t = v.reduce((a,b)=>a+b,0); return kc({ attr:' data-rva="'+x[0]+'"', on:(f||'todos')===x[0], col:x[2], ic:x[3], nom:x[1], sub:x[0]==='todos' ? fV(0)+' – '+fV(nd-1) : '', val:miles(t), num:t, fmt:'m', d:'<span class="kc-d">'+(x[0]==='todos' ? 'por día' : pct(t,n)+'%')+'</span>', b:minibarras(v), title:x[1]+': '+miles(t)+' · '+pct(t,n)+'% del total' }); };
+  const kp = [['todos','Solicitudes','#2B2926',IC.acta], ['mat','Matrimonio','#C4605A',IC.acta], ['nac','Nacimiento','#C4605A',IC.acta], ['rec','Matrimonio reciente','#C4605A',IC.reloj], ['otro','Acta de otro estado','#C4605A',IC.alerta], ['val','Válidas','#2F6657',IC.ok], ['pen','Pendientes','#2F6657',IC.reloj]].concat(iNov>=0 ? [['nov','No válidas','#C4605A',IC.alerta]] : []);
+  const carta = x => { const v = porDia(FIL[x[0]]), t = v.reduce((a,b)=>a+b,0); return kc({ attr:' data-rva="'+x[0]+'"', on:(f||'todos')===x[0], col:x[2], ic:x[3], nom:x[1], sub:x[0]==='todos' ? fV(0)+' – '+fV(nd-1) : '', val:miles(t), num:t, fmt:'m', d:'<span class="kc-d">'+(x[0]==='todos' ? 'por día' : (x[0]==='rec' ? '≤30 días · ' : '')+pct(t,n)+'%')+'</span>', b:minibarras(v), title:x[1]+': '+miles(t)+' · '+pct(t,n)+'% del total' }); };
   const quien = B ? ' · <b>'+esc(B.v)+'</b>' : '', tF = B ? ' · <b>'+esc(B.v)+'</b>' : '';
   $('rg-body').innerHTML = '<div class="ctl rg-ctl"><div class="rango"><b>'+fV(0)+' '+iniV.getFullYear()+' – '+fV(nd-1)+' '+new Date(iniV.getFullYear(), iniV.getMonth(), iniV.getDate()+nd-1).getFullYear()+'</b><span>periodo propio de la base · se actualiza cada semana</span></div>'+
       cajaBusca('rg-va-bus', 'Buscar estado, nacionalidad u oficina')+(B ? '<span class="tag-f">'+esc(B.v)+' <button data-rvab aria-label="Quitar filtro">×</button></span>' : '')+'</div>'+
     '<section class="kpis rg-kpis" data-modo="'+(Q.compacto?'compacto':'tarjetas')+'"><div class="kg" style="flex:1 1 0;--g:#2B2926"><div class="eti">Total'+tF+'</div><div>'+carta(kp[0])+'</div></div>'+
       '<div class="kg g-irr" style="flex:2 1 0"><div class="eti">Tipo de acta</div><div>'+kp.slice(1,3).map(carta).join('')+'</div></div>'+
-      '<div class="kg g-irr" style="flex:2 1 0"><div class="eti">Señales para revisar</div><div>'+kp.slice(3,5).map(carta).join('')+'</div></div>'+
-      '<div class="kg g-reg" style="flex:2 1 0"><div class="eti">Resultado</div><div>'+kp.slice(5).map(carta).join('')+'</div></div>'+plegar()+'</section>'+
+      '<div class="kg g-irr" style="flex:2.3 1 0"><div class="eti">Señales para revisar</div><div>'+kp.slice(3,5).map(carta).join('')+'</div></div>'+
+      '<div class="kg g-reg" style="flex:'+(kp.length-5)+' 1 0"><div class="eti">Resultado</div><div>'+kp.slice(5).map(carta).join('')+'</div></div>'+plegar()+'</section>'+
     '<div class="rg-hz" id="rg-va-hz"></div>'+
     '<div class="rg-g rg-g4"><div class="caja"><h2><span>Solicitudes por tipo de acta</span>'+info('vae')+'<button class="rg-ib'+(Q.vaEti?' on':'')+'" data-rvaeti title="'+(Q.vaEti?'Ocultar':'Mostrar')+' valores">123</button></h2><span class="q">por día · '+fV(0)+' – '+fV(nd-1)+(f ? ' · '+kp.find(x => x[0]===f)[1] : '')+quien+'</span><div id="rg-va-evo" style="flex:1;min-height:290px"></div></div>'+
       '<div class="caja"><h2><span>Nacionalidades</span>'+info('van')+'</h2><span class="q">× = veces su peso en los trámites migratorios'+quien+'</span><div id="rg-va-nat"></div></div>'+
