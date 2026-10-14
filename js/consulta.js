@@ -239,12 +239,83 @@ function entender(txt){
   const fuera = [['mujer','sexo'],['hombre','sexo'],['nina','sexo'],['edad','edad'],['aere','via'],['vuelo','via'],['terrestre','via'],['estacion','est'],['punto','p'],['nacionalidad','n'],['documento','doc']];
   fuera.forEach(([w,dim]) => { const m = t.match(new RegExp(' ('+w+'[a-z]*)')); if (m && !B.dims[dim] && !(ind.partes||[]).some(p => p.sin.some(sx => sx.startsWith(w)))){ toma(m[1]); avisos.push(cap(ind.nom)+': la base no trae '+{sexo:'sexo',edad:'edad',via:'vía',est:'estación',p:'punto',n:'nacionalidad',doc:'documento'}[dim]+'. La respuesta no está filtrada por «'+m[1]+'».'); } });
   if (!B.dims.n && /mexican/.test(t)) tomaTodo('mexican');
+  if (q.filtros.e){ toma('o r') || toma('or'); }
   let resto = t.split(' ').filter(w => w && !/^_+$/.test(w) && !VACIAS.has(w) && !/^\d+$/.test(w));
   if (resto.length){ const inv = {}; pre.fix.forEach(f => { inv[f[1]] = f[0]; }); pre.fix = pre.fix.filter(f => resto.indexOf(f[1])<0); resto = resto.map(w => inv[w] || w); }
   if (resto.length) avisos.unshift('No reconocí: «'+resto.join(' ')+'». La respuesta no lo toma en cuenta.');
-  if (!cand.length) avisos.unshift('No reconocí qué quieres ver; se muestra '+ind.nom+'. Elígelo en «Qué» o prueba una de las sugerencias.');
+  // solo un país o solo un estado, sin indicador: perfil con todo lo del Pulso
+  const fk = Object.keys(q.filtros), solo = fk.length===1 && (fk[0]==='n' || fk[0]==='e') && q.filtros[fk[0]].length===1;
+  if (!cand.length && !resto.length && solo && !q.desg && !q.cmpA && !q.cmp && !q.partes.length){ const nm = B.dims[fk[0]].vals[q.filtros[fk[0]][0]]; if (nm!=='México') q.perfil = { dim:fk[0], nom:nm }; }
+  if (!cand.length && !q.perfil) avisos.unshift('No reconocí qué quieres ver; se muestra '+ind.nom+'. Elígelo en «Qué» o prueba una de las sugerencias.');
   limitar(q);
-  if (!cand.length){ const fx = fraseFiltros(q), per = mes>=0 ? ' en '+MES[mes] : ''; q.sugs = ['rescatados','internaciones','NNA canalizados'].map(x => x+(fx ? ' '+fx : '')+per); } q.avisos = avisos; q.entendi = usado; q.fix = pre.fix; return q;
+  if (!cand.length && !q.perfil){ const fx = fraseFiltros(q), per = mes>=0 ? ' en '+MES[mes] : ''; q.sugs = ['rescatados','internaciones','NNA canalizados'].map(x => x+(fx ? ' '+fx : '')+per); } q.avisos = avisos; q.entendi = usado; q.fix = pre.fix; return q;
+}
+
+/* ---- Perfil: todo lo del Pulso para una nacionalidad o una O.R. en el periodo. Se activa al escribir solo el país
+   («Venezuela», «venezolanos») o solo el estado («Chiapas», «O.R. Chiapas»). Las cifras no se suman entre sí: una
+   persona puede contar en varios indicadores. Canalizados = NNA + adultos que los acompañan (como en el Pulso). */
+const PFD = () => [['Regular', VERDE, [['ing','Ingresos de extranjeros',['ing']], ['rech','Rechazos',['rech']], ['tram','Trámites concluidos',['tram']], ['docs','Extranjeros con documento vigente',null]]],
+  ['Irregular', ROJO, [['resc','Rescatados',['resc']], ['pres','Presentados',['pres']], ['can','Canalizados al DIF',['nna','adu']], ['ret','Retornados',['ret']]]],
+  ['Desde EE. UU.', OCRE, [['rec','Recibidos de EE. UU.',['rec']], ['rep','Mexicanos repatriados',['rep']]]]];
+const IR_PF = { can:'nna' };
+const palabras = v => v>=1e6 ? (v/1e6).toFixed(1).replace('.0','')+' millones' : v>=1e4 ? Math.round(v/1e3)+' mil' : miles(v);
+function idxNom(vals, nom){ let i = vals.indexOf(nom); if (i<0){ const n = norm(nom); i = vals.findIndex(v => norm(v)===n); } return i; }
+// Mide un renglón del perfil sumando sus bases; null si ninguna base trae esa dimensión (repatriados no tiene nacionalidad)
+function medirPF(ks, dim, nom, d0, d1, C, M){
+  const otra = dim==='n' ? 'e' : 'n', top = new Map(); let tot = 0, dias = 0, ok = false, fin = null; const sem = new Array(C.l.length).fill(0), cmp = M ? [0, 0, 0, 0] : null;
+  ks.forEach(k => { const ind = INDK[k]; if (!ind) return; const B = BASES[ind.b]; if (!B.dims[dim]) return; ok = true;
+    const i = idxNom(B.dims[dim].vals, nom), a = d0>B.inicio ? d0 : B.inicio, z = d1<finBase(B) ? d1 : finBase(B); if (fin==null || finBase(B)<fin) fin = finBase(B);
+    dias = Math.max(dias, z>=a ? difDias(a, z)+1 : 0); if (i<0 || z<a) return;
+    const o = { ind:ind, filtros:{ [dim]:[i] }, d0:a, d1:z }; tot += total(o); serie(o, C).forEach((x,j) => sem[j] += x);
+    if (B.dims[otra]) porDim(o, otra).forEach(([j,x]) => { const nm = B.dims[otra].vals[j]; top.set(nm, (top.get(nm) || 0) + x); });
+    if (M) M.forEach((p,j) => { const pa = p[0]>B.inicio ? p[0] : B.inicio, pz = p[1]<finBase(B) ? p[1] : finBase(B); if (pz<pa) return; cmp[j*2] += total(Object.assign({}, o, { d0:pa, d1:pz })); cmp[j*2+1] = difDias(pa, pz)+1; }); });
+  if (!ok) return null;
+  const t1 = [...top].filter(x => x[0]!=='México').sort((a,b) => b[1]-a[1])[0];
+  const cam = cmp && cmp[0]>=300 && cmp[1] && cmp[3] ? ((cmp[2]/cmp[3])/(cmp[0]/cmp[1])-1)*100 : null;
+  return { tot:tot, dia:dias ? tot/dias : 0, sem:sem, top:t1 && tot ? [t1[0], deCien(t1[1], tot)] : null, cam:cam, fin:fin };
+}
+// Con qué se compara: los días anteriores del mismo largo; si las bases no llegan, el último mes completo contra el anterior
+function comparacionPF(d0, d1){ const n = difDias(d0, d1)+1, a0 = sumaDias(d0, -n), a1 = sumaDias(d0, -1);
+  if (a0>=INI) return { M:[[a0, a1], [d0, d1]], txt:'contra los '+n+' días anteriores', corto:'contra los '+n+' días anteriores' };
+  const f = fecha0(d1); let y = f.getFullYear(), m = f.getMonth(); if (iso(new Date(y, m+1, 0))>d1){ m--; if (m<0){ m = 11; y--; } }
+  const B = [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))], A = [iso(new Date(y, m-1, 1)), iso(new Date(y, m, 0))];
+  if (A[0]<d0) return null; return { M:[A, B], txt:MES[fecha0(B[0]).getMonth()]+' contra '+MES[fecha0(A[0]).getMonth()], corto:MESC[fecha0(B[0]).getMonth()]+'. contra '+MESC[fecha0(A[0]).getMonth()]+'.', B:B }; }
+function docsPF(dim, nom){ const D = window.IANAMI_DATOS; if (!D || !D.docs) return null;
+  if (dim==='n'){ const i = idxNom(D.nats.map(x => x[0]), nom), r = i>=0 && D.docs.nat ? D.docs.nat[i] : null; return r ? { tot:r[0], h:r[1], m:r[2] } : null; }
+  const i = idxNom(D.ests, nom); return i>=0 && D.docs.est ? { tot:D.docs.est[i] } : null; }
+function perfil(q){
+  const dim = q.perfil.dim, nom = q.perfil.nom, C = cubetas(q.d0, q.d1, 's'), cp = comparacionPF(q.d0, q.d1), g = [];
+  PFD().forEach(([gn, col, l]) => { const cs = []; l.forEach(([k, n, ks]) => { if (k==='docs'){ const d = docsPF(dim, nom); if (d && d.tot) cs.push(Object.assign({ k:k, nom:n }, d)); return; }
+      const m = medirPF(ks, dim, nom, q.d0, q.d1, C, cp && cp.M); if (m && m.tot>0) cs.push(Object.assign({ k:k, nom:n, ir:IR_PF[k] || k }, m)); });
+    g.push({ nom:gn, col:col, cs:cs }); });
+  const todas = [].concat(...g.map(x => x.cs)), de = k => todas.find(c => c.k===k), ing = de('ing'), res = de('resc'), nat = dim==='n';
+  const vac = c => c.k==='tram' && cp && cp.B && cp.B[0].slice(5,7)==='12';      // el INM cierra oficinas a fin de año
+  const fr = [];
+  if (ing) fr.push('Entraron <b>'+palabras(ing.tot)+(nat ? ' personas de '+esc(nom)+'</b> por puntos de internación' : ' extranjeros</b> por '+esc(nom)+(ing.top ? ', '+ing.top[1]+'% de '+esc(ing.top[0]) : '')));
+  if (res) fr.push((ing ? 'hubo ' : 'Hubo ')+'<b>'+palabras(res.tot)+' rescates</b>'+(res.top ? ', '+res.top[1]+'% '+(nat ? 'en ' : 'de ')+esc(res.top[0]) : ''));
+  const cam = todas.filter(c => c.cam!=null && Math.abs(c.cam)>=5).sort((a,b) => Math.abs(b.cam)-Math.abs(a.cam)).slice(0,2);
+  let resp = fr.length ? fr.join(ing && !nat ? ', y ' : ' y ')+'.' : 'No hay registros de '+esc(nom)+' en el periodo.';
+  if (cam.length) resp += ' Lo que más cambió ('+cp.txt+'): '+cam.map(c => '<b>'+esc(minus(c.nom))+'</b> ('+pct1(c.cam)+(vac(c) ? ', vacaciones de fin de año' : '')+')').join(' y ')+'.';
+  const ind = INDK.resc, fin = todas.map(c => c.fin).filter(Boolean).sort().slice(-1)[0] || FIN;
+  return { q:q, ind:ind, B:BASES[ind.b], tipo:'perfil', pf:{ dim:dim, nom:nom, g:g, cp:cp, C:C, dias:difDias(q.d0, q.d1)+1, fin:fin }, total:todas.reduce((s,c) => s+c.tot, 0), resp:'', frasePF:resp, avisos:(q.avisos || []).slice(), listas:[], partes:[], nomF:nom };
+}
+function sparkPF(s, col){ if (s.length<3) return ''; const mx = Math.max(...s, 1), W = 200, H = 24, p = s.map((v,i) => (i/(s.length-1)*W).toFixed(1)+','+(H-2-v/mx*(H-4)).toFixed(1)).join(' ');
+  return '<svg class="pc-sp" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,'+H+' '+p+' '+W+','+H+'" fill="'+col+'" fill-opacity=".13"/><polyline points="'+p+'" fill="none" stroke="'+col+'" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>'; }
+function hojaPF(r, fmt){
+  const P = r.pf, q = r.q, ahora = new Date(), nat = P.dim==='n', sem = P.C.l.map(c => !c.inc);
+  const flecha = c => c.cam==null ? '<span class="pc-ar sin" title="Pocos casos para un porcentaje">—</span>' : '<span class="pc-ar">'+(Math.abs(c.cam)<1 ? '= ' : c.cam>0 ? '▲ ' : '▼ ')+Math.abs(c.cam).toFixed(Math.abs(c.cam)<10 ? 1 : 0)+'%</span>';
+  const carta = (c, col) => c.k==='docs'
+    ? '<div class="pc pc-al"><span class="pc-n">'+esc(c.nom)+'</span><b class="pc-v'+(miles(c.tot).length>8 ? ' lg' : '')+'">'+miles(c.tot)+'</b><span class="pc-d">al último corte · no sigue al periodo</span>'+(c.h!=null ? '<span class="pc-t">Hombres <b>'+deCien(c.h, c.tot)+'%</b> · mujeres <b>'+deCien(c.m, c.tot)+'%</b></span>' : '<span class="pc-t">Por sexo: sin dato por O.R.</span>')+'</div>'
+    : '<button type="button" class="pc" data-cqind="'+c.ir+'" title="Ver solo '+esc(minus(c.nom))+'">'+(P.cp ? flecha(c) : '')+'<span class="pc-n">'+esc(c.nom)+'</span><b class="pc-v'+(miles(c.tot).length>8 ? ' lg' : '')+'">'+miles(c.tot)+'</b><span class="pc-d">'+(c.dia<1 ? 'menos de 1' : miles(c.dia))+' por día</span>'+
+      sparkPF(c.sem.filter((x,i) => sem[i]), col)+(c.top ? '<span class="pc-t">Encabeza <b>'+esc(c.top[0])+'</b> '+c.top[1]+'%</span>' : '')+'</button>';
+  const grupos = P.g.map(x => '<section class="pg'+(x.nom==='Desde EE. UU.' ? ' uno' : '')+'" style="--c:'+x.col+'"><h3>'+x.nom+'</h3>'+(x.cs.length ? '<div class="pg-cs">'+x.cs.map(c => carta(c, x.col)).join('')+'</div>' : '<p class="pg-0">Sin registros '+(nat ? 'de '+esc(P.nom) : 'en esta O.R.')+'</p>')+'</section>').join('');
+  const fte = 'DGCVM, DGCOR, SIRENNA y DGRAM'+(nat ? '' : ' · DGPMV');
+  const html = '<article class="cq-hoja f'+fmt+' t-perfil">'+
+    '<header class="cq-top"><div><div class="cq-ceja">IA-NAMI · Perfil de '+(nat ? 'nacionalidad' : 'O.R.')+'</div><h2 class="cq-tit">'+esc(P.nom)+'</h2></div><div class="cq-meta"><b>'+rangoTxt(q.d0, q.d1)+'</b>'+P.dias+' días</div></header>'+
+    '<p class="pf-fr">'+r.frasePF+'</p><div class="pf">'+grupos+'</div>'+
+    '<footer class="cq-pie"><span>Línea: registros por semana. '+(P.cp ? '▲▼ '+P.cp.txt+', por día; «—» cuando hay pocos casos. ' : '')+'Las cifras no se suman entre sí: una persona puede contar en varios indicadores.'+(nat ? ' Repatriados no aparece: son mexicanos.' : '')+'</span>'+
+    '<span class="fte">Fuentes: <b>'+fte+'</b><br>Datos al '+fechaTxt(P.fin)+' · generado '+fechaTxt(iso(ahora))+' '+String(ahora.getHours()).padStart(2,'0')+':'+String(ahora.getMinutes()).padStart(2,'0')+'</span></footer></article>';
+  return { html:html, ch:[] };
 }
 
 /* ==== [5] HOJA (plantillas) ======================================= */
@@ -278,6 +349,7 @@ const filtrosTxt = q => { const B = BASES[INDK[q.ind].b]; return Object.keys(q.f
 
 // Cálculo completo de una consulta (también lo usa la prueba)
 function calcular(q){
+  if (q.perfil) return perfil(q);
   const ind = INDK[q.ind], B = BASES[ind.b], base = { ind:ind, filtros:q.filtros, d0:q.d0, d1:q.d1, rei:q.partes.some(k => parteDe(ind,k).rei) };
   const r = { q:q, ind:ind, B:B, tipo:plantilla(q), total:total(base), base:base, avisos:(q.avisos || []).slice() };
   if (base.rei) r.avisos.push('La reincidencia solo se registra en '+[...B.reiOR].map(e => B.dims.e.vals[e]).join(', ')+': el total se limita a esas O.R.');
@@ -373,6 +445,7 @@ function fraseFiltros(q, quitar){
   return l.join(' ').replace(/^· /, '· ');
 }
 function titulo(r){
+  if (r.tipo==='perfil') return 'Perfil de '+r.pf.nom+' · '+rangoTxt(r.q.d0, r.q.d1);
   const q = r.q, ind = r.ind, L = r.listas[0], f = fraseFiltros(q, r.tipo==='comp' ? r.cdim : null), sf = f ? ' '+f : '';
   if (r.tipo==='cambio'){ const c = r.cam, nm = x => nomPer(x[0], x[1]); return 'Cambio en '+ind.nom+sf+(c.dim ? ', por '+min(c.nomDim) : '')+': '+nm([q.d0, q.d1])+' contra '+nm(c.A); }
   if (r.tipo==='prop' || r.tipo==='fuentes'){ const ps = r.partes.map(x => x.p.q); return 'De '+ind.art+' '+ind.nom+sf+', ¿'+ind.cu+' '+ps.join(' y ¿'+ind.cu+' ').replace(/ y ¿/g,' y ')+'?'; }
@@ -454,6 +527,7 @@ const tarjetaCh = (id, tit, q) => '<div class="cq-card"><h3>'+esc(tit)+'</h3><sp
 // Dimensión chica para las tarjetas de un ranking (pocas categorías: condición, vía, modalidad, resultado…)
 function dimChica(r){ const B = r.B; for (const d of ['cond','mod','via','res','sexo']){ if (B.dims[d] && !(r.q.filtros[d] || []).length && B.dims[d].vals.length<=4){ const l = porDim(r.base, d); if (l.length>=2) return { dim:d, l:l }; } } return null; }
 function hoja(r, fmt, angosta){
+  if (r.tipo==='perfil') return hojaPF(r, fmt);
   const q = r.q, T = r.total, nna = r.ind.nna, ch = [], ahora = new Date(), mk = (op) => { ch.push(op); return 'c'+(ch.length-1); };
   const fte = r.tipo==='fuentes' ? 'DGCOR, DGCVM y SIRENNA' : r.B.fuente+(r.B.fuente==='DGCOR' ? ', reporte de las O.R.' : '');
   const L1 = r.listas[0], L2 = r.listas[1], nL = fmt==='v' ? 6 : 10, top = (L, n) => L ? L.filas.slice(0, n).map(f => [f.nom, f.v]) : [];
@@ -542,6 +616,7 @@ const $ = id => document.getElementById(id);
 let Q = null, R = null, abierto = false, GR = [], menuDe = null;
 // Ayuda («i»): ejemplos que funcionan, por tipo de pregunta; al tocarlos se consultan
 const AYUDA = [
+  ['Todo de un país o una O.R.', 'Escribe solo el nombre: salen todos los indicadores del Pulso', ['Venezuela', 'Chiapas', 'hondureños noviembre']],
   ['Cuántos', 'Un indicador, con país, estado o fecha', ['rescatados en noviembre', 'trámites de Venezuela', 'repatriados en Tamaulipas']],
   ['De los… cuántos', 'Una parte de un total', ['de los rescatados cuántos fueron canalizados', 'de los repatriados cuántos son NNA']],
   ['Por', 'Repartir por nacionalidad, O.R., vía o tipo', ['NNA de Colombia por O.R.', 'rescatados por nacionalidad', 'ingresos por vía']],
@@ -599,6 +674,8 @@ function pintar(){
 const SLOT = ['n','e','p','est','of','doc','tt'];
 const TODO = { n:'todas las nacionalidades', e:'todas las O.R.', p:'todos los puntos', est:'todas las estaciones', of:'todas las oficinas', doc:'todos los documentos', tt:'todos los trámites', mod:'toda modalidad', via:'todas las vías', sexo:'ambos sexos', edad:'todas las edades', cond:'toda condición', mot:'todo motivo' };
 function pintarFrase(){
+  if (Q.perfil){ const B0 = BASES[INDK[Q.ind].b], d = Q.perfil.dim, i = (Q.filtros[d] || [])[0];
+    $('cq-frase').innerHTML = '<span class="cq-cj">Todo de</span><button type="button" class="cq-pz fil" data-cqquita="'+d+':'+i+'" title="Quitar">'+(d==='e' ? 'O.R. ' : '')+esc(Q.perfil.nom)+' <small>×</small></button><span class="cq-cj">en</span><button type="button" class="cq-pz" data-pz="per">'+esc(rangoTxt(Q.d0, Q.d1))+' <small>▾</small></button><button type="button" class="cq-pz mas" data-pz="ind">+ ver un solo indicador</button>'; return; }
   const ind = INDK[Q.ind], B = BASES[ind.b], pz = (k, txt, cl, x) => '<button type="button" class="cq-pz '+(cl || '')+'" data-pz="'+k+'">'+txt+(x ? '' : ' <small>▾</small>')+'</button>';
   let h = pz('ind', esc(cap(ind.nom)), 'ind');
   if (ind.partes && ind.partes.length){ if (Q.partes.length){ h += '<span class="cq-cj">¿'+ind.cu+'</span>'+Q.partes.map(k => '<button type="button" class="cq-pz parte" data-cqquitap="'+k+'" title="Quitar">'+esc(minus(parteDe(ind,k).nom))+' <small>×</small></button>').join('<span class="cq-cj">y</span>')+'<span class="cq-cj">?</span>'+(Q.partes.length<3 ? pz('parte', '+', 'mas', true) : ''); }
@@ -643,7 +720,7 @@ function listaFiltros(t, ds){
 function cerrarMenu(){ const m = $('cq-menu'); if (m) m.hidden = true; menuDe = null; }
 function elegir(k, v){
   const ind = INDK[Q.ind], B = BASES[ind.b];
-  if (k==='ind'){ const f = Q.filtros, prev = B, B2 = BASES[INDK[v].b]; Q.ind = v; Q.partes = []; Q.fuente = 'or'; Q.filtros = {};
+  if (k==='ind'){ Q.perfil = null; const f = Q.filtros, prev = B, B2 = BASES[INDK[v].b]; Q.ind = v; Q.partes = []; Q.fuente = 'or'; Q.filtros = {};
     Object.keys(f).forEach(d => { if (B2.dims[d] && prev.dims[d]){ const l = f[d].map(i => B2.dims[d].vals.indexOf(prev.dims[d].vals[i])).filter(i => i>=0); if (l.length) Q.filtros[d] = l; } }); if (Q.desg && Q.desg!=='t' && !B2.dims[Q.desg]) Q.desg = ''; }
   else if (k==='parte'){ if (Q.partes.length<3) Q.partes.push(v); }
   else if (k==='desg'){ if (v.startsWith('t:')){ Q.desg = 't'; Q.gran = v.slice(2); } else Q.desg = v; }
@@ -683,8 +760,9 @@ function clic(e){
   if ((b = T('[data-pz]'))){ if (b.dataset.pz==='ind' && !Q){ Q = nuevaQ(); Q.fmt = 'h'; } if (menuDe===b){ cerrarMenu(); return; } abrirMenu(b.dataset.pz, b); return; }
   cerrarMenu();
   if ((b = T('[data-cqi]'))){ const a = $('cq-ay'), ab = a.hidden; a.hidden = !ab; b.setAttribute('aria-expanded', ab); b.classList.toggle('on', ab); return; }
+  if ((b = T('[data-cqind]'))){ elegir('ind', b.dataset.cqind); return; }
   if ((b = T('[data-cqej]'))){ $('cq-ay').hidden = true; $('cq-caja').querySelector('[data-cqi]').classList.remove('on'); consultar(entender(b.dataset.cqej)); return; }
-  if ((b = T('[data-cqquita]'))){ const [k,i] = b.dataset.cqquita.split(':'); Q.filtros[k] = Q.filtros[k].filter(x => x!==+i); if (!Q.filtros[k].length) delete Q.filtros[k]; Q.avisos = []; Q.fix = []; pintar(); return; }
+  if ((b = T('[data-cqquita]'))){ Q.perfil = null; const [k,i] = b.dataset.cqquita.split(':'); Q.filtros[k] = Q.filtros[k].filter(x => x!==+i); if (!Q.filtros[k].length) delete Q.filtros[k]; Q.avisos = []; Q.fix = []; pintar(); return; }
   if ((b = T('[data-cqquitap]'))){ Q.partes = Q.partes.filter(k => k!==b.dataset.cqquitap); Q.avisos = []; Q.fix = []; Q.sugs = []; limitar(Q); pintar(); return; }
   if (T('[data-cqcmp]')){ Q.cmp = !Q.cmp; pintar(); return; }
   if (T('[data-cqsincmp]')){ Q.cmpA = null; Q.dir = ''; Q.avisos = []; limitar(Q); pintar(); return; }
@@ -734,6 +812,7 @@ function noPasan(){ const a = ACEPTA[R.ind.ir.d] || {}, B = R.B, l = [];
 function notaTablero(){ const l = noPasan(), cruce = R.tipo==='fuentes';
   return (cruce ? 'La comparación con el sistema se abrirá completa en Analizar; por ahora te lleva a Rescates. ' : '')+(l.length ? 'En el tablero no se aplica: '+l.join('; ')+'.' : ''); }
 function irTablero(){
+  if (R.tipo==='perfil'){ const pf = R.pf; if (window.IANAMI_PULSO && window.IANAMI_PULSO.verLugar){ cerrar(); window.IANAMI_PULSO.verLugar(pf.dim, pf.nom); } return; }
   const ind = R.ind, B = R.B, f = Q.filtros, nom = d => (f[d] || []).map(i => B.dims[d].vals[i]);
   const p = Object.assign({}, ind.ir, { d0:Q.d0, d1:Q.d1, nats:nom('n'), ests:nom('e'), ptos:nom('p') });
   if (Q.ind==='rep'){ if (f.mod && f.mod.length===1) p.mod = f.mod[0]; const em = { ad:'ad', me:'me', ah:'ah', am:'am', ac:'ac', na:'na' }[Q.partes[0]]; if (em) p.em = em; }

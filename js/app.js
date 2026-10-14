@@ -1388,6 +1388,8 @@ window.IANAMI_PULSO = {
   sala(pf){ abrirSala(pf); },                    // pantalla completa con el perfil de un proceso
   tiene: nom => natPorNombre(nom)>=0,
   rechazo: nom => rechazoExt(null, nom==null ? null : natPorNombre(nom)),   // [rechazos, llegadas] con la definición común
+  verLugar(dim, nom){ if (dim==='n'){ const i = natPorNombre(nom); if (i<0) return false; S.ind = null; irA('pulso'); fijarSel({t:'n', i:i}, true); }   // perfil de Pregunta a INAMI: el Pulso en su Panorama, con el lugar elegido
+    else { const i = EST.findIndex(e => sinAcento(e)===sinAcento(nom)); if (i<0) return false; S.ind = null; irA('pulso'); fijarSel({t:'e', i:i}, true); } window.scrollTo(0,0); return true; },
   verNat(nom, ind){ const i = natPorNombre(nom); if (i<0) return false; S.ind = ind || 'ing'; irA('pulso'); fijarSel({t:'n', i:i}, true); window.scrollTo(0,0); return true; }
 };
 function irA(v){
