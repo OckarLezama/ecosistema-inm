@@ -1192,19 +1192,31 @@ body.en-sala{overflow:hidden}
 /* Pregunta a INAMI · bullets: el resultado en viñetas para mandarlo como mensaje (mismo estilo de la plataforma) */
 #cq-res.bul .cq-fmtg{display:none}#cq-res:not(.bul) [data-cqacc="copiar"]{display:none}
 .cq-hw.bul{max-width:760px;margin:0 auto}
-.cq-bul{position:relative;background:#FCFBF7;color:#2B2926;border:1px solid #E5E2D3;border-radius:14px;padding:26px 30px 20px 34px;display:grid;gap:14px;box-shadow:0 10px 30px rgba(43,41,38,.07);overflow:hidden}
-.cq-bul::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}
-.cq-bul::after{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:var(--c);opacity:.06;pointer-events:none}
-.cq-bul header{display:grid;gap:4px}
-.cq-bul h2{font:700 26px/1.12 var(--f-num);margin:2px 0 0;text-wrap:balance}
-.cq-bul .per{font-size:13.5px;color:#5C5952;font-weight:500}
-.cq-bul ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.cq-bul li{position:relative;padding-left:22px;font-size:15.5px;line-height:1.45}
-.cq-bul li::before{content:"";position:absolute;left:2px;top:.55em;width:9px;height:9px;border-radius:2px;background:var(--c)}
-.cq-bul li b{font-family:var(--f-num);font-weight:700;font-size:1.12em;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
-.cq-bul li.lead{font-size:19px;line-height:1.35;padding:12px 16px 12px 40px;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 11%,#fff),#fff);border:1px solid color-mix(in srgb,var(--c) 24%,#E5E2D3);border-radius:10px}
-.cq-bul li.lead::before{left:16px;top:1.05em;width:12px;height:12px;border-radius:3px}
-.cq-bul li.lead b{font-size:1.45em;color:var(--c)}
-.cq-bul .nota{margin:0;font-size:12.5px;color:#5C5952;font-style:italic}
-.cq-bul footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;border-top:1px solid #E5E2D3;padding-top:10px;font-size:12px;color:#5C5952}.cq-bul footer b{color:#2B2926}
-@media (max-width:560px){ .cq-bul{padding:18px 16px 14px 22px} .cq-bul h2{font-size:21px} .cq-bul li{font-size:14.5px} .cq-bul li.lead{font-size:16.5px;padding:10px 12px 10px 32px} .cq-bul li.lead::before{left:12px} }
+/* Pregunta a INAMI · barra de acciones: botones chicos con ícono y texto corto (el detalle va en el título al pasar el cursor) */
+.cq-bar{gap:8px 12px}
+.cq-nav{gap:4px}.cq-nav button,.cq-acc button,.cq-pil button{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;font:600 12px var(--f-txt);border-radius:8px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.cq-nav button{border:1px solid transparent;background:transparent;color:var(--ink2)}.cq-nav button:hover{background:var(--panel2);color:var(--ink)}
+.cq-vis{display:flex;gap:8px;flex-wrap:wrap}
+.cq-pil{border-radius:9px;padding:2px;gap:2px}.cq-pil button{height:26px;padding:0 9px;border-radius:7px;color:var(--ink2)}.cq-pil button:hover{color:var(--ink)}
+.cq-pil button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(43,41,38,.14)}
+.cq-acc{gap:4px}.cq-acc button,.cq-acc button.pri{border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.cq-acc button:hover{border-color:#2F6657;color:#2F6657;background:#F3F7F5}
+.cq-acc button.ir{border-color:transparent;background:transparent;color:#2F6657}.cq-acc button.ir:hover{background:#EAF0EC}
+.cq-bar svg{flex:none;opacity:.85}
+@media (max-width:640px){ .cq-fmtg span,.cq-nav span{display:none} .cq-nav button,.cq-fmtg button{padding:0 8px} .cq-acc{width:100%} .cq-acc button{flex:1 1 auto;justify-content:center;padding:0 6px} }
+/* bullets: misma hoja que la ficha (encabezado, tarjeta principal con su barra de color y pie) */
+.cq-bul{background:#FCFBF7;color:#2B2926;border:1px solid #E5E2D3;border-radius:12px;padding:24px 28px 18px;display:grid;gap:14px}
+.cq-bul ul{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.cq-bul li{position:relative;padding-left:18px;font-size:15px;line-height:1.45}
+.cq-bul li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:2px;background:var(--c)}
+.cq-bul li b{font-family:var(--f-num);font-weight:700;font-size:1.1em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cq-bul .nota{margin:0;font-size:12px;color:#5C5952;font-style:italic}
+.cq-bul footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;border-top:1px solid #E5E2D3;padding-top:10px;font-size:11.5px;color:#5C5952}.cq-bul footer b{color:#2B2926}
+.cb-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.cb-ceja{font:600 11px var(--f);letter-spacing:.12em;text-transform:uppercase;color:#8F7F2E}
+.cq-bul h2{font:700 24px/1.12 var(--f-num);margin:4px 0 0}
+.cb-meta{text-align:right;font-size:12px;color:#5C5952;line-height:1.45;flex:none;max-width:40%}.cb-meta b{display:block;font:700 15px var(--f-num);color:#2B2926}
+.cq-bul li.lead{position:relative;background:linear-gradient(180deg,#fff,#FAF8F2);border:1px solid #E5E2D3;border-radius:10px;padding:12px 16px 12px 18px;font-size:17px}
+.cq-bul li.lead::before{left:0;top:10px;bottom:10px;height:auto;width:3px;border-radius:2px}
+.cq-bul li.lead b{font-size:1.5em;color:#2B2926}
+@media (max-width:560px){ .cb-top{flex-direction:column;gap:6px} .cb-meta{text-align:left;max-width:none} .cq-bul li.lead{padding:10px 12px 10px 14px} }

@@ -19,6 +19,10 @@ const Q = [['encuentros CBP','cbp'],['encuentros de mexicanos por sector','cbp']
       const ind = await p.evaluate(t => { const P = window.IANAMI_CONSULTA._prueba, q = P.entender(t); return q.ind; }, t);
       if (/No reconocí/.test(o.av) || !o.hoja || ind!==k) errs.push(vw+' «'+t+'» → '+ind+' '+o.av.slice(0,80));
       if (vw===1366) console.log('«'+t+'» →', ind, '|', o.av.slice(0,110)); }
+    // lo que escribe el autocompletado (nombre de cada indicador y de cada parte) se entiende completo
+    const auto = await p.evaluate(() => { const P = window.IANAMI_CONSULTA._prueba, l = P.IND.map(x => x.nom).concat(P.IND.flatMap(x => (x.partes || []).map(q => x.nom+' '+q.nom.toLowerCase())));
+      return l.filter(t => (P.entender(t).avisos || []).some(a => /No reconocí/.test(a))); });
+    if (auto.length) errs.push(vw+' autocompletado: '+auto.join(' | '));
     // Bullets
     await p.evaluate(t => { document.getElementById('cq-q').value = t; document.getElementById('cq-f').requestSubmit(); }, 'rescatados de Venezuela en diciembre'); await p.waitForTimeout(300);
     await p.click('[data-cqmodo="b"]'); await p.waitForTimeout(300);

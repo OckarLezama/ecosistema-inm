@@ -24,14 +24,14 @@ const SEXO = ['Hombres','Mujeres'];
 const BASES = {};
 function base(k, b){ b.ini = fecha0(b.inicio); BASES[k] = b; }
 if (CV){
-  const D = CV.dic, MX = D.n.indexOf('México'), E = {nom:'O.R.', col:'e', vals:D.e}, N = {nom:'Nacionalidad', col:'n', vals:D.n};
+  const D = CV.dic, MX = D.n.indexOf('México'), E = {nom:'O.R.', col:'e', vals:D.e}, ES = {nom:'Estado', col:'e', vals:D.e}, N = {nom:'Nacionalidad', col:'n', vals:D.n};
   const T = { ing:tabla(CV.ing), seg:tabla(CV.seg), pre:tabla(CV.pre), ret:tabla(CV.ret), nna:tabla(CV.nna), adu:tabla(CV.adu), orr:tabla(CV.orr), rec:tabla(CV.rec) };
   T.orr.sd = T.orr.v.map((x,i) => Math.max(0, x-T.orr.pre[i]-T.orr.can[i]));        // rescatados sin destino registrado
   T.rec.v = T.rec.ad.map((x,i) => x+T.rec.me[i]); T.ret.v = T.ret.dep.map((x,i) => x+T.ret.ra[i]);
   const reiOR = new Set(); T.orr.rei.forEach((v,i) => { if (v>0) reiOR.add(T.orr.e[i]); });
   const c = { inicio:CV.inicio, dias:CV.dias, fuente:'DGCVM' };
-  base('ing', Object.assign({}, c, { T:T.ing, ex:i => T.ing.n[i]!==MX, dims:{ e:E, n:N, p:{nom:'Punto de internación', col:'p', vals:D.p}, via:{nom:'Vía', col:'vi', vals:['Aérea','Terrestre','Marítima (cruceros)']} } }));
-  base('seg', Object.assign({}, c, { T:T.seg, ex:i => T.seg.n[i]!==MX, dims:{ e:E, n:N, p:{nom:'Punto de internación', col:'p', vals:D.p}, res:{nom:'Resultado', col:'r', vals:['Internación','Rechazo']} } }));
+  base('ing', Object.assign({}, c, { T:T.ing, ex:i => T.ing.n[i]!==MX, dims:{ e:ES, n:N, p:{nom:'Punto de internación', col:'p', vals:D.p}, via:{nom:'Vía', col:'vi', vals:['Aérea','Terrestre','Marítima (cruceros)']} } }));
+  base('seg', Object.assign({}, c, { T:T.seg, ex:i => T.seg.n[i]!==MX, dims:{ e:ES, n:N, p:{nom:'Punto de internación', col:'p', vals:D.p}, res:{nom:'Resultado', col:'r', vals:['Internación','Rechazo']} } }));
   base('pre', Object.assign({}, c, { T:T.pre, dims:{ e:E, n:N, est:{nom:'Estación', col:'s', vals:D.s} } }));
   base('ret', Object.assign({}, c, { T:T.ret, dims:{ e:E, n:N } }));
   base('nna', Object.assign({}, c, { fuente:'SIRENNA', T:T.nna, dims:{ e:E, n:N, sexo:{nom:'Sexo', col:'s', vals:SEXO}, edad:{nom:'Edad', col:'g', vals:CV.edades.slice(0,3)}, cond:{nom:'Condición', col:'c', vals:CV.clases}, mot:{nom:'Motivo de salida', col:'m', vals:CV.motivos} } }));
@@ -41,12 +41,12 @@ if (CV){
   // cada base con su propio corte: las que llegan menos lejos no se cuentan como ceros
   if (CV.fin) Object.keys(CV.fin).forEach(k => { if (BASES[k]){ BASES[k].dias = CV.fin[k]+1; } });
   // mexicanos que ingresaron y el gran total (extranjeros + mexicanos): misma base de ingresos
-  const dI = { e:E, p:{nom:'Punto de internación', col:'p', vals:D.p}, via:{nom:'Vía', col:'vi', vals:['Aérea','Terrestre','Marítima (cruceros)']} };
+  const dI = { e:ES, p:{nom:'Punto de internación', col:'p', vals:D.p}, via:{nom:'Vía', col:'vi', vals:['Aérea','Terrestre','Marítima (cruceros)']} };
   base('ingmx', Object.assign({}, c, { T:T.ing, dias:BASES.ing.dias, ex:i => T.ing.n[i]===MX, dims:dI }));
   base('ingall', Object.assign({}, c, { T:T.ing, dias:BASES.ing.dias, dims:Object.assign({ n:N }, dI) }));
 }
 if (PM) base('rep', { inicio:PM.inicio, dias:PM.dias, fuente:'DGPMV', T:tabla(PM.rep), dims:{ e:{nom:'O.R.', col:'e', vals:PM.dic.e}, p:{nom:'Punto de repatriación', col:'p', vals:PM.dic.p}, mod:{nom:'Modalidad', col:'m', vals:['Terrestre','Aérea (vuelos PRIM)']} } });
-if (RG) base('tram', { inicio:RG.inicio, dias:RG.dias, fuente:'DGRAM', T:tabla(RG.cols), dims:{ e:{nom:'Estado', col:'e', vals:RG.dic.e}, n:{nom:'Nacionalidad', col:'n', vals:RG.dic.n}, of:{nom:'Oficina', col:'o', vals:RG.dic.o},
+if (RG) base('tram', { inicio:RG.inicio, dias:RG.dias, fuente:'DGRAM', T:tabla(RG.cols), dims:{ e:{nom:'O.R.', col:'e', vals:RG.dic.e}, n:{nom:'Nacionalidad', col:'n', vals:RG.dic.n}, of:{nom:'Oficina', col:'o', vals:RG.dic.o},
   doc:{nom:'Documento', col:'c', vals:RG.condiciones}, tipo:{nom:'Tipo de trámite', col:'t', vals:RG.dic.t}, res:{nom:'Resultado', col:'r', vals:RG.dic.r}, sexo:{nom:'Sexo', col:'s', vals:RG.sexos}, edad:{nom:'Edad', col:'a', vals:RG.edades} } });
 
 // Bases del Pulso (datos.js): encuentros de la CBP (en EE. UU.) y caravanas
@@ -121,7 +121,7 @@ const IND = [
   { k:'cbp', nom:'encuentros de la CBP', art:'los', cu:'cuántos', b:'cbp', sin:['encuentro','cbp','patrulla fronteriza'], proc:'Pulso · Encuentros en EE. UU.', ir:{d:'pulso', ind:'cbp'},
     nota:'Encuentros que registra la CBP en la frontera de EE. UU. con México: los hace EE. UU., no el INM. Incluye mexicanos.',
     partes:[ {k:'mx', nom:'Mexicanos', q:'eran mexicanos', ex:(T,i) => T.n[i]===BASES.cbp.mx, g:1, sin:['mexican']}, {k:'ext', nom:'Extranjeros', q:'eran de otros países', ex:(T,i) => T.n[i]!==BASES.cbp.mx, g:1, sin:['extranjer']} ]
-      .concat(CBP ? [['USBP','Patrulla Fronteriza (USBP)','entre puertos',['usbp','patrulla']], ['OFO','Puertos de entrada (OFO)','en puertos de entrada',['ofo','puerto']], ['CBP ONE','Citas CBP ONE','con cita CBP ONE',['one']]]
+      .concat(CBP ? [['USBP','Patrulla Fronteriza (USBP)','entre puertos',['usbp','patrulla']], ['OFO','Puertos de entrada (OFO)','en puertos de entrada',['ofo','puerto']], ['CBP ONE','Citas CBP ONE','con cita CBP ONE',['one','citas']]]
         .map(([c,nom,q,sn]) => ({ k:c.toLowerCase().replace(' ',''), nom:nom, q:'fueron '+q, ex:(T,i) => T.a[i]===CBP.ag.indexOf(c), g:2, sin:sn })).filter(x => CBP.ag.indexOf(x.k==='cbpone' ? 'CBP ONE' : x.k.toUpperCase())>=0) : []) },
   { k:'tram', nom:'trámites concluidos', art:'los', cu:'cuántos', b:'tram', sin:['tramite','documento','residen','visa','tarjeta'], proc:'Regulación migratoria', ir:{d:'regulacion'}, nota:'Trámites que concluyeron en el INM, con o sin documento.',
     partes: RG ? RG.dic.r.slice(0,3).map((r,j) => ({ k:'r'+j, nom:r, q:['fueron positivos','fueron negativos','se cancelaron'][j] || 'fueron '+r.toLowerCase(), ex:(T,i) => T.r[i]===j, g:1, sin:[['positiv'],['negativ'],['cancelad']][j] || [] }))
@@ -232,6 +232,10 @@ function preparar(txt){
 // Palabras clave de documentos (DGRAM) → texto que contiene el nombre del documento
 const DOCK = [['humanitari','Humanitario'],['regional','Regional'],['fronteriz','Fronterizo'],['permanente','Permanente'],['estudiant','Estudiante'],['temporal','Temporal'],['adopcion','Adopción'],['empleador','empleador']];
 function entender(txt){
+  // nombre completo de un indicador (lo escribe el autocompletado): se reconoce antes de aplicar sinónimos, que lo deformarían
+  // («ingresos al país (extranjeros y mexicanos)» → «internaciones al nacionalidad mexicanos»). Solo nombres de dos palabras o más.
+  const crudo = ' '+norm(txt)+' '; let fijo = null;
+  IND.filter(x => norm(x.nom).indexOf(' ')>0).sort((a,b) => norm(b.nom).length-norm(a.nom).length).some(x => { const n = ' '+norm(x.nom)+' ', i = crudo.indexOf(n); if (i<0) return false; fijo = x; txt = crudo.slice(0, i)+' '+crudo.slice(i+n.length); return true; });
   const pre = preparar(txt); let t = pre.t; const usado = [], avisos = [], q = nuevaQ(), pos = {};
   const toma = w => { const i = t.indexOf(' '+w+' '); if (i<0) return false; usado.push(w); t = t.slice(0,i)+' '+'_'.repeat(w.length)+' '+t.slice(i+w.length+2); return true; };
   const tomaRaiz = r => { const m = t.match(new RegExp(' ('+r+'[a-zñ]*)')); if (!m) return false; return toma(m[1]); };
@@ -240,12 +244,12 @@ function entender(txt){
   // 0. quincena: se lee antes que todo («primera» no es «vuelos PRIM»)
   const quin = t.match(/ (primera|segunda) quincena /); if (quin){ toma(quin[1]); toma('quincena'); }
   // 1. indicador: el que aparece primero; se consume solo esa palabra (las demás pueden ser partes, como «deportados»)
-  const cand = IND.map(x => { let at = 1e9, w = ''; x.sin.forEach(s => { const m = t.match(new RegExp(' ('+s+'[a-zñ]*)')); if (m && m.index<at){ at = m.index; w = m[1]; } }); return [x, at, w]; }).filter(x => x[1]<1e9).sort((a,b) => a[1]-b[1] || b[2].length-a[2].length);
-  if (cand.length){ q.ind = cand[0][0].k; toma(cand[0][2]);
+  const cand = fijo ? [[fijo, 0, '']] : IND.map(x => { let at = 1e9, w = ''; x.sin.forEach(s => { const m = t.match(new RegExp(' ('+s+'[a-zñ]*)')); if (m && m.index<at){ at = m.index; w = m[1]; } }); return [x, at, w]; }).filter(x => x[1]<1e9).sort((a,b) => a[1]-b[1] || b[2].length-a[2].length);
+  if (cand.length){ q.ind = cand[0][0].k; if (cand[0][2]) toma(cand[0][2]);
     // si la palabra que dio el indicador es también una de sus partes («deportados»), cuenta como parte
     (cand[0][0].partes || []).forEach(p => { if (p.sin.some(sx => cand[0][2].startsWith(sx))) q.partes.push(p.k); }); }
   const ind = INDK[q.ind], B = BASES[ind.b];
-  if (cand.length) norm(ind.nom).split(' ').forEach(w => { if (w.length>2 && !VACIAS.has(w)) toma(w); });   // el autocompletado escribe el nombre completo
+  if (cand.length && !fijo) norm(ind.nom).split(' ').forEach(w => { if (w.length>2 && !VACIAS.has(w)) toma(w); });   // el autocompletado escribe el nombre completo
   if (q.ind==='rec'){ ['de ee uu','de eeuu','de estados unidos','ee uu','eeuu','estados unidos'].some(toma); }
   // 2. desglose: «por X»
   DESG_TXT.slice().sort((a,b) => b[0].length-a[0].length).forEach(([w,d]) => { if (t.indexOf(' por '+w+' ')>=0){ toma('por'); toma(w);
@@ -550,7 +554,7 @@ function opBarrasV(l, nna, col){ return { grid:{ left:46, right:10, top:24, bott
   series:[{ type:'bar', barMaxWidth:34, data:l.map(x => x[1]), itemStyle:{ color:col || VERDE, borderRadius:[3,3,0,0] }, label:{ show:true, position:'top', fontSize:10.5, color:'#2B2926', formatter:p => etiq(p.value, nna) } }] }; }
 // Barras horizontales de mayor a menor (listas cortas y celular)
 function opBarrasH(l, nna, col, T){ return { grid:{ left:8, right:T ? 130 : 54, top:6, bottom:6, containLabel:true }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => '<b>'+esc(l[p[0].dataIndex][0])+'</b><br>'+cifra(p[0].value, nna) },
-  xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:l.map(x => x[0]), splitLine:{ show:false }, axisLabel:{ color:'#2B2926', fontSize:11, formatter:v => v.length>22 ? v.slice(0,21)+'…' : v } }),
+  xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:l.map(x => x[0]), axisLabel:{ color:'#2B2926', fontSize:11, formatter:v => v.length>22 ? v.slice(0,21)+'…' : v } }),
   series:[{ type:'bar', barMaxWidth:18, data:l.map(x => x[1]), itemStyle:{ color:col || VERDE, borderRadius:[0,3,3,0] }, label:{ show:true, position:'right', fontSize:10.5, color:'#2B2926', formatter:p => etiq(p.value, nna)+(T && T>=30 && !(nna && p.value<5) ? '  ·  '+deCien(p.value, T)+' de cada 100' : '') } }] }; }
 // De cada 100: barras al 100% con la parte (o partes) y el resto; si las partes se traslapan, una barra por parte
 function opCien(r, filas){
@@ -561,7 +565,7 @@ function opCien(r, filas){
     label:{ show:true, position:'right', color:'#5C5952', fontSize:10, formatter:p => cifra(filas[p.dataIndex].v, nna) }, tooltip:{ show:false } });
   return { grid:{ left:8, right:excl ? 62 : 26, top:r.partes.length>1 ? 24 : 6, bottom:6, containLabel:true }, legend:r.partes.length>1 ? { top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11 }, data:r.partes.map(x => x.p.nom) } : { show:false },
     tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => { const f = filas[ps[0].dataIndex]; return '<b>'+esc(f.nom)+'</b> · '+cifra(f.v, nna)+'<br>'+r.partes.map((pp,j) => pp.p.nom+': <b>'+cifra(f.partes[j], nna)+'</b>'+(f.v>=30 ? ' ('+deCien(f.partes[j], f.v)+' de cada 100)' : '')).join('<br>'); } },
-    xAxis:eje({ type:'value', max:excl ? 100 : undefined, axisLabel:{ formatter:'{value}' } }), yAxis:eje({ type:'category', inverse:true, data:nom, splitLine:{ show:false }, axisLabel:{ color:'#2B2926', fontSize:11 } }), series:series }; }
+    xAxis:eje({ type:'value', max:excl ? 100 : undefined, axisLabel:{ formatter:'{value}' } }), yAxis:eje({ type:'category', inverse:true, data:nom, axisLabel:{ color:'#2B2926', fontSize:11 } }), series:series }; }
 // Línea en el tiempo con rango habitual (promedio ± desviación de los periodos completos)
 function opLinea(C, series, nna, banda){
   const lab = C.l.map(c => { const f = fecha0(c.a); return C.g==='m' ? MESC[f.getMonth()]+' '+String(f.getFullYear()).slice(2) : f.getDate()+' '+MESC[f.getMonth()]; });
@@ -576,17 +580,17 @@ function opLinea(C, series, nna, banda){
 // Cambio (%): barras divergentes, verde si sube y rojo si baja
 function opCambio(l){ const v = l.map(f => +f.pct.toFixed(1)), mx = Math.max(10, ...v.map(Math.abs)), todosSuben = v.every(x => x>=0), todosBajan = v.every(x => x<=0);
   return { grid:{ left:8, right:46, top:6, bottom:6, containLabel:true }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => { const f = l[p[0].dataIndex]; return '<b>'+esc(f.nom)+'</b><br>'+corto(f.a)+' → '+corto(f.b)+' por día<br>'+pct1(f.pct); } },
-    xAxis:eje({ type:'value', min:todosSuben ? 0 : -mx*1.1, max:todosBajan ? 0 : mx*1.1, axisLabel:{ formatter:x => Math.round(x)+'%' } }), yAxis:eje({ type:'category', inverse:true, data:l.map(f => f.nom), splitLine:{ show:false }, axisLabel:{ color:'#2B2926', fontSize:11 } }),
+    xAxis:eje({ type:'value', min:todosSuben ? 0 : -mx*1.1, max:todosBajan ? 0 : mx*1.1, axisLabel:{ formatter:x => Math.round(x)+'%' } }), yAxis:eje({ type:'category', inverse:true, data:l.map(f => f.nom), axisLabel:{ color:'#2B2926', fontSize:11 } }),
     series:[{ type:'bar', barMaxWidth:18, data:v.map(x => ({ value:x, itemStyle:{ color:x>=0 ? VERDE : ROJO, borderRadius:x>=0 ? [0,3,3,0] : [3,0,0,3] } })),
       label:{ show:true, position:'right', fontSize:10.5, fontWeight:600, color:'#2B2926', formatter:p => pct1(p.value) } }] }; }
 // Antes y después, por día
 function opAB(l, nna, nA, nB){ return { grid:{ left:8, right:40, top:24, bottom:6, containLabel:true }, legend:{ top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11 }, data:[nA, nB] },
-  tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } }, xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:l.map(f => f.nom), splitLine:{ show:false }, axisLabel:{ color:'#2B2926', fontSize:11 } }),
+  tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } }, xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:l.map(f => f.nom), axisLabel:{ color:'#2B2926', fontSize:11 } }),
   series:[{ name:nA, type:'bar', barMaxWidth:9, data:l.map(f => +f.a.toFixed(1)), itemStyle:{ color:'#B7C2BD' } }, { name:nB, type:'bar', barMaxWidth:9, data:l.map(f => +f.b.toFixed(1)), itemStyle:{ color:VERDE },
     label:{ show:true, position:'right', fontSize:9.5, formatter:p => etiq(p.value, nna) } }] }; }
 // Fuentes: cuántos registra el sistema por cada 100 que reporta la O.R.
 function opIndice(filas){ return { grid:{ left:8, right:40, top:6, bottom:6, containLabel:true }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => { const f = filas[p[0].dataIndex]; return '<b>'+esc(f.nom)+'</b><br>Reporte O.R.: '+miles(f.or)+'<br>Sistema: '+miles(f.sis); } },
-  xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:filas.map(f => f.nom), splitLine:{ show:false }, axisLabel:{ color:'#2B2926', fontSize:11 } }),
+  xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:filas.map(f => f.nom), axisLabel:{ color:'#2B2926', fontSize:11 } }),
   series:[{ type:'bar', barMaxWidth:18, data:filas.map(f => { const k = deCien(f.sis, f.or); return { value:k, itemStyle:{ color:k<20 ? ROJO : SALVIA, borderRadius:[0,3,3,0] } }; }), label:{ show:true, position:'right', fontSize:10.5, fontWeight:600, color:'#2B2926', formatter:p => p.value },
     markLine:{ silent:true, symbol:'none', lineStyle:{ color:'#2B2926', type:'dashed', width:1 }, label:{ formatter:'100', color:'#5C5952', fontSize:10 }, data:[{ xAxis:100 }] } }] }; }
 
@@ -629,7 +633,7 @@ function hoja(r, fmt, angosta){
     kpis = r.cols.map((c,j) => tarjeta(c.nom, '', cifra(c.v, nna), '<b>'+deCien(c.v, S)+'</b> de cada 100 entre los comparados', c.col, false)).join('');
     const otra = r.cols[0].otra, cats = [...new Set(r.cols.flatMap(c => c.top.map(t => t[0])))].slice(0,5);
     const opG = cats.length ? { grid:{ left:8, right:40, top:24, bottom:6, containLabel:true }, legend:{ top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11 }, data:r.cols.map(c => c.nom) },
-      tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } }, xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:cats, splitLine:{ show:false }, axisLabel:{ color:'#2B2926', fontSize:11 } }),
+      tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } }, xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:cats, axisLabel:{ color:'#2B2926', fontSize:11 } }),
       series:r.cols.map(c => { const m = new Map(c.top); return { name:c.nom, type:'bar', barMaxWidth:10, itemStyle:{ color:c.col }, data:cats.map(k => m.get(k) || 0), label:{ show:true, position:'right', fontSize:9.5, formatter:p => p.value ? etiq(p.value, nna) : '' } }; }) } : null;
     cuerpo = (r.Cc.l.length>1 ? tarjetaCh(mk(opLinea(r.Cc, r.cols.map(c => ({ nom:c.nom, v:c.serie, col:c.col })), nna, false)), 'Por '+{d:'día',s:'semana',m:'mes'}[r.Cc.g], 'cada línea es uno de los comparados') : '')+
              (opG ? tarjetaCh(mk(opG), otra+' principal', 'de cada uno de los comparados') : '');
@@ -655,7 +659,7 @@ function hoja(r, fmt, angosta){
   }
   else {   // ranking
     eti = cap(r.ind.nom)+(fraseFiltros(q) ? ' '+fraseFiltros(q) : '');
-    const ch2 = dimChica(r), Td = ch2 ? ch2.l.reduce((s,x) => s+x[1], 0) : 0, pg = !ch2 && r.ind.partes ? r.ind.partes.filter(p => p.g===1).slice(0,3) : [];
+    const ch2 = r.ind.k==='ingall' ? null : dimChica(r), Td = ch2 ? ch2.l.reduce((s,x) => s+x[1], 0) : 0, pg = !ch2 && r.ind.partes ? r.ind.partes.filter(p => p.g===1).slice(0,3) : [];
     kpis = tot+(ch2 ? ch2.l.slice(0,3).map(([k,v],j) => tarjeta(r.B.dims[ch2.dim].vals[k], '', cifra(v, nna), nna && v>0 && v<5 ? 'cifra protegida' : '<b>'+deCien(v, Td)+'</b> de cada 100', [SALVIA, ROJO, OCRE][j])).join('')
       : pg.length ? pg.map((p,j) => { const v = total(Object.assign({}, r.base, medParte(r.ind, p))); return tarjeta(p.nom, '', cifra(v, nna), T>=30 ? '<b>'+deCien(v, T)+'</b> de cada 100' : '', [VERDE, ROJO, OCRE][j]); }).join('')
       : [L1, L2].filter(L => L && L.filas.length>=2).map((L,j) => tarjeta(L.filas[0].nom, 'principal '+(PLU[L.nom] ? 'entre '+L.filas.length+' '+PLU[L.nom] : 'por '+min(L.nom)), cifra(L.filas[0].v, nna), T>=30 ? '<b>'+deCien(L.filas[0].v, T)+'</b> de cada 100' : '', [VERDE, OCRE][j])).join('')+
@@ -664,7 +668,7 @@ function hoja(r, fmt, angosta){
     const domina = L1 && L1.filas.length>=2 && L1.filas[0].v > 3*L1.filas[1].v;
     const vert = !angosta && fmt!=='v' && !domina && L1 && L1.filas.length>=3;
     cuerpo = (L1 ? tarjetaCh(mk(vert ? opBarrasV(top(L1, nL), nna) : opBarrasH(top(L1, fmt==='v' ? 6 : nL), nna, null, T)), 'Totales por '+min(L1.nom), '<b>'+cifra(T, nna)+'</b> '+esc(r.ind.nom)+' · '+(L1.filas.length>nL ? 'las '+nL+' principales de '+L1.filas.length : L1.filas.length+' en total')) : '')+
-             (L2 && !(ch2 && ch2.dim===L2.dim) ? tarjetaCh(mk(opBarrasH(top(L2, 5), nna, OCRE, T)), 'Por '+min(L2.nom), 'las 5 principales') : semanal());
+             (L2 && !(ch2 && ch2.dim===L2.dim) && !(/^ing/.test(r.ind.k) && (q.filtros.e || q.filtros.n)) ? tarjetaCh(mk(opBarrasH(top(L2, 5), nna, OCRE, T)), 'Por '+min(L2.nom), 'las 5 principales') : semanal());
     if (!cuerpo && r.B.foto){ cuerpo = '<div class="cq-vacio">Con estos filtros juntos la base no trae más desglose. Quita uno para ver el reparto.</div>'; una = true; } else una = false;
   }
   const html = '<article class="cq-hoja f'+fmt+' t-'+r.tipo+(una ? ' una' : '')+'">'+
@@ -712,7 +716,8 @@ function bullets(r){
   l.push(b(mesa(T, nna))+' '+nf+' '+per+'.');
   if (r.antes!=null && r.antes>=30) l.push(flB((T/r.antes-1)*100)+' contra los '+dias+' días anteriores ('+b(mesa(r.antes, nna))+', '+r.antesTxt+').');
   if (!foto && !r.ind.pocos && dias>1) l.push('Promedio: '+b(mesa(T/dias, nna))+' por día.');
-  const ch = r.partes.length ? null : dimChica(r);
+  const ch = r.partes.length || r.ind.k==='ingall' ? null : dimChica(r);
+  if (!r.partes.length && r.ind.k==='ingall') l.push(r.ind.partes.filter(p => p.g===1).map(p => { const v = total(Object.assign({}, r.base, medParte(r.ind, p))); return pcB(v, T)+' '+b(mesa(v))+' '+esc(minus(p.nom)); }).join(' + ')+'.');
   if (r.partes.length) r.partes.forEach(x => l.push((pcB(x.v, T, nna)+' '+b(mesa(x.v, nna))+' '+esc(minus(x.p.nom))).trim()+'.'));
   else if (ch) l.push(ch.l.map(([k,v]) => (pcB(v, T, nna)+' '+b(mesa(v, nna))+' '+esc(minus(B.dims[ch.dim].vals[k]))).trim()).join(' · ')+'.');
   if (r.tipo==='tiempo'){ const s = r.serie, C = r.C, mk = s.indexOf(Math.max(...s)), u = { d:'día', s:'semana', m:'mes' }[C.g]; if (s.length>2) l.push('El '+u+' más alto: '+nomCub(C, mk)+', con '+b(mesa(s[mk], nna))+'.'); }
@@ -729,7 +734,7 @@ const sinHtml = h => String(h).replace(/<b>(.*?)<\/b>/g, '*$1*').replace(/<[^>]+
 function textoBullets(r){ const x = bullets(r);
   return '*'+sinHtml(x.tit)+'*\n'+x.per+'\n\n'+x.l.map(h => '• '+sinHtml(h)).join('\n')+(x.nota ? '\n\n_'+x.nota+'_' : '')+'\n\nFuente: '+x.fte+' · datos al '+fechaTxt(x.fin)+' · IA-NAMI'; }
 function hojaBul(r, fmt){ const x = bullets(r), ahora = new Date(), ind = r.ind;
-  return '<article class="cq-bul f'+fmt+'" style="--c:'+colInd(r)+'"><header><div class="cq-ceja">IA-NAMI · '+esc(r.tipo==='perfil' ? 'Perfil' : ind.proc)+'</div><h2>'+esc(x.tit)+'</h2><span class="per">'+esc(x.per)+'</span></header>'+
+  return '<article class="cq-bul f'+fmt+'" style="--c:'+colInd(r)+'"><header class="cb-top"><div><div class="cb-ceja">IA-NAMI · '+esc(r.tipo==='perfil' ? 'Perfil' : ind.proc)+' · bullets</div><h2>'+esc(x.tit)+'</h2></div><div class="cb-meta"><b>'+esc(x.per)+'</b>'+esc(x.fte)+'</div></header>'+
     '<ul>'+x.l.map((h,i) => '<li'+(i===0 ? ' class="lead"' : '')+'>'+h+'</li>').join('')+'</ul>'+(x.nota ? '<p class="nota">'+esc(x.nota)+'</p>' : '')+
     '<footer><span>Fuente: <b>'+esc(x.fte)+'</b> · datos al '+fechaTxt(x.fin)+'</span><span>Generado '+fechaTxt(iso(ahora))+' '+String(ahora.getHours()).padStart(2,'0')+':'+String(ahora.getMinutes()).padStart(2,'0')+'</span></footer></article>'; }
 // Dibuja las gráficas de una hoja ya insertada
@@ -740,6 +745,7 @@ function dibujar(cont, ops, anim){
 
 /* ==== [6] VENTANA ================================================== */
 const $ = id => document.getElementById(id);
+const ICQ = {'des': '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>', 'nue': '<path d="M12 5v14M5 12h14"/>', 'ficha': '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15l3-3 3 2 4-5"/>', 'bul': '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>', 'h': '<rect x="3" y="6" width="18" height="12" rx="2"/>', 'v': '<rect x="7" y="3" width="10" height="18" rx="2"/>', 'pdf': '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9.5 14.5 12 17l2.5-2.5"/>', 'img': '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 9"/>', 'cop': '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>', 'wa': '<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13"/>', 'ir': '<path d="M7 17 17 7M8 7h9v9"/>'}, ico = k => '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICQ[k]+'</svg>';
 let Q = null, R = null, abierto = false, GR = [], menuDe = null;
 // Ayuda («i»): ejemplos que funcionan, por tipo de pregunta; al tocarlos se consultan
 const AYUDA = [
@@ -766,9 +772,10 @@ function montar(){
     '<div id="cq-inicio"><div class="cq-arma"><span>o arma tu consulta:</span><button type="button" class="cq-pz vacia" data-pz="ind">¿Qué quieres ver? ▾</button></div>'+
       '<div class="cq-ej"><span>Prueba:</span>'+EJ.map(e => '<button type="button" data-cqej="'+esc(e)+'">'+esc(e)+'</button>').join('')+'</div></div>'+
     '<div id="cq-res" hidden><div class="cq-frase" id="cq-frase"></div><div id="cq-av"></div>'+
-      '<div class="cq-bar"><div class="cq-nav"><button type="button" data-cqdes id="cq-des" title="Regresa al paso anterior">↶ Deshacer</button><button type="button" data-cqnue title="Borra la consulta y empieza de nuevo">Nueva pregunta</button></div><div class="cq-pil cq-modo" role="group" aria-label="Presentación"><button type="button" data-cqmodo="f" title="Una hoja con cifras y gráficas (infografía)">Ficha</button><button type="button" data-cqmodo="b" title="Viñetas con las cifras, para mandar como mensaje">Bullets</button></div>'+
-      '<div class="cq-pil cq-fmtg" role="group" aria-label="Formato"><button type="button" data-cqfmt="h">Horizontal</button><button type="button" data-cqfmt="v">Vertical</button></div>'+
-      '<div class="cq-acc"><button type="button" class="pri" data-cqacc="pdf">PDF</button><button type="button" data-cqacc="img">Imagen</button><button type="button" data-cqacc="copiar" title="Copia el texto de las viñetas">Copiar texto</button><button type="button" data-cqacc="wa" title="En celular o tableta abre el menú para compartir con la imagen; en computadora abre WhatsApp Web y descarga la imagen">Compartir</button><button type="button" data-cqacc="ir" id="cq-ir">Ver en el tablero</button></div></div>'+
+      '<div class="cq-bar"><div class="cq-nav"><button type="button" data-cqdes id="cq-des" title="Regresa al paso anterior">'+ico('des')+'<span>Deshacer</span></button><button type="button" data-cqnue title="Borra la consulta y empieza de nuevo">'+ico('nue')+'<span>Nueva</span></button></div>'+
+      '<div class="cq-vis"><div class="cq-pil cq-modo" role="group" aria-label="Presentación"><button type="button" data-cqmodo="f" title="Ficha: una hoja con cifras y gráficas">'+ico('ficha')+'<span>Ficha</span></button><button type="button" data-cqmodo="b" title="Bullets: viñetas con las cifras, para mandar como mensaje">'+ico('bul')+'<span>Bullets</span></button></div>'+
+      '<div class="cq-pil cq-fmtg" role="group" aria-label="Formato"><button type="button" data-cqfmt="h" title="Horizontal (presentación)">'+ico('h')+'<span>Horizontal</span></button><button type="button" data-cqfmt="v" title="Vertical (celular, estado de WhatsApp)">'+ico('v')+'<span>Vertical</span></button></div></div>'+
+      '<div class="cq-acc"><button type="button" data-cqacc="pdf" title="Descargar en PDF">'+ico('pdf')+'<span>PDF</span></button><button type="button" data-cqacc="img" title="Descargar como imagen">'+ico('img')+'<span>Imagen</span></button><button type="button" data-cqacc="copiar" title="Copiar el texto de las viñetas">'+ico('cop')+'<span>Copiar</span></button><button type="button" data-cqacc="wa" title="En celular o tableta abre el menú para compartir con la imagen; en computadora abre WhatsApp Web y descarga la imagen">'+ico('wa')+'<span>Compartir</span></button><button type="button" data-cqacc="ir" id="cq-ir" class="ir">'+ico('ir')+'<span>Ver en el tablero</span></button></div></div>'+
       '<span class="cq-nt" id="cq-nt"></span><span class="cq-msg" id="cq-msg"></span><div class="cq-hw" id="cq-hw"></div></div>'+
     '<div class="cq-menu" id="cq-menu" hidden></div></div><div class="cq-render" id="cq-render" aria-hidden="true"></div>';
   document.body.appendChild(m);
@@ -796,9 +803,9 @@ function pintar(){
     (Q.sugs && Q.sugs.length ? '<div class="cq-ej cq-quis"><span>¿Quisiste decir?</span>'+Q.sugs.map(e => '<button type="button" data-cqej="'+esc(e)+'">'+esc(e)+'</button>').join('')+'</div>' : '');
   document.querySelectorAll('[data-cqfmt]').forEach(b => b.classList.toggle('on', b.dataset.cqfmt===Q.fmt));
   const bul = Q.modo==='b'; document.querySelectorAll('[data-cqmodo]').forEach(b => { b.classList.toggle('on', b.dataset.cqmodo===(bul ? 'b' : 'f')); b.setAttribute('aria-pressed', b.dataset.cqmodo===(bul ? 'b' : 'f')); });
-  $('cq-res').classList.toggle('bul', bul); const wa = document.querySelector('[data-cqacc="wa"]'); wa.textContent = bul ? 'WhatsApp' : 'Compartir';
+  $('cq-res').classList.toggle('bul', bul); const wa = document.querySelector('[data-cqacc="wa"]'); wa.querySelector('span').textContent = bul ? 'WhatsApp' : 'Compartir';
   wa.title = bul ? 'Abre WhatsApp con el texto de las viñetas, listo para enviar' : 'En celular o tableta abre el menú para compartir con la imagen; en computadora abre WhatsApp Web y descarga la imagen';
-  $('cq-ir').textContent = 'Profundizar en el tablero ›'; $('cq-ir').title = 'Abre '+R.ind.proc+' con esta consulta'; $('cq-nt').textContent = notaTablero();
+  $('cq-ir').querySelector('span').textContent = 'Ver en el tablero'; $('cq-ir').title = 'Abre '+R.ind.proc+' con esta consulta'; $('cq-nt').textContent = notaTablero();
   const hw = $('cq-hw'); hw.className = 'cq-hw'+(Q.fmt==='v' ? ' vert' : ''); GR.forEach(c => c.dispose());
   if (bul){ hw.className = 'cq-hw bul'; hw.innerHTML = hojaBul(R, 'h'); GR = []; $('cq-msg').textContent = ''; clearTimeout(tPrep); PREP = null; botonCompartir(true); return; }
   const h = hoja(R, Q.fmt, hw.clientWidth>0 && hw.clientWidth<600); hw.innerHTML = h.html; GR = dibujar(hw, h.ch, true); $('cq-msg').textContent = ''; prepararImagen();
@@ -818,7 +825,7 @@ function pintarFrase(){
   vivos.filter(d => prin.indexOf(d)<0 && (Q.filtros[d] || []).length).forEach(d => prin.push(d));
   prin.forEach(k => { const f = Q.filtros[k] || []; h += '<span class="cq-cj">'+(CONECTOR[k] || 'con')+'</span>';
     h += f.length ? f.map(i => '<button type="button" class="cq-pz fil" data-cqquita="'+k+':'+i+'" title="Quitar">'+esc(B.dims[k].vals[i])+' <small>×</small></button>').join('')+(f.length<3 ? pz('fil:'+k, '+', 'mas', true) : '')
-      : pz('fil:'+k, esc(TODO[k] || 'cualquier '+min(B.dims[k].nom)), 'todo'); });
+      : pz('fil:'+k, esc(k==='e' && B.dims.e.nom==='Estado' ? 'todos los estados' : TODO[k] || 'cualquier '+min(B.dims[k].nom)), 'todo'); });
   if (vivos.some(d => prin.indexOf(d)<0)) h += pz('fil', '+ más filtros', 'mas', true);
   const dsc = Q.desg==='t' ? { auto:'tiempo', d:'día', s:'semana', m:'mes' }[Q.gran] : Q.desg ? min(B.dims[Q.desg].nom) : (R.listas[0] ? min(R.listas[0].nom) : 'sin desglose');
   h += '<span class="cq-cj">por</span>'+pz('desg', esc(dsc))+'<span class="cq-cj">·</span>'+(B.foto ? '<span class="cq-cj" title="Es una foto al último corte: no sigue al periodo">al corte del '+esc(fechaTxt(B.inicio))+'</span>' : pz('per', esc(rangoTxt(Q.d0, Q.d1))));
