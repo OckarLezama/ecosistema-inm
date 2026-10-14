@@ -118,6 +118,18 @@ INDS.forEach(m => { const a = new Float32Array(NW*NS*NN), ws = new Float64Array(
 const NCAT = {ing_via:3, rech_det:2, tram_se:16, tram_res:3, tram_tipo:(D.tramTipos||[]).length, resc_rei:2, resc_des:3, pres_est:D.estaciones.length, can_nna:12, can_ad:2, ret_tipo:2, recib_edad:2, rep_comp:8};
 const COMP = {};                                  // desgloses del periodo (llegan por mes: [mes, estado, nacionalidad, categoría, valor])
 // Parte de un mes de las bases que cae dentro del periodo elegido (0 a 1)
+// Con el play en pantalla completa, los desgloses siguen al día del cursor: cada mes se prorratea dentro de [a, b)
+function fraccionRango(m, a, b){
+  const x = new Date(INICIO0.getFullYear(), INICIO0.getMonth()+m, 1), y = new Date(INICIO0.getFullYear(), INICIO0.getMonth()+m+1, 1);
+  const s = Math.max(0, Math.round((x-INICIO0)/864e5)), e = Math.min(D0.dias, Math.round((y-INICIO0)/864e5)), o = Math.min(e,b) - Math.max(s,a);
+  return e>s && o>0 ? o/(e-s) : 0;
+}
+function compHasta(k, ss, n, hasta){
+  const nc = NCAT[k], c = D.comp[k], o = new Array(nc).fill(0), sset = ss ? new Set(ss) : null, fr = {};
+  for (let i=0; i<c.length; i+=5){ if (sset && !sset.has(c[i+1])) continue; if (n!=null && c[i+2]!==n) continue;
+    let f = fr[c[i]]; if (f==null) f = fr[c[i]] = fraccionRango(c[i], P0, hasta); if (f) o[c[i+3]] += c[i+4]*f; }
+  return o;
+}
 function fraccionMes(m){
   const a = new Date(INICIO0.getFullYear(), INICIO0.getMonth()+m, 1), b = new Date(INICIO0.getFullYear(), INICIO0.getMonth()+m+1, 1);
   const s = Math.max(0, Math.round((a-INICIO0)/864e5)), e = Math.min(D0.dias, Math.round((b-INICIO0)/864e5)), o = Math.min(e,P1) - Math.max(s,P0);
@@ -165,6 +177,7 @@ function diario(k, F){                         // serie diaria con el filtro act
 }
 function comp(k, ss, n){
   if (Array.isArray(n)){ const o = new Array(NCAT[k]).fill(0); n.forEach(x => comp(k,ss,x).forEach((v,i) => o[i] += v)); return o; }
+  if (SALA.on && S.dia<ND && D.comp[k]) return compHasta(k, ss, n, P0+Math.max(0, S.dia));   // pantalla completa con play: hasta el día del cursor
   const nc = NCAT[k], a = COMP[k], o = new Array(nc).fill(0), l = ss || TODOS, n0 = n==null?0:n, n1 = n==null?NN-1:n;
   for (let j=0;j<l.length;j++) for (let ni=n0; ni<=n1; ni++){ const b = (l[j]*NN+ni)*nc; for (let c=0;c<nc;c++) o[c] += a[b+c]; }
   return o; }
@@ -1320,6 +1333,16 @@ function marcarFiltro(){
 }
 
 /* ==== [12] CONSULTAR Y COMPARTIR ================================== */
+// ECharts y el zoom de pantallas grandes: la página se agranda con CSS zoom (clase esc) y ECharts toma la posición del
+// mouse sin esa escala, así que señalaba otro punto (otra línea, otra barra). Aquí se le entrega ya corregida (zrX, zrY),
+// que ECharts usa tal cual. Sin zoom no hace nada. En pantallas táctiles ECharts ya la calcula bien por su cuenta.
+(function(){
+  const raiz = el => { for (let x = el; x && x.getAttribute; x = x.parentNode){ if (x.getAttribute('_echarts_instance_')) return x.firstElementChild || x; } return null; };
+  const fijar = e => { if (e.zrX!=null || e.clientX==null) return; const r = raiz(e.target); if (!r || !r.offsetWidth) return;
+    const b = r.getBoundingClientRect(), k = b.width / r.offsetWidth; if (Math.abs(k-1) < 0.01) return;
+    e.zrX = (e.clientX - b.left) / k; e.zrY = (e.clientY - b.top) / k; };
+  ['mousemove','mousedown','mouseup','click','dblclick','contextmenu','wheel','mousewheel','pointermove','pointerdown','pointerup','mouseover','mouseout'].forEach(t => document.addEventListener(t, fijar, { capture:true, passive:true }));
+})();
 // Carga diferida: con dos años de datos, Control, Regulación y Protección pesan decenas de MB. El Pulso abre solo
 // con datos/datos.js; lo demás se baja la primera vez que se abre esa parte y queda en memoria.
 const VERSION = ((document.querySelector('script[src*="js/app.js"]') || {}).src || '').split('?')[1] || '';
