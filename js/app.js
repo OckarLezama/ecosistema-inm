@@ -1385,7 +1385,8 @@ function menuDir(abrir){
   const m = $('menu-dir'), b = document.querySelector('[data-menu-dir]'); if (!m || !b) return;
   m.hidden = !abrir; b.setAttribute('aria-expanded', abrir);
   if (abrir){ const r = b.getBoundingClientRect(), top = document.querySelector('.top').getBoundingClientRect();
-    m.style.left = Math.max(8, Math.min(r.left-top.left, top.width-m.offsetWidth-8))+'px'; m.style.top = (r.bottom-top.top+2)+'px';
+    const z = E || 1;                               // la barra se agranda con zoom (clase esc): el rectángulo viene escalado; left/top van sin escalar
+    m.style.left = Math.max(8, Math.min((r.left-top.left)/z, top.width/z-m.offsetWidth-8))+'px'; m.style.top = ((r.bottom-top.top)/z+2)+'px';
     m.innerHTML = DIRS.map((d,i) => '<button data-dir="'+i+'" class="'+(S.vista==='dir' && (S.dir||0)===i ? 'on' : '')+'"><b>'+d.s+'</b><span>'+d.n+'</span></button>').join(''); }
 }
 // Tablero de una dirección: sus bases con total, variación, tendencia, nacionalidades y estados

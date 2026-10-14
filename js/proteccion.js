@@ -292,7 +292,7 @@ function pintarRep(){
       grupo(3, '#2B2926', 'Mexicanos repatriados de EE. UU. · toca una modalidad para filtrar', tm(-1, 'Repatriados', 'todas las modalidades', IC.tot, '#2B2926')+tm(0, 'Terrestre', 'garitas y puentes', IC.tierra, COLMOD[0])+tm(1, 'Aérea', 'vuelos PRIM · '+diasPrim+' días con llegada', IC.avion, COLMOD[1]))+
       grupo(2, VERDE, 'Adultos · '+pct(AD, T0)+'% del total', ad)+grupo(3, ROJO, 'Niñas, niños y adolescentes · toca una para analizar', nn)+plegar()+'</section>'+
     '<div class="rg-hz" id="cv-hz"></div>'+
-    '<div class="rg-g rg-g21">'+cajaTend('pm-tr', 'tr')+'<div class="caja"><h2><span id="pm-tp-t"></span>'+info('tp')+'</h2><span class="q" id="pm-tp-q"></span><div id="pm-tp"></div></div></div>'+
+    '<div class="rg-g rg-g21 fila-par">'+cajaTend('pm-tr', 'tr')+'<div class="caja"><h2><span id="pm-tp-t"></span>'+info('tp')+'</h2><span class="q" id="pm-tp-q"></span><div id="pm-tp"></div></div></div>'+
     '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿A quién recibe cada punto?</span>'+info('perfil')+'</h2><span class="q" id="pm-pf-q"></span><div id="pm-pf" style="height:420px"></div></div>'+
       '<div class="caja"><h2><span>Llegadas de vuelos PRIM</span>'+info('prim')+'</h2><span class="q" id="pm-pr-q"></span><div class="cv-scroll"><div id="pm-pr" style="height:380px"></div></div></div></div>'+
     detIni()+

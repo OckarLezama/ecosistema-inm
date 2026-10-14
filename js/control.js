@@ -298,7 +298,7 @@ function pintarInt(){
         tarjeta('Casos', 'en segunda revisión', IC.lupa, OCRE, SEG, {})+tarjeta('Rechazos', 'no se internaron', IC.no, ROJO, SEG, {ex:rech})+
         kc({ nom:'% rechazado', sub:'de quienes llegan', ic:IC.no, col:VINO, val:crucero ? '—' : tasaTxt(base), d: crucero ? '<span class="kc-d">no aplica a cruceros</span>' : w ? chipD(tasa(tot(SEG, {ex:rech, d0:w[0][0], d1:w[0][1]}), tot(ING, {ex:llegada, d0:w[0][0], d1:w[0][1]}))*1e3, tasa(tot(SEG, {ex:rech, d0:w[1][0], d1:w[1][1]}), tot(ING, {ex:llegada, d0:w[1][0], d1:w[1][1]}))*1e3) : '' })+'</div></div>'+plegar()+'</section>'+
     '<div class="rg-hz" id="cv-hz"></div>'+
-    '<div class="rg-g rg-g21">'+cajaTend('cv-tr', 'tr')+'<div class="caja"><h2><span id="cv-tp-t"></span>'+info('tp')+'</h2><span class="q" id="cv-tp-q"></span><div id="cv-tp"></div></div></div>'+
+    '<div class="rg-g rg-g21 fila-par">'+cajaTend('cv-tr', 'tr')+'<div class="caja"><h2><span id="cv-tp-t"></span>'+info('tp')+'</h2><span class="q" id="cv-tp-q"></span><div id="cv-tp"></div></div></div>'+
     '<h3 class="cv-sec">Segunda revisión y rechazos <small>solo llegadas por aire y tierra</small></h3>'+
     (crucero ? '<p class="cv-cal" style="background:var(--panel2);color:var(--ink2)">Los pasajeros de crucero no pasan por segunda revisión. Quita el filtro de vía marítima para ver los rechazos.</p>' :
     '<div class="rg-g rg-g21"><div class="caja"><h2><span>¿Dónde y a quién se rechaza?</span>'+info('disp')+pil('data-csc', Q.sc, [['n','Nacionalidades'],['p','Puntos']])+'</h2><span class="q" id="cv-disp-q"></span><div id="cv-disp" class="cv-fill" style="min-height:440px"></div></div>'+
@@ -436,7 +436,7 @@ function pintarEst(){
         sel('rei', 'Reincidentes', REI_OR.size<=2 ? 'solo los registra '+reiTxt : pct(RE, R)+'% donde se registra', IC.ret, ROJO)+sel('opre', 'Presentados en estación', fuente('o','O.R.'), IC.est, OCRE)+sel('ocan', 'Canalizados al DIF', fuente('o','O.R.'), IC.nino, '#778E88')+'</div></div>'+
       masG('Sistema<br>DGCVM', corto(tot(PRE, {})), 'Sistema DGCVM · <button class="cv-lnk" data-cdif>¿por qué dos cifras de presentados?</button>', VERDE, sel('pre', 'Presentados', fuente('s','sistema'), IC.est, '#2B2926')+sel('ra', 'Retornos asistidos', '', IC.ret, VERDE)+sel('dep', 'Deportaciones', '', IC.ret, VINO))+plegar()+'</section>'+
     '<div class="rg-hz" id="cv-hz"></div>'+
-    '<div class="rg-g rg-g21">'+cajaTend('cv-ps', 'tre')+'<div class="caja"><h2><span id="cv-pp-t"></span>'+info('pe')+'</h2><span class="q" id="cv-pp-q"></span><div id="cv-pp"></div></div></div>'+
+    '<div class="rg-g rg-g21 fila-par">'+cajaTend('cv-ps', 'tre')+'<div class="caja"><h2><span id="cv-pp-t"></span>'+info('pe')+'</h2><span class="q" id="cv-pp-q"></span><div id="cv-pp"></div></div></div>'+
     '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿Quién reincide?</span>'+info('rein')+'<span id="cv-rn-o" class="cv-h2r"></span></h2><span class="q" id="cv-rn-q"></span><div id="cv-rn"></div></div>'+
       '<div class="caja"><h2><span>¿Quién se presenta y quién retorna?</span>'+info('pr')+'<span class="cv-h2r" id="cv-pr-o"></span></h2><span class="q" id="cv-pr-q"></span><div class="cv-scroll cv-fill"><div id="cv-pr"></div></div></div></div>'+
     detIni()+
@@ -574,7 +574,7 @@ function pintarCan(){
       '<div class="kg" style="flex:1 1 0;--g:'+VERDE+'"><div class="eti">Adultos</div><div>'+tarjeta('Adultos acompañantes', fuente('s','SIRENNA'), IC.adulto, VERDE, ADU, {}, ' data-ccan="adu" aria-pressed="'+!nna+'"', null, !nna)+'</div></div>'+
       masG('Reporte<br>de las O.R.', corto(tot(ORR, {v:'can'})), 'Reporte de las O.R.', GRIS, tarjeta('Canalizados al DIF', fuente('o','tras un rescate'), IC.nino, GRIS, ORR, {v:'can'})+tarjeta('Menores recibidos de EE. UU.', fuente('o','O.R. de la frontera norte'), IC.nino, GRIS, REC, {v:'me'}))+plegar()+'</section>'+
     '<div class="rg-hz" id="cv-hz"></div>'+
-    '<div class="rg-g rg-g21">'+cajaTend('cv-cs', 'ctend')+'<div class="caja"><h2><span id="cv-cp-t"></span>'+info('cp')+'</h2><span class="q" id="cv-cp-q"></span><div id="cv-cp"></div></div></div>'+
+    '<div class="rg-g rg-g21 fila-par">'+cajaTend('cv-cs', 'ctend')+'<div class="caja"><h2><span id="cv-cp-t"></span>'+info('cp')+'</h2><span class="q" id="cv-cp-q"></span><div id="cv-cp"></div></div></div>'+
     '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿Cómo salen?</span>'+info('sal')+'</h2><span class="q" id="cv-sal-q"></span><div id="cv-sal"></div></div>'+
       '<div class="caja"><h2><span>'+(nna ? 'Edad y sexo' : 'Sexo')+'</span>'+info('edad')+'</h2><span class="q">'+(nna ? 'grupos de edad a la fecha del evento'+(Q.cls>=0 ? ' · '+CV.clases[Q.cls].toLowerCase()+'s' : '') : 'adultos que acompañan a NNA')+'</span><div id="cv-ed" class="cv-fill" style="min-height:260px"></div></div></div>'+
     detIni()+
