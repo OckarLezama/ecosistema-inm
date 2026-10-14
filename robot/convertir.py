@@ -141,7 +141,7 @@ PENDIENTES = {"rep_com": "Pendiente: el área corrige fechas (años 2027, meses 
 
 
 def reconocer(tabla, columnas=None):
-    columnas = columnas or {norm(c) for c in tabla.iloc[0].tolist()}
+    columnas = columnas if columnas is not None else {norm(c) for c in tabla.iloc[0].tolist()}
     for clave, pide, excluye in FIRMAS:
         if pide <= columnas and not (excluye & columnas):
             return clave
@@ -675,10 +675,19 @@ def main():
     # los renglones con nacionalidad mexicana se avisan en la base y no se cuentan)
     seg_ext = B["seg"][B["seg"]["n"] != MEXICO]
     rech = seg_ext[seg_ext["det"] == 1]
+    # Canalizados = NNA + adultos que los acompañan: se cuenta solo hasta donde llegan las dos bases
+    # (si una llega más lejos, sus días de más no se suman, para no mostrar adultos sin sus NNA)
+    fin_can = min(B["can_nna"]["DIA"].max(), B["can_ad"]["DIA"].max())
+    for k, nom in (("can_nna", "NNA"), ("can_ad", "adultos")):
+        extra = B[k]["DIA"] > fin_can
+        if extra.any():
+            avisar(k, f"La base de {nom} llega al {B[k]['DIA'].max().date()} y la otra al {fin_can.date()}: en «Canalizados» del Pulso "
+                      f"se cuenta hasta el {fin_can.date()} ({int(B[k].loc[extra, 'v'].sum()):,} registros posteriores quedan fuera hasta que llegue la otra base)")
     can = pd.concat([B["can_nna"][["DIA", "s", "n", "v"]], B["can_ad"][["DIA", "s", "n", "v"]]])
+    can = can[can["DIA"] <= fin_can]
     # Ingresos: el tablero cuenta extranjeros; los mexicanos que regresan van aparte (ing_mx) para mostrar el total completo
     ing_ext, ing_mx = B["ing"][B["ing"]["n"] != MEXICO], B["ing"][B["ing"]["n"] == MEXICO]
-    BX = dict(B, ing=ing_ext, seg=seg_ext)
+    BX = dict(B, ing=ing_ext, seg=seg_ext, can_nna=B["can_nna"][B["can_nna"]["DIA"] <= fin_can], can_ad=B["can_ad"][B["can_ad"]["DIA"] <= fin_can])
     indicadores = {"ing": ing_ext, "ing_mx": ing_mx, "rech": rech, "tram": B["tram"], "resc": B["resc"], "pres": B["pres"],
                    "can": can, "ret": B["ret"], "recib": B["recib"], "rep": B["rep"]}
     salida = {"inicio": inicio.date().isoformat(), "corte": fin.date().isoformat(), "dias": dias,

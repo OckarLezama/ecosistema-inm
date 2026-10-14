@@ -19,6 +19,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import sys
 import unicodedata
 
@@ -144,24 +145,76 @@ def vigentes(origen):
     return o
 
 
+def _encabezado_va(ruta):
+    """Hoja visible y renglón del encabezado (el archivo puede traer renglones vacíos arriba)."""
+    import openpyxl
+    libro = openpyxl.load_workbook(ruta, read_only=True)
+    try:
+        for h in libro.worksheets:
+            if h.sheet_state != "visible":
+                continue
+            for k, fila in enumerate(h.iter_rows(max_row=8, values_only=True)):
+                if "RESULTADO DE LA VALIDACION" in {norm(c) for c in fila if c is not None}:
+                    return h.title, k
+            return None, None
+    finally:
+        libro.close()
+    return None, None
+
+
+def _resultado(x):
+    n = norm(x)
+    if "PENDIENTE" in n:
+        return "Pendiente"
+    if "NO VALID" in n or "NO LOCALIZ" in n or "INEXISTENTE" in n:
+        return "No válida"
+    if "VALID" in n or "LOCALIZADO" in n:
+        return "Válida"
+    return "Respuesta poco clara" if "CLARA" in n else str(x).strip().capitalize()
+
+
 def validaciones(origen):
-    """Validación de actas del Registro Civil. Nunca se publican número de acta, oficialía, libro ni municipio."""
+    """Validación de actas del Registro Civil. Nunca se publican número de acta, oficialía, libro ni municipio.
+    Desde oct 2026 llega la base histórica (may 2025 en adelante), con un renglón vacío arriba del encabezado."""
+    base = "Validación del Registro Civil"
     for ruta in sorted(glob.glob(os.path.join(origen, "*.xlsx"))):
-        if "RESULTADO DE LA VALIDACION" not in {norm(c) for c in lector.primera_fila(ruta)}:
+        if os.path.basename(ruta).startswith("~$"):
             continue
-        t = pd.read_excel(ruta)
-        t.columns = [norm(c) for c in t.columns]
+        hoja, k = _encabezado_va(ruta)
+        if hoja is None:
+            continue
+        t = pd.read_excel(ruta, sheet_name=hoja, header=k)
+        t = t[[c for c in t.columns if not str(c).startswith("Unnamed")]]
+        t.columns = [norm(c).replace("OR SOLICITANTE", "O.R. SOLICITANTE") for c in t.columns]
+        t = t[t["FECHA DE SOLICITUD"].notna() | t["RESULTADO DE LA VALIDACION"].notna()]
         fs = pd.to_datetime(t["FECHA DE SOLICITUD"], errors="coerce").dt.normalize()
         fr = pd.to_datetime(t["FECHA DE REGISTRO"], errors="coerce").dt.normalize()
+        mala = fr.notna() & ((fr.dt.year < 1900) | (fr > fs))
+        if mala.any():
+            lector.avisar(base, f"{int(mala.sum()):,} actas con fecha de registro imposible (antes de 1900, en el futuro o después de la solicitud); "
+                                "no entran en «matrimonio de 30 días o menos».")
+            fr = fr.where(~mala)
+        sinf = int(fs.isna().sum())
+        if sinf:
+            lector.avisar(base, f"{sinf:,} solicitudes sin fecha de solicitud válida (no se cuentan).")
+        quita_or = lambda x: re.sub(r"^O\.?R\.?\s+", "", str(x).strip(), flags=re.I)
         ent = t["ENTIDAD FEDERATIVA DE REGISTRO"].map(lambda x: ESTADO.get(norm(str(x).replace("_", " ")), str(x).replace("_", " ").title()))
-        orr = t["O.R. QUE REPORTA"].map(lambda x: ESTADO.get(norm(x), str(x).strip()))
+        orr = t["O.R. QUE REPORTA"].map(lambda x: ESTADO.get(norm(quita_or(x)), quita_or(x)))
         sol = t["O.R. SOLICITANTE DE VALIDACIONES"].fillna("Sin dato").astype(str).str.strip()
-        res = t["RESULTADO DE LA VALIDACION"].map(lambda x: "Válida" if "VALID" in norm(x) else "Pendiente" if "PENDIENTE" in norm(x) else str(x).strip().capitalize())
+        res = t["RESULTADO DE LA VALIDACION"].map(_resultado)
         tipo = t["TIPO DE TRAMITE MIGRATORIO"].astype(str).str.strip()
-        filas = pd.DataFrame({"fs": fs, "fr": fr, "ofr": orr, "ent": ent, "n": t["NACIONALIDAD"].map(nacionalidad), "t": tipo, "acto": t["TIPO DE ACTO REGISTRAL"].astype(str).str.strip(), "res": res, "sol": sol})
+        acto = t["TIPO DE ACTO REGISTRAL"].astype(str).str.strip().str.capitalize()
+        filas = pd.DataFrame({"fs": fs, "fr": fr, "ofr": orr, "ent": ent, "n": t["NACIONALIDAD"].map(nacionalidad), "t": tipo, "acto": acto, "res": res, "sol": sol})
         filas = filas[filas["fs"].notna()]
-        dic = {k: sorted(filas[k].dropna().unique().tolist()) for k in ("ofr", "ent", "n", "t", "acto", "res", "sol")}
+        for k in ("ofr", "ent", "n", "t", "acto", "res", "sol"):
+            filas[k] = filas[k].where(filas[k].notna() & (filas[k].astype(str).str.strip().str.lower() != "nan"), "Sin dato")
         ini = filas["fs"].min()
+        poco = filas.groupby(filas["fs"].dt.to_period("M")).size()
+        if len(poco) > 3 and poco.iloc[:4].sum() < 0.01 * len(filas):
+            lector.avisar(base, f"Hay {int(poco.iloc[:4].sum())} solicitudes antes de {str(poco.index[4])}; la base completa empieza en mayo de 2025 (revisar si son fechas mal capturadas).")
+        dic = {k: sorted(filas[k].dropna().unique().tolist()) for k in ("ofr", "ent", "n", "t", "acto", "res", "sol")}
+        print(f"Validación del Registro Civil: {len(filas):,} solicitudes del {ini.date()} al {filas['fs'].max().date()} · " +
+              ", ".join(f"{k} {v:,}" for k, v in filas["res"].value_counts().items()))
         return {"va_ini": ini.date().isoformat(), "va_dic": dic, "va_archivo": os.path.basename(ruta),
                 "va": [[int((r.fs - ini).days), int((r.fs - r.fr).days) if pd.notna(r.fr) else -1] + [dic[k].index(getattr(r, k)) for k in ("ofr", "ent", "n", "t", "acto", "res", "sol")] for r in filas.itertuples()]}
     return {}
