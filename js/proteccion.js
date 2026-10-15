@@ -546,19 +546,19 @@ function comCambio(){ if (!OTROS.com || CV.dias-1-OTROS.com.d1>14) return null; 
   for (let i=0;i<T.N;i++){ const d = T.d[i]; if (d>=a0 && d<b1) A += T.v[i]; else if (d>=p0 && d<a0) P += T.v[i]; }
   if (P<100 || Math.abs(A/P-1)<.25 || Math.abs(A-P)<100) return null;
   return { cl:A>=P ? 'u' : 'd', ic:A>=P ? '▲' : '▼', h:'Vuelos comerciales '+(A>=P ? 'suben ' : 'bajan ')+Math.abs((A/P-1)*100).toFixed(0)+'% en sus últimas 4 semanas', t:miles(P)+' → '+miles(A)+' · '+fecha(a0)+' – '+fecha(X.d1)+' · aparte del total · ver ›', act:' data-pcom' }; }
-// Vuelos PRIM por aeropuerto: en qué días hubo llegada en las dos últimas semanas completas (el archivo no trae número de vuelos)
-function tiraPrim(){ if (Q.mod===0) return ''; let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); if (b-7 < Q.d0) return '';
-  const fila = p => { const v = agg(REP, i => REP.d[i]-(b-7), 14, { mod:1, pto:p, d0:b-7, d1:b+7 }); return { p, v, a:v.slice(0,7).filter(Boolean).length, c:v.slice(7).filter(Boolean).length, n:v.slice(7).reduce((x,y)=>x+y,0) }; };
-  const l = [...AEREO].filter(p => Q.pto<0 || p===Q.pto).map(fila).filter(r => r.a || r.c).sort((x,y) => y.c-x.c || y.n-x.n || y.a-x.a);
+// Vuelos PRIM por aeropuerto en el periodo de consulta: días con llegada, personas y qué días de la semana recibe (el archivo no trae número de vuelos)
+function tiraPrim(){ if (Q.mod===0) return '';
+  const fila = p => { const dd = agg(REP, i => REP.d[i]-Q.d0, Q.d1-Q.d0, { mod:1, pto:p }), sem = new Array(7).fill(0); let n = 0, v = 0;
+    dd.forEach((x,k) => { if (x){ n++; v += x; sem[dSem(Q.d0+k)]++; } }); return { p, n, v, sem }; };
+  const l = [...AEREO].filter(p => Q.pto<0 || p===Q.pto).map(fila).filter(r => r.n).sort((x,y) => y.n-x.n || y.v-x.v);
+  const bt = '<button class="rg-mas-f pm-mas" data-ptira aria-expanded="'+!!Q.tira+'">'+(Q.tira ? 'Ocultar días con llegada por aeropuerto ▴' : 'Ver días con llegada por aeropuerto ▾')+'</button>';
   if (!l.length) return ''; const nom = p => nomP(p).replace(/\s*\(vuelos.*$/,'').replace(/^A\.\s*I\.?\s*(de\s+)?/,''), L = ['L','M','M','J','V','S','D'];
-  const pts = (r, k0) => '<span class="pm-tp-s">'+[0,1,2,3,4,5,6].map(j => { const x = r.v[k0+j], d = b-7+k0+j; return '<i class="'+(x ? 'si' : '')+'" title="'+DSEM[dSem(d)]+' '+fecha(d)+': '+(x ? miles(x)+' personas' : 'sin llegada')+'"></i>'; }).join('')+'</span>';
-  const dif = r => r.c===r.a ? '<small>=</small>' : '<small class="'+(r.c>r.a ? 'u' : 'd')+'">'+(r.c>r.a ? '▲' : '▼')+Math.abs(r.c-r.a)+'</small>';
-  const ta = l.reduce((t,r) => t+r.a, 0), tc = l.reduce((t,r) => t+r.c, 0);
-  return '<button class="rg-mas-f pm-mas" data-ptira aria-expanded="'+!!Q.tira+'">'+(Q.tira ? 'Ocultar días con llegada por aeropuerto ▴' : 'Ver días con llegada por aeropuerto ▾')+'</button>'+
-    '<div class="pm-tp"'+(Q.tira ? '' : ' hidden')+'>'+'<div class="pm-tp-t"><b>Días con llegada por aeropuerto</b>'+info('vt')+'<span>'+tc+' esta semana · '+ta+' la anterior</span></div>'+
-    '<div class="pm-tp-r pm-tp-h pm-tp-w"><span></span><span>'+fecha(b-7)+' – '+fecha(b-1)+'</span><span>'+fecha(b)+' – '+fecha(b+6)+'</span><span></span><span></span></div>'+
-    '<div class="pm-tp-r pm-tp-h"><span></span><span class="pm-tp-s">'+L.map(x => '<em>'+x+'</em>').join('')+'</span><span class="pm-tp-s">'+L.map(x => '<em>'+x+'</em>').join('')+'</span><span>días</span><span>personas</span></div>'+
-    l.map(r => '<div class="pm-tp-r"><span class="n" title="'+esc(nomP(r.p))+'">'+esc(nom(r.p))+'</span>'+pts(r, 0)+pts(r, 7)+'<span class="num">'+r.c+' '+dif(r)+'</span><span class="num">'+miles(r.n)+'</span></div>').join('')+'</div>'; }
+  const celdas = r => { const mx = Math.max(...r.sem); return '<span class="pm-tp-s">'+r.sem.map((x,j) => '<i class="'+(x ? 'si'+(x/mx<.45 ? ' cl' : '') : '')+'" style="'+(x ? '--a:'+(.25+.75*x/mx).toFixed(2) : '')+'" title="'+DSEML[j]+': '+x+' '+(x===1 ? 'día' : 'días')+' con llegada">'+(x || '')+'</i>').join('')+'</span>'; };
+  const V = l.reduce((t,r) => t+r.v, 0), N = agg(REP, i => REP.d[i]-Q.d0, Q.d1-Q.d0, { mod:1, ex:Q.pto<0 ? null : undefined }).filter(Boolean).length;   // días con al menos una llegada a cualquier aeropuerto (igual que arriba)
+  return bt+'<div class="pm-tp"'+(Q.tira ? '' : ' hidden')+'><div class="pm-tp-t"><b>Días con llegada por aeropuerto</b>'+info('vt')+'<span>'+fechaA(Q.d0)+' – '+fechaA(Q.d1-1)+'</span></div>'+
+    '<div class="pm-tp-r pm-tp-h"><span></span><span class="pm-tp-s">'+L.map(x => '<em>'+x+'</em>').join('')+'</span><span>días</span><span>personas</span><span>por día</span></div>'+
+    l.map(r => '<div class="pm-tp-r"><span class="n" title="'+esc(nomP(r.p))+'">'+esc(nom(r.p))+'</span>'+celdas(r)+'<span class="num">'+miles(r.n)+'</span><span class="num">'+miles(r.v)+'</span><span class="num s">'+miles(r.v/r.n)+'</span></div>').join('')+
+    (l.length>1 ? '<div class="pm-tp-r pm-tp-f"><span>Total</span><span class="mini">días con llegada a algún aeropuerto</span><span class="num">'+miles(N)+'</span><span class="num">'+miles(V)+'</span><span class="num s">'+miles(V/N)+'</span></div>' : '')+'</div>'; }
 
 /* ==== [6] MONTAJE Y EVENTOS ======================================= */
 const INFO = {
@@ -577,7 +577,7 @@ const INFO = {
   cmm:'<b>¿A qué aeropuertos llegan?</b> Mexicanos repatriados desde EE. UU. en vuelos comerciales (no son vuelos PRIM). Vienen en otro archivo y no están sumados en el total de repatriados. El tamaño del círculo es cuántas personas llegaron a cada aeropuerto.',
   cma:'<b>Por aeropuerto y O.R.</b>, de mayor a menor, con la parte del total. Son llegadas en vuelos comerciales: no están en el archivo de Repatriados.',
   cms:'<b>Personas por semana</b> que llegaron en vuelos comerciales.',
-  vt:'<b>Días con llegada por aeropuerto.</b> Cada punto es un día de las dos últimas semanas completas; relleno = ese día llegó al menos un vuelo PRIM. A la derecha, los días con llegada de la última semana (contra la anterior) y cuántas personas llegaron.<br><br>Se cuentan <b>días con llegada</b>, no vuelos: el archivo de Repatriados junta en un renglón todos los vuelos de un aeropuerto en el día. Cuando el área agregue el número de vuelos, aquí se mostrará.',
+  vt:'<b>Días con llegada por aeropuerto</b> en el periodo que elegiste. Los cuadros L a D dicen en cuántos lunes, martes… llegó al menos un vuelo PRIM: más oscuro, más frecuente. Así se ve qué días opera cada aeropuerto.<br><br>Después: días con llegada, personas y promedio de personas por día con llegada. Se cuentan <b>días</b>, no vuelos: el archivo de Repatriados junta en un renglón todos los vuelos de un aeropuerto en el día.<br><br>Se cuentan <b>días con llegada</b>, no vuelos: el archivo de Repatriados junta en un renglón todos los vuelos de un aeropuerto en el día. Cuando el área agregue el número de vuelos, aquí se mostrará.',
   cmd:'<b>¿Qué días llegan?</b> Personas por día de la semana en todo el periodo, y en cuántos de esos días hubo llegadas.'
 };
 let popFija = false;

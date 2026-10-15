@@ -18,9 +18,9 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     await p.evaluate(() => { const b = [...document.querySelectorAll('#pm-pf [data-mzk]')].find(x => /Matamoros/.test(x.textContent)); if (b) b.click(); }); await p.waitForTimeout(1200);
     ok(await p.evaluate(() => document.getElementById('pm-pr').closest('.caja').hidden && document.getElementById('pm-pf').closest('.rg-g2').classList.contains('solo')), w+' garita: sin tarjeta PRIM, perfil a todo lo ancho');
     await p.evaluate(() => { const b = document.querySelector('[data-pquita="p"]'); if (b) b.click(); }); await p.waitForTimeout(1200);
-    // vuelos PRIM por aeropuerto: los días de la derecha son los puntos rellenos de la última semana
-    await p.evaluate(() => document.querySelector('[data-ptira]').click()); await p.waitForTimeout(400);
-    ok(await p.evaluate(() => { const f = [...document.querySelectorAll('.pm-tp-r:not(.pm-tp-h)')]; return f.length>0 && f.every(r => r.querySelectorAll('.pm-tp-s')[1].querySelectorAll('i.si').length===parseInt(r.children[3].textContent)); }), w+' días con vuelo PRIM por aeropuerto');
+    // vuelos PRIM por aeropuerto en el periodo: los cuadros L–D suman los días con llegada de cada aeropuerto
+    ok(await p.evaluate(() => { const f = [...document.querySelectorAll('.pm-tp-r:not(.pm-tp-h):not(.pm-tp-f)')]; const n = r => +r.children[2].textContent.replace(/,/g,'');
+      return f.length>0 && f.every(r => [...r.querySelectorAll('.pm-tp-s i')].reduce((t,i) => t+(+i.textContent||0), 0)===n(r)) && f.every((r,k) => !k || n(r)<=n(f[k-1])); }), w+' días con vuelo PRIM por aeropuerto (periodo)');
     ok(await p.evaluate(() => !document.querySelector('[data-pvista="com"]')), w+' sin pestaña de vuelos comerciales');
     for (const k of ['gh','com']){ if (!PM.otros[k]) continue;
       if (k==='com'){ await p.evaluate(() => document.querySelector('[data-pvista="rep"]').click()); await p.waitForTimeout(1500); await p.evaluate(() => document.querySelector('[data-pcom]').click()); }
