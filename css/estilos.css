@@ -1424,14 +1424,15 @@ body.en-sala{overflow:hidden}
 .mot-menu button{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:8px}
 .mot-menu button small{font-size:10.5px;color:#7A766C;min-width:42px;text-align:right}.mot-menu button.on small{color:#D8D3C4}
 /* Protección: vuelos PRIM por aeropuerto y vuelos comerciales dentro de Repatriados */
-.pm-tp{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.pm-tp{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .pm-tp-t{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;margin-bottom:6px}.pm-tp-t>span:last-child{margin-left:auto;color:var(--ink3);font-size:11.5px}
-.pm-tp-r{display:grid;grid-template-columns:minmax(70px,1fr) auto auto 52px 52px;align-items:center;column-gap:12px;padding:3px 0;font-size:12px}
+.pm-tp[hidden]{display:none}
+.pm-tp{width:fit-content;max-width:100%}.pm-tp-r{display:grid;grid-template-columns:minmax(70px,130px) auto auto 52px 64px;align-items:center;column-gap:12px;padding:3px 0;font-size:12px}
 .pm-tp-r .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pm-tp-r>.num{text-align:right;font-family:var(--f-num);font-weight:600;font-size:13px}.pm-tp-r>.num small{font-weight:500;font-size:11px;color:var(--ink3)}.pm-tp-r small.u{color:#2F6657}.pm-tp-r small.d{color:#A8443E}
 .pm-tp-s{display:grid;grid-template-columns:repeat(7,11px);gap:3px}
 .pm-tp-s i{width:11px;height:11px;border-radius:50%;border:1.3px solid #CFCBBB;box-sizing:border-box}.pm-tp-s i.si{background:#2F6657;border-color:#2F6657}
-.pm-tp-h{font-size:10px;color:var(--ink3);padding:0}.pm-tp-h em{font-style:normal;text-align:center;width:11px}.pm-tp-h>span:nth-child(n+4){text-align:right}
+.pm-tp-h{font-size:10px;color:var(--ink3);padding:0}.pm-tp-h em{font-style:normal;text-align:center;width:11px}.pm-tp-h>span:nth-child(n+4){text-align:right}.pm-tp-t>span:last-child{margin-left:auto}
 .pm-tp-w>span{white-space:nowrap;font-size:10px;text-align:center}.pm-tp-w>span:nth-child(2),.pm-tp-w>span:nth-child(3){color:var(--ink2)}
 @media (max-width:420px){ .pm-tp-r{column-gap:7px;grid-template-columns:minmax(56px,1fr) auto auto 40px 44px} .pm-tp-s{grid-template-columns:repeat(7,9px);gap:2px} .pm-tp-s i,.pm-tp-h em{width:9px;height:9px} }
 .pm .pm-com-n{margin:6px 0 10px;padding:0 16px;font-size:12.5px;color:var(--ink2);max-width:none}

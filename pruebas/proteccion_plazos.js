@@ -19,6 +19,7 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(await p.evaluate(() => document.getElementById('pm-pr').closest('.caja').hidden && document.getElementById('pm-pf').closest('.rg-g2').classList.contains('solo')), w+' garita: sin tarjeta PRIM, perfil a todo lo ancho');
     await p.evaluate(() => { const b = document.querySelector('[data-pquita="p"]'); if (b) b.click(); }); await p.waitForTimeout(1200);
     // vuelos PRIM por aeropuerto: los días de la derecha son los puntos rellenos de la última semana
+    await p.evaluate(() => document.querySelector('[data-ptira]').click()); await p.waitForTimeout(400);
     ok(await p.evaluate(() => { const f = [...document.querySelectorAll('.pm-tp-r:not(.pm-tp-h)')]; return f.length>0 && f.every(r => r.querySelectorAll('.pm-tp-s')[1].querySelectorAll('i.si').length===parseInt(r.children[3].textContent)); }), w+' días con vuelo PRIM por aeropuerto');
     ok(await p.evaluate(() => !document.querySelector('[data-pvista="com"]')), w+' sin pestaña de vuelos comerciales');
     for (const k of ['gh','com']){ if (!PM.otros[k]) continue;

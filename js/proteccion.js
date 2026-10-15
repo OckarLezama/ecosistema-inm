@@ -20,7 +20,7 @@ const DIC = { e:CV.dic.e, p:CV.dic.p, n:[] }, NE = DIC.e.length, NP = DIC.p.leng
 const INI = new Date(CV.inicio+'T00:00:00'), DS = (INI.getDay()+6)%7;
 const semDe = d => Math.floor((d+DS)/7), semIni = w => w*7-DS;
 // em = medida que se analiza (columna): v total, ad adultos, ah hombres, am mujeres, me NNA, ac acompañados, na no acompañados
-const Q = { det:{}, cm:false, vista:'rep', per:'todo', d0:0, d1:CV.dias, cmp:'sem', nats:[], ests:[], pto:-1, mod:-1, cls:-1, gran:'auto', eti:false, desg:'tot', sel:null, tot:'p', em:'v', mas:{}, compacto:false };
+const Q = { det:{}, cm:false, tira:false, vista:'rep', per:'todo', d0:0, d1:CV.dias, cmp:'sem', nats:[], ests:[], pto:-1, mod:-1, cls:-1, gran:'auto', eti:false, desg:'tot', sel:null, tot:'p', em:'v', mas:{}, compacto:false };
 // Suma de una tabla por una clave, con los filtros activos (periodo, O.R., punto y modalidad); o.v elige la columna
 function agg(T, key, nk, o){
   o = o || {}; const out = new Float64Array(nk), d0 = o.d0!=null ? o.d0 : Q.d0, d1 = o.d1!=null ? o.d1 : Q.d1, v = T[o.v || 'v'];
@@ -554,7 +554,8 @@ function tiraPrim(){ if (Q.mod===0) return ''; let w = semDe(Q.d1-1); if (semIni
   const pts = (r, k0) => '<span class="pm-tp-s">'+[0,1,2,3,4,5,6].map(j => { const x = r.v[k0+j], d = b-7+k0+j; return '<i class="'+(x ? 'si' : '')+'" title="'+DSEM[dSem(d)]+' '+fecha(d)+': '+(x ? miles(x)+' personas' : 'sin llegada')+'"></i>'; }).join('')+'</span>';
   const dif = r => r.c===r.a ? '<small>=</small>' : '<small class="'+(r.c>r.a ? 'u' : 'd')+'">'+(r.c>r.a ? '▲' : '▼')+Math.abs(r.c-r.a)+'</small>';
   const ta = l.reduce((t,r) => t+r.a, 0), tc = l.reduce((t,r) => t+r.c, 0);
-  return '<div class="pm-tp">'+'<div class="pm-tp-t"><b>Días con llegada por aeropuerto</b>'+info('vt')+'<span>'+tc+' esta semana · '+ta+' la anterior</span></div>'+
+  return '<button class="rg-mas-f pm-mas" data-ptira aria-expanded="'+!!Q.tira+'">'+(Q.tira ? 'Ocultar días con llegada por aeropuerto ▴' : 'Ver días con llegada por aeropuerto ▾')+'</button>'+
+    '<div class="pm-tp"'+(Q.tira ? '' : ' hidden')+'>'+'<div class="pm-tp-t"><b>Días con llegada por aeropuerto</b>'+info('vt')+'<span>'+tc+' esta semana · '+ta+' la anterior</span></div>'+
     '<div class="pm-tp-r pm-tp-h pm-tp-w"><span></span><span>'+fecha(b-7)+' – '+fecha(b-1)+'</span><span>'+fecha(b)+' – '+fecha(b+6)+'</span><span></span><span></span></div>'+
     '<div class="pm-tp-r pm-tp-h"><span></span><span class="pm-tp-s">'+L.map(x => '<em>'+x+'</em>').join('')+'</span><span class="pm-tp-s">'+L.map(x => '<em>'+x+'</em>').join('')+'</span><span>días</span><span>personas</span></div>'+
     l.map(r => '<div class="pm-tp-r"><span class="n" title="'+esc(nomP(r.p))+'">'+esc(nom(r.p))+'</span>'+pts(r, 0)+pts(r, 7)+'<span class="num">'+r.c+' '+dif(r)+'</span><span class="num">'+miles(r.n)+'</span></div>').join('')+'</div>'; }
@@ -609,7 +610,11 @@ function eventos(cont){
     if (T('[data-peti]')){ Q.eti = !Q.eti; cuerpo(); return; }
     if ((b = T('[data-pdesg]'))){ Q.desg = b.dataset.pdesg; pintarTr(); pintarTp(); return; }
     if (T('[data-psel]')){ Q.sel = null; pintarTp(); return; }
-    if (T('[data-ppftodos]')){ Q.pfTodos = !Q.pfTodos; pintarPf(); return; }
+    if (T('[data-ppftodos]')){ Q.pfAuto = false; Q.pfTodos = !Q.pfTodos; pintarPf(); return; }
+    if ((b = T('[data-ptira]'))){ Q.tira = !Q.tira; const d = b.nextElementSibling; d.hidden = !Q.tira; b.setAttribute('aria-expanded', Q.tira); b.textContent = Q.tira ? 'Ocultar días con llegada por aeropuerto ▴' : 'Ver días con llegada por aeropuerto ▾';
+      // la tarjeta crece: el perfil de al lado muestra todos los puntos para que no quede espacio vacío (y regresa si lo abrimos nosotros)
+      const lado = Math.abs($('pm-pf').closest('.caja').offsetTop-b.closest('.caja').offsetTop)<5;   // solo si las dos tarjetas van lado a lado
+      if (Q.tira && !Q.pfTodos && lado){ Q.pfTodos = Q.pfAuto = true; pintarPf(); } else if (!Q.tira && Q.pfAuto){ Q.pfTodos = Q.pfAuto = false; pintarPf(); } return; }
     if (T('[data-pcom]')){ Q.cm = !Q.cm; cuerpo(); return; }
     if (T('[data-pdet]')){ Q.det[Q.vista] = !Q.det[Q.vista]; cuerpo(); return; }
     if (T('[data-pplegar]')){ Q.compacto = !Q.compacto; cuerpo(); return; }
