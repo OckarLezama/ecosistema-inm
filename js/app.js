@@ -121,7 +121,7 @@ window.IANAMI_CUAD = op => { if (!op || op.geo || [].concat(op.series || []).som
     if (x.type!=='log'){ x.minorTick = Object.assign({ show:false, splitNumber:2 }, x.minorTick); x.minorSplitLine = Object.assign({ show:true, lineStyle:{ color:'#F2F0E9' } }, x.minorSplitLine); } });
   const esCat = a => [].concat(a || []).some(x => x && x.type==='category');
   if (esCat(op.xAxis) && esCat(op.yAxis)) return op;          // matrices (cruces): sin cuadrícula
-  if (op.tooltip && op.tooltip.appendToBody===undefined) op.tooltip.appendToBody = true;   // el recuadro flotante no queda cortado ni encimado dentro de un contenedor con desplazamiento
+  if (op.tooltip && op.tooltip.confine===undefined) op.tooltip.confine = true;   // el recuadro flotante se queda dentro de la gráfica: no se corta ni deja espacio extra en la página
   fija(op.xAxis); fija(op.yAxis); return op; };
 
 // Barras al 100% «¿Qué documento obtiene cada nacionalidad?»: el mismo componente para todas las gráficas de ese tipo.
@@ -136,7 +136,7 @@ window.IANAMI_MEZCLA = function(el, c){ if (!el) return;
   const tc = k => claro(C[k].col) ? '#7A766C' : C[k].col;
   const dTxt = (f, k) => '<b class="num" style="color:'+tc(k)+'">'+(f.v[k]/f.tot*100).toFixed(1)+'%</b> '+e(C[k].nom);
   el.className = 'rg-mz mz-g';
-  el.innerHTML = F.map(f => { const k0 = c.orden!=null ? c.orden : mayor(f);
+  el.innerHTML = F.map(f => { const k0 = c.orden!=null ? c.orden : c.base!=null ? c.base : mayor(f);
       return '<div class="rg-mz-r'+(c.sel!=null && c.sel===f.k ? ' sel' : '')+'" data-mzk="'+f.k+'"><span title="'+e(f.nom)+'">'+e(f.nom)+'</span><span class="rg-mz-b">'+C.map((cat,i) => { const v = f.v[i], p = v/f.tot*100;
         return v ? '<i data-c="'+i+'" data-p="'+p.toFixed(1)+'" style="flex:'+v+' 1 0;background:'+cat.col+';color:'+(claro(cat.col) ? '#2B2926' : '#fff')+(c.orden!=null && c.orden!==i ? ';opacity:.3' : '')+'" title="'+e(cat.nom)+': '+num(v)+' · '+p.toFixed(1)+'%">'+(p>=12 ? Math.round(p)+'%' : '')+'</i>' : ''; }).join('')+
         '</span><span class="rg-mz-d" data-base="'+e(dTxt(f, k0))+'">'+dTxt(f, k0)+'</span><span class="x num">'+corto(f.tot)+'</span></div>'; }).join('')+

@@ -1375,7 +1375,7 @@ body.en-sala{overflow:hidden}
 .mot-tb2 .mot-h,.mot-tb2 .mot-r{grid-template-columns:minmax(120px,1.1fr) minmax(80px,2fr) 84px 110px 110px}
 .mot-tb2 button.mot-r{all:unset;display:grid;grid-template-columns:minmax(120px,1.1fr) minmax(80px,2fr) 84px 110px 110px;gap:12px;align-items:center;padding:6px 4px;border-bottom:1px solid #EEEBE2;cursor:pointer}
 .mot-tb2 button.mot-r:hover,.mot-tb2 button.mot-r.on{background:#F4F2EA}
-.mot-x{text-align:right;font-size:11.5px;color:#7A766C;white-space:nowrap}.mot-x.alto{color:#7E302B;font-weight:700}.mot-x.bajo{color:#9A958A}
+.mot-x{text-align:right;font-size:11.5px;color:#7A766C;white-space:nowrap}.mot-x.alto{color:#7E302B;font-weight:700}.mot-x.menos{color:#9A958A}
 @media (max-width:900px){ .mot-md{grid-template-columns:minmax(0,1fr)} .mot-menu{flex-direction:row;flex-wrap:wrap;border-right:0;padding-right:0} .mot-menu button{flex:1 1 140px}
   .mot-h,.mot-r,.mot-tb2 .mot-h,.mot-tb2 button.mot-r{grid-template-columns:minmax(0,1.2fr) minmax(60px,1fr) 70px 60px;gap:8px} .mot-h span:nth-child(n+5),.mot-r>*:nth-child(n+5){display:none} }
 /* Plazos: por trámite (barra al 100%) y cuánto tardan (dos barras al 100%) */
@@ -1421,3 +1421,5 @@ body.en-sala{overflow:hidden}
 .bs-dg>summary:hover{background:#F7F5EE;border-radius:8px}
 .bs-sem-n{font-size:12px;opacity:.85;margin:6px 0 0}
 .bs-c .tb.bs th:first-child{width:22%}.bs-c .tb.bs th:last-child{width:34%}
+.mot-menu button{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:8px}
+.mot-menu button small{font-size:10.5px;color:#7A766C;min-width:42px;text-align:right}.mot-menu button.on small{color:#D8D3C4}

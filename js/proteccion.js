@@ -99,7 +99,7 @@ function barrasV(id, l, o){
   el.style.width = ancho+'px'; if (ancho>w+4 && o.q) $(o.q).insertAdjacentHTML('beforeend', ' · <b>desliza la gráfica para ver todos →</b>'); const cpl = Math.max(6, Math.floor((paso-6)/5.4));
   const parte = v => String(v).split(' ').reduce((a,x) => { const u = a[a.length-1]; if (u && (u+' '+x).length<=cpl) a[a.length-1] = u+' '+x; else a.push(x); return a; }, []), lin = Math.max(1, ...l.map(x => parte(x.lab).length));
   const series = o.series || [{ name:'', k:'v' }];
-  return graf(id, { grid:{ left:46, right:12, top:o.ley ? 34 : 22, bottom:14+lin*12 }, legend:o.ley ? { top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{fontSize:11.5}, data:(o.series || []).map(x => x.name).concat(o.tend ? [{ name:'Tendencia', icon:'path://M0,5 L7,5 M7,5 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 M13,5 L20,5', itemStyle:{ color:'#2B2926' } }] : []) } : { show:false },
+  return graf(id, { grid:{ left:46, right:12, top:o.ley ? 34 : 22, bottom:14+lin*12 }, legend:o.ley ? { top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{fontSize:11.5}, data:(o.series || []).map(x => x.name).concat(o.tend ? [{ name:'Tendencia', icon:'path://M0,5 L4,5 M6,5 L8,5 M8,5 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 M12,5 L14,5 M16,5 L20,5', itemStyle:{ color:'#7A766C' } }] : []) } : { show:false },
     tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:o.tip },
     xAxis:{ type:'category', data:l.map(x => x.lab), axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, splitLine:{ show:true, lineStyle:{ color:'#EEEBE2' } }, triggerEvent:true,
       axisLabel:{ interval:0, fontSize:paso<50 ? 9.5 : 10.5, color:'#2B2926', lineHeight:12, formatter:(v,i) => { const t = parte(v).join('\n'); return l[i] && l[i].on ? t.split('\n').map(x => '{s|'+x+'}').join('\n') : t; },
@@ -110,7 +110,7 @@ function barrasV(id, l, o){
       label: series.length===1 ? { show:paso>=30, position:'top', fontSize:10, color:'#2B2926', lineHeight:12, formatter:o.eti || (p => corto(p.value)) }
         : { show:(o.stack ? false : Q.eti) && paso>=30, position:o.stack ? 'inside' : 'top', fontSize:9, color:o.stack ? '#fff' : '#2B2926', formatter:p => p.value ? corto(p.value) : '' } }))
       .concat(o.tend ? [(() => { const tt = l.map(x => series.reduce((t,s) => t+(x[s.k]||0), 0)), k = o.tend; return { name:'Tendencia', type:'line', smooth:false, silent:true, z:5, tooltip:{ show:false },
-        lineStyle:{ width:2, color:'#2B2926', opacity:.8 }, symbol:'circle', symbolSize:6, showSymbol:true, itemStyle:{ color:'#FCFBF7', borderColor:'#2B2926', borderWidth:1.8 }, data:tt.map((_,j) => { const a = Math.max(0, j-k+1), w = tt.slice(a, j+1); return +(w.reduce((x,y)=>x+y,0)/w.length).toFixed(1); }) }; })()] : [])
+        lineStyle:{ width:1.4, color:'#7A766C', type:[4,3], opacity:.85 }, symbol:'circle', symbolSize:4.5, showSymbol:true, itemStyle:{ color:'#FCFBF7', borderColor:'#7A766C', borderWidth:1.3 }, data:tt.map((_,j) => { const a = Math.max(0, j-k+1), w = tt.slice(a, j+1); return +(w.reduce((x,y)=>x+y,0)/w.length).toFixed(1); }) }; })()] : [])
       .concat(o.stack && series.length>1 ? [{ name:'Total', type:'bar', stack:'a', silent:true, barMaxWidth:34, data:l.map(() => 0), itemStyle:{ color:'transparent' }, tooltip:{ show:false },
         label:{ show:paso>=26, position:'top', fontSize:10, color:'#2B2926', fontWeight:600, formatter:p => corto(series.reduce((t,s) => t+(l[p.dataIndex][s.k]||0), 0)) } }] : []) });
 }
@@ -283,7 +283,7 @@ function panelP(c){
 const cap = s => s[0].toUpperCase()+s.slice(1), AEREO = new Set(DIC.p.map((p,i) => /vuelos/.test(p) ? i : -1).filter(i => i>=0));   // aeropuertos de llegada de vuelos PRIM
 const DSEM = ['lun','mar','mié','jue','vie','sáb','dom'], DSEML = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
 const dSem = d => (fDia(d).getDay()+6)%7;
-const DET = { rep:'totales por punto de repatriación y por O.R.' };
+const DET = { rep:'mapa de puntos, días de la semana y totales por punto y O.R.' };
 function pintarRep(){
   const b = $('cv-body'), w = ventanas(), M = MED[Q.em];
   if (Q.em!=='v' && Q.desg==='grp') Q.desg = 'tot';
@@ -301,9 +301,9 @@ function pintarRep(){
     '<div class="rg-g rg-g21 fila-par">'+cajaTend('pm-tr', 'tr')+'<div class="caja"><h2><span id="pm-tp-t"></span>'+info('tp')+'</h2><span class="q" id="pm-tp-q"></span><div id="pm-tp"></div></div></div>'+
     '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿A quién recibe cada punto?</span>'+info('perfil')+'</h2><span class="q" id="pm-pf-q"></span><div id="pm-pf"></div><div id="pm-pf-m"></div></div>'+
       '<div class="caja"><h2><span>Llegadas de vuelos PRIM</span>'+info('prim')+'</h2><span class="q" id="pm-pr-q"></span><div class="cv-scroll cv-fill"><div id="pm-pr"></div></div></div></div>'+
+    detIni()+
     '<div class="rg-g pm-g3"><div class="caja"><h2><span>¿Dónde se recibe?</span>'+info('mapa')+'</h2><span class="q" id="pm-mp-q"></span>'+leyMapa([['Garitas y puentes (terrestre)', COLMOD[0]], ['Aeropuertos (vuelos PRIM)', COLMOD[1]]])+'<div id="pm-mp" class="cv-fill pm-mapa" style="min-height:400px"></div></div>'+
       '<div class="caja"><h2><span>¿Qué días se repatría?</span>'+info('ds')+'</h2><span class="q" id="pm-ds-q"></span><div id="pm-ds"></div></div></div>'+
-    detIni()+
       '<div class="caja rg-ancho cv-ancho"><h2><span>Totales de '+M[0]+'</span>'+info('tot')+'<span class="cv-h2r cv-h2b" id="pm-tt-sel"></span></h2><span class="q" id="pm-tt-q"></span><div class="cv-scroll cv-fill"><div id="pm-tt"></div></div></div>'+
     '</div>';
   // Titulares: cambio en la comparación, el punto donde más NNA llegan solos y los vuelos PRIM
@@ -358,7 +358,7 @@ function pintarPf(){
   const sgT = sg.reduce((a,b)=>a+b,0), tpT = tp.reduce((a,b)=>a+b,0), sinPrim = Q.mod===0 || (Q.pto>=0 && !AEREO.has(Q.pto));
   $('pm-pf-q').innerHTML = (sinPrim ? '<b>'+(Q.mod===0 ? 'Solo terrestre' : esc(nomP(Q.pto))+' es garita o puente')+': no hay vuelos PRIM que mostrar.</b> ' : '')+'Cada barra es el 100% de las personas que recibe el punto, repartidas por grupo · pasa el cursor por un color para compararlo en todos los puntos · toca un punto para filtrar'+(Math.abs(tpT-sgT)>=1 ? ' · <span title="Registros donde los grupos no suman el total; ver Notas de calidad">'+miles(Math.abs(tpT-sgT))+' sin desglose por grupo en la base</span>' : '');
   $('pm-pf').style.height = '';
-  window.IANAMI_MEZCLA($('pm-pf'), { cats:GRUPOS.map(g => ({ nom:g[1], col:g[2] })), filas:l.map(k => ({ k:k, nom:nomP(k), tot:sg[k], v:x.map(g => g[k]) })), orden:Q.pfOrd==null ? null : Q.pfOrd, sel:Q.pto>=0 ? Q.pto : null,
+  window.IANAMI_MEZCLA($('pm-pf'), { base:3, cats:GRUPOS.map(g => ({ nom:g[1], col:g[2] })), filas:l.map(k => ({ k:k, nom:nomP(k), tot:sg[k], v:x.map(g => g[k]) })), orden:Q.pfOrd==null ? null : Q.pfOrd, sel:Q.pto>=0 ? Q.pto : null,
     onOrden:o => { Q.pfOrd = o; pintarPf(); }, onFila:k => { Q.pto = Q.pto===k ? -1 : k; Q.sel = null; cuerpo(); } });
   $('pm-pf-m').innerHTML = todos.length>TOPF ? '<button class="rg-mas-f pm-mas" data-ppftodos>'+(Q.pfTodos ? 'Ver solo los '+TOPF+' principales ▴' : 'Ver los '+todos.length+' puntos ▾')+'</button>' : '';
 }

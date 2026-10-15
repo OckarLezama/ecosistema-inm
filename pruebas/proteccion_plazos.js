@@ -10,7 +10,7 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     const p = await (await b.newContext({ viewport:{ width:w, height:h } })).newPage(); p.on('pageerror', e => errs.push(w+': '+e.message));
     await p.route('**/*', r => r.request().url().startsWith('file://') ? r.continue() : r.abort());
     await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500);
-    await p.evaluate(() => IANAMI_NAV.ir('proteccion', {})); await p.waitForSelector('#pm-mp', { timeout:60000 }); await p.waitForTimeout(1500);
+    await p.evaluate(() => IANAMI_NAV.ir('proteccion', {})); await p.waitForSelector('#pm-mp', { state:'attached', timeout:60000 }); await p.evaluate(() => document.querySelector('[data-pdet]').click()); await p.waitForTimeout(1800);   // el mapa y los días van en el detalle
     ok(await p.evaluate(() => !!echarts.getInstanceByDom(document.getElementById('pm-mp'))), w+' mapa de puntos');
     ok(await p.evaluate(() => document.querySelectorAll('#pm-ds .pm-hm .c').length===70), w+' calendario 10 × 7');
     ok(await p.evaluate(() => /Ver los \d+ puntos/.test(document.getElementById('pm-pf-m').textContent)), w+' perfil con «ver todos»');
@@ -37,7 +37,7 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(pz.of.length>0 && pz.of.every((x,i,a) => !i || x<=a[i-1]), w+' oficinas de mayor a menor atraso');
     ok(pz.celdas>=pz.of.length, w+' mapa de calor oficina × mes');
     await p.screenshot({ path:path.join(__dirname,'capturas','plazos_'+w+'.png') });
-    for (const v of ['nat','mot','mes','res']){ await p.evaluate(v => document.querySelector('[data-rmotv="'+v+'"]').click(), v); await p.waitForTimeout(900);
+    for (const v of ['nat','mes','mot']){ await p.evaluate(v => document.querySelector('[data-rmotv="'+v+'"]').click(), v); await p.waitForTimeout(900);
       ok(await p.evaluate(v => ({ res:() => document.querySelectorAll('#rg-mot .mot-tile').length>=3, mot:() => document.querySelectorAll('#rg-mot .mot-r').length>3, nat:() => document.querySelectorAll('#rg-mot-g .rg-mz-r').length>3, mes:() => !!echarts.getInstanceByDom(document.getElementById('rg-mot-g')) })[v](), v), w+' motivo de estancia: '+v); }
   }
   console.log(mal ? 'con problemas '+mal : 'todo bien'); console.log('errores', JSON.stringify(errs)); await b.close(); })();

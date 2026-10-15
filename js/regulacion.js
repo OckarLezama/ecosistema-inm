@@ -606,8 +606,8 @@ function elegirBusca(x){
 }
 // ¿Por qué se quedan? Resumen, cruce con nacionalidad (de cada 100 trámites de cada país, por qué motivo) y cómo cambia mes a mes
 const COLMOT = ['#2F6657','#8F7F2E','#C4605A','#778E88','#7E302B','#BDB58D'], GRISMOT = '#D8D3C4', SINMOT = /^(sin motivo|no disponible)/i;
-function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const NM = DIC.m.length, x = agg(K.m, NM, {}), T = x.reduce((a,b) => a+b, 0), V = Q.motV || 'res';
-  $('rg-mot-o').innerHTML = '<div class="pil chica">'+[['res','Resumen'],['nat','Por nacionalidad'],['mot','Por motivo'],['mes','Mes a mes']].map(o => '<button data-rmotv="'+o[0]+'" class="'+(V===o[0]?'on':'')+'">'+o[1]+'</button>').join('')+'</div>';
+function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const NM = DIC.m.length, x = agg(K.m, NM, {}), T = x.reduce((a,b) => a+b, 0), V = Q.motV && Q.motV!=='res' ? Q.motV : 'mot';
+  $('rg-mot-o').innerHTML = '<div class="pil chica">'+[['mot','Por motivo'],['nat','Por nacionalidad'],['mes','Mes a mes']].map(o => '<button data-rmotv="'+o[0]+'" class="'+(V===o[0]?'on':'')+'">'+o[1]+'</button>').join('')+'</div>';
   const l = DIC.m.map((n,j) => [n, x[j], j]).filter(r => r[1]>0).sort((a,b) => b[1]-a[1]), filt = filtros().length || Q.doc>=0 ? ' · con los filtros elegidos' : '';
   // motivos que se dibujan: los 6 principales con motivo declarado; el resto en «Otros motivos» y aparte «Sin motivo registrado»
   const top = l.filter(r => !SINMOT.test(r[0])).slice(0, 6).map(r => r[2]), grupo = j => top.indexOf(j)>=0 ? top.indexOf(j) : SINMOT.test(DIC.m[j]) ? 7 : 6;
@@ -644,14 +644,15 @@ function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const 
     const cand = l.filter(r => !SINMOT.test(r[0])).map(r => r[2]); if (Q.motSel==null || cand.indexOf(Q.motSel)<0) Q.motSel = cand[0]; const ms = Q.motSel;
     const quita = {nats:null}, tn = agg(K.n, NN, quita), xm = agg(K.n, NN, Object.assign({ ex:i => K.m[i]===ms }, quita)), TM = xm.reduce((a,b)=>a+b,0), TT = tn.reduce((a,b)=>a+b,0) || 1, prom = TM/TT;
     const ns = [...Array(NN).keys()].filter(n => xm[n]>0 && !/^sin dato$/i.test(DIC.n[n])).sort((a,b) => xm[b]-xm[a]).slice(0, 12), mx = ns.length ? xm[ns[0]] : 1, gi = top.indexOf(ms), col = gi>=0 ? COLMOT[gi] : '#8F7F2E', mxm = Math.max(...cand.map(j => x[j]));
-    $('rg-mot-q').innerHTML = 'elige un motivo a la izquierda: a la derecha, las nacionalidades que más lo declaran'+(Q.ests.length || Q.ofiF>=0 || Q.doc>=0 ? filt : '');
+    const sinM = l.filter(r => SINMOT.test(r[0])).reduce((t,r) => t+r[1], 0);
+    $('rg-mot-q').innerHTML = '<b>'+Math.round((T-sinM)/T*100)+' de cada 100</b> trámites declaran un motivo (los otros '+Math.round(sinM/T*100)+' no lo registran) · a la izquierda, cada motivo con su parte del total; elige uno y a la derecha ves qué nacionalidades lo declaran'+(Q.ests.length || Q.ofiF>=0 || Q.doc>=0 ? filt : '');
     el.innerHTML = '<div class="mot-md"><nav class="mot-menu" aria-label="Motivos">'+cand.map(j => { const c = top.indexOf(j)>=0 ? COLMOT[top.indexOf(j)] : '#A7A296';
-        return '<button class="'+(j===ms ? 'on' : '')+'" data-rmots="'+j+'" style="--c:'+c+'"><span>'+esc(DIC.m[j])+'</span><b class="num">'+corto(x[j])+'</b><i style="width:'+(x[j]/mxm*100).toFixed(1)+'%"></i></button>'; }).join('')+'</nav>'+
+        return '<button class="'+(j===ms ? 'on' : '')+'" data-rmots="'+j+'" style="--c:'+c+'" title="'+esc(DIC.m[j])+': '+miles(x[j])+' trámites ('+pct(x[j], T)+'%)"><span>'+esc(DIC.m[j])+'</span><b class="num">'+Math.round(x[j]/T*100)+'%</b><small>'+corto(x[j])+'</small><i style="width:'+(x[j]/mxm*100).toFixed(1)+'%"></i></button>'; }).join('')+'</nav>'+
       '<div class="mot-det"><p class="mot-tit"><b style="color:'+col+'">'+esc(DIC.m[ms])+'</b>: '+miles(TM)+' trámites · en promedio, <b>'+Math.round(prom*100)+' de cada 100</b> trámites de una nacionalidad son por este motivo</p>'+
         '<div class="mot-tb mot-tb2"><div class="mot-h"><span>Nacionalidad</span><span></span><span>Trámites</span><span>De cada 100 de sus trámites</span><span>Contra el promedio</span></div>'+
         ns.map(n => { const p = tn[n] ? xm[n]/tn[n] : 0, v = prom ? p/prom : 0;
           return '<button class="mot-r'+(Q.nats.indexOf(n)>=0 ? ' on' : '')+'" data-rmotn="'+n+'" title="Toca para ver solo '+esc(DIC.n[n])+'"><span class="mot-n">'+esc(DIC.n[n])+'</span><span class="b"><i style="width:'+(xm[n]/mx*100).toFixed(1)+'%;background:'+col+'"></i></span><b class="num">'+miles(xm[n])+'</b><span class="num">'+Math.round(p*100)+'</span>'+
-            '<span class="mot-x'+(v>=1.5 ? ' alto' : v<=.67 ? ' bajo' : '')+'">'+v.toFixed(1)+' veces</span></button>'; }).join('')+'</div></div></div>';
+            '<span class="mot-x'+(v>=1.5 ? ' alto' : v<=.67 ? ' menos' : '')+'">'+v.toFixed(1)+' veces</span></button>'; }).join('')+'</div></div></div>';
     return; }
   // mes a mes: de cada 100 trámites del mes, por qué motivo
   const mesK = i => mesDe(K.d[i]), m0 = mesDe(Q.d0), nmz = mesDe(Q.d1-1)-m0+1, mm = agg(i => (mesK(i)-m0)*NGR+grupo(K.m[i]), nmz*NGR, {}), tm = [...Array(nmz).keys()].map(j => { let t = 0; for (let g=0;g<NGR;g++) t += mm[j*NGR+g]; return t; });
@@ -663,13 +664,13 @@ function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const 
   // la línea (trámites del mes) va encima de las barras con su propia escala, en la franja de arriba; cada punto lleva su cifra
   const tv = tm.map((v,j) => j===nmz-1 && fDia(Q.d1-1).getDate()<20 ? null : v), vv = tv.filter(v => v!=null), tMx = Math.max(...vv), tMn = Math.min(...vv), rg = (tMx-tMn) || tMx*.1;
   graf('rg-mot-g', { grid:{ left:44, right:14, top:30, bottom:26 },
-    legend:{ top:0, right:0, data:[{ name:'Trámites del mes', icon:'path://M0,5 L8,5 M8,5 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 M14,5 L22,5' }], textStyle:{ fontSize:11, color:'#2B2926' }, itemWidth:22, itemHeight:10, selectedMode:false },
+    legend:{ top:0, right:0, data:[{ name:'Trámites del mes', icon:'path://M0,5 L4,5 M6,5 L8,5 M8,5 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 M12,5 L14,5 M16,5 L20,5' }], textStyle:{ fontSize:11, color:'#2B2926' }, itemWidth:22, itemHeight:10, selectedMode:false },
     tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => { const k = ps[0].dataIndex; return '<b>'+lab[k]+'</b> · '+miles(tm[k])+' trámites<br>'+ps.filter(p => p.seriesName!=='Trámites del mes' && p.value>0).sort((a,b) => b.value-a.value).map(p => p.marker+esc(p.seriesName)+': <b>'+p.value.toFixed(1)+'%</b>').join('<br>'); } },
     xAxis:{ type:'category', data:lab, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, axisLabel:{ color:'#5C5952', fontSize:10.5 } },
     yAxis:[{ type:'value', max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 } }, { type:'value', show:false, min:tMn-rg*2.6, max:tMx+rg*.35, splitLine:{ show:false } }],
     series:[...Array(NGR).keys()].map(g => ({ name:nomG(g), type:'bar', stack:'m', barMaxWidth:30, color:colG(g), itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 }, data:lab.map((_,j) => tm[j] ? +(mm[j*NGR+g]/tm[j]*100).toFixed(2) : 0) }))
-      .concat([{ name:'Trámites del mes', type:'line', yAxisIndex:1, z:10, smooth:false, data:tv, symbol:'circle', symbolSize:7, lineStyle:{ width:2.2, color:'#2B2926' }, itemStyle:{ color:'#fff', borderColor:'#2B2926', borderWidth:2 },
-        label:{ show:true, position:'top', distance:6, fontSize:9.5, color:'#2B2926', fontWeight:600, textBorderColor:'#FCFBF7', textBorderWidth:2.5, formatter:p => p.value==null ? '' : (p.value/1e3).toFixed(0)+'k' } }]) });
+      .concat([{ name:'Trámites del mes', type:'line', yAxisIndex:1, z:10, smooth:false, data:tv, symbol:'circle', symbolSize:5, lineStyle:{ width:1.4, color:'#5C5952', type:[4,3] }, itemStyle:{ color:'#FCFBF7', borderColor:'#5C5952', borderWidth:1.3 },
+        label:{ show:true, position:'top', distance:5, fontSize:9.5, color:'#5C5952', fontWeight:600, textBorderColor:'#FCFBF7', textBorderWidth:2.5, formatter:p => p.value==null ? '' : (p.value/1e3).toFixed(0)+'k' } }]) });
 
 }
 function vistaTramites(){
