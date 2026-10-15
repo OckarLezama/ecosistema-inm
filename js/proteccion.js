@@ -276,7 +276,7 @@ function panelP(c){
 }
 
 /* ==== [5] REPATRIADOS ============================================= */
-const cap = s => s[0].toUpperCase()+s.slice(1), AIFA = DIC.p.findIndex(p => /AIFA/.test(p));
+const cap = s => s[0].toUpperCase()+s.slice(1), AEREO = new Set(DIC.p.map((p,i) => /vuelos/.test(p) ? i : -1).filter(i => i>=0));   // aeropuertos de llegada de vuelos PRIM
 const DSEM = ['lun','mar','mié','jue','vie','sáb','dom'], DSEML = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
 const dSem = d => (fDia(d).getDay()+6)%7;
 const DET = { rep:'totales por punto y O.R., y promedio por día de la semana' };
@@ -310,9 +310,9 @@ function pintarRep(){
   const me = agg(REP, i => REP.p[i], NP, {pto:-1, v:'me'}), na = agg(REP, i => REP.p[i], NP, {pto:-1, v:'na'}), sMe = me.reduce((a,b)=>a+b,0), sNa = na.reduce((a,b)=>a+b,0);
   const pn = [...Array(NP).keys()].filter(k => me[k]>=100).sort((a,b) => na[b]/me[b]-na[a]/me[a])[0];
   if (pn!=null && na[pn]) hz.push({ cl:'al', ic:'!', h:esc(nomP(pn))+': '+pct(na[pn], me[pn])+'% de sus NNA llegan no acompañados', t:miles(na[pn])+' de '+miles(me[pn])+' · en todos los puntos: '+pct(sNa, sMe)+'% · ver solo este punto ›', act:' data-ppt="'+pn+'"' });
-  if (Q.mod!==0 && (Q.pto<0 || Q.pto===AIFA)){ const dd = agg(REP, i => REP.d[i], CV.dias, {mod:1, pto:-1}), l = [...dd.keys()].filter(d => dd[d]);
+  if (Q.mod!==0 && (Q.pto<0 || AEREO.has(Q.pto))){ const dd = agg(REP, i => REP.d[i], CV.dias, {mod:1, pto:Q.pto}), l = [...dd.keys()].filter(d => dd[d]);
     if (l.length){ const s = l.reduce((t,d) => t+dd[d], 0), u = l[l.length-1], ds = l.map(dSem), moda = [...Array(7).keys()].sort((a,b) => ds.filter(x => x===b).length-ds.filter(x => x===a).length)[0];
-      hz.push({ cl:'n', ic:'✈', h:'Vuelos PRIM: '+l.length+' días con llegada al AIFA', t:'promedio '+miles(s/l.length)+' personas por día con llegada · la mayoría en '+DSEML[moda]+' · última: '+fecha(u)+' ('+miles(dd[u])+')'+(Q.mod<0 ? ' · ver solo vuelos PRIM ›' : ''), act:Q.mod<0 ? ' data-pmod="1"' : '' }); } }
+      hz.push({ cl:'n', ic:'✈', h:'Vuelos PRIM: '+l.length+' días con llegada'+(Q.pto>=0 ? ' a '+esc(nomP(Q.pto)) : ' a algún aeropuerto'), t:'promedio '+miles(s/l.length)+' personas por día con llegada · la mayoría en '+DSEML[moda]+' · última: '+fecha(u)+' ('+miles(dd[u])+')'+(Q.mod<0 ? ' · ver solo vuelos PRIM ›' : ''), act:Q.mod<0 ? ' data-pmod="1"' : '' }); } }
   $('cv-hz').innerHTML = hz.map(titular).join('')+info('hz');
   pintarTr(); pintarTp(); pintarPf(); pintarPr();
   totales({ ch:'pm-tt', q:'pm-tt-q', pil:'pm-tt-sel', attr:'data-ptot', val:Q.tot, unidad:M[0], ops:[['p','Por punto'],['e','Por O.R.']], tope:30,
@@ -362,7 +362,7 @@ function pintarPf(){
       label:{ show:true, position:'inside', fontSize:10, color:'#fff', formatter:p => p.value>=9 ? Math.round(p.value)+'%' : '' } })) });
   ch.off('click'); ch.on('click', p => { const k = p.componentType==='yAxis' ? l[p.dataIndex!=null ? p.dataIndex : l.findIndex(z => nomP(z)+' ('+corto(tp[z])+')'===p.value)] : l[p.dataIndex]; if (k!=null){ Q.pto = Q.pto===k ? -1 : k; Q.sel = null; cuerpo(); } });
 }
-// Vuelos PRIM: cada día con llegada al AIFA, con adultos y NNA
+// Vuelos PRIM: cada día con llegada a los aeropuertos (o al elegido), con adultos y NNA
 function pintarPr(){
   const caja = $('pm-pr').closest('.caja'), ad = agg(REP, i => REP.d[i], CV.dias, {mod:1, v:'ad'}), me = agg(REP, i => REP.d[i], CV.dias, {mod:1, v:'me'}), vt = agg(REP, i => REP.d[i], CV.dias, {mod:1, v:'v'});
   const dias = [...vt.keys()].filter(d => vt[d]);
@@ -390,7 +390,7 @@ const INFO = {
   tr:'<b>Mexicanos repatriados de EE. UU. en el tiempo</b> por día, semana o mes, en total o por modalidad (terrestre o vuelos PRIM), grupo, O.R. o punto. La franja marca el rango habitual (calculado fuera de vacaciones) y la sombra gris, las temporadas vacacionales.',
   tp:'<b>Quién llega en el periodo:</b> hombres y mujeres adultos, NNA acompañados y no acompañados, y las O.R. y los puntos de repatriación con más llegadas, con su cambio contra el periodo anterior de la misma duración.',
   perfil:'<b>De cada 100 personas que recibe cada punto</b>, cuántas son hombres adultos, mujeres adultas, NNA acompañados y NNA no acompañados. Muestra a quién atiende cada punto: unos reciben casi solo adultos y otros concentran a los NNA que llegan solos.',
-  prim:'<b>Días con llegada de vuelos PRIM al AIFA</b> (modalidad aérea), con adultos y NNA, y el promedio por día. El archivo no trae el número de vuelos; un día muy por encima del promedio puede corresponder a más de un vuelo.',
+  prim:'<b>Días con llegada de vuelos PRIM</b> a los aeropuertos (modalidad aérea; desde 2025 también Villahermosa, Tapachula, Tulum y otros), con adultos y NNA, y el promedio por día. El archivo no trae el número de vuelos; un día muy por encima del promedio puede corresponder a más de un vuelo.',
   tot:'<b>Repatriados por punto de repatriación u O.R.</b>, de mayor a menor, divididos en hombres y mujeres adultos y NNA acompañados y no acompañados.',
   ds:'<b>Promedio de repatriados por día de la semana</b>, por garitas y puentes (terrestre) y por vuelos PRIM (aérea).',
   hz:'<b>Titulares:</b> el cambio de los repatriados contra el periodo de comparación, el punto donde más NNA llegan sin acompañante y el resumen de los vuelos PRIM.'

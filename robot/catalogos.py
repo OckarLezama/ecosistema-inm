@@ -186,7 +186,27 @@ PUNTOS_REPATRIACION = {'Punto de Internación El Chaparral, B.C.': ('El Chaparra
  'Punto de Internacion San Luis Rio Colorado, Son.': ('San Luis Río Colorado', -114.78, 32.49),
  'Puente Internacional Benito Juárez, Reynosa, Tamaulipas': ('Reynosa', -98.28, 26.09),
  'Puente Internacional Juárez-Lincoln, Nuevo Laredo, Tamaulipas': ('Nuevo Laredo', -99.51, 27.5),
- 'Puente Internacional Puerta de México, Matamoros, Tamaulipas': ('Matamoros', -97.5, 25.88)}
+ 'Puente Internacional Puerta de México, Matamoros, Tamaulipas': ('Matamoros', -97.5, 25.88),
+ # desde 2025 la base nombra así los puntos; varios nombres del mismo punto llevan el mismo nombre corto y se juntan
+ 'Piedras Negras': ('Piedras Negras', -100.51, 28.7),
+ 'Cd. Acuña': ('Cd. Acuña', -100.93, 29.32),
+ 'San Luis Río Colorado': ('San Luis Río Colorado', -114.78, 32.49),
+ 'Punto de Internacion Agua Prieta, Son.': ('Agua Prieta', -109.55, 31.33),
+ 'Ciudad Hidalgo': ('Ciudad Hidalgo', -92.15, 14.68),
+ 'A. I. Felipe Ángeles': ('AIFA (vuelos)', -99.02, 19.74),
+ 'A. I. Ciudad de México': ('AICM (vuelos)', -99.07, 19.44),
+ 'A. I. de Villahermosa': ('Villahermosa (vuelos)', -92.82, 17.99),
+ 'A. I. de Tapachula': ('Tapachula (vuelos)', -92.37, 14.79),
+ 'A. I. Tulum': ('Tulum (vuelos)', -87.61, 20.09),
+ 'A. I. Mérida': ('Mérida (vuelos)', -89.66, 20.94),
+ 'A.I. Mérida': ('Mérida (vuelos)', -89.66, 20.94),
+ 'A. I. Huatulco': ('Huatulco (vuelos)', -96.26, 15.78),
+ 'A. I. Morelia': ('Morelia (vuelos)', -101.03, 19.85),
+ 'A. I. Campeche': ('Campeche (vuelos)', -90.5, 19.82),
+ 'Aeropuerto Internacional de Campeche': ('Campeche (vuelos)', -90.5, 19.82),
+ 'A. I. San Luis Potosí': ('San Luis Potosí (vuelos)', -100.93, 22.25),
+ 'A. I. Guadalajara': ('Guadalajara (vuelos)', -103.31, 20.52),
+ 'A. I. Monterrey': ('Monterrey (vuelos)', -100.11, 25.78)}
 
 # estación o estancia: (longitud, latitud)
 ESTACIONES = {'Estación Migratoria Tuxtla Gutiérrez': (-93.12, 16.75),

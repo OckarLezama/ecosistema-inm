@@ -136,7 +136,7 @@ NOMBRES = {"ing": "Ingresos", "seg": "Segunda revisión", "tram": "Trámites", "
            "docs_nat": "Documentos vigentes por país", "docs_cruce": "Documentos vigentes estado × país",
            "rep_com": "Repatriados en vuelos comerciales", "rep_gh": "Repatriados desde Guatemala y Honduras"}
 # Bases reconocidas que todavía no entran al tablero (el área está corrigiendo el archivo)
-PENDIENTES = {"rep_com": "Pendiente: el área corrige fechas (años 2027, meses cambiados y fechas como texto). No se usa todavía.",
+PENDIENTES = {"rep_com": "Fechas ya corregidas (13 may – 28 sep 2026). Pendiente: decidir cómo se integra con repatriados (¿son de EE. UU.? ¿se suman al total?). No se usa todavía.",
               "rep_gh": "Pendiente: confirmar qué significa «PAÍS» y si no hay menores. No se usa todavía."}
 
 
@@ -487,8 +487,11 @@ def puntos(B, inicio, cortes):
     avisar("ing", f"{len(salida)} de {ing['punto'].nunique()} puntos de internación tienen coordenadas en el catálogo "
                   f"({con_coord / max(total, 1) * 100:.0f}% de los ingresos); el resto no aparece como punto en el mapa")
     repat = []
-    for nombre, (corto, lon, lat) in C.PUNTOS_REPATRIACION.items():
-        d = rep[rep["punto"] == norm(nombre)]
+    por_corto = {}
+    for nombre, (corto, lon, lat) in C.PUNTOS_REPATRIACION.items():   # nombres distintos del mismo punto se juntan
+        por_corto.setdefault((corto, lon, lat), set()).add(norm(nombre))
+    for (corto, lon, lat), nombres in por_corto.items():
+        d = rep[rep["punto"].isin(nombres)]
         if not len(d):
             continue
         repat.append({"n": corto, "s": int(d["s"].iloc[0]), "x": lon, "y": lat, "wk": por_semana(d, inicio, cortes),

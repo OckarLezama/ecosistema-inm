@@ -158,7 +158,7 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 
 ## Pendientes
 
-- Bases: pedir al área la actualizada de repatriados (llega al 31 dic 2024).
+- DGPMV: decidir cómo se integran vuelos comerciales (fechas ya corregidas) y Guatemala-Honduras (qué significa «PAÍS»).
 - Analizar: encuentros CBP completos y el producto «Mesa de Seguridad» (viñetas + gráficas).
 - Mover los Excel de DATA a un repositorio privado.
 - DGRAM: confirmar por qué los trámites con tarjeta marcan «Sin expedición» y los 47,617 sin documento; el reparto por documento de oct–dic 2024 cambió respecto a la base anterior (oficios S.R.E. 8,019 → 10,790).

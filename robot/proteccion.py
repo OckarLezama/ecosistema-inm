@@ -30,7 +30,7 @@ def norm(x):
 ALIAS_E = {norm(k): norm(v) for k, v in getattr(C, "ALIAS_ESTADO", {}).items()}
 ESTADO = {norm(e): e for e in C.ESTADOS}
 PUNTO = {norm(k): v[0] for k, v in C.PUNTOS_REPATRIACION.items()}
-PUNTO[norm("Aeropuerto Internacional Felipe Ángeles")] = "AIFA (vuelos PRIM)"
+PUNTO = {k: (v.replace(" (vuelos)", " (vuelos PRIM)")) for k, v in PUNTO.items()}   # en la vista de Protección: «AIFA (vuelos PRIM)»
 MODALIDAD = {"TERRESTRE": 0, "AEREO": 1}
 # columnas del archivo → nombre corto en la tabla
 COLS = {"MEXICANOS REPATRIADOS": "v", "TOTAL ADULTOS": "ad", "ADULTOS HOMBRES": "ah", "ADULTOS MUJERES": "am",
