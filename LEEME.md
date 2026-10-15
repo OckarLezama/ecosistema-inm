@@ -184,3 +184,5 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - Protección: DGPMV COMERCIALES trae fechas en 2027 y 2024, meses cambiados y fechas como texto; se pidió al área corregirlo. Cada archivo de DGPMV tendrá su propio periodo y fecha de corte.
 - Protección: confirmar qué significa «PAÍS» en DGPMV GUATEMALA-HONDURAS y si de verdad no hay menores.
 - Protección: pedir el número de vuelos PRIM por día (hoy solo se cuentan días con llegada).
+
+<!-- publicación: 15 oct 2026 -->
