@@ -18,11 +18,17 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     await p.evaluate(() => { const b = [...document.querySelectorAll('#pm-pf [data-mzk]')].find(x => /Matamoros/.test(x.textContent)); if (b) b.click(); }); await p.waitForTimeout(1200);
     ok(await p.evaluate(() => document.getElementById('pm-pr').closest('.caja').hidden && document.getElementById('pm-pf').closest('.rg-g2').classList.contains('solo')), w+' garita: sin tarjeta PRIM, perfil a todo lo ancho');
     await p.evaluate(() => { const b = document.querySelector('[data-pquita="p"]'); if (b) b.click(); }); await p.waitForTimeout(1200);
-    for (const k of ['gh','com']){ if (!PM.otros[k]) continue; await p.evaluate(k => document.querySelector('[data-pvista="'+k+'"]').click(), k); await p.waitForTimeout(1500);
+    // vuelos PRIM por aeropuerto: el total es la suma de los renglones
+    ok(await p.evaluate(() => { const t = document.querySelector('.pm-vt'); if (!t) return false; const f = [...t.querySelectorAll('tbody tr')].map(r => +r.cells[2].textContent); return f.length>0 && +t.querySelector('tfoot tr').cells[2].textContent===f.reduce((x,y)=>x+y,0); }), w+' tabla de días con vuelo PRIM');
+    ok(await p.evaluate(() => !document.querySelector('[data-pvista="com"]')), w+' sin pestaña de vuelos comerciales');
+    for (const k of ['gh','com']){ if (!PM.otros[k]) continue;
+      if (k==='com'){ await p.evaluate(() => document.querySelector('[data-pvista="rep"]').click()); await p.waitForTimeout(1500); await p.evaluate(() => document.querySelector('[data-pcom]').click()); }
+      else await p.evaluate(k => document.querySelector('[data-pvista="'+k+'"]').click(), k);
+      await p.waitForTimeout(1500);
       const txt = await p.evaluate(() => document.getElementById('cv-body').innerText);
       ok(txt.indexOf(miles(suma(PM.otros[k], "v")))>=0, w+' '+k+' total '+miles(suma(PM.otros[k], 'v')));
       ok(await p.evaluate(k => !!echarts.getInstanceByDom(document.getElementById(k==='gh' ? 'pm-gh-mapa' : 'pm-cm-mapa')), k), w+' '+k+' mapa');
-      const v = await p.evaluate(() => [...document.querySelectorAll('#cv-body .barra .x')].map(e => +e.textContent.replace(/,/g,'')));
+      const v = await p.evaluate(() => [...document.querySelectorAll('#cv-body .pm-com-b + .cv-det .barra .x')].map(e => +e.textContent.replace(/,/g,'')));
       ok(k!=='com' || v.slice(0, PM.otros.com.dic.p.length).every((x,i,a) => !i || x<=a[i-1]), w+' '+k+' aeropuertos de mayor a menor');
       if (k==='gh') ok(/el mismo día y con la misma cifra/.test(txt), w+' gh cruce con Ciudad Hidalgo'); }
     await p.evaluate(() => document.querySelector('[data-pvista="rep"]').click()); await p.waitForTimeout(1000);

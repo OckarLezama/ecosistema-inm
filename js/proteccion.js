@@ -2,8 +2,8 @@
    IA-NAMI · PROTECCIÓN AL MIGRANTE (DGPMV)
    Vista del proceso de Protección al migrante. Pestaña activa:
    Repatriados (mexicanos que EE. UU. entrega a México por garitas,
-   puentes y vuelos PRIM). Vuelos comerciales y Guatemala-Honduras se
-   activan cuando el área envíe los archivos corregidos. Todo se
+   puentes y vuelos PRIM), con los vuelos comerciales en una sección
+   plegable aparte. Guatemala-Honduras es otra pestaña. Todo se
    calcula en la página sobre datos/proteccion.js. Usa los mismos
    componentes y estilos que Control migratorio.
    ÍNDICE  [1] DATOS Y FILTROS   [2] UTILIDADES   [3] CONTROLES E INDICADORES
@@ -20,7 +20,7 @@ const DIC = { e:CV.dic.e, p:CV.dic.p, n:[] }, NE = DIC.e.length, NP = DIC.p.leng
 const INI = new Date(CV.inicio+'T00:00:00'), DS = (INI.getDay()+6)%7;
 const semDe = d => Math.floor((d+DS)/7), semIni = w => w*7-DS;
 // em = medida que se analiza (columna): v total, ad adultos, ah hombres, am mujeres, me NNA, ac acompañados, na no acompañados
-const Q = { det:{}, vista:'rep', per:'todo', d0:0, d1:CV.dias, cmp:'sem', nats:[], ests:[], pto:-1, mod:-1, cls:-1, gran:'auto', eti:false, desg:'tot', sel:null, tot:'p', em:'v', mas:{}, compacto:false };
+const Q = { det:{}, cm:false, vista:'rep', per:'todo', d0:0, d1:CV.dias, cmp:'sem', nats:[], ests:[], pto:-1, mod:-1, cls:-1, gran:'auto', eti:false, desg:'tot', sel:null, tot:'p', em:'v', mas:{}, compacto:false };
 // Suma de una tabla por una clave, con los filtros activos (periodo, O.R., punto y modalidad); o.v elige la columna
 function agg(T, key, nk, o){
   o = o || {}; const out = new Float64Array(nk), d0 = o.d0!=null ? o.d0 : Q.d0, d1 = o.d1!=null ? o.d1 : Q.d1, v = T[o.v || 'v'];
@@ -296,7 +296,7 @@ function pintarRep(){
   const nn = te('me', pct(ME, T0)+'% del total', IC.nino, '#2B2926')+te('ac', pct(tot(REP, {v:'ac'}), ME)+'% de los NNA', IC.nino, '#778E88')+te('na', pct(tot(REP, {v:'na'}), ME)+'% de los NNA', IC.nino, ROJO);
   b.innerHTML = '<section class="kpis rg-kpis" id="cv-kpis" data-modo="'+(Q.compacto?'compacto':'tarjetas')+'">'+
       grupo(3, '#2B2926', 'Mexicanos repatriados de EE. UU. · toca una modalidad para filtrar', tm(-1, 'Repatriados', 'todas las modalidades', IC.tot, '#2B2926')+tm(0, 'Terrestre', 'garitas y puentes', IC.tierra, COLMOD[0])+tm(1, 'Aérea', 'vuelos PRIM · '+diasPrim+' días con llegada', IC.avion, COLMOD[1]))+
-      grupo(2, VERDE, 'Adultos · '+pct(AD, T0)+'% del total', ad)+grupo(3, ROJO, 'Niñas, niños y adolescentes · toca una para analizar', nn)+plegar()+'</section>'+
+      grupo(2, VERDE, 'Adultos · '+pct(AD, T0)+'% del total', ad)+grupo(3, ROJO, 'Niñas, niños y adolescentes · toca una para analizar', nn)+masCom()+plegar()+'</section>'+
     '<div class="rg-hz" id="cv-hz"></div>'+
     '<div class="rg-g rg-g21 fila-par">'+cajaTend('pm-tr', 'tr')+'<div class="caja"><h2><span id="pm-tp-t"></span>'+info('tp')+'</h2><span class="q" id="pm-tp-q"></span><div id="pm-tp"></div></div></div>'+
     '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿A quién recibe cada punto?</span>'+info('perfil')+'</h2><span class="q" id="pm-pf-q"></span><div id="pm-pf"></div><div id="pm-pf-m"></div></div>'+
@@ -304,8 +304,9 @@ function pintarRep(){
     detIni()+
     '<div class="rg-g pm-g3"><div class="caja"><h2><span>¿Dónde se recibe?</span>'+info('mapa')+'</h2><span class="q" id="pm-mp-q"></span>'+leyMapa([['Garitas y puentes (terrestre)', COLMOD[0]], ['Aeropuertos (vuelos PRIM)', COLMOD[1]]])+'<div id="pm-mp" class="cv-fill pm-mapa" style="min-height:400px"></div></div>'+
       '<div class="caja"><h2><span>¿Qué días se repatría?</span>'+info('ds')+'</h2><span class="q" id="pm-ds-q"></span><div id="pm-ds"></div></div></div>'+
+      tablaPrim()+
       '<div class="caja rg-ancho cv-ancho"><h2><span>Totales de '+M[0]+'</span>'+info('tot')+'<span class="cv-h2r cv-h2b" id="pm-tt-sel"></span></h2><span class="q" id="pm-tt-q"></span><div class="cv-scroll cv-fill"><div id="pm-tt"></div></div></div>'+
-    '</div>';
+    '</div>'+comSec();
   // Titulares: cambio en la comparación, el punto donde más NNA llegan solos y los vuelos PRIM
   const hz = [];
   if (w){ const ta = tot(REP, vEm({d0:w[0][0], d1:w[0][1]})), tc = tot(REP, vEm({d0:w[1][0], d1:w[1][1]}));
@@ -324,7 +325,7 @@ function pintarRep(){
     dim:{ p:{ T:REP, key:i => REP.p[i], nk:NP, nom:nomP, quita:{pto:-1, v:Q.em}, sel:Q.pto>=0 ? [Q.pto] : [] }, e:{ T:REP, key:i => REP.e[i], nk:NE, nom:nomE, quita:{ests:null, v:Q.em}, sel:Q.ests } },
     apila:Q.em==='v' ? GRUPOS.map(g => ({ name:g[1], col:g[2], o:{v:g[0]} })) : null,
     elegir:k => { if (Q.tot==='p') Q.pto = Q.pto===k ? -1 : k; else alternar(Q.ests, k); Q.sel = null; cuerpo(); } });
-  pintarDs(); pintarDonde();
+  pintarDs(); pintarDonde(); if (Q.cm && OTROS.com) comDibujar();
 }
 // Tendencia de la medida elegida, con desglose por modalidad, grupo, O.R. o punto
 function pintarTr(){
@@ -393,7 +394,7 @@ function mapaRegion(){ if (echarts.getMap('pm-region')) return true; const G = w
   echarts.registerMap('pm-region', { type:'FeatureCollection', features:G.features.filter(f => f.properties.t==='m' || f.properties.t==='u' || CA.has(f.properties.key)) }); return true; }
 // Encuadre que llena la caja sin deformar el mapa: la zona de interés siempre cabe completa y se extiende la geografía alrededor
 function encuadreGeo(el, caja){ const w = el.clientWidth || 600, h = el.clientHeight || 400; let x0 = caja[0][0], y1 = caja[0][1], x1 = caja[1][0], y0 = caja[1][1];
-  const px = (x1-x0)*.07, py = (y1-y0)*.05; x0 -= px; x1 += px; y0 -= py; y1 += py;
+  const px = (x1-x0)*(w<520 ? .13 : .07), py = (y1-y0)*(w<520 ? .08 : .05); x0 -= px; x1 += px; y0 -= py; y1 += py;   // en pantallas angostas, más margen: las burbujas no se cortan
   const a = Math.cos((y0+y1)/2*Math.PI/180), R = (x1-x0)*a/(y1-y0), Rc = w/h;
   if (Rc>R){ const e = ((y1-y0)*Rc/a-(x1-x0))/2; x0 -= e; x1 += e; } else { const e = ((x1-x0)*a/Rc-(y1-y0))/2; y0 -= e; y1 += e; }
   return { boundingCoords:[[x0,y1],[x1,y0]], aspectScale:a, layoutCenter:['50%','50%'], layoutSize:Math.max(w, h) }; }
@@ -462,7 +463,7 @@ function diasOtro(X, grupos){ const T = X.T, n = new Array(7).fill(0), a = grupo
 const listaO = (l, T, nom, col) => l.map(r => '<div class="barra"><span>'+esc(nom(r[0]))+' <small>'+pct(r[1], T)+'%</small></span><span class="b"><i style="width:'+(r[1]/l[0][1]*100).toFixed(1)+'%;background:'+col+'"></i></span><span class="x">'+miles(r[1])+'</span></div>').join('');
 function kpisOtro(cartas){ return '<section class="kpis rg-kpis" id="cv-kpis" data-modo="'+(Q.compacto?'compacto':'tarjetas')+'">'+cartas.map(c => '<div class="kg" style="flex:'+(c.flex || 1)+' 1 0;--g:'+c.col+'"><div class="eti">'+c.eti+'</div><div>'+c.html+'</div></div>').join('')+'</section>'; }
 const cartaO = (nom, sub, v, col, ic, d, val) => kc({ col:col, ic:ic, nom:nom, sub:sub, val:val || corto(v), num:val ? null : v, d:'<span class="kc-d">'+d+'</span>' });
-function pintarOtro(k){ if (k==='gh') pintarGH(); else pintarCom(); }
+function pintarOtro(){ pintarGH(); }
 // Lo que cambió: las últimas 4 semanas de la base contra las 4 anteriores, el grupo que más se movió y la última llegada
 function cambiosOtro(X, grupos, nomU){ const T = X.T, b1 = X.d1+1, a0 = b1-28, p0 = a0-28, sumaV = (d0, d1, f) => { let t = 0; for (let i=0;i<T.N;i++) if (T.d[i]>=d0 && T.d[i]<d1 && (!f || f(i))) t += T.v[i]; return t; };
   const A = sumaV(a0, b1), P = sumaV(p0, a0), hz = [], rng = fecha(a0)+' – '+fecha(X.d1);
@@ -518,25 +519,38 @@ function pintarGH(){
       yAxis:Object.assign({}, ejeY), series:[{ name:'Este archivo', type:'bar', barGap:'-100%', barMaxWidth:12, data:l.map(x => x[1]), itemStyle:{ color:'#D8D3C4' } }, { name:'Repatriados · Ciudad Hidalgo', type:'bar', barMaxWidth:6, data:l.map(x => x[2]), itemStyle:{ color:VERDE } }] }); }
 }
 // Vuelos comerciales: por aeropuerto, semana y día de la semana
-function pintarCom(){
-  const X = OTROS.com, T = X.T, NPc = X.dic.p.length; let V = 0, ME = 0; const porP = new Array(NPc).fill(0), porE = new Array(X.dic.e.length).fill(0), dd = new Map();
+// Vuelos comerciales: dentro de Repatriados, aparte (no están en el archivo de Repatriados ni en su total) y con su propio periodo
+function comDatos(){ const X = OTROS.com, T = X.T; let V = 0, ME = 0; const porP = new Array(X.dic.p.length).fill(0), porE = new Array(X.dic.e.length).fill(0), dd = new Map();
   for (let i=0;i<T.N;i++){ V += T.v[i]; ME += T.me[i]; porP[T.p[i]] += T.v[i]; porE[T.e[i]] += T.v[i]; dd.set(T.d[i], (dd.get(T.d[i])||0)+T.v[i]); }
-  const lp = porP.map((v,j) => [j, v]).filter(x => x[1]).sort((a,b) => b[1]-a[1]), le = porE.map((v,j) => [j, v]).filter(x => x[1]).sort((a,b) => b[1]-a[1]), nomA = j => X.dic.p[j].replace(/^A\. I\. /,'');
-  $('cv-ctl').innerHTML = '<div class="rango"><b>'+fechaA(X.d0)+' – '+fechaA(X.d1)+'</b><span>periodo propio de la base · son otros vuelos (no PRIM): se suman aparte, no están en Repatriados</span></div>';
-  const top2 = lp.slice(0, 2).reduce((t,x) => t+x[1], 0);
-  $('cv-body').innerHTML = kpisOtro([
-      { col:'#2B2926', eti:'Total', html:cartaO('Repatriados', 'en vuelos comerciales', V, '#2B2926', IC.avion, dd.size+' días con llegada') },
-      { col:VERDE, eti:'Cómo llegan', flex:2, html:cartaO('Por día con llegada', 'promedio de personas', 0, VERDE, IC.avion, (m => 'la mayor: '+miles(m[1])+' el '+fecha(m[0]))([...dd.entries()].sort((a,b) => b[1]-a[1])[0]), miles(V/Math.max(1, dd.size)))+cartaO('NNA', ME ? '' : 'todos son adultos', ME, ROJO, IC.nino, ME ? pct(ME, V)+'% del total' : '0 niñas, niños o adolescentes') },
-      { col:OCRE, eti:'Dónde', flex:1, html:cartaO('Aeropuertos', 'que reciben', 0, OCRE, IC.avion, nomA(lp[0][0])+' y '+nomA(lp[1] ? lp[1][0] : lp[0][0])+': '+pct(top2, V)+'%', String(lp.length)) }])+
-    cambiosOtro(X, lp.map(x => ({ name:nomA(x[0]), f:i => T.p[i]===x[0] })), 'repatriados en vuelos comerciales')+
-    '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿A qué aeropuertos llegan?</span>'+info('cmm')+'</h2><span class="q">el tamaño es la cantidad · '+miles(V)+' personas en '+lp.length+' aeropuertos</span><div id="pm-cm-mapa" class="cv-fill pm-mapa" style="min-height:380px"></div></div>'+
-      '<div class="caja"><h2><span>Por aeropuerto</span>'+info('cma')+'</h2><span class="q">de mayor a menor · el % es la parte del total</span>'+listaO(lp, V, nomA, VERDE)+'<h4 class="mini" style="margin:14px 0 4px">O.R. que recibe</h4>'+listaO(le, V, j => X.dic.e[j], '#778E88')+'</div></div>'+
-    '<div class="rg-g rg-g21"><div class="caja"><h2><span>Por semana</span>'+info('cms')+'</h2><span class="q" id="pm-cm-sq">personas por semana · '+fechaA(X.d0)+' – '+fechaA(X.d1)+'</span><div class="cv-scroll"><div id="pm-cm-sem" style="height:300px"></div></div></div>'+
-      '<div class="caja"><h2><span>¿Qué días llegan?</span>'+info('cmd')+'</h2><span class="q">personas por día de la semana en todo el periodo · días con llegada</span>'+diasOtro(X, [{ name:'Personas', col:VERDE, f:() => true }])+'</div></div>'+
-    '<p class="mini" style="padding:0 16px">Fuente: '+esc(X.archivo)+' (DGPMV) · '+fechaA(X.d0)+' – '+fechaA(X.d1)+'. Mexicanos repatriados desde EE. UU. en vuelos comerciales (no PRIM). No están en el archivo de Repatriados: se suman aparte.</p>';
-  semanalOtro(X, 'pm-cm-sem', 'pm-cm-sq', [{ name:'Personas', col:VERDE, f:() => true }]);
-  burbujas('pm-cm-mapa', lp.filter(x => coord(X.dic.p[x[0]])).map(x => ({ k:x[0], nom:X.dic.p[x[0]], corto:nomA(x[0]), v:x[1], c:coord(X.dic.p[x[0]]) })), { caja:[[-118.6,33.2],[-86.4,14.3]], per:fechaA(X.d0)+' – '+fechaA(X.d1), T:V, etiq:7, max:40 });
-}
+  const lp = porP.map((v,j) => [j, v]).filter(x => x[1]).sort((a,b) => b[1]-a[1]), le = porE.map((v,j) => [j, v]).filter(x => x[1]).sort((a,b) => b[1]-a[1]);
+  return { X, T, V, ME, dd, lp, le, nomA:j => X.dic.p[j].replace(/^A\.\s*I\.?\s*(de\s+)?/,'') }; }
+function masCom(){ if (!OTROS.com) return ''; const c = comDatos(), top2 = c.lp.slice(0, 2).reduce((t,x) => t+x[1], 0), mx = [...c.dd.entries()].sort((a,b) => b[1]-a[1])[0];
+  return masG('Vuelos<br>comerciales', corto(c.V), 'Vuelos comerciales · aparte: no están en el total de repatriados · '+fecha(c.X.d0)+' – '+fechaA(c.X.d1), OCRE,
+    cartaO('Repatriados', 'en vuelos comerciales', c.V, '#2B2926', IC.avion, c.dd.size+' días con llegada')+
+    cartaO('Por día con llegada', 'promedio de personas', 0, VERDE, IC.avion, 'la mayor: '+miles(mx[1])+' el '+fecha(mx[0]), miles(c.V/Math.max(1, c.dd.size)))+
+    cartaO('NNA', c.ME ? '' : 'todos son adultos', c.ME, ROJO, IC.nino, c.ME ? pct(c.ME, c.V)+'% del total' : '0 niñas, niños o adolescentes')+
+    cartaO('Aeropuertos', 'que reciben', 0, OCRE, IC.avion, c.nomA(c.lp[0][0])+(c.lp[1] ? ' y '+c.nomA(c.lp[1][0]) : '')+': '+pct(top2, c.V)+'%', String(c.lp.length))); }
+function comSec(){ if (!OTROS.com) return ''; const c = comDatos(), on = !!Q.cm;
+  return '<button class="rg-det-b cv-det-b pm-com-b'+(on?' on':'')+'" data-pcom aria-expanded="'+on+'">'+(on ? 'Ocultar vuelos comerciales ▴' : 'Ver vuelos comerciales: '+miles(c.V)+' personas, aparte de Repatriados ▾')+'</button><div class="cv-det"'+(on ? '' : ' hidden')+'>'+
+    (on ? '<p class="pm-com-n">Mexicanos repatriados desde EE. UU. en <b>vuelos comerciales</b> (no PRIM) · '+fechaA(c.X.d0)+' – '+fechaA(c.X.d1)+' · vienen en otro archivo: <b>no están sumados</b> en las cifras de arriba.</p>'+
+    cambiosOtro(c.X, c.lp.map(x => ({ name:c.nomA(x[0]), f:i => c.T.p[i]===x[0] })), 'repatriados en vuelos comerciales')+
+    '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿A qué aeropuertos llegan?</span>'+info('cmm')+'</h2><span class="q">el tamaño es la cantidad · '+miles(c.V)+' personas en '+c.lp.length+' aeropuertos</span><div id="pm-cm-mapa" class="cv-fill pm-mapa" style="min-height:380px"></div></div>'+
+      '<div class="caja"><h2><span>Por aeropuerto</span>'+info('cma')+'</h2><span class="q">de mayor a menor · el % es la parte del total</span>'+listaO(c.lp, c.V, c.nomA, VERDE)+'<h4 class="mini" style="margin:14px 0 4px">O.R. que recibe</h4>'+listaO(c.le, c.V, j => c.X.dic.e[j], '#778E88')+'</div></div>'+
+    '<div class="rg-g rg-g21"><div class="caja"><h2><span>Por semana</span>'+info('cms')+'</h2><span class="q" id="pm-cm-sq">personas por semana · '+fechaA(c.X.d0)+' – '+fechaA(c.X.d1)+'</span><div class="cv-scroll"><div id="pm-cm-sem" style="height:300px"></div></div></div>'+
+      '<div class="caja"><h2><span>¿Qué días llegan?</span>'+info('cmd')+'</h2><span class="q">personas por día de la semana en todo el periodo · días con llegada</span>'+diasOtro(c.X, [{ name:'Personas', col:VERDE, f:() => true }])+'</div></div>'+
+    '<p class="mini" style="padding:0 16px">Fuente: '+esc(c.X.archivo)+' (DGPMV) · '+fechaA(c.X.d0)+' – '+fechaA(c.X.d1)+'.</p>' : '')+'</div>'; }
+function comDibujar(){ const c = comDatos();
+  semanalOtro(c.X, 'pm-cm-sem', 'pm-cm-sq', [{ name:'Personas', col:VERDE, f:() => true }]);
+  burbujas('pm-cm-mapa', c.lp.filter(x => coord(c.X.dic.p[x[0]])).map(x => ({ k:x[0], nom:c.X.dic.p[x[0]], corto:c.nomA(x[0]), v:x[1], c:coord(c.X.dic.p[x[0]]) })), { caja:[[-118.6,33.2],[-86.4,14.3]], per:fechaA(c.X.d0)+' – '+fechaA(c.X.d1), T:c.V, etiq:7, max:40 }); }
+// Vuelos PRIM por aeropuerto: días con llegada en la última semana completa contra la anterior (el archivo no trae número de vuelos)
+function tablaPrim(){ if (Q.mod===0) return ''; let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); if (b-7 < Q.d0) return '';
+  const dias = (p, a) => agg(REP, i => REP.d[i]-a, 7, { mod:1, pto:p, d0:a, d1:a+7 }).filter(Boolean).length;
+  const l = [...AEREO].filter(p => Q.pto<0 || p===Q.pto).map(p => ({ p, a:dias(p, b-7), c:dias(p, b), v:tot(REP, { mod:1, pto:p, d0:b, d1:b+7 }) })).filter(r => r.a || r.c).sort((x,y) => y.c-x.c || y.v-x.v || y.a-x.a);
+  if (!l.length) return ''; const S = k => l.reduce((t,r) => t+r[k], 0), dif = n => '<td class="'+(n>0 ? 'u' : n<0 ? 'd' : '')+'">'+(n>0 ? '+' : '')+n+'</td>', nom = p => nomP(p).replace(/\s*\(vuelos.*$/,'').replace(/^A\.\s*I\.?\s*(de\s+)?/,'');
+  return '<div class="caja rg-ancho cv-ancho"><h2><span>Vuelos PRIM: días con llegada por aeropuerto</span>'+info('vt')+'</h2><span class="q">última semana completa contra la anterior · de mayor a menor</span>'+
+    '<div class="pm-vt-w"><table class="pm-vt"><thead><tr><th>Aeropuerto</th><th>'+fecha(b-7)+' – '+fecha(b-1)+'</th><th>'+fecha(b)+' – '+fecha(b+6)+'</th><th>Dif.</th><th>Personas<br><small>'+fecha(b)+' – '+fecha(b+6)+'</small></th></tr></thead><tbody>'+
+    l.map(r => '<tr><td>'+esc(nom(r.p))+'</td><td>'+r.a+'</td><td>'+r.c+'</td>'+dif(r.c-r.a)+'<td>'+miles(r.v)+'</td></tr>').join('')+
+    '</tbody><tfoot><tr><td>Total</td><td>'+S('a')+'</td><td>'+S('c')+'</td>'+dif(S('c')-S('a'))+'<td>'+miles(S('v'))+'</td></tr></tfoot></table></div></div>'; }
 
 /* ==== [6] MONTAJE Y EVENTOS ======================================= */
 const INFO = {
@@ -552,9 +566,10 @@ const INFO = {
   ghc:'<b>¿Estas personas ya están en Repatriados?</b> El archivo de Repatriados tiene un punto llamado Ciudad Hidalgo. Se compara, día por día, cuántas personas registra ese punto contra este archivo.<br><br>Si casi todos los días tienen la misma cifra, son <b>las mismas personas registradas en dos archivos</b>: ya están en el total de repatriados y no deben sumarse otra vez. Este archivo sirve para saber <b>de qué país</b> (Guatemala u Honduras) llegaron.',
   ghs:'<b>Personas por semana</b>, separadas por el país desde donde llegaron (Guatemala u Honduras).',
   ghd:'<b>¿Qué días llegan?</b> Personas por día de la semana en todo el periodo, y en cuántos de esos días hubo llegadas. Sirve para planear personal en Ciudad Hidalgo.',
-  cmm:'<b>¿A qué aeropuertos llegan?</b> Mexicanos repatriados desde EE. UU. en vuelos comerciales (no son vuelos PRIM). El tamaño del círculo es cuántas personas llegaron a cada aeropuerto.',
+  cmm:'<b>¿A qué aeropuertos llegan?</b> Mexicanos repatriados desde EE. UU. en vuelos comerciales (no son vuelos PRIM). Vienen en otro archivo y no están sumados en el total de repatriados. El tamaño del círculo es cuántas personas llegaron a cada aeropuerto.',
   cma:'<b>Por aeropuerto y O.R.</b>, de mayor a menor, con la parte del total. Son llegadas en vuelos comerciales: no están en el archivo de Repatriados.',
   cms:'<b>Personas por semana</b> que llegaron en vuelos comerciales.',
+  vt:'<b>Vuelos PRIM por aeropuerto.</b> Cuántos días de la semana recibió vuelos cada aeropuerto, contra la semana anterior, y cuántas personas llegaron.<br><br>Se cuentan <b>días con llegada</b>, no vuelos: el archivo de Repatriados junta en un renglón todos los vuelos de un aeropuerto en el día. Cuando el área agregue el número de vuelos, aquí se mostrará.',
   cmd:'<b>¿Qué días llegan?</b> Personas por día de la semana en todo el periodo, y en cuántos de esos días hubo llegadas.'
 };
 let popFija = false;
@@ -569,7 +584,7 @@ const NOM_OTRO = { com:['Vuelos comerciales', 'Mexicanos repatriados desde EE. U
 function montar(cont){
   const pend = 'Pendiente: el área revisa el archivo; se activa en cuanto llegue corregido';
   cont.innerHTML = '<div class="rg cv pm"><div class="rg-sub"><div><span class="mini">Procesos › DGPMV</span><h1>Protección al migrante</h1></div><div class="rg-vistas">'+
-    '<button data-pvista="rep" class="'+(Q.vista==='rep'?'on':'')+'">Repatriados</button>'+['com','gh'].map(k => OTROS[k] ? '<button data-pvista="'+k+'" class="'+(Q.vista===k?'on':'')+'" title="'+esc(NOM_OTRO[k][1])+'">'+NOM_OTRO[k][0]+'</button>' : '<button disabled title="'+pend+'">'+NOM_OTRO[k][0]+' <small>sin archivo</small></button>').join('')+'</div></div>'+
+    '<button data-pvista="rep" class="'+(Q.vista==='rep'?'on':'')+'">Repatriados</button>'+['gh'].map(k => OTROS[k] ? '<button data-pvista="'+k+'" class="'+(Q.vista===k?'on':'')+'" title="'+esc(NOM_OTRO[k][1])+'">'+NOM_OTRO[k][0]+'</button>' : '<button disabled title="'+pend+'">'+NOM_OTRO[k][0]+' <small>sin archivo</small></button>').join('')+'</div></div>'+
     '<div class="ctl rg-ctl" id="cv-ctl"></div><div id="cv-body" class="rg-body anim"></div>'+
     '<p class="mini pm-fuente" style="padding:0 16px">Fuente: '+esc(CV.archivo)+' (DGPMV) · '+fechaA(0)+' – '+fechaA(CV.dias-1)+' · todos son de nacionalidad mexicana. «Aérea» corresponde a los vuelos PRIM.</p>'+
     (CV.calidad.length ? '<details class="cv-calw"><summary>Notas de calidad de los datos ('+CV.calidad.length+')</summary><ul>'+CV.calidad.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul></details>' : '')+'</div>';
@@ -588,6 +603,7 @@ function eventos(cont){
     if ((b = T('[data-pdesg]'))){ Q.desg = b.dataset.pdesg; pintarTr(); pintarTp(); return; }
     if (T('[data-psel]')){ Q.sel = null; pintarTp(); return; }
     if (T('[data-ppftodos]')){ Q.pfTodos = !Q.pfTodos; pintarPf(); return; }
+    if (T('[data-pcom]')){ Q.cm = !Q.cm; cuerpo(); return; }
     if (T('[data-pdet]')){ Q.det[Q.vista] = !Q.det[Q.vista]; cuerpo(); return; }
     if (T('[data-pplegar]')){ Q.compacto = !Q.compacto; cuerpo(); return; }
     if ((b = T('[data-pper]'))){ Q.per = b.dataset.pper; if (Q.per==='todo'){ Q.d0 = 0; Q.d1 = CV.dias; } else if (Q.per==='anio'){ Q.anio = fDia(CV.dias-1).getFullYear(); Q.mes = 0; fijarAnio(); } Q.sel = null; cuerpo(); return; }
