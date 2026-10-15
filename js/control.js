@@ -255,7 +255,7 @@ function tendencia(c){
   if (c.clic) ch.getZr().on('click', e => { if (!ch.containPixel({ gridIndex:0 }, [e.offsetX, e.offsetY])) return; const k = Math.round(ch.convertFromPixel({ gridIndex:0 }, [e.offsetX, e.offsetY])[0]); if (!isNaN(k) && k>=0 && k<C.n) c.clic(C.l[k], C, k); });
   return ch;
 }
-const cajaTend = (id, info_k) => '<div class="caja"><h2><span id="'+id+'-t"></span>'+info(info_k)+'</h2><span class="q" id="'+id+'-q"></span><div class="rg-desg" id="'+id+'-c"></div><div class="rg-evo-ley" id="'+id+'-l"></div><div id="'+id+'" class="cv-fill" style="min-height:320px"></div></div>';
+const cajaTend = (id, info_k) => '<div class="caja"><h2><span id="'+id+'-t"></span>'+info(info_k)+'</h2><span class="q" id="'+id+'-q"></span><div class="rg-desg" id="'+id+'-c"></div><div class="rg-evo-ley" id="'+id+'-l"></div><div id="'+id+'" class="cv-fill cuadros" style="min-height:320px"></div></div>';
 const qTend = id => { const C = cubetasG(); $(id+'-q').innerHTML = {d:'por día', s:'por semana (lunes a domingo)', m:'por mes'}[C.g]+' · '+fechaA(Q.d0)+' – '+fechaA(Q.d1-1)+(filtrosTxt().length ? ' · '+filtrosTxt().map(x => '<b>'+esc(x)+'</b>').join(' · ') : ''); };
 const topK = (T, key, nk, o, n, quita) => top(agg(T, key, nk, o), n, quita).map(x => x[0]);
 
@@ -388,10 +388,10 @@ function pintarEmb(tn, tp, base){
   const l = tn.filter(x => x.r>=100).sort((a,b) => Q.emo==='p' ? b.t-a.t : b.r-a.r).slice(0, 9), mx = Math.max(1, ...l.map(x => x.s/x.ll*1000));
   $('cv-emb-o').innerHTML = pil('data-cemo', Q.emo, [['n','Más rechazos'],['p','Mayor proporción']]);
   $('cv-emb-q').innerHTML = (Q.emo==='p' ? 'las 9 con mayor proporción de rechazo' : 'las 9 con más rechazos')+' (100 rechazos o más) · <i class="sw" style="background:#D9D2B4"></i>pasan a segunda revisión <i class="sw" style="background:'+ROJO+'"></i>son rechazados · toca una para ver su ficha';
-  $('cv-emb').innerHTML = '<div class="cv-emb h"><span></span><span></span><span>rechazados de cada 1,000</span></div>'+l.map(x => { const s = x.s/x.ll*1000, r = x.r/x.ll*1000;
+  $('cv-emb').innerHTML = '<div class="cv-emb h"><span></span><span></span><span>'+(Q.emo==='p' ? 'rechazados de cada 1,000' : 'rechazos')+'</span></div>'+l.map(x => { const s = x.s/x.ll*1000, r = x.r/x.ll*1000;
     return '<button class="cv-emb" data-cn="'+x.k+'" title="'+esc(nomN(x.k))+': de cada 1,000 que llegan, '+f(s)+' pasan a revisión y '+f(r)+' son rechazados"><span class="cv-emb-n">'+esc(nomN(x.k))+'<small>llegaron '+corto(x.ll)+'</small></span>'+
       '<span class="cv-emb-b"><i class="s" style="width:'+(s/mx*100).toFixed(1)+'%"></i><i class="r" style="width:'+(r/mx*100).toFixed(1)+'%"></i></span>'+
-      '<span class="cv-emb-v"><b>'+f(r)+'</b><small>'+veces(x.t)+' · '+corto(x.r)+' rechazos</small></span></button>'; }).join('')+
+      '<span class="cv-emb-v">'+(Q.emo==='p' ? '<b>'+f(r)+'</b><small>'+veces(x.t)+' · '+corto(x.r)+' rechazos</small>' : '<b>'+miles(x.r)+'</b><small>'+f(r)+' de cada 1,000 · '+veces(x.t)+'</small>')+'</span></button>'; }).join('')+
     '<p class="rg-base">Promedio de todas las nacionalidades: <b>'+f(base*10)+'</b> rechazados de cada 1,000 que llegan.</p>';
 }
 // Comparación de 2 o 3 nacionalidades, en la misma medida que «De cada 1,000 que llegan», lado a lado
@@ -453,7 +453,7 @@ function pintarEst(){
   if (w){ const a = tot(ORR, {d0:w[0][0], d1:w[0][1]}), c = tot(ORR, {d0:w[1][0], d1:w[1][1]}), xa = agg(ORR, i => ORR.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), xc = agg(ORR, i => ORR.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]});
     let m = -1, dm = 0; for (let k=0;k<NN;k++){ const d = xa[k]-xc[k]; if (Math.abs(d)>Math.abs(dm)){ dm = d; m = k; } }
     if (c) hz.push({ cl:a>=c ? 'd' : 'u', ic:a>=c ? '▲' : '▼', h:'Rescates '+(a>=c ? 'suben ' : 'bajan ')+Math.abs((a/c-1)*100).toFixed(1)+'% '+(Q.cmp==='sem' ? 'en la semana' : 'en los últimos '+Q.cmp+' días'), t:miles(c)+' → '+miles(a)+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+miles(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' });
-    const pa = tot(PRE, {d0:w[0][0], d1:w[0][1]}), pc = tot(PRE, {d0:w[1][0], d1:w[1][1]}); if (pc) hz.push({ cl:pa>=pc ? 'd' : 'u', ic:pa>=pc ? '▲' : '▼', h:'Presentados (sistema) '+(pa>=pc ? 'suben ' : 'bajan ')+Math.abs((pa/pc-1)*100).toFixed(1)+'%', t:miles(pc)+' → '+miles(pa)+' · ver la tendencia ›', act:' data-cem="pre"' }); }
+    const pa = tot(PRE, {d0:w[0][0], d1:w[0][1]}), pc = tot(PRE, {d0:w[1][0], d1:w[1][1]}); if (pc) hz.push({ cl:pa>=pc ? 'd' : 'u', ic:pa>=pc ? '▲' : '▼', h:'Presentados (sistema) '+(pa>=pc ? 'suben ' : 'bajan ')+Math.abs((pa/pc-1)*100).toFixed(1)+'% '+(Q.cmp==='sem' ? 'en la semana' : 'en los últimos '+Q.cmp+' días'), t:miles(pc)+' → '+miles(pa)+' · ver la tendencia ›', act:' data-cem="pre"' }); }
   const rn = agg(ORR, i => ORR.n[i], NN, {nats:null, v:'rei'}), tn = agg(ORR, i => ORR.n[i], NN, {nats:null, ex:conRei}), cand = [...Array(NN).keys()].filter(k => rn[k]).sort((a,b) => rn[b]-rn[a])[0], alta = [...Array(NN).keys()].filter(k => tn[k]>=300).sort((a,b) => rn[b]/tn[b]-rn[a]/tn[a])[0];
   if (cand!=null && tn[cand]) hz.push({ cl:'al', ic:'↻', h:esc(nomN(cand))+': '+Math.round(rn[cand]/tn[cand]*100)+' de cada 100 rescatados ya lo habían sido ('+corto(rn[cand])+' personas)', t:(alta!=null && alta!==cand ? 'la proporción más alta es '+esc(nomN(alta))+' ('+Math.round(rn[alta]/tn[alta]*100)+' de cada 100, '+corto(rn[alta])+' personas) · ' : '')+'solo '+esc(reiTxt)+' registra reincidencia · filtrar ›', act:' data-cn="'+cand+'"' });
   $('cv-hz').innerHTML = hz.map(titular).join('')+info('hze');
@@ -511,10 +511,10 @@ function pintarRein(){
   const l = (Q.nats.length ? base.filter(k => Q.nats.indexOf(k)>=0) : base).sort((a,b) => ord==='n' ? r[b]-r[a] : r[b]/t[b]-r[a]/t[a]).slice(0, 10), mx = 100;
   $('cv-rn-q').innerHTML = 'de cada 100 rescatados, cuántos ya habían sido rescatados antes · <b>solo '+esc(reiTxt)+' registra reincidencia</b> · promedio: <b>'+Math.round(prom)+' de cada 100</b> · <i class="sw" style="background:'+ROJO+'"></i>arriba del promedio <i class="sw" style="background:'+VERDE+'"></i>abajo o igual · nacionalidades con 300 rescatados o más';
   $('cv-rn-o').innerHTML = pil('data-creo', ord, [['n','Más reincidentes'],['p','Mayor proporción']]);
-  $('cv-rn').innerHTML = '<div class="cv-emb h"><span></span><span></span><span>de cada 100</span></div>'+l.map(k => { const p = r[k]/t[k]*100;
+  $('cv-rn').innerHTML = '<div class="cv-emb h"><span></span><span></span><span>'+(ord==='n' ? 'reincidentes' : 'de cada 100')+'</span></div>'+l.map(k => { const p = r[k]/t[k]*100;
     return '<button class="cv-emb'+(Q.nats.indexOf(k)>=0 ? ' on' : '')+'" data-cn="'+k+'" title="'+esc(nomN(k))+': '+miles(r[k])+' reincidentes de '+miles(t[k])+' rescatados"><span class="cv-emb-n">'+esc(nomN(k))+'<small>'+corto(r[k])+' reincidentes de '+corto(t[k])+'</small></span>'+
       '<span class="cv-emb-b"><i class="s" style="width:100%"></i><i class="r" style="width:'+p.toFixed(1)+'%;background:'+(p>prom ? ROJO : VERDE)+'"></i></span>'+
-      '<span class="cv-emb-v"><b style="color:'+(p>prom ? '#A8443E' : '#2F6657')+'">'+Math.round(p)+'</b><small>'+(p>prom+5 ? 'arriba del promedio' : p<prom-5 ? 'abajo del promedio' : 'cerca del promedio')+'</small></span></button>'; }).join('')+
+      '<span class="cv-emb-v"><b style="color:'+(p>prom ? '#A8443E' : '#2F6657')+'">'+(ord==='n' ? miles(r[k]) : Math.round(p))+'</b><small>'+(ord==='n' ? Math.round(p)+' de cada 100 · ' : '')+(p>prom+5 ? 'arriba del promedio' : p<prom-5 ? 'abajo del promedio' : 'cerca del promedio')+'</small></span></button>'; }).join('')+
     '<p class="rg-base">«Más reincidentes» ordena por cantidad de personas; «Mayor proporción», por cuántos de cada 100. Una nacionalidad pequeña puede tener una proporción muy alta con pocas personas.</p>';
 }
 // Presentados y retornos (sistema): de cada 100 presentados, cuántos salen del país, por nacionalidad u O.R.
@@ -591,10 +591,10 @@ function pintarCan(){
   const hz = [];
   if (w){ const per = Q.cmp==='sem' ? 'en la semana' : 'en los últimos '+Q.cmp+' días', a = tot(T, {d0:w[0][0], d1:w[0][1]}), c = tot(T, {d0:w[1][0], d1:w[1][1]});
     if (c) hz.push({ cl:a>=c ? 'd' : 'u', ic:a>=c ? '▲' : '▼', h:(nna ? 'NNA canalizados' : 'Adultos acompañantes')+' '+(a>=c ? 'suben ' : 'bajan ')+Math.abs((a/c-1)*100).toFixed(1)+'% '+per, t:miles(c)+' → '+miles(a)+' · ver la tendencia ›', act:'' });
-    if (nna){ const na = tot(NNA, {cls:1, d0:w[0][0], d1:w[0][1]}), nc = tot(NNA, {cls:1, d0:w[1][0], d1:w[1][1]}); hz.push({ cl:na>nc ? 'al' : 'u', ic:na>nc ? '!' : '▼', h:'No acompañados: '+nc+' → '+na+' '+per, t:'ver solo no acompañados ›', act:' data-ccls="1"' }); }
+    if (nna){ const na = tot(NNA, {cls:1, d0:w[0][0], d1:w[0][1]}), nc = tot(NNA, {cls:1, d0:w[1][0], d1:w[1][1]}); hz.push({ cl:na>nc ? 'al' : 'u', ic:na>nc ? '!' : '▼', h:'NNA no acompañados '+(na>=nc ? 'suben' : 'bajan')+': '+miles(nc)+' → '+miles(na)+' '+per, t:'ver solo no acompañados ›', act:' data-ccls="1"' }); }
     const xa = agg(T, i => T.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), xc = agg(T, i => T.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]}); let m = -1, dm = 0;
     for (let k=0;k<NN;k++){ const d = xa[k]-xc[k]; if (Math.abs(d)>Math.abs(dm)){ dm = d; m = k; } }
-    if (m>=0 && dm) hz.push({ cl:dm>0 ? 'd' : 'u', ic:dm>0 ? '▲' : '▼', h:esc(nomN(m))+(dm>0 ? ' sube ' : ' baja ')+Math.abs(dm)+' '+per, t:xc[m]+' → '+xa[m]+' · el mayor cambio entre nacionalidades · filtrar ›', act:' data-cn="'+m+'"' }); }
+    if (m>=0 && dm) hz.push({ cl:dm>0 ? 'd' : 'u', ic:dm>0 ? '▲' : '▼', h:esc(nomN(m))+(dm>0 ? ' sube ' : ' baja ')+miles(Math.abs(dm))+' '+per, t:miles(xc[m])+' → '+miles(xa[m])+' · el mayor cambio entre nacionalidades · filtrar ›', act:' data-cn="'+m+'"' }); }
   $('cv-hz').innerHTML = hz.map(titular).join('')+info('hzc');
   // Tendencia y panel: al tocar un periodo, motivo de salida, nacionalidades y O.R. de ese periodo
   qTend('cv-cs'); if (nna) $('cv-cs-q').insertAdjacentHTML('beforeend', ' · '+fuente('s','SIRENNA')+' NNA canalizados · '+fuente('o','reporte de las O.R.')+' canalizados al DIF tras un rescate (otra fuente: no se suma)');
@@ -674,7 +674,7 @@ const INFO = {
   tre:'<b>Rescates en el tiempo</b> por día, semana o mes, con el rango habitual y las temporadas vacacionales. Los presentados se muestran con sus dos fuentes: el reporte de las O.R. (DGCOR) y el sistema (DGCVM).',
   pe:'<b>Composición del periodo:</b> nacionalidades, O.R. y estaciones con más registros, y su cambio contra el periodo anterior de la misma duración.',
   dif:'<b>Dos registros de presentados.</b> El reporte de las O.R. (DGCOR) cuenta a quienes se envían a una estación tras un rescate; el sistema de DGCVM cuenta a quienes quedan presentados. Miden cosas distintas y con cortes distintos, por eso no se suman. La columna «Sistema / O.R.» indica qué parte del reporte aparece en el sistema.',
-  rein:'<b>Reincidencia:</b> de cada 100 personas rescatadas de una nacionalidad, cuántas ya habían sido rescatadas antes. Solo se calcula con las O.R. que registran reincidencia; las demás reportan 0. «Más reincidentes» ordena por número de personas y «Mayor proporción», por cuántas de cada 100.',
+  rein:'<b>Reincidencia:</b> de cada 100 personas rescatadas de una nacionalidad, cuántas ya habían sido rescatadas antes. Solo se calcula con las O.R. que registran reincidencia; las demás reportan 0. «Más reincidentes» ordena por número de personas (la cifra grande); «Mayor proporción», por cuántas de cada 100 (la cifra grande pasa a ser esa proporción).',
   hze:'<b>Titulares:</b> el cambio de los rescates y de los presentados contra el periodo de comparación, y la nacionalidad con más reincidencia.',
   hzc:'<b>Titulares:</b> el cambio de los canalizados y de los NNA no acompañados contra el periodo de comparación, y la nacionalidad que más cambió.',
   cp:'<b>Composición del periodo:</b> cómo concluyó la canalización (motivo de salida), nacionalidades y O.R., y su cambio contra el periodo anterior de la misma duración.',

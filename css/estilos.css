@@ -1223,3 +1223,84 @@ body.en-sala{overflow:hidden}
 .rg-mot{display:grid;grid-template-columns:1fr 1fr;gap:4px 28px}@media (max-width:760px){.rg-mot{grid-template-columns:1fr}}
 .rg-eti-n{font-size:1.25em;color:var(--ink);letter-spacing:0;margin:0 2px}
 .rg .rg-kpis .kg:first-child .kc-n{white-space:normal;line-height:1.1}
+.rg-aviso{margin:10px 0 6px;padding:9px 12px;border-radius:9px;background:#F6EFE0;border:1px solid #E7D9B8;font-size:12.5px;line-height:1.45;color:#5C5952}.rg-aviso b{color:#2B2926;font-weight:600}
+/* Protección: mapa + días, calendario por punto, ruta Guatemala-Honduras */
+.pm-g3{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr)}
+@media (max-width:1180px){ .pm-g3{grid-template-columns:minmax(0,1fr)} }
+.pm-mas{display:block;margin:6px auto 0}
+.pm-dia{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:22px;margin-top:6px}
+@media (max-width:760px){ .pm-dia{grid-template-columns:minmax(0,1fr)} }
+.pm .pm-dia h4,.pm .pm-dia-c h4{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#5C5952;margin:0 0 8px;font-weight:600}
+.pm-dia h4 small{text-transform:none;letter-spacing:0;font-weight:400;margin-left:4px}
+.pm-dr{display:grid;grid-template-columns:72px minmax(0,1fr) 54px;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #EEEBE2;font-size:12.5px}
+.pm-dr small{grid-column:2/4;font-size:10.5px;color:#7A766C;margin-top:-3px}
+.pm-dr .b{display:flex;height:14px;background:#F2EFE6;border-radius:3px;overflow:hidden}
+.pm-dr .b i{display:block;height:100%}
+.pm-dr .b i+i{border-left:1.5px solid #FCFBF7}
+.pm-dr b.num{text-align:right;font-size:13px}
+.pm-dr.max span:first-child,.pm-dr.max b.num{font-weight:700;color:#7E302B}
+.pm-dia-n{font-size:11.5px;color:#5C5952;margin:8px 0 0;line-height:1.4}
+.pm-ley{display:flex;gap:14px;font-size:11px;color:#5C5952;margin-top:6px}
+.pm-ley .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.pm-hm{display:grid;grid-template-columns:minmax(96px,1.5fr) repeat(7,minmax(0,1fr));gap:2px;font-size:11px}
+.pm-hm .h{text-align:center;color:#5C5952;font-size:10.5px;padding-bottom:2px}
+.pm-hm .n{all:unset;cursor:pointer;font-size:11.5px;color:#2B2926;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px 0 0;align-self:center}
+.pm-hm .n:hover,.pm-hm .n.on{color:#7E302B;font-weight:700}
+.pm-hm .c{height:26px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;font-size:10.5px;background-clip:padding-box;outline:1px solid #F2EFE6}
+.pm-pasos{list-style:none;display:flex;gap:8px;padding:0;margin:8px 0 4px;flex-wrap:wrap}
+.pm-pasos li{flex:1 1 160px;display:flex;align-items:center;gap:8px;font-size:12px;color:#2B2926;background:#F4F2EA;border-radius:8px;padding:7px 10px;line-height:1.3}
+.pm-pasos li>b:first-child{flex:0 0 22px;height:22px;border-radius:50%;background:#2B2926;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px}
+.pm-cuadre{margin-top:8px}
+.pm-cq{display:flex;gap:14px;align-items:center;background:#EEF3F1;border-radius:10px;padding:12px 14px}
+.pm-cq b.num{font-size:34px;line-height:1;color:#2F6657;font-weight:700}
+.pm-cq span{font-size:12.5px;line-height:1.4;color:#2B2926}
+.pm-cuadre>p{font-size:12.5px;line-height:1.45;margin:10px 0}
+.pm-cq2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.pm-cq2>div{background:#F4F2EA;border-radius:8px;padding:8px 10px}
+.pm-cq2 b.num{display:block;font-size:18px;font-weight:700}
+.pm-cq2 span{font-size:10.5px;color:#5C5952;line-height:1.3;display:block}
+/* Regulación: plazos dentro de Trámites */
+.rg-pzb{margin-top:12px}
+.pzb-top{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1.4fr) auto;gap:22px;align-items:center}
+@media (max-width:1100px){ .pzb-top{grid-template-columns:minmax(0,1fr)} }
+.pzb-k{display:flex;align-items:center;gap:6px;font:600 15px/1.2 'Barlow Condensed','Barlow',sans-serif;color:#2B2926;margin-bottom:6px}
+.pzb-big{display:flex;align-items:center;gap:12px}
+.pzb-big b.num{font-size:44px;line-height:1;font-weight:700}
+.pzb-big span{font-size:12.5px;line-height:1.35;color:#2B2926}
+.pzb-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:#EEEBE2;margin:10px 0 6px}
+.pzb-bar i{display:block;height:100%}.pzb-bar i+i{border-left:2px solid #FCFBF7}
+.pzb-l{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#5C5952}
+.pzb-l .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.pzb-sem{color:var(--c);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px}
+.pzb-s{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pzb-s>div{background:#F4F2EA;border-radius:10px;padding:10px 12px}
+.pzb-s>div.r{background:#F7E9E7}
+.pzb-s b.num{display:block;font-size:24px;font-weight:700;line-height:1.1}
+.pzb-s>div.r b.num{color:#7E302B}
+.pzb-s span{font-size:11px;color:#5C5952;line-height:1.3;display:block;margin-top:2px}
+.pzb-b{all:unset;cursor:pointer;background:#2B2926;color:#F4F2EA;border-radius:10px;padding:10px 14px;font-weight:600;font-size:13px;text-align:center;line-height:1.25}
+.pzb-b small{display:block;font-weight:400;font-size:10.5px;opacity:.75}
+.pzb-b:hover,.pzb-b.on{background:#7E302B}
+.pzb-n{font-size:11px;color:#7A766C;margin:8px 0 0}
+.pzb-a{margin:14px -16px -4px}
+.pzb-a .rg-g{margin-top:12px}
+.pzt-r{display:grid;grid-template-columns:minmax(120px,1.25fr) minmax(0,1.6fr) 52px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid #EEEBE2}
+.pzt-n{font-size:12px;color:#2B2926;line-height:1.2}.pzt-n small{display:block;font-size:10.5px;color:#7A766C}
+.pzt-t{position:relative;height:18px;background:linear-gradient(#EEEBE2,#EEEBE2) 0 50%/100% 2px no-repeat}
+.pzt-t i{position:absolute;top:50%;transform:translateY(-50%)}
+.pzt-pl{width:3px;height:18px;background:#2B2926;border-radius:1px;margin-left:-1.5px}
+.pzt-ln{height:6px;border-radius:3px}
+.pzt-d{width:12px;height:12px;border-radius:50%;margin-left:-6px;border:2px solid #FCFBF7;box-sizing:content-box}
+.pzt-r b.num{text-align:right;font-size:14px}
+.pzt-ley{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:#5C5952;margin-top:8px}
+.pzt-ley i{position:static;display:inline-block;vertical-align:-2px;margin-right:5px;transform:none}
+.pzt-ley .pzt-pl{height:12px;margin-left:0}.pzt-ley .pzt-d{margin-left:0;width:8px;height:8px}
+.pzh{display:grid;gap:2px;font-size:10.5px;align-items:center}
+.pzh .h{text-align:center;color:#5C5952;font-size:10px}
+.pzh .n{all:unset;cursor:pointer;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:6px}
+.pzh .n:hover,.pzh .n.on{color:#7E302B;font-weight:700}
+.pzh .c{height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.pzh b.num{text-align:right;font-size:12px}
+/* Cuadrícula de fondo («cuadritos») igual a «Trámites concluidos» en todas las tendencias y en Pregunta a INAMI */
+.cuadros,[data-ch]{background-image:linear-gradient(rgba(226,222,208,.45) 1px,transparent 1px),linear-gradient(90deg,rgba(226,222,208,.45) 1px,transparent 1px);background-size:22px 22px;border-radius:8px}
+@media (max-width:600px){ .pm #pm-mp,.pm #pm-cm-mapa{min-height:300px!important} .pm #pm-gh-mapa{min-height:340px!important} .pzb-s{grid-template-columns:minmax(0,1fr)} .pzb-big b.num{font-size:36px} .pzt-r{grid-template-columns:minmax(0,1fr) 52px} .pzt-t{grid-column:1/3;grid-row:2} .pzh{overflow-x:auto} }

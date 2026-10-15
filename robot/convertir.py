@@ -136,9 +136,9 @@ NOMBRES = {"ing": "Ingresos", "seg": "Segunda revisión", "tram": "Trámites", "
            "docs_nat": "Documentos vigentes por país", "docs_cruce": "Documentos vigentes estado × país",
            "rep_com": "Repatriados en vuelos comerciales", "rep_gh": "Repatriados desde Guatemala y Honduras"}
 # Bases reconocidas que todavía no entran al tablero (el área está corrigiendo el archivo)
-# Bases que no entran al Pulso: se leen en robot/proteccion.py y se muestran en su propia pestaña (datos independientes, no se suman a Repatriados)
-PENDIENTES = {"rep_com": "Dato independiente: se muestra en Protección al migrante › Vuelos comerciales; no se suma a Repatriados.",
-              "rep_gh": "Dato independiente: mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras; no se suma a Repatriados."}
+# Bases que no entran al Pulso: se leen en robot/proteccion.py y se muestran en su propia pestaña (vuelos comerciales se suma aparte; Guatemala-Honduras ya está en Repatriados como Ciudad Hidalgo)
+PENDIENTES = {"rep_com": "Se muestra en Protección al migrante › Vuelos comerciales. No está en el archivo de Repatriados: se suma aparte.",
+              "rep_gh": "Mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras. Coincide día por día con el punto Ciudad Hidalgo de Repatriados: es el mismo flujo y no se suma otra vez."}
 INDEPENDIENTES = {"rep_com", "rep_gh"}
 
 

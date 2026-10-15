@@ -162,7 +162,9 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 
 ## Pendientes
 
-- DGPMV: vuelos comerciales y Guatemala-Honduras ya tienen su pestaña (datos independientes, no se suman a Repatriados).
+- DGPMV: vuelos comerciales y Guatemala-Honduras tienen su pestaña. Vuelos comerciales no está en Repatriados (se suma aparte). Guatemala-Honduras coincide día por día (98%) con el punto Ciudad Hidalgo de Repatriados: es el mismo flujo, no se suma; la pestaña muestra el cruce. Confirmar con el área.
+- Regulación: el análisis de plazos vive dentro de Trámites (banda «¿El INM resuelve a tiempo?» que se abre); ya no hay pestaña Plazos.
+- Pantalla completa automática: agregar «?completa» a la dirección; el primer toque la activa (el navegador no permite entrar sin un gesto).
 - Analizar: encuentros CBP completos y el producto «Mesa de Seguridad» (viñetas + gráficas).
 - Mover los Excel de DATA a un repositorio privado.
 - DGRAM: confirmar por qué los trámites con tarjeta marcan «Sin expedición» y los 47,617 sin documento; el reparto por documento de oct–dic 2024 cambió respecto a la base anterior (oficios S.R.E. 8,019 → 10,790).

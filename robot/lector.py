@@ -218,6 +218,13 @@ def documentos_tramite(t):
         X.loc[vacio & con, SIN_TIPO] = 1
         if sin:
             X.loc[vacio & ~con, sin] = 1
+    res = next((c for c in t.columns if c.startswith("TIPO DE RESOLUCION")), None)
+    if res is not None:                                       # concluidos que la base aún marca «en proceso» o «cancelado»
+        r = t[res].map(norm)
+        ep, ca = r.str.startswith("EN PROCESO"), r.str.startswith("CANCELAD")
+        if ep.any() or ca.any():
+            avisar("Trámites", f"Entre los trámites concluidos, «Tipo de resolución» dice {int(ep.sum()):,} «En proceso» y {int(ca.sum()):,} «Cancelados»; "
+                   f"{int((ep & con).sum()):,} de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.")
     mult = X.sum(axis=1) > 1
     if mult.any():
         avisar("Trámites", f"{int(mult.sum()):,} trámites marcan más de un documento; cuentan una vez por documento.")

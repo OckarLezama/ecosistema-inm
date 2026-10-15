@@ -2207,6 +2207,10 @@ function iniciar(){
   ayudaHerramientas();
   document.addEventListener('keydown', e => { if (e.key==='Escape' && SALA.on && !(window.IANAMI_CONSULTA && document.getElementById('cq') && !document.getElementById('cq').hidden)){ const p = $('sl-pop'); if (p && !p.hidden) p.hidden = true; else cerrarSala(); } });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && SALA.on) cerrarSala(); });
+  // «?completa» en la dirección (pantallas táctiles de sala): el navegador no deja entrar solo a pantalla completa,
+  // así que el primer toque, clic o tecla la activa; si alguien sale, el siguiente toque vuelve a entrar
+  if (/[?&#]completa\b/i.test(location.search+location.hash)){ const ir = () => { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); };
+    addEventListener('pointerdown', ir, true); addEventListener('keydown', ir, true); }
   $('tgraf').addEventListener('pointermove', tipTiempo); $('tgraf').addEventListener('pointerleave', () => tipTiempo(null)); $('tgraf').addEventListener('pointerup', e => { if (e.pointerType==='touch') setTimeout(() => tipTiempo(null), 1800); });
   const tg = $('tgraf'); let arr = false, pend = 0;
   const arrastre = e => { const d = diaDesdeX(e); cancelAnimationFrame(pend); pend = requestAnimationFrame(() => fijarDia(d)); };

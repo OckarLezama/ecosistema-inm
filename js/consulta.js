@@ -235,12 +235,22 @@ function preparar(txt){
 }
 // Palabras clave de documentos (DGRAM) → texto que contiene el nombre del documento
 const DOCK = [['humanitari','Humanitario'],['regional','Regional'],['fronteriz','Fronterizo'],['permanente','Permanente'],['estudiant','Estudiante'],['temporal','Temporal'],['adopcion','Adopción'],['empleador','empleador']];
+let VLARGOS = null;
+function valoresLargos(){ if (VLARGOS) return VLARGOS; const S = new Set();
+  Object.values(BASES).forEach(B => Object.values(B.dims).forEach(D => D.vals.forEach(v => { [norm(v), norm(String(v).replace(/\s*\([^)]*\)/g, ''))].forEach(n => { if (n.indexOf(' ')>0 && n.length>=6) S.add(n); }); })));
+  // los que también son nombre de una parte («retorno asistido», «deportación») se dejan libres para que la parte se reconozca
+  IND.forEach(x => (x.partes || []).forEach(q => [q.nom].concat(q.sin || []).forEach(t => S.delete(norm(t)))));
+  return VLARGOS = [...S].sort((a,b) => b.length-a.length); }
 function entender(txt){
   // nombre completo de un indicador (lo escribe el autocompletado): se reconoce antes de aplicar sinónimos, que lo deformarían
   // («ingresos al país (extranjeros y mexicanos)» → «internaciones al nacionalidad mexicanos»). Solo nombres de dos palabras o más.
   const crudo = ' '+norm(txt)+' '; let fijo = null;
   IND.filter(x => norm(x.nom).indexOf(' ')>0).sort((a,b) => norm(b.nom).length-norm(a.nom).length).some(x => { const n = ' '+norm(x.nom)+' ', i = crudo.indexOf(n); if (i<0) return false; fijo = x; txt = crudo.slice(0, i)+' '+crudo.slice(i+n.length); return true; });
-  const pre = preparar(txt); let t = pre.t; const usado = [], avisos = [], q = nuevaQ(), pos = {};
+  // nombres de lugares y países de varias palabras («países bajos», «puente internacional ojinaga»): se protegen antes de aplicar
+  // sinónimos y correcciones, que los deformarían, y se devuelven tal cual después
+  const ALLV = valoresLargos(); let txt2 = ' '+norm(txt)+' '; ALLV.forEach((n,k) => { if (txt2.indexOf(' '+n+' ')>=0) txt2 = txt2.split(' '+n+' ').join(' qv'+k+'q '); });
+  const pre = preparar(txt2); let t = pre.t;    // los nombres protegidos se devuelven antes de leer los filtros (paso 4)
+  const usado = [], avisos = [], q = nuevaQ(), pos = {};
   const toma = w => { const i = t.indexOf(' '+w+' '); if (i<0) return false; usado.push(w); t = t.slice(0,i)+' '+'_'.repeat(w.length)+' '+t.slice(i+w.length+2); return true; };
   const tomaRaiz = r => { const m = t.match(new RegExp(' ('+r+'[a-zñ]*)')); if (!m) return false; return toma(m[1]); };
   const tomaTodo = r => { let k = 0; while (tomaRaiz(r)) k++; return k>0; };
@@ -265,7 +275,10 @@ function entender(txt){
   P.slice().sort((a,b) => Math.max(...b.sin.map(x => x.length))-Math.max(...a.sin.map(x => x.length))).forEach(p => { if (q.partes.indexOf(p.k)<0 && p.sin.some(sx => tomaRaiz(sx))){ q.partes.push(p.k); p.sin.forEach(tomaTodo); } });
   ind.sin.forEach(tomaTodo);
   // 4. valores de filtro (nombres de nacionalidades, estados, puntos…), el más largo primero; se guardan en el orden del texto
-  const vals = []; Object.keys(B.dims).forEach(dim => B.dims[dim].vals.forEach((v,i) => { const n = norm(v); if (n.length>=4) vals.push([n, dim, i]); }));
+  t = t.replace(/qv(\d+)q/g, (m,k) => ALLV[+k]);
+  const vals = []; Object.keys(B.dims).forEach(dim => B.dims[dim].vals.forEach((v,i) => { const n = norm(v); if (n.length>=4) vals.push([n, dim, i]);
+    const sinPar = norm(String(v).replace(/\s*\([^)]*\)/g, '')); if (sinPar.length>=4 && sinPar!==n) vals.push([sinPar, dim, i]);          // «Tulum (vuelos PRIM)» también como «tulum»
+    const sinPre = norm(String(v).replace(/^(A\.\s*I\.|Aeropuerto Internacional( de)?|Puente Internacional|Garita|Punto de Internaci[oó]n|OR|O\.R\.|SRF|RL)\s+/i, '')); if (sinPre.length>=4 && sinPre!==n && sinPre!==sinPar) vals.push([sinPre, dim, i]); }));
   vals.push(['eeuu','n',B.dims.n ? B.dims.n.vals.indexOf('EE. UU.') : -1], ['ee uu','n',B.dims.n ? B.dims.n.vals.indexOf('EE. UU.') : -1], ['cdmx','e',B.dims.e ? B.dims.e.vals.indexOf('Ciudad de México') : -1]);
   ['n','e','p'].forEach(dim => { if (!B.dims[dim]) return; Object.keys(VOC[dim] || {}).forEach(a => { const i = B.dims[dim].vals.indexOf(VOC[dim][a]); if (i>=0 && a.length>=2 && !VACIAS.has(a) && ['sin','son','ver','col','mor'].indexOf(a)<0) vals.push([a, dim, i]); }); });
   vals.filter(v => v[2]>=0).sort((a,b) => b[0].length-a[0].length).forEach(([n,dim,i]) => { const at = t.indexOf(' '+n+' '); if (at>=0 && toma(n)) filtro(dim, i, at); });
@@ -879,17 +892,24 @@ function sugerir(){
   const v = $('cq-q').value, i = v.lastIndexOf(' '), w = norm(v.slice(i+1)), box = $('cq-sug');
   if (w.length<2){ box.hidden = true; return; }
   const c = [], ya = new Set(), mete = (txt, tipo) => { const k = norm(txt); if (ya.has(k)) return; ya.add(k); c.push([txt, tipo, k]); };
-  IND.forEach(x => mete(x.nom, 'qué ver')); IND.forEach(x => (x.partes || []).forEach(p => mete(minus(p.nom), 'parte de '+x.nom)));
+  mete('ingresos de extranjeros', 'qué ver'); IND.forEach(x => mete(x.nom, 'qué ver')); IND.forEach(x => (x.partes || []).forEach(p => mete(minus(p.nom), 'parte de '+x.nom)));
   ['nacionalidad','O.R.','punto','estación','mes','semana'].forEach(d => mete('por '+d, 'desglose'));
   MES.forEach(m => mete(m, 'periodo'));
   Object.values(BASES).forEach(B => Object.keys(B.dims).forEach(d => { if (['n','e','p','est','doc','cond','mod','via'].indexOf(d)>=0) B.dims[d].vals.forEach(x => mete(x, B.dims[d].nom.toLowerCase())); }));
   Object.keys(GENT).forEach(g => mete(GENT[g], 'nacionalidad'));
-  let l = c.filter(x => x[2].startsWith(w) || x[2].split(' ').some(p => p.startsWith(w))).sort((a,b) => (a[2].startsWith(w) ? 0 : 1)-(b[2].startsWith(w) ? 0 : 1) || a[0].length-b[0].length).slice(0,7);
+  // primero lo que coincide con las últimas 2 o 3 palabras («quintana ro» → Quintana Roo), luego con la última
+  const pal = norm(v).split(' '); let l = [];
+  for (let k=Math.min(3, pal.length); k>=2 && !l.length; k--){ const cola = pal.slice(-k).join(' '); l = c.filter(x => x[2].startsWith(cola) || x[2].indexOf(' '+cola)>=0); }
+  if (!l.length) l = c.filter(x => x[2].startsWith(w) || x[2].split(' ').some(p => p.startsWith(w)));
+  l = l.sort((a,b) => (a[2].startsWith(w) ? 0 : 1)-(b[2].startsWith(w) ? 0 : 1) || a[0].length-b[0].length).slice(0,7);
   if (!l.length && w.length>=4) l = c.filter(x => x[2].split(' ').some(p => distancia(w, p.slice(0, w.length), 1)<=1)).slice(0,5);
   SUG = l; sAct = 0; if (!l.length){ box.hidden = true; return; }
   box.innerHTML = l.map((x,j) => '<button type="button" data-sug="'+j+'" class="'+(j===0 ? 'act' : '')+'"><span>'+esc(x[0])+'</span><small>'+esc(x[1])+'</small></button>').join(''); box.hidden = false;
 }
-function usarSug(j){ const x = SUG[j]; if (!x) return; const inp = $('cq-q'), v = inp.value, i = v.lastIndexOf(' '); inp.value = v.slice(0, i+1)+x[0].toLowerCase()+' '; $('cq-sug').hidden = true; inp.focus(); }
+// La sugerencia reemplaza lo que ya se escribió de ella, aunque sean varias palabras («ingreso quintana ro» + «Quintana Roo» → «ingreso quintana roo»)
+function usarSug(j){ const x = SUG[j]; if (!x) return; const inp = $('cq-q'), pal = inp.value.replace(/\s+$/,'').split(/\s+/), sug = norm(x[0]);
+  let k = 1; for (let n=Math.min(pal.length, 6); n>=1; n--){ const cola = norm(pal.slice(-n).join(' ')); if (cola && (sug.startsWith(cola) || sug.split(' ').some((w,i,a) => a.slice(i).join(' ').startsWith(cola)))){ k = n; break; } }
+  inp.value = pal.slice(0, pal.length-k).concat([x[0].toLowerCase()]).join(' ')+' '; $('cq-sug').hidden = true; inp.focus(); }
 function teclaSug(e){ const box = $('cq-sug'); if (box.hidden || !SUG.length) return;
   if (e.key==='ArrowDown' || e.key==='ArrowUp'){ sAct = (sAct+(e.key==='ArrowDown' ? 1 : -1)+SUG.length)%SUG.length; box.querySelectorAll('[data-sug]').forEach((b,j) => b.classList.toggle('act', j===sAct)); e.preventDefault(); }
   else if (e.key==='Tab' || e.key==='Enter'){ const w = norm($('cq-q').value.split(' ').pop()); if (e.key==='Enter' && (w.length<2 || SUG[sAct][2]===w)){ box.hidden = true; return; } e.preventDefault(); usarSug(sAct); }

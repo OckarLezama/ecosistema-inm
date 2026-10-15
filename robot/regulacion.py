@@ -41,6 +41,8 @@ ESTADO = {norm(e): e for e in C.ESTADOS}
 
 
 def nacionalidad(x):
+    if pd.isna(x) or norm(x) in ("", "NAN", "NONE"):
+        return "Sin dato"
     n = ALIAS.get(norm(x), norm(x))
     return CORTO.get(n) or str(x).strip().title()
 
@@ -54,7 +56,7 @@ DOCUMENTOS = [
     ("TARJETA DE VISITANTE REGIONAL", "Vis. Regional"),
     ("TARJETA DE VISITANTE TRABAJADOR FRONTERIZO", "Vis. Trab. Fronterizo"),
     ("TARJETA DE VISITANTE CON FINES DE ADOPCION", "Vis. Adopción"),
-    ("TARJETA SIN TIPO REGISTRADO", "Tarjeta sin tipo"),    # terminó con tarjeta, pero la base no dice cuál
+    ("TARJETA SIN TIPO REGISTRADO", "Tarjeta sin tipo registrado"),    # terminó con tarjeta, pero la base no dice cuál
     ("CONSTANCIA DE INSCRIPCION DE EMPLEADOR", "Constancia de empleador"),
     ("OFICIO DE AUTORIZACION S.R.E.", "Oficio S.R.E."),
     ("OFICIO DE NOTIFICACION DE CAMBIO", "Oficio de cambio"),

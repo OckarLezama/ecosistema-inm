@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-14 21:48
+Generado: 2026-10-14 23:54
 Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
 
 == Ingresos  ·  DGCVM INGRESOS.xlsx  ·  cargado 2026-10-13
@@ -24,6 +24,7 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    · Trae 358,011 renglones anteriores al 2024-10-01 (desde 2024-01-02); no se usan: el tablero empieza el 1 oct 2024.
    · 592,952 trámites con tarjeta marcan también «Sin expedición de documento»; se cuentan solo con su tarjeta.
    · 47,617 trámites no marcan ningún documento: 44,647 terminaron con tarjeta (se cuentan como «Tarjeta sin tipo registrado») y 2,970 sin tarjeta (se cuentan como «Sin expedición»).
+   · Entre los trámites concluidos, «Tipo de resolución» dice 27,038 «En proceso» y 19,475 «Cancelados»; 23,927 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
 
 == Rescates  ·  DGCOR RESCATES.xlsx  ·  cargado 2026-10-13
    53,591 renglones · total 900,882 · del 2024-10-01 al 2026-10-12
@@ -82,8 +83,8 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    22 caravanas · del 2024-10-05 al 2026-09-22
    · Lugares sin coordenadas en el catálogo (no se dibuja su recorrido): Corazones, Oaxaca
 
-== Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES.xlsx  ·  Dato independiente: se muestra en Protección al migrante › Vuelos comerciales; no se suma a Repatriados.
+== Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES.xlsx  ·  Se muestra en Protección al migrante › Vuelos comerciales. No está en el archivo de Repatriados: se suma aparte.
 
-== Repatriados desde Guatemala y Honduras  ·  DGPMV GUATEMALA-HONDURAS.xlsx  ·  Dato independiente: mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras; no se suma a Repatriados.
+== Repatriados desde Guatemala y Honduras  ·  DGPMV GUATEMALA-HONDURAS.xlsx  ·  Mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras. Coincide día por día con el punto Ciudad Hidalgo de Repatriados: es el mismo flujo y no se suma otra vez.
 
 Archivos que no se reconocieron: DGRAM VALIDACION DOCUMENTOS REGISTRO CIVIL.xlsx
