@@ -68,6 +68,44 @@ def leer(origen):
     sys.exit("No se encontró el archivo de repatriados (columnas " + ", ".join(sorted(pide)) + ")")
 
 
+def otros(origen, ini):
+    """Vuelos comerciales y Guatemala-Honduras: datos independientes (no se suman a Repatriados). Días contados desde el
+    inicio de la base de repatriados, para usar el mismo calendario en la página."""
+    import re
+    out = {}
+    for k, base, pide, sin in (("com", "Repatriados en vuelos comerciales", {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"}, {"PAIS"}),
+                               ("gh", "Repatriados desde Guatemala y Honduras", {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION", "PAIS"}, set())):
+        t, archivos = lector.leer_por_columnas(origen, pide, base, sin)
+        if t is None or not len(t):
+            continue
+        t = t[t["DIA"].notna()].copy()
+        cols = {"MEXICANOS REPATRIADOS": "v", "ADULTOS": "ad", "MENORES": "me", "NNA ACOMPANADOS": "ac", "NNA NO ACOMPANADOS": "na"}
+        for c in cols:
+            t[c] = pd.to_numeric(t[c], errors="coerce").fillna(0).astype(int) if c in t.columns else 0
+        E, P, PA = Dic(), Dic(), Dic()
+        quita = lambda x: re.sub(r"^(OFICINA DE REPRESENTACION EN|O\.?R\.?)\s+", "", norm(x))
+        t["e"] = t["O.R."].map(lambda x: estado(quita(x))).map(E)
+        t["p"] = t["PUNTO INTERNACION"].map(lambda x: re.sub(r"^A\.\s*I\.?\s*(de\s+)?", "A. I. ", " ".join(str(x).split()), flags=re.I)).map(P)
+        t["pa"] = t["PAIS"].map(lambda x: " ".join(str(x).split()).title()).map(PA) if "PAIS" in t.columns else 0
+        t["d"] = (t["DIA"] - ini).dt.days.astype(int)
+        antes = int((t["d"] < 0).sum())
+        if antes:
+            lector.avisar(base, f"{antes} registros antes del {ini.date()} (no se usan).")
+            t = t[t["d"] >= 0]
+        m1 = (t["ADULTOS"] + t["MENORES"]) != t["MEXICANOS REPATRIADOS"]
+        if m1.any():
+            lector.avisar(base, f"{int(m1.sum())} registros donde adultos + menores no suman el total.")
+        m2 = (t["NNA ACOMPANADOS"] + t["NNA NO ACOMPANADOS"]) != t["MENORES"]
+        if m2.any():
+            lector.avisar(base, f"{int(m2.sum())} registros donde NNA acompañados + no acompañados no suman los menores.")
+        tab = {"d": t["d"].tolist(), "e": t["e"].tolist(), "p": t["p"].tolist(), "pa": t["pa"].tolist() if "PAIS" in t.columns else [0] * len(t)}
+        for c, kk in cols.items():
+            tab[kk] = t[c].tolist()
+        out[k] = {"archivo": ", ".join(archivos), "d0": int(t["d"].min()), "d1": int(t["d"].max()), "dic": {"e": E.l, "p": P.l, "pa": PA.l}, "t": tab}
+        print(f"{base}: {len(t)} registros, {int(t['MEXICANOS REPATRIADOS'].sum()):,} personas, {t['DIA'].min():%d/%m/%Y} – {t['DIA'].max():%d/%m/%Y}")
+    return out
+
+
 # ==== [3] TABLA ===================================================
 def main():
     ap = argparse.ArgumentParser()
@@ -111,7 +149,7 @@ def main():
 
     # ==== [5] SALIDA ==============================================
     out = {"inicio": ini.strftime("%Y-%m-%d"), "dias": dias, "archivo": archivo,
-           "dic": {"e": E.l, "p": P.l}, "rep": tabla, "calidad": calidad}
+           "dic": {"e": E.l, "p": P.l}, "rep": tabla, "calidad": calidad, "otros": otros(a.origen, ini)}
     os.makedirs(a.destino, exist_ok=True)
     with open(os.path.join(a.destino, "proteccion.js"), "w", encoding="utf-8") as f:
         f.write("window.IANAMI_PMV=" + json.dumps(out, ensure_ascii=False, separators=(",", ":")) + ";\n")

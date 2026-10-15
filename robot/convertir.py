@@ -136,8 +136,10 @@ NOMBRES = {"ing": "Ingresos", "seg": "Segunda revisión", "tram": "Trámites", "
            "docs_nat": "Documentos vigentes por país", "docs_cruce": "Documentos vigentes estado × país",
            "rep_com": "Repatriados en vuelos comerciales", "rep_gh": "Repatriados desde Guatemala y Honduras"}
 # Bases reconocidas que todavía no entran al tablero (el área está corrigiendo el archivo)
-PENDIENTES = {"rep_com": "Fechas ya corregidas (13 may – 28 sep 2026). Pendiente: decidir cómo se integra con repatriados (¿son de EE. UU.? ¿se suman al total?). No se usa todavía.",
-              "rep_gh": "Pendiente: confirmar qué significa «PAÍS» y si no hay menores. No se usa todavía."}
+# Bases que no entran al Pulso: se leen en robot/proteccion.py y se muestran en su propia pestaña (datos independientes, no se suman a Repatriados)
+PENDIENTES = {"rep_com": "Dato independiente: se muestra en Protección al migrante › Vuelos comerciales; no se suma a Repatriados.",
+              "rep_gh": "Dato independiente: mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras; no se suma a Repatriados."}
+INDEPENDIENTES = {"rep_com", "rep_gh"}
 
 
 # Una hoja es base si sus encabezados se reconocen (las hojas de apoyo, tablas dinámicas o formatos largos se saltan)
@@ -746,7 +748,7 @@ def main():
         if k in PENDIENTES:
             if k in archivos:
                 lineas.append(f"== {NOMBRES[k]}  ·  {archivos[k]}  ·  {PENDIENTES[k]}")
-                salida["bases"].append({"k": k, "n": NOMBRES[k], "archivo": archivos[k], "cargado": cargas[k], "pendiente": True, "obs": lector.avisos_de(NOMBRES[k]), "avisos": 1})
+                salida["bases"].append({"k": k, "n": NOMBRES[k], "archivo": archivos[k], "cargado": cargas[k], "pendiente": k not in INDEPENDIENTES, "obs": lector.avisos_de(NOMBRES[k]), "avisos": 1})
                 lineas.append("")
             continue
         info = {"k": k, "n": NOMBRES[k], "archivo": archivos[k], "cargado": cargas[k]}

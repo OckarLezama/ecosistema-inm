@@ -284,12 +284,22 @@ const RESPALDO = { 'lib/html2canvas.min.js':'https://cdnjs.cloudflare.com/ajax/l
 const cargarJS = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok;
   s.onerror = () => { s.remove(); if (!RESPALDO[u]) return mal(); const r = document.createElement('script'); r.src = RESPALDO[u]; r.onload = ok; r.onerror = mal; document.head.appendChild(r); }; document.head.appendChild(s); });
 function tituloVista(){ if (S.vista==='pulso') return 'Pulso'+(nombreFiltro() ? ' · '+nombreFiltro() : '');
-  const h = document.querySelector('#vista-otra h1'), t = document.querySelector('.rg-vistas .on'); return (h ? h.textContent : 'IA-NAMI')+(t ? ' · '+t.textContent : ''); }
+  const h = document.querySelector('#vista-otra h1'), t = document.querySelector('.rg-vistas .on'); return (h ? h.textContent.replace('Pantalla completa','').trim() : 'IA-NAMI')+(t ? ' · '+t.textContent : ''); }
+// html2canvas no entiende colores modernos (color-mix, color(srgb …)): en la copia que se dibuja se cambian por rgb
+const COLOR_PROPS = ['color','backgroundColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor','outlineColor','textDecorationColor','fill','stroke','boxShadow','backgroundImage'];
+let cvColor = null;
+function aRGB(v){ if (!cvColor){ cvColor = document.createElement('canvas').getContext('2d', { willReadFrequently:true }); cvColor.canvas.width = cvColor.canvas.height = 1; }
+  cvColor.clearRect(0,0,1,1); cvColor.fillStyle = '#000'; cvColor.fillStyle = v; cvColor.fillRect(0,0,1,1); const d = cvColor.getImageData(0,0,1,1).data; return 'rgba('+d[0]+','+d[1]+','+d[2]+','+(d[3]/255).toFixed(3)+')'; }
+function colorFijo(doc){ const win = doc.defaultView || window;
+  doc.querySelectorAll('*').forEach(el => { const cs = win.getComputedStyle(el);
+    COLOR_PROPS.forEach(k => { const v = cs[k]; if (!v || (v.indexOf('color(')<0 && v.indexOf('color-mix(')<0 && v.indexOf('oklch(')<0 && v.indexOf('lab(')<0)) return;
+      if (k==='backgroundImage' || k==='boxShadow') el.style[k] = 'none'; else el.style[k] = aRGB(v); }); }); }
+window.IANAMI_COLORFIJO = colorFijo;
 async function hacerPDF(){
   await Promise.all(LIBS_PDF.map(cargarJS));
   const zona = S.vista==='pulso' ? $('vista-pulso') : $('vista-otra'), tit = 'IA-NAMI · '+tituloVista()+' · '+(S.vista==='pulso' ? $('rango').textContent : ((document.querySelector('#vista-otra .rango b') || {}).textContent || ''));
   const lienzo = await html2canvas(zona, { scale:1.6, backgroundColor:'#F4F2EA', useCORS:true, ignoreElements:el => el.id==='rg-pop' || el.id==='kpi-tip' || (el.classList && el.classList.contains('res')),
-    onclone:doc => { const st = doc.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; doc.head.appendChild(st); } });
+    onclone:doc => { const st = doc.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; doc.head.appendChild(st); colorFijo(doc); } });
   const { jsPDF } = window.jspdf, pdf = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' }), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), m = 22;
   const esc2 = (W-2*m)/lienzo.width, alto = Math.floor((H-2*m-14)/esc2);
   for (let y=0, p=0; y<lienzo.height; y+=alto, p++){
@@ -300,20 +310,29 @@ async function hacerPDF(){
   }
   return { pdf:pdf, nombre:('IA-NAMI_'+tituloVista()).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w]+/g,'_').replace(/_+$/,'')+'.pdf', tit:tit };
 }
+// WhatsApp: el celular y la tableta solo abren su menú de compartir en el instante del toque, y la computadora bloquea ventanas
+// que no salen del clic. Por eso: en computadora WhatsApp Web se abre en el clic y el PDF se descarga al estar listo;
+// en celular y tableta el PDF se prepara y un segundo toque («Compartir PDF») abre el menú del teléfono con el archivo.
+const TACTIL_COMP = () => matchMedia('(pointer:coarse)').matches && !!(navigator.canShare && navigator.share);
+let PDF_LISTO = null;
 async function compartir(modo){
-  const b = $('b-comp'), txt = b.innerHTML; $('menu-comp').hidden = true; b.disabled = true; b.textContent = 'Generando PDF…';
+  const b = $('b-comp'), txt = b.innerHTML, menu = modo==='wa' && TACTIL_COMP(); $('menu-comp').hidden = true;
+  if (modo==='wa' && !menu) window.open('https://wa.me/?text='+encodeURIComponent('IA-NAMI · '+tituloVista()+' — te comparto el PDF (adjúntalo desde tus descargas).'), '_blank', 'noopener');
+  b.disabled = true; b.textContent = 'Generando PDF…';
   try {
     const r = await hacerPDF();
-    if (modo==='wa'){ const f = new File([r.pdf.output('blob')], r.nombre, { type:'application/pdf' });
-      if (navigator.canShare && navigator.canShare({ files:[f] })) await navigator.share({ files:[f], title:r.tit, text:r.tit });
-      else { r.pdf.save(r.nombre); window.open('https://wa.me/?text='+encodeURIComponent(r.tit+' — te comparto el PDF (adjúntalo desde tus descargas).'), '_blank', 'noopener'); } }
-    else r.pdf.save(r.nombre);
-  } catch (e){ if (!e || e.name!=='AbortError') alertaComp('No se pudo generar el PDF. Revisa tu conexión e intenta de nuevo.'); }
+    if (menu){ PDF_LISTO = { f:new File([r.pdf.output('blob')], r.nombre, { type:'application/pdf' }), tit:r.tit };
+      const m = $('menu-comp'); m.innerHTML = '<button data-comp="enviar"><b>Compartir PDF</b><span>toca para elegir WhatsApp u otra app</span></button>'; m.hidden = false; }
+    else { r.pdf.save(r.nombre); if (modo==='wa') alertaComp('PDF descargado: adjúntalo en el chat de WhatsApp que se abrió.'); }
+  } catch (e){ alertaComp('No se pudo generar el PDF. Intenta de nuevo.'); }
   b.disabled = false; b.innerHTML = txt;
 }
+function enviarPDF(){ const x = PDF_LISTO; $('menu-comp').hidden = true; if (!x) return;
+  if (!navigator.canShare({ files:[x.f] })){ const u = URL.createObjectURL(x.f), a = document.createElement('a'); a.href = u; a.download = x.f.name; a.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); return; }
+  navigator.share({ files:[x.f], title:x.tit }).catch(e => { if (!e || e.name!=='AbortError') alertaComp('No se pudo abrir el menú de compartir.'); }); }
 function alertaComp(m){ const a = $('menu-comp'); a.innerHTML = '<p class="mini" style="padding:8px 10px;margin:0">'+esc(m)+'</p>'; a.hidden = false; setTimeout(() => { a.hidden = true; menuComp(false); }, 3500); }
 function menuComp(abrir){ const m = $('menu-comp'); if (!abrir){ m.hidden = true; return; }
-  m.innerHTML = '<button data-comp="pdf"><b>Descargar PDF</b><span>de lo que estás viendo</span></button><button data-comp="wa"><b>Enviar por WhatsApp</b><span>'+(navigator.canShare ? 'elige el chat al compartir' : 'se descarga el PDF y se abre WhatsApp')+'</span></button>';
+  m.innerHTML = '<button data-comp="pdf"><b>Descargar PDF</b><span>de lo que estás viendo</span></button><button data-comp="wa"><b>Enviar por WhatsApp</b><span>'+(TACTIL_COMP() ? 'se prepara el PDF y eliges el chat' : 'se abre WhatsApp Web y se descarga el PDF')+'</span></button>';
   m.hidden = false; }
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const colG = g => cssv(g==='reg'?'--reg':g==='irr'?'--irr':'--usa');
@@ -1403,7 +1422,7 @@ window.IANAMI_CARGAR = cargarModulo;
 function iniciarConsulta(){
   $('b-consulta').addEventListener('click', () => { cargarModulo('consulta').then(() => { if (window.IANAMI_CONSULTA) window.IANAMI_CONSULTA.abrir(); }, () => {}); });
   $('b-comp').addEventListener('click', e => { e.stopPropagation(); menuComp($('menu-comp').hidden); });
-  $('menu-comp').addEventListener('click', e => { const b = e.target.closest('[data-comp]'); if (b) compartir(b.dataset.comp); });
+  $('menu-comp').addEventListener('click', e => { e.stopPropagation(); const b = e.target.closest('[data-comp]'); if (!b) return; if (b.dataset.comp==='enviar') enviarPDF(); else compartir(b.dataset.comp); });
   document.addEventListener('click', e => { if (!e.target.closest('#menu-comp, #b-comp')) menuComp(false); });
 }
 // Abre un proceso con filtros (los usa «Profundizar en el tablero» de Pregunta a INAMI)

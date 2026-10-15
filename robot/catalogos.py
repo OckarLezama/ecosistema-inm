@@ -118,7 +118,7 @@ ESTADOS = ['Aguascalientes',
  'Zacatecas']
 
 # Formas alternas de escribir un estado
-ALIAS_ESTADO = {
+ALIAS_ESTADO = {'GUERRRERO': 'GUERRERO', 
     'MEXICO': 'ESTADO DE MEXICO',
     'EDO. DE MEXICO': 'ESTADO DE MEXICO',
     'CDMX': 'CIUDAD DE MEXICO',

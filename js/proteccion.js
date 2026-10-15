@@ -400,11 +400,36 @@ function mostrarInfo(b){ let p = $('pm-pop'); if (!p){ p = document.createElemen
   if (!b){ p.hidden = true; popFija = false; return; }
   p.innerHTML = '<button class="rg-pop-x" data-ppopx aria-label="Cerrar">×</button>'+INFO[b.dataset.pinfo]; p.hidden = false; popFija = true;
   const r = b.getBoundingClientRect(), w = Math.min(340, innerWidth-24); p.style.width = w+'px'; p.style.left = Math.max(12, Math.min(innerWidth-w-12, r.left-w/2))+'px'; p.style.top = (r.bottom+8+scrollY)+'px'; p.style.position = 'absolute'; }
-function cuerpo(){ const c = $('cv-ctl'); if (!c) return; c.innerHTML = htmlCtl(); buscador(); pintarRep(); }
+function cuerpo(){ const c = $('cv-ctl'); if (!c) return; document.querySelectorAll('.pm .pm-fuente, .pm .cv-calw').forEach(x => { x.hidden = !!OTROS[Q.vista]; }); if (OTROS[Q.vista]){ pintarOtro(Q.vista); return; } c.innerHTML = htmlCtl(); buscador(); pintarRep(); }
+/* ---- Vuelos comerciales y Guatemala-Honduras: datos independientes (no se suman a Repatriados), con su propio periodo ---- */
+const OTROS = {}; Object.keys(CV.otros || {}).forEach(k => { const o = CV.otros[k]; OTROS[k] = Object.assign({}, o, { T:tabla(o.t) }); });
+const NOM_OTRO = { com:['Vuelos comerciales', 'Mexicanos repatriados desde EE. UU. en vuelos comerciales'], gh:['Guatemala y Honduras', 'Mexicanos que EE. UU. envió a Guatemala u Honduras y que México recibe por la frontera sur'] };
+function pintarOtro(k){
+  const X = OTROS[k], T = X.T, s = c => { let t = 0; for (let i=0;i<T.N;i++) t += T[c][i]; return t; }, V = s('v'), AD = s('ad'), ME = s('me'), AC = s('ac'), NA = s('na');
+  const porK = (col, nk) => { const o = new Array(nk).fill(0); for (let i=0;i<T.N;i++) o[T[col][i]] += T.v[i]; return o.map((v,j) => [j, v]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]); };
+  const dias = new Set(); for (let i=0;i<T.N;i++) dias.add(T.d[i]);
+  $('cv-ctl').innerHTML = '<div class="rango"><b>'+fechaA(X.d0)+' – '+fechaA(X.d1)+'</b><span>periodo propio de la base · dato independiente: no se suma a Repatriados</span></div>';
+  const carta = (nom, sub, v, col, ic, d) => kc({ col:col, ic:ic, nom:nom, sub:sub, val:corto(v), num:v, d:'<span class="kc-d">'+d+'</span>' });
+  const g = (flex, col, eti, c) => '<div class="kg" style="flex:'+flex+' 1 0;--g:'+col+'"><div class="eti">'+eti+'</div><div>'+c+'</div></div>';
+  const lista = (l, nom, col) => '<div>'+l.map(r => '<div class="barra"><span>'+esc(nom[r[0]])+' <small>'+pct(r[1], V)+'%</small></span><span class="b"><i style="width:'+(r[1]/l[0][1]*100).toFixed(1)+'%;background:'+col+'"></i></span><span class="x">'+corto(r[1])+'</span></div>').join('')+'</div>';
+  $('cv-body').innerHTML = '<section class="kpis rg-kpis" id="cv-kpis" data-modo="'+(Q.compacto?'compacto':'tarjetas')+'">'+
+      g(1, '#2B2926', 'Total', carta('Repatriados', dias.size+' días con registro', V, '#2B2926', IC.tot, 'por día con registro: '+miles(V/Math.max(1, dias.size))))+
+      g(1, VERDE, 'Adultos', carta('Adultos', '', AD, VERDE, IC.adulto, pct(AD, V)+'% del total'))+
+      g(3, ROJO, 'Niñas, niños y adolescentes', carta('NNA', '', ME, '#2B2926', IC.nino, pct(ME, V)+'% del total')+carta('Acompañados', '', AC, '#778E88', IC.nino, ME ? pct(AC, ME)+'% de los NNA' : '—')+carta('No acompañados', '', NA, ROJO, IC.nino, ME ? pct(NA, ME)+'% de los NNA' : '—'))+'</section>'+
+    '<div class="rg-g rg-g21"><div class="caja"><h2><span>Por semana</span></h2><span class="q" id="pm-o-q">personas por semana · '+fechaA(X.d0)+' – '+fechaA(X.d1)+'</span><div class="cv-scroll"><div id="pm-o-sem" style="height:320px"></div></div></div>'+
+      '<div class="caja"><h2><span>'+(k==='gh' ? 'Desde qué país' : 'Por aeropuerto de llegada')+'</span></h2>'+(k==='gh' ? lista(porK('pa', X.dic.pa.length), X.dic.pa, OCRE)+'<h4 class="mini" style="margin:12px 0 4px">Punto de llegada</h4>'+lista(porK('p', X.dic.p.length), X.dic.p, VERDE) : lista(porK('p', X.dic.p.length), X.dic.p, VERDE))+
+        '<h4 class="mini" style="margin:12px 0 4px">O.R. que recibe</h4>'+lista(porK('e', X.dic.e.length), X.dic.e, '#778E88')+'</div></div>'+
+    '<p class="mini" style="padding:0 16px">Fuente: '+esc(X.archivo)+' (DGPMV). '+esc(NOM_OTRO[k][1])+'. Es un dato independiente: no se suma a Repatriados.</p>';
+  const w0 = semDe(X.d0), nw = semDe(X.d1)-w0+1, a = new Array(nw).fill(0), m = new Array(nw).fill(0);
+  for (let i=0;i<T.N;i++){ const w = semDe(T.d[i])-w0; a[w] += T.ad[i]; m[w] += T.me[i]; }
+  const l = a.map((x,j) => ({ lab:fecha(Math.max(X.d0, semIni(w0+j))), a:x, n:m[j] }));
+  barrasV('pm-o-sem', l, { q:'pm-o-q', stack:true, ley:true, series:[{ name:'Adultos', k:'a', col:VERDE }, { name:'NNA', k:'n', col:ROJO }],
+    tip:ps => '<b>Semana del '+esc(l[ps[0].dataIndex].lab)+'</b><br>'+ps.filter(p => p.seriesName!=='Total').map(p => p.marker+esc(p.seriesName)+': <b>'+miles(p.value)+'</b>').join('<br>') });
+}
 function montar(cont){
   const pend = 'Pendiente: el área revisa el archivo; se activa en cuanto llegue corregido';
   cont.innerHTML = '<div class="rg cv pm"><div class="rg-sub"><div><span class="mini">Procesos › DGPMV</span><h1>Protección al migrante</h1></div><div class="rg-vistas">'+
-    '<button data-pvista="rep" class="on">Repatriados</button><button disabled title="'+pend+'">Vuelos comerciales <small>en revisión</small></button><button disabled title="'+pend+'">Guatemala y Honduras <small>en revisión</small></button></div></div>'+
+    '<button data-pvista="rep" class="'+(Q.vista==='rep'?'on':'')+'">Repatriados</button>'+['com','gh'].map(k => OTROS[k] ? '<button data-pvista="'+k+'" class="'+(Q.vista===k?'on':'')+'" title="'+esc(NOM_OTRO[k][1])+' · dato independiente">'+NOM_OTRO[k][0]+'</button>' : '<button disabled title="'+pend+'">'+NOM_OTRO[k][0]+' <small>sin archivo</small></button>').join('')+'</div></div>'+
     '<div class="ctl rg-ctl" id="cv-ctl"></div><div id="cv-body" class="rg-body anim"></div>'+
     '<p class="mini pm-fuente" style="padding:0 16px">Fuente: '+esc(CV.archivo)+' (DGPMV) · '+fechaA(0)+' – '+fechaA(CV.dias-1)+' · todos son de nacionalidad mexicana. «Aérea» corresponde a los vuelos PRIM.</p>'+
     (CV.calidad.length ? '<details class="cv-calw"><summary>Notas de calidad de los datos ('+CV.calidad.length+')</summary><ul>'+CV.calidad.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul></details>' : '')+'</div>';
@@ -414,6 +439,7 @@ function montar(cont){
 function eventos(cont){
   cont.addEventListener('click', e => { if (!e.target.closest('.pm')) return; const T = s => e.target.closest(s); let b;
     if ((b = T('[data-pinfo]'))){ const p = $('pm-pop'); if (p && !p.hidden && p.dataset.cual===b.dataset.pinfo) mostrarInfo(null); else { mostrarInfo(b); $('pm-pop').dataset.cual = b.dataset.pinfo; } return; }
+    if ((b = T('[data-pvista]'))){ Q.vista = b.dataset.pvista; document.querySelectorAll('.pm [data-pvista]').forEach(x => x.classList.toggle('on', x===b)); cuerpo(); return; }
     if ((b = T('[data-pmod]'))){ const k = +b.dataset.pmod; if (k<0){ Q.mod = -1; Q.em = 'v'; } else Q.mod = Q.mod===k ? -1 : k; Q.sel = null; cuerpo(); return; }
     if ((b = T('[data-pem]'))){ const k = b.dataset.pem; Q.em = Q.em===k ? 'v' : k; Q.sel = null; cuerpo(); return; }
     if (T('[data-pmas]')){ Q.mas[Q.vista] = !Q.mas[Q.vista]; abrirMasC(); return; }
@@ -437,7 +463,7 @@ function eventos(cont){
 }
 let listo = false;
 // Recibe filtros desde Pregunta a INAMI («Profundizar en el tablero»)
-function fijar(p){ const ix = (l, nombres) => (nombres || []).map(n => l.indexOf(n)).filter(i => i>=0);
+function fijar(p){ const ix = (l, nombres) => (nombres || []).map(n => l.indexOf(n)).filter(i => i>=0); Q.vista = 'rep';
   Q.ests = ix(DIC.e, p.ests).slice(0,3); const pt = ix(DIC.p, p.ptos); Q.pto = pt.length===1 ? pt[0] : -1; Q.mod = p.mod!=null ? p.mod : -1; Q.em = p.em || 'v'; Q.sel = null; if (p.d0 && p.d1){ Q.per = 'pers'; Q.d0 = Math.max(0, diaDe(p.d0)); Q.d1 = Math.min(CV.dias, diaDe(p.d1)+1); if (Q.d1<=Q.d0) Q.d1 = Q.d0+1; } }
 window.IANAMI_PROTECCION = { pintar(cont){ if (!listo){ eventos(cont); listo = true; } montar(cont); }, fijar:fijar };
 })();

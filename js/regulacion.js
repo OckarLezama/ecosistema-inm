@@ -660,7 +660,7 @@ function vistaVigentes(){
   const totTipo = kT>=0 ? RG.dv_tipo[kT][1]+RG.dv_tipo[kT][2] : T;
   const nomSel = s => !s ? '' : s.t==='e' ? RG.dv_e[s.i] : s.t==='p' ? RG.dv_p[s.i] : RG.dv_n[s.i][0];
   const porTipo = (f, cols) => cols.map((x,k) => [nomT(x), f[3+k]]).filter(x => x[1]>0).sort((a,b)=>b[1]-a[1]);
-  $('rg-body').innerHTML = '<div class="ctl rg-ctl"><div class="rango"><b>Corte al '+esc(corte)+'</b><span>stock semanal · no depende del periodo</span></div></div>'+
+  $('rg-body').innerHTML = '<div class="ctl rg-ctl"><div class="rango"><b>Corte al '+esc(corte)+'</b><span>stock semanal · no depende del periodo</span></div>'+cajaBusca('rg-dvg-bus', 'Buscar estado o nacionalidad')+'</div>'+
     '<section class="kpis rg-kpis" data-modo="'+(Q.compacto?'compacto':'tarjetas')+'"><div class="kg" style="flex:1 1 0;--g:#2B2926"><div class="eti">Total</div><div>'+tarjeta('Con documento vigente', ['', T-M, M], '#2B2926', 'personas extranjeras', IC.tot, -1)+'</div></div>'+
       '<div class="kg g-reg" style="flex:5 1 0"><div class="eti">Por tipo de documento · toca uno para filtrar</div><div>'+ti.slice(0,5).map(x => tarjeta(nomT(x[0]), x, '#2F6657', '', IC.tarj, x[3])).join('')+'</div></div>'+plegar()+'</section>'+
     // 1) tabla por estado o nacionalidad
@@ -685,7 +685,12 @@ function vistaVigentes(){
       $('rg-dvd').innerHTML = '<p class="rg-dato"><b class="num">'+miles(t)+'</b> personas de <b>'+esc(RG.dv_p[s.i])+'</b> con documento vigente'+(n ? ' · '+pct(n[2], n[1]+n[2])+'% mujeres' : '')+'</p>'+
         tipoH(fN, RG.dv_nt, fN ? fN[1]+fN[2] : t)+'<h4>En qué estado viven</h4>'+barrasHTML(l, t, '#2F6657')+(kT>=0 ? '<span class="nota">El reparto por estado incluye todos los tipos de documento: el archivo no lo separa por tipo.</span>' : ''); } };
   window.__rgDetalle = detalle;
-  autocompletar($('rg-dv-bus'), $('rg-dv-bus-r'), RG.dv_e.map((e,i) => ({n:e, t:'Estado', v:{t:'e',i:i}})).concat(RG.dv_p.map((p,j) => ({n:p, t:'País', v:{t:'p',i:j}}))), x => { Q.dvSel = x.v; $('rg-dv-bus').value = ''; detalle(); });
+  // buscador: estados, los 25 países del cruce con estados y el resto de las nacionalidades (sin estado)
+  const opDV = RG.dv_e.map((e,i) => ({n:e, t:'Estado', v:{t:'e',i:i}})).concat(RG.dv_p.map((p,j) => ({n:p, t:'País', v:{t:'p',i:j}})),
+    (RG.dv_n || []).map((f,j) => RG.dv_p.indexOf(f[0])>=0 ? null : {n:f[0], t:'País', v:{t:'n',i:j}}).filter(Boolean));
+  const elegirDV = (inp, x) => { Q.dvSel = x.v; inp.value = ''; detalle(); const c = $('rg-dvd'); if (c && inp.id==='rg-dvg-bus') c.closest('.caja').scrollIntoView({ behavior:'smooth', block:'center' }); };
+  autocompletar($('rg-dv-bus'), $('rg-dv-bus-r'), opDV, x => elegirDV($('rg-dv-bus'), x));
+  autocompletar($('rg-dvg-bus'), $('rg-dvg-bus-r'), opDV, x => elegirDV($('rg-dvg-bus'), x));
   detalle();
   // ---- matriz o ranking
   const todo = Q.dvMxTodo, el = $('rg-dv');

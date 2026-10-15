@@ -129,7 +129,7 @@ def vigentes(origen):
             filas = [[nacionalidad(n), int(h), int(m)] + [int(x) for x in tipo] for n, h, m, tipo in
                      zip(cuerpo[0], num(1), num(2), zip(*[num(i + 2) for i in range(4, len(hdr), 3)]))]
             filas.sort(key=lambda f: -(f[1] + f[2]))
-            o["dv_n"] = filas[:40]
+            o["dv_n"] = filas                      # todas las nacionalidades (el buscador las necesita todas)
             o["dv_nt"] = tipos
         elif fila0 and fila0[0] == "O.R." and "TOTAL GENERAL" in fila0:
             hdr = pd.Series(t.iloc[0].tolist()).ffill().tolist()

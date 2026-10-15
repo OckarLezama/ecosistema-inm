@@ -928,11 +928,11 @@ function lienzo(){ const x = COLA.then(lienzo0, lienzo0); COLA = x.catch(() => {
 async function lienzo0(){
   await Promise.all(LIBS.map(cargar)); const fmt = Q.fmt, w = fmt==='v' ? 720 : 1600, h = fmt==='v' ? 1280 : 900, z = $('cq-render');
   if (Q.modo==='b'){ z.innerHTML = '<div class="cq-hw fijo bul" style="width:760px">'+hojaBul(R, 'h')+'</div>'; const el = z.querySelector('.cq-bul');
-    await new Promise(ok => setTimeout(ok, 60)); try { return await window.html2canvas(el, { scale:2, backgroundColor:'#FCFBF7', useCORS:true }); } finally { z.innerHTML = ''; } }
+    await new Promise(ok => setTimeout(ok, 60)); try { return await window.html2canvas(el, { scale:2, backgroundColor:'#FCFBF7', useCORS:true, onclone:d => window.IANAMI_COLORFIJO && window.IANAMI_COLORFIJO(d) }); } finally { z.innerHTML = ''; } }
   const H = hoja(R, fmt, false); z.innerHTML = '<div class="cq-hw fijo'+(fmt==='v' ? ' vert' : '')+'" style="width:'+w+'px">'+H.html+'</div>';
   const el = z.querySelector('.cq-hoja'); el.style.width = w+'px'; el.style.height = h+'px'; const cs = dibujar(z, H.ch, false);
   await new Promise(ok => setTimeout(ok, 60));
-  try { return await window.html2canvas(el, { scale:fmt==='v' ? 2.25 : 1.5, backgroundColor:'#FCFBF7', useCORS:true }); } finally { cs.forEach(c => c.dispose()); z.innerHTML = ''; }
+  try { return await window.html2canvas(el, { scale:fmt==='v' ? 2.25 : 1.5, backgroundColor:'#FCFBF7', useCORS:true, onclone:d => window.IANAMI_COLORFIJO && window.IANAMI_COLORFIJO(d) }); } finally { cs.forEach(c => c.dispose()); z.innerHTML = ''; }
 }
 const msg = t => { const m = $('cq-msg'); if (m) m.textContent = t; };
 function bajar(href, nombre){ const a = document.createElement('a'); a.href = href; a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 300); }

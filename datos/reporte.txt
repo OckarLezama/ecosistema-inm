@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-14 19:58
+Generado: 2026-10-14 20:33
 Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
 
 == Ingresos  ·  DGCVM INGRESOS.xlsx  ·  cargado 2026-10-13
@@ -83,8 +83,8 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    22 caravanas · del 2024-10-05 al 2026-09-22
    · Lugares sin coordenadas en el catálogo (no se dibuja su recorrido): Corazones, Oaxaca
 
-== Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES.xlsx  ·  Fechas ya corregidas (13 may – 28 sep 2026). Pendiente: decidir cómo se integra con repatriados (¿son de EE. UU.? ¿se suman al total?). No se usa todavía.
+== Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES.xlsx  ·  Dato independiente: se muestra en Protección al migrante › Vuelos comerciales; no se suma a Repatriados.
 
-== Repatriados desde Guatemala y Honduras  ·  DGPMV GUATEMALA-HONDURAS.xlsx  ·  Pendiente: confirmar qué significa «PAÍS» y si no hay menores. No se usa todavía.
+== Repatriados desde Guatemala y Honduras  ·  DGPMV GUATEMALA-HONDURAS.xlsx  ·  Dato independiente: mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras; no se suma a Repatriados.
 
 Archivos que no se reconocieron: DGRAM VALIDACION DOCUMENTOS REGISTRO CIVIL.xlsx
