@@ -177,8 +177,8 @@ def juntar(partes, base, col_dia="DIA"):
     t = pd.concat(salida[::-1], ignore_index=True).sort_values("_D", kind="stable")
     antes = t["_D"] < INICIO
     if antes.any():
-        avisar(base, f"Trae {int(antes.sum()):,} renglones anteriores al {INICIO.date()} (desde {t['_D'].min().date()}); "
-                     "no se usan: el tablero empieza el 1 oct 2024.")
+        avisar(base, f"{int(antes.sum()):,} renglones son de antes del 1 oct 2024 (el más antiguo, del {t['_D'].min().date()}). "
+                     "No se usan: la plataforma empieza el 1 oct 2024.")
         t = t[~antes]
     t[col_dia] = t["_D"]
     return t.drop(columns="_D").reset_index(drop=True)

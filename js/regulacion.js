@@ -614,18 +614,20 @@ function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const 
   const nomG = g => g<6 ? DIC.m[top[g]] : g===6 ? 'Otros motivos' : 'Sin motivo registrado', colG = g => g<6 ? COLMOT[g] : g===6 ? '#A7A296' : GRISMOT, NGR = 8;
   const ley = '<div class="mot-ley">'+[...Array(NGR).keys()].map(g => '<span><i style="background:'+colG(g)+'"></i>'+esc(nomG(g))+'</span>').join('')+'</div>';
   if (V==='res'){ el.className = 'rg-mot1';
-    // composición (una barra al 100%) y, abajo, cada motivo con su cifra, su parte, su tendencia mensual y el cambio reciente
+    // lo que importa en una mirada: qué parte declara motivo, los 6 motivos principales con su tendencia y su cambio; el resto, plegado
     const m0 = mesDe(Q.d0), nmz = mesDe(Q.d1-1)-m0+1, mm = agg(i => (mesDe(K.d[i])-m0)*NM+K.m[i], nmz*NM, {}), tmz = [...Array(nmz).keys()].map(j => { let t = 0; for (let k=0;k<NM;k++) t += mm[j*NM+k]; return t; });
     const ult = fDia(Q.d1-1).getDate()<20 ? nmz-1 : nmz, sh = (k, a, b) => { let x = 0, t = 0; for (let j=Math.max(0,a); j<b; j++){ x += mm[j*NM+k]; t += tmz[j]; } return t ? x/t*100 : null; };
-    const spark = k => { const v = [...Array(ult).keys()].map(j => tmz[j] ? mm[j*NM+k]/tmz[j] : 0); if (v.length<3) return ''; const mx = Math.max(...v) || 1, W = 90, H = 22, pts = v.map((y,i) => (i/(v.length-1)*W).toFixed(1)+','+(H-2-y/mx*(H-4)).toFixed(1)).join(' ');
-      return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" class="mot-sp" aria-hidden="true"><polyline points="'+pts+'" fill="none" stroke="currentColor" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>'; };
-    const g8 = new Float64Array(NGR); l.forEach(r => { g8[grupo(r[2])] += r[1]; });
-    $('rg-mot-q').innerHTML = 'trámites por motivo de estancia declarado, de mayor a menor'+filt+' · la línea es su parte de los trámites mes a mes · el cambio compara los últimos 3 meses completos contra los 3 anteriores';
-    el.innerHTML = '<div class="mot-comp">'+[...Array(NGR).keys()].filter(g => g8[g]).map(g => '<i style="flex:'+g8[g]+';background:'+colG(g)+'" title="'+esc(nomG(g))+': '+miles(g8[g])+' ('+pct(g8[g], T)+'%)">'+(g8[g]/T>=.07 ? '<b>'+Math.round(g8[g]/T*100)+'%</b>' : '')+'</i>').join('')+'</div>'+ley+
-      '<div class="mot-tb"><div class="mot-h"><span>Motivo</span><span></span><span>Trámites</span><span>% del total</span><span>Mes a mes</span><span>Cambio</span></div>'+
-      l.map(r => { const k = r[2], g = grupo(k), a = sh(k, ult-3, ult), b = sh(k, ult-6, ult-3), d = a!=null && b!=null ? a-b : null;
-        return '<div class="mot-r"><span class="mot-n"><i style="background:'+colG(g)+'"></i>'+esc(r[0])+'</span><span class="b"><i style="width:'+(r[1]/l[0][1]*100).toFixed(1)+'%;background:'+colG(g)+'"></i></span><b class="num">'+miles(r[1])+'</b><span class="num">'+pct(r[1], T)+'%</span><span class="mot-spw" style="color:'+(g===7 ? '#9A958A' : colG(g))+'">'+spark(k)+'</span>'+
-          '<span class="mot-d '+(d==null || Math.abs(d)<.5 ? '' : d>0 ? 'u' : 'dn')+'">'+(d==null ? '—' : Math.abs(d)<.5 ? '= estable' : (d>0 ? '▲ ' : '▼ ')+Math.abs(d).toFixed(1)+' pts')+'</span></div>'; }).join('')+'</div>';
+    const spark = (k, col) => { const v = [...Array(ult).keys()].map(j => tmz[j] ? mm[j*NM+k]/tmz[j] : 0); if (v.length<3) return ''; const mx = Math.max(...v) || 1, mn = Math.min(...v), W = 120, H = 30, y = q => (H-3-(q-mn)/((mx-mn)||1)*(H-6)).toFixed(1), pts = v.map((q,i) => (i/(v.length-1)*W).toFixed(1)+','+y(q)).join(' ');
+      return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" class="mot-sp2" aria-hidden="true"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/><circle cx="'+W+'" cy="'+y(v[v.length-1])+'" r="2.6" fill="'+col+'"/></svg>'; };
+    const cambio = k => { const a = sh(k, ult-3, ult), b = sh(k, ult-6, ult-3); if (a==null || b==null) return ''; const d = a-b; return Math.abs(d)<.5 ? '<span class="mot-c">estable en los últimos 3 meses</span>' : '<span class="mot-c '+(d>0 ? 'u' : 'dn')+'">'+(d>0 ? '▲ sube ' : '▼ baja ')+Math.abs(d).toFixed(1)+' de cada 100 en los últimos 3 meses</span>'; };
+    const g8 = new Float64Array(NGR); l.forEach(r => { g8[grupo(r[2])] += r[1]; }); const sin = g8[7], con = T-sin, top6 = l.filter(r => !SINMOT.test(r[0])).slice(0, 6);
+    $('rg-mot-q').innerHTML = 'el motivo que la persona declara en su trámite'+filt+' · la línea de cada tarjeta es cómo cambia su parte mes a mes';
+    el.innerHTML = '<p class="mot-lead"><b>'+Math.round(con/T*100)+' de cada 100</b> trámites declaran un motivo; los más comunes son '+top6.slice(0,3).map(r => '<b>'+esc(r[0].toLowerCase())+'</b> ('+Math.round(r[1]/T*100)+')').join(', ')+'. <span class="mini">Los otros '+Math.round(sin/T*100)+' no registran motivo.</span></p>'+
+      '<div class="mot-comp">'+[...Array(NGR).keys()].filter(g => g8[g]).map(g => '<i style="flex:'+g8[g]+';background:'+colG(g)+'" title="'+esc(nomG(g))+': '+miles(g8[g])+' ('+pct(g8[g], T)+'%)">'+(g8[g]/T>=.07 ? '<b style="color:'+(g===7 ? '#2B2926' : '#fff')+'">'+Math.round(g8[g]/T*100)+'</b>' : '')+'</i>').join('')+'</div>'+ley+
+      '<div class="mot-tiles">'+top6.map(r => { const g = grupo(r[2]), col = colG(g);
+        return '<button class="mot-tile" data-rmotir="'+r[2]+'" style="--c:'+col+'" title="Ver qué nacionalidades declaran '+esc(r[0].toLowerCase())+'"><span class="mot-tn">'+esc(r[0])+'</span><b class="num">'+Math.round(r[1]/T*100)+'<small> de cada 100</small></b><span class="mot-tt">'+miles(r[1])+' trámites</span>'+spark(r[2], col)+cambio(r[2])+'</button>'; }).join('')+'</div>'+
+      '<button class="rg-mas-f" data-rmottodos>'+(Q.motTodos ? 'Ocultar la lista completa ▴' : 'Ver los '+l.length+' motivos ▾')+'</button>'+
+      (Q.motTodos ? '<div class="mot-lista">'+l.map(r => '<div class="barra pc"><span>'+esc(r[0])+' <small>'+pct(r[1], T)+'%</small></span><span class="b"><i style="width:'+(r[1]/l[0][1]*100).toFixed(1)+'%;background:'+colG(grupo(r[2]))+'"></i></span><span class="x">'+miles(r[1])+'</span></div>').join('')+'</div>' : '');
     return; }
   el.className = 'rg-mot1';
   if (V==='nat'){ const quita = {nats:null}, tn = agg(K.n, NN, quita), ns = [...Array(NN).keys()].filter(n => tn[n]>=300 && !/^sin dato$/i.test(DIC.n[n])).sort((a,b) => tn[b]-tn[a]).slice(0, 12);
@@ -633,16 +635,11 @@ function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const 
     // hallazgos: dónde pesa mucho más un motivo que en el promedio (solo los 6 principales, con 10% o más del país)
     const hz = []; ns.forEach(n => { for (let g=0; g<6; g++){ const p = m[n*NGR+g]/tn[n], pg = tg[g]/TG; if (p>=.10 && pg>0 && p/pg>=1.8) hz.push([n, g, p, p/pg]); } });
     hz.sort((a,b) => b[3]-a[3]); const vis = []; hz.forEach(h => { if (vis.length<3 && !vis.some(v => v[0]===h[0])) vis.push(h); });
-    $('rg-mot-q').innerHTML = 'de cada 100 trámites de cada nacionalidad, por qué motivo se quedan · las 12 con más trámites · toca una para filtrar'+(Q.ests.length || Q.ofiF>=0 || Q.doc>=0 ? filt : '');
-    el.innerHTML = ley+'<div id="rg-mot-g" style="height:'+(ns.length*34+40)+'px"></div>'+(vis.length ? '<div class="mot-hz">'+vis.map(h => '<p><b>'+esc(DIC.n[h[0]])+'</b>: '+esc(nomG(h[1]).toLowerCase())+' es '+Math.round(h[2]*100)+' de cada 100 trámites, <b>'+(h[3]).toFixed(1)+' veces</b> el promedio ('+Math.round(tg[h[1]]/TG*100)+').</p>').join('')+'</div>' : '');
-    const rows = ns.slice().reverse(), ch = graf('rg-mot-g', { grid:{ left:8, right:14, top:4, bottom:20, containLabel:true },
-      tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => { const n = rows[ps[0].dataIndex]; return '<b>'+esc(DIC.n[n])+'</b> · '+miles(tn[n])+' trámites<br>'+ps.filter(p => p.value>0).sort((a,b) => b.value-a.value).map(p => p.marker+esc(p.seriesName)+': <b>'+p.value.toFixed(1)+'%</b> ('+miles(m[n*NGR+p.seriesIndex])+')').join('<br>'); } },
-      xAxis:{ type:'value', max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 } },
-      yAxis:{ type:'category', data:rows.map(n => DIC.n[n]), axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, triggerEvent:true, axisLabel:{ color:'#2B2926', fontSize:11.5, formatter:(v,i) => (Q.nats.indexOf(rows[i])>=0 ? '{s|'+v+'}' : v)+'\n{t|'+corto(tn[rows[i]])+' trámites}', rich:{ s:{ fontWeight:700, color:'#7E302B', fontSize:11.5 }, t:{ fontSize:9.5, color:'#8A8579', lineHeight:12 } } } },
-      series:[...Array(NGR).keys()].map(g => ({ name:nomG(g), type:'bar', stack:'m', barMaxWidth:20, color:colG(g), itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 },
-        data:rows.map(n => +(m[n*NGR+g]/tn[n]*100).toFixed(2)), label:{ show:true, position:'inside', fontSize:9.5, color:g===7 ? '#2B2926' : '#fff', formatter:p => p.value>=9 ? Math.round(p.value)+'%' : '' } })) });
-    ch.off('click'); ch.on('click', p => { if (p.componentType==='series' && p.seriesIndex<6){ Q.motV = 'mot'; Q.motSel = top[p.seriesIndex]; pintarMotivo(); return; }
-      const n = rows[p.componentType==='yAxis' ? rows.findIndex(z => DIC.n[z]===p.value) : p.dataIndex]; if (n!=null) alternarNat(n); }); return; }
+    $('rg-mot-q').innerHTML = 'cada barra es el 100% de los trámites de la nacionalidad, repartido por motivo · las 12 con más trámites · pasa el cursor por un color para compararlo en todas · toca una para filtrar'+(Q.ests.length || Q.ofiF>=0 || Q.doc>=0 ? filt : '');
+    el.innerHTML = '<div id="rg-mot-g"></div>'+(vis.length ? '<div class="mot-hz">'+vis.map(h => '<p><b>'+esc(DIC.n[h[0]])+'</b>: '+esc(nomG(h[1]).toLowerCase())+' es '+Math.round(h[2]*100)+' de cada 100 trámites, <b>'+(h[3]).toFixed(1)+' veces</b> el promedio ('+Math.round(tg[h[1]]/TG*100)+').</p>').join('')+'</div>' : '');
+    window.IANAMI_MEZCLA($('rg-mot-g'), { cats:[...Array(NGR).keys()].map(g => ({ nom:nomG(g), col:colG(g) })), filas:ns.map(n => ({ k:n, nom:DIC.n[n], tot:tn[n], v:[...Array(NGR).keys()].map(g => m[n*NGR+g]) })),
+      orden:Q.motOrd==null ? null : Q.motOrd, sel:Q.nats.length===1 ? Q.nats[0] : null, onOrden:o => { Q.motOrd = o; pintarMotivo(); }, onFila:n => alternarNat(n) });
+    return; }
   if (V==='mot'){ // un motivo: qué nacionalidades lo declaran, cuántos y qué parte de sus trámites
     const cand = l.filter(r => !SINMOT.test(r[0])).map(r => r[2]); if (Q.motSel==null || cand.indexOf(Q.motSel)<0) Q.motSel = cand[0]; const ms = Q.motSel;
     const quita = {nats:null}, tn = agg(K.n, NN, quita), xm = agg(K.n, NN, Object.assign({ ex:i => K.m[i]===ms }, quita)), TM = xm.reduce((a,b)=>a+b,0), TT = tn.reduce((a,b)=>a+b,0) || 1, prom = TM/TT;
@@ -662,16 +659,18 @@ function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const 
   const sh = (g, a, b) => { let x = 0, t = 0; for (let j=a;j<b;j++){ x += mm[j*NGR+g]; t += tm[j]; } return t ? x/t*100 : 0; };
   const cmb = nmz>=7 ? [...Array(6).keys()].map(g => [g, sh(g, 0, 3), sh(g, nmz-4, nmz-1)]).sort((a,b) => Math.abs(b[2]-b[1])-Math.abs(a[2]-a[1]))[0] : null;
   $('rg-mot-q').innerHTML = 'de cada 100 trámites de cada mes, por qué motivo'+filt+(cmb && Math.abs(cmb[2]-cmb[1])>=1 ? ' · <b>'+esc(nomG(cmb[0]))+'</b> '+(cmb[2]>cmb[1] ? 'sube' : 'baja')+' de '+Math.round(cmb[1])+' a '+Math.round(cmb[2])+' de cada 100 (primeros 3 meses contra los últimos 3 completos)' : '');
-  el.innerHTML = ley+'<div id="rg-mot-g" style="height:400px"></div>';
-  // arriba, en su propio espacio, los trámites totales de cada mes (línea sutil); abajo, la mezcla de motivos al 100%. Sin doble eje.
-  graf('rg-mot-g', { grid:[{ left:44, right:10, top:6, height:62 }, { left:44, right:10, top:92, bottom:26 }],
-    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => { const k = ps[0].dataIndex; return '<b>'+lab[k]+'</b> · '+miles(tm[k])+' trámites<br>'+ps.filter(p => p.seriesName!=='Trámites' && p.value>0).sort((a,b) => b.value-a.value).map(p => p.marker+esc(p.seriesName)+': <b>'+p.value.toFixed(1)+'%</b>').join('<br>'); } },
-    axisPointer:{ link:[{ xAxisIndex:'all' }] },
-    xAxis:[{ type:'category', gridIndex:0, data:lab, show:false }, { type:'category', gridIndex:1, data:lab, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, axisLabel:{ color:'#5C5952', fontSize:10.5 } }],
-    yAxis:[{ type:'value', gridIndex:0, splitNumber:1, min:0, minorSplitLine:{ show:false }, axisLabel:{ color:'#9A958A', fontSize:9.5, showMinLabel:false, formatter:v => corto(v) }, name:'trámites al mes', nameLocation:'end', nameGap:4, nameTextStyle:{ color:'#9A958A', fontSize:9.5, align:'left', padding:[0,0,0,-40] } },
-      { type:'value', gridIndex:1, max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 } }],
-    series:[{ name:'Trámites', type:'line', xAxisIndex:0, yAxisIndex:0, smooth:.4, symbol:'circle', symbolSize:4, data:tm.map((v,j) => j===nmz-1 && fDia(Q.d1-1).getDate()<20 ? null : v), lineStyle:{ width:1.6, color:'#5C5952', opacity:.7 }, itemStyle:{ color:'#5C5952' }, areaStyle:{ color:'rgba(92,89,82,.07)' } }]
-      .concat([...Array(NGR).keys()].map(g => ({ name:nomG(g), type:'bar', xAxisIndex:1, yAxisIndex:1, stack:'m', barMaxWidth:30, color:colG(g), itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 }, data:lab.map((_,j) => tm[j] ? +(mm[j*NGR+g]/tm[j]*100).toFixed(2) : 0) }))) });
+  el.innerHTML = ley+'<div id="rg-mot-g" style="height:380px"></div>';
+  // la línea (trámites del mes) va encima de las barras con su propia escala, en la franja de arriba; cada punto lleva su cifra
+  const tv = tm.map((v,j) => j===nmz-1 && fDia(Q.d1-1).getDate()<20 ? null : v), vv = tv.filter(v => v!=null), tMx = Math.max(...vv), tMn = Math.min(...vv), rg = (tMx-tMn) || tMx*.1;
+  graf('rg-mot-g', { grid:{ left:44, right:14, top:30, bottom:26 },
+    legend:{ top:0, right:0, data:[{ name:'Trámites del mes', icon:'path://M0,5 L8,5 M8,5 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 M14,5 L22,5' }], textStyle:{ fontSize:11, color:'#2B2926' }, itemWidth:22, itemHeight:10, selectedMode:false },
+    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => { const k = ps[0].dataIndex; return '<b>'+lab[k]+'</b> · '+miles(tm[k])+' trámites<br>'+ps.filter(p => p.seriesName!=='Trámites del mes' && p.value>0).sort((a,b) => b.value-a.value).map(p => p.marker+esc(p.seriesName)+': <b>'+p.value.toFixed(1)+'%</b>').join('<br>'); } },
+    xAxis:{ type:'category', data:lab, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, axisLabel:{ color:'#5C5952', fontSize:10.5 } },
+    yAxis:[{ type:'value', max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 } }, { type:'value', show:false, min:tMn-rg*2.6, max:tMx+rg*.35, splitLine:{ show:false } }],
+    series:[...Array(NGR).keys()].map(g => ({ name:nomG(g), type:'bar', stack:'m', barMaxWidth:30, color:colG(g), itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 }, data:lab.map((_,j) => tm[j] ? +(mm[j*NGR+g]/tm[j]*100).toFixed(2) : 0) }))
+      .concat([{ name:'Trámites del mes', type:'line', yAxisIndex:1, z:10, smooth:false, data:tv, symbol:'circle', symbolSize:7, lineStyle:{ width:2.2, color:'#2B2926' }, itemStyle:{ color:'#fff', borderColor:'#2B2926', borderWidth:2 },
+        label:{ show:true, position:'top', distance:6, fontSize:9.5, color:'#2B2926', fontWeight:600, textBorderColor:'#FCFBF7', textBorderWidth:2.5, formatter:p => p.value==null ? '' : (p.value/1e3).toFixed(0)+'k' } }]) });
+
 }
 function vistaTramites(){
   $('rg-body').innerHTML = '<div class="ctl rg-ctl" id="rg-ctl"></div><section class="kpis rg-kpis" id="rg-kpis" data-modo="tarjetas"></section>'+
@@ -1073,6 +1072,8 @@ function eventos(cont){
     if ((b = T('[data-rdesg]'))){ Q.desg = b.dataset.rdesg; PANEL = null; pintarPrincipal(); if ((Q.pv || 'res')==='res') pintarPanel(); return; }
     if (T('[data-rcierra]')){ cerrarPanel(); return; }
     if ((b = T('[data-rmotv]'))){ Q.motV = b.dataset.rmotv; pintarMotivo(); return; }
+    if (T('[data-rmottodos]')){ Q.motTodos = !Q.motTodos; pintarMotivo(); return; }
+    if ((b = T('[data-rmotir]'))){ Q.motV = 'mot'; Q.motSel = +b.dataset.rmotir; pintarMotivo(); return; }
     if ((b = T('[data-rmots]'))){ Q.motSel = +b.dataset.rmots; pintarMotivo(); return; }
     if ((b = T('[data-rmotn]'))){ alternarNat(+b.dataset.rmotn); return; }
     if (T('[data-rpza]')){ Q.pzA = !Q.pzA; pintarPlazos(); return; }

@@ -238,7 +238,7 @@ def preparar(clave, t, col_nat="NACIONALIDAD"):
         sin = t.loc[t["n"] == OTRAS, col_nat].astype(str).str.strip().value_counts()
         sin = sin[[norm(x) not in ("EMPLEADOR", "APATRIDA", "SIN DATO", "NAN") for x in sin.index]]
         if len(sin):
-            avisar(clave, f"{int(sin.sum()):,} renglones con nacionalidad sin código (van a «Otras»): " + ", ".join(sin.index[:8]))
+            avisar(clave, f"{int(sin.sum()):,} renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: " + ", ".join(sin.index[:8]) + ("…" if len(sin.index) > 8 else "") + ".")
     return t[t["DIA"].notna() & (t["s"] >= 0)].copy()
 
 
@@ -342,8 +342,8 @@ def cargar_ret(t):
     t["v"] = t["DEPORTADOS"] + t["RETORNOS ASISTIDOS"]
     dif = t["v"] != t["RETORNADOS A SU PAIS"]
     if dif.any():
-        avisar("ret", f"{int(dif.sum()):,} renglones donde deportados + retornos asistidos no es igual a «Retornados a su país» "
-                      f"(diferencia {int((t['v'] - t['RETORNADOS A SU PAIS'])[dif].sum()):+,}); se usa la suma")
+        avisar("ret", f"{int(dif.sum()):,} renglones donde deportados + retornos asistidos no da la columna «Retornados a su país» "
+                      f"(diferencia de {int((t['v'] - t['RETORNADOS A SU PAIS'])[dif].sum()):+,} personas). La plataforma usa la suma de deportados + retornos asistidos.")
     return t
 
 
@@ -492,8 +492,8 @@ def puntos(B, inicio, cortes):
                        "top": [[idx_nat(a) if idx_nat(a) != OTRAS else a.title(), int(b)] for a, b in top.items()],
                        "rech": int(r.get(1, 0)) if r is not None else 0, "seg": int(r.sum()) if r is not None else 0})
     total = int(ing.v.sum())
-    avisar("ing", f"{len(salida)} de {ing['punto'].nunique()} puntos de internación tienen coordenadas en el catálogo "
-                  f"({con_coord / max(total, 1) * 100:.0f}% de los ingresos); el resto no aparece como punto en el mapa")
+    avisar("ing", f"Solo {len(salida)} de {ing['punto'].nunique()} puntos de internación tienen ubicación para dibujarse en el mapa "
+                  f"(concentran el {con_coord / max(total, 1) * 100:.0f}% de los ingresos). Los demás sí se cuentan en todas las cifras; solo no aparecen como punto en el mapa.")
     repat = []
     por_corto = {}
     for nombre, (corto, lon, lat) in C.PUNTOS_REPATRIACION.items():   # nombres distintos del mismo punto se juntan
@@ -621,7 +621,7 @@ def caravanas(tabla):
         lista.append({"n": vacio(r.get("NOMBRE")) or "Sin nombre", "f": r["INICIO"].date().isoformat(),
                       "s": salida, "sx": sx, "d": disol, "dx": dx, "p": int(pd.to_numeric(r.get("PERSONAS"), errors="coerce") or 0)})
     if sin_ubicar:
-        avisar("car", "Lugares sin coordenadas en el catálogo (no se dibuja su recorrido): " + ", ".join(sorted(sin_ubicar)))
+        avisar("car", "Estos lugares no tienen ubicación en el catálogo, así que su recorrido no se dibuja en el mapa: " + ", ".join(sorted(sin_ubicar)))
     return lista
 
 

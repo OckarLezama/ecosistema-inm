@@ -99,7 +99,7 @@ function barrasV(id, l, o){
   el.style.width = ancho+'px'; if (ancho>w+4 && o.q) $(o.q).insertAdjacentHTML('beforeend', ' · <b>desliza la gráfica para ver todos →</b>'); const cpl = Math.max(6, Math.floor((paso-6)/5.4));
   const parte = v => String(v).split(' ').reduce((a,x) => { const u = a[a.length-1]; if (u && (u+' '+x).length<=cpl) a[a.length-1] = u+' '+x; else a.push(x); return a; }, []), lin = Math.max(1, ...l.map(x => parte(x.lab).length));
   const series = o.series || [{ name:'', k:'v' }];
-  return graf(id, { grid:{ left:46, right:12, top:o.ley ? 34 : 22, bottom:14+lin*12 }, legend:o.ley ? { top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{fontSize:11.5}, data:(o.series || []).map(x => x.name).concat(o.tend ? [{ name:'Tendencia', icon:'path://M0,5 L20,5', itemStyle:{ color:'#9A958A' } }] : []) } : { show:false },
+  return graf(id, { grid:{ left:46, right:12, top:o.ley ? 34 : 22, bottom:14+lin*12 }, legend:o.ley ? { top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{fontSize:11.5}, data:(o.series || []).map(x => x.name).concat(o.tend ? [{ name:'Tendencia', icon:'path://M0,5 L7,5 M7,5 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 M13,5 L20,5', itemStyle:{ color:'#2B2926' } }] : []) } : { show:false },
     tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:o.tip },
     xAxis:{ type:'category', data:l.map(x => x.lab), axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, splitLine:{ show:true, lineStyle:{ color:'#EEEBE2' } }, triggerEvent:true,
       axisLabel:{ interval:0, fontSize:paso<50 ? 9.5 : 10.5, color:'#2B2926', lineHeight:12, formatter:(v,i) => { const t = parte(v).join('\n'); return l[i] && l[i].on ? t.split('\n').map(x => '{s|'+x+'}').join('\n') : t; },
@@ -109,8 +109,8 @@ function barrasV(id, l, o){
       data:l.map(x => ({ value:x[s.k], itemStyle: series.length===1 ? { color: x.col || (l.some(y => y.on) ? (x.on ? VINO : '#B9CFC6') : VERDE) } : undefined })),
       label: series.length===1 ? { show:paso>=30, position:'top', fontSize:10, color:'#2B2926', lineHeight:12, formatter:o.eti || (p => corto(p.value)) }
         : { show:(o.stack ? false : Q.eti) && paso>=30, position:o.stack ? 'inside' : 'top', fontSize:9, color:o.stack ? '#fff' : '#2B2926', formatter:p => p.value ? corto(p.value) : '' } }))
-      .concat(o.tend ? [(() => { const tt = l.map(x => series.reduce((t,s) => t+(x[s.k]||0), 0)), k = o.tend; return { name:'Tendencia', type:'line', smooth:.5, symbol:'none', silent:true, z:5, tooltip:{ show:false },
-        lineStyle:{ width:1.6, color:'#2B2926', opacity:.35 }, data:tt.map((_,j) => { const a = Math.max(0, j-k+1), w = tt.slice(a, j+1); return +(w.reduce((x,y)=>x+y,0)/w.length).toFixed(1); }) }; })()] : [])
+      .concat(o.tend ? [(() => { const tt = l.map(x => series.reduce((t,s) => t+(x[s.k]||0), 0)), k = o.tend; return { name:'Tendencia', type:'line', smooth:false, silent:true, z:5, tooltip:{ show:false },
+        lineStyle:{ width:2, color:'#2B2926', opacity:.8 }, symbol:'circle', symbolSize:6, showSymbol:true, itemStyle:{ color:'#FCFBF7', borderColor:'#2B2926', borderWidth:1.8 }, data:tt.map((_,j) => { const a = Math.max(0, j-k+1), w = tt.slice(a, j+1); return +(w.reduce((x,y)=>x+y,0)/w.length).toFixed(1); }) }; })()] : [])
       .concat(o.stack && series.length>1 ? [{ name:'Total', type:'bar', stack:'a', silent:true, barMaxWidth:34, data:l.map(() => 0), itemStyle:{ color:'transparent' }, tooltip:{ show:false },
         label:{ show:paso>=26, position:'top', fontSize:10, color:'#2B2926', fontWeight:600, formatter:p => corto(series.reduce((t,s) => t+(l[p.dataIndex][s.k]||0), 0)) } }] : []) });
 }
@@ -299,7 +299,7 @@ function pintarRep(){
       grupo(2, VERDE, 'Adultos · '+pct(AD, T0)+'% del total', ad)+grupo(3, ROJO, 'Niñas, niños y adolescentes · toca una para analizar', nn)+plegar()+'</section>'+
     '<div class="rg-hz" id="cv-hz"></div>'+
     '<div class="rg-g rg-g21 fila-par">'+cajaTend('pm-tr', 'tr')+'<div class="caja"><h2><span id="pm-tp-t"></span>'+info('tp')+'</h2><span class="q" id="pm-tp-q"></span><div id="pm-tp"></div></div></div>'+
-    '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿A quién recibe cada punto?</span>'+info('perfil')+'</h2><span class="q" id="pm-pf-q"></span><div id="pm-pf" style="height:420px"></div><div id="pm-pf-m"></div></div>'+
+    '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿A quién recibe cada punto?</span>'+info('perfil')+'</h2><span class="q" id="pm-pf-q"></span><div id="pm-pf"></div><div id="pm-pf-m"></div></div>'+
       '<div class="caja"><h2><span>Llegadas de vuelos PRIM</span>'+info('prim')+'</h2><span class="q" id="pm-pr-q"></span><div class="cv-scroll cv-fill"><div id="pm-pr"></div></div></div></div>'+
     '<div class="rg-g pm-g3"><div class="caja"><h2><span>¿Dónde se recibe?</span>'+info('mapa')+'</h2><span class="q" id="pm-mp-q"></span>'+leyMapa([['Garitas y puentes (terrestre)', COLMOD[0]], ['Aeropuertos (vuelos PRIM)', COLMOD[1]]])+'<div id="pm-mp" class="cv-fill pm-mapa" style="min-height:400px"></div></div>'+
       '<div class="caja"><h2><span>¿Qué días se repatría?</span>'+info('ds')+'</h2><span class="q" id="pm-ds-q"></span><div id="pm-ds"></div></div></div>'+
@@ -352,23 +352,15 @@ function pintarTp(){
 }
 // Perfil de cada punto: de cada 100 que recibe, cuántos son de cada grupo
 function pintarPf(){
-  const x = GRUPOS.map(g => agg(REP, i => REP.p[i], NP, {pto:-1, v:g[0]})), sg = [...Array(NP).keys()].map(k => x.reduce((t,g) => t+g[k], 0)), tp = agg(REP, i => REP.p[i], NP, {pto:-1, v:'v'}), todos = [...Array(NP).keys()].filter(k => tp[k]).sort((a,b) => tp[b]-tp[a]), TOPF = 12, l = (Q.pfTodos ? todos : todos.slice(0, TOPF).concat(Q.pto>=0 && todos.indexOf(Q.pto)>=TOPF ? [Q.pto] : [])).reverse();
+  const x = GRUPOS.map(g => agg(REP, i => REP.p[i], NP, {pto:-1, v:g[0]})), sg = [...Array(NP).keys()].map(k => x.reduce((t,g) => t+g[k], 0)), tp = agg(REP, i => REP.p[i], NP, {pto:-1, v:'v'});
+  const todos = [...Array(NP).keys()].filter(k => sg[k]).sort((a,b) => tp[b]-tp[a]), TOPF = 12, l = Q.pfTodos ? todos : todos.slice(0, TOPF).concat(Q.pto>=0 && todos.indexOf(Q.pto)>=TOPF ? [Q.pto] : []);
   const caja = $('pm-pf').closest('.caja'); if (!l.length){ caja.hidden = true; return; } caja.hidden = false;
-  const sgT = sg.reduce((a,b)=>a+b,0), tpT = tp.reduce((a,b)=>a+b,0);
-  const sinPrim = Q.mod===0 || (Q.pto>=0 && !AEREO.has(Q.pto));
-  $('pm-pf-q').innerHTML = (sinPrim ? '<b>'+(Q.mod===0 ? 'Solo terrestre' : esc(nomP(Q.pto))+' es garita o puente')+': no hay vuelos PRIM que mostrar.</b> ' : '')+'De cada 100 personas que recibe cada punto, cuántas son de cada grupo · de mayor a menor total (entre paréntesis) · toca uno para filtrar'+(Math.abs(tpT-sgT)>=1 ? ' · <span title="Registros donde los grupos no suman el total; ver Notas de calidad">'+miles(Math.abs(tpT-sgT))+' sin desglose por grupo en la base</span>' : '');
-  $('pm-pf').style.height = Math.max(260, l.length*30+64)+'px';
+  const sgT = sg.reduce((a,b)=>a+b,0), tpT = tp.reduce((a,b)=>a+b,0), sinPrim = Q.mod===0 || (Q.pto>=0 && !AEREO.has(Q.pto));
+  $('pm-pf-q').innerHTML = (sinPrim ? '<b>'+(Q.mod===0 ? 'Solo terrestre' : esc(nomP(Q.pto))+' es garita o puente')+': no hay vuelos PRIM que mostrar.</b> ' : '')+'Cada barra es el 100% de las personas que recibe el punto, repartidas por grupo · pasa el cursor por un color para compararlo en todos los puntos · toca un punto para filtrar'+(Math.abs(tpT-sgT)>=1 ? ' · <span title="Registros donde los grupos no suman el total; ver Notas de calidad">'+miles(Math.abs(tpT-sgT))+' sin desglose por grupo en la base</span>' : '');
+  $('pm-pf').style.height = '';
+  window.IANAMI_MEZCLA($('pm-pf'), { cats:GRUPOS.map(g => ({ nom:g[1], col:g[2] })), filas:l.map(k => ({ k:k, nom:nomP(k), tot:sg[k], v:x.map(g => g[k]) })), orden:Q.pfOrd==null ? null : Q.pfOrd, sel:Q.pto>=0 ? Q.pto : null,
+    onOrden:o => { Q.pfOrd = o; pintarPf(); }, onFila:k => { Q.pto = Q.pto===k ? -1 : k; Q.sel = null; cuerpo(); } });
   $('pm-pf-m').innerHTML = todos.length>TOPF ? '<button class="rg-mas-f pm-mas" data-ppftodos>'+(Q.pfTodos ? 'Ver solo los '+TOPF+' principales ▴' : 'Ver los '+todos.length+' puntos ▾')+'</button>' : '';
-  const ch = graf('pm-pf', { grid:{ left:8, right:16, top:34, bottom:24, containLabel:true },
-    legend:{ top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11.5 }, data:GRUPOS.map(g => g[1]) },
-    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => { const k = l[ps[0].dataIndex]; return '<b>'+esc(nomP(k))+'</b> · '+miles(tp[k])+' personas<br>'+ps.map(p => p.marker+esc(p.seriesName)+': <b>'+miles(x[p.seriesIndex][k])+'</b> ('+p.value.toFixed(1)+'%)').join('<br>'); } },
-    xAxis:{ type:'value', max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 }, splitLine:{ lineStyle:{ color:'#EEEBE2' } } },
-    yAxis:{ type:'category', data:l.map(k => nomP(k)+' ('+corto(tp[k])+')'), axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, triggerEvent:true,
-      axisLabel:{ color:'#2B2926', fontSize:11, formatter:(v,i) => Q.pto===l[i] ? '{s|'+v+'}' : v, rich:{ s:{ fontWeight:700, color:VINO, fontSize:11 } } } },
-    series:GRUPOS.map((g,j) => ({ name:g[1], type:'bar', stack:'a', barMaxWidth:22, color:g[2], itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 },
-      data:l.map(k => ({ value:sg[k] ? x[j][k]/sg[k]*100 : 0, itemStyle:{ opacity:Q.pto>=0 && Q.pto!==k ? .35 : 1 } })),
-      label:{ show:true, position:'inside', fontSize:10, color:'#fff', formatter:p => p.value>=9 ? Math.round(p.value)+'%' : '' } })) });
-  ch.off('click'); ch.on('click', p => { const k = p.componentType==='yAxis' ? l[p.dataIndex!=null ? p.dataIndex : l.findIndex(z => nomP(z)+' ('+corto(tp[z])+')'===p.value)] : l[p.dataIndex]; if (k!=null){ Q.pto = Q.pto===k ? -1 : k; Q.sel = null; cuerpo(); } });
 }
 // Vuelos PRIM: cada día con llegada a los aeropuertos (o al elegido), con adultos y NNA
 function pintarPr(){
@@ -379,7 +371,7 @@ function pintarPr(){
   caja.hidden = false; fila.classList.remove('solo');
 
   const s = dias.reduce((t,d) => t+vt[d], 0), prom = s/dias.length;
-  $('pm-pr-q').innerHTML = '<b>'+dias.length+'</b> días con llegada · <b>'+miles(s)+'</b> personas · promedio <b>'+miles(prom)+'</b> por día · punteada: promedio · gris: tendencia (últimos 8 días con llegada)';
+  $('pm-pr-q').innerHTML = '<b>'+dias.length+'</b> días con llegada · <b>'+miles(s)+'</b> personas · promedio <b>'+miles(prom)+'</b> por día · punteada: promedio · línea con puntos: tendencia (promedio de los últimos 8 días con llegada)';
   const l = dias.map(d => ({ lab:fecha(d)+' '+DSEM[dSem(d)], full:DSEML[dSem(d)]+' '+fechaA(d), a:ad[d], n:me[d], d:d }));
   const ch = barrasV('pm-pr', l, { q:'pm-pr-q', stack:true, ley:true, tend:8, series:[{ name:'Adultos', k:'a', col:VERDE }, { name:'NNA', k:'n', col:ROJO }],
     tip:ps => { const x = l[ps[0].dataIndex], t = vt[x.d]; return '<b>'+esc(x.full)+'</b><br>'+miles(t)+' personas'+(t>prom*1.25 ? ' · <b>muy arriba del promedio: puede ser más de un vuelo</b>' : t<prom*0.25 ? ' · <b>muy abajo del promedio</b>' : '')+'<br>'+ps.filter(p => p.seriesName!=='Total').map(p => p.marker+esc(p.seriesName)+': <b>'+miles(p.value)+'</b>').join('<br>'); } });
@@ -508,17 +500,16 @@ function pintarGH(){
       '<div class="caja"><h2><span>¿Qué días llegan?</span>'+info('ghd')+'</h2><span class="q">personas por día de la semana en todo el periodo · días con llegada</span>'+diasOtro(X, [{ name:'Guatemala', col:CG, f:fG }, { name:'Honduras', col:CHN, f:fH }])+'</div></div>'+
     '<p class="mini" style="padding:0 16px">Fuente: '+esc(X.archivo)+' (DGPMV) · '+fechaA(X.d0)+' – '+fechaA(X.d1)+'. Mexicanos que EE. UU. envió a Guatemala u Honduras y que México recibe por la frontera sur. La ruta del mapa es ilustrativa: el archivo no trae la ciudad de EE. UU. ni el aeropuerto de llegada.</p>';
   semanalOtro(X, 'pm-gh-sem', 'pm-gh-sq', [{ name:'Guatemala', col:CG, f:fG }, { name:'Honduras', col:CHN, f:fH }]);
-  // mapa de flujo, centrado en México (como «¿A qué aeropuertos llegan?»): EE. UU. → Guatemala / Honduras → Ciudad Hidalgo.
-  // Trazos finos con partículas; el grosor solo distingue el volumen, sin tapar el mapa.
-  { const US = [-98.2,30.6], GT = [-90.5,14.6], HN = [-87.2,14.9], CH = [-92.15,14.68], mxF = Math.max(G, H, 1), w = v => 1.4+v/mxF*2.2;
+  // mapa de flujo con el mismo lenguaje del Pulso: trazo ancho y tenue que se arquea, y partículas que viajan a velocidad constante
+  { const US = [-98.2,30.6], GT = [-90.5,14.6], HN = [-87.2,14.9], CH = [-92.15,14.68], mxF = Math.max(G, H, 1), w = v => 3+v/mxF*7;
     const nodo = (c, nom, txt, col, pos, r, off) => ({ name:nom, value:[c[0], c[1]], symbolSize:r || 9, itemStyle:{ color:col, borderColor:'#fff', borderWidth:1.5 }, label:{ show:true, position:pos, offset:off || [0,0], distance:7, formatter:'{n|'+nom+'}'+(txt ? '\n{v|'+txt+'}' : ''), rich:{ n:{ fontSize:11.5, fontWeight:700, color:'#2B2926', lineHeight:15 }, v:{ fontSize:10.5, color:'#5C5952' } }, textBorderColor:MT.tierra, textBorderWidth:3 } });
-    const lin = (a, b, v, col, cur) => ({ coords:[a, b], v:v, lineStyle:{ width:w(v), color:col, curveness:cur, opacity:.8 } });
-    const fx = col => ({ show:true, period:5, trailLength:.55, symbol:'circle', symbolSize:3.5, color:col, loop:true });
+    const rutas = [[US, GT, G, CG, .22], [GT, CH, G, CG, .45], [US, HN, H, CHN, .22], [HN, CH, H, CHN, .4]], NP_ = 5, PER = 6;
+    const serieR = [{ type:'lines', coordinateSystem:'geo', silent:false, z:2, data:rutas.map(r => ({ coords:[r[0], r[1]], v:r[2], lineStyle:{ width:w(r[2]), color:r[3], curveness:r[4], opacity:.2, cap:'round' } })) }]
+      .concat([...Array(NP_).keys()].map(k => ({ type:'lines', coordinateSystem:'geo', silent:true, z:3, effect:{ show:true, period:PER, delay:k*PER*1000/NP_, trailLength:0, symbol:'circle', symbolSize:5, loop:true },
+        data:rutas.map(r => ({ coords:[r[0], r[1]], lineStyle:{ width:0, opacity:0, color:r[3], curveness:r[4] }, effect:{ color:r[3], symbolSize:Math.max(4, w(r[2])*.8) } })) })));
     mapaGeo('pm-gh-mapa', [[-112,32],[-84.5,12.6]], { tooltip:{ trigger:'item', formatter:p => p.seriesType==='lines' ? miles(p.data.v)+' personas<br><span style="font-size:10.5px;opacity:.7">'+fechaA(X.d0)+' – '+fechaA(X.d1)+'</span>' : '<b>'+esc(p.name)+'</b>' },
-      series:[{ type:'lines', coordinateSystem:'geo', effect:fx(CG), data:[lin(US, GT, G, CG, -.22), lin(GT, CH, G, CG, .5)] },
-        { type:'lines', coordinateSystem:'geo', effect:fx(CHN), data:[lin(US, HN, H, CHN, .3), lin(HN, CH, H, CHN, .4)] },
-        { type:'scatter', coordinateSystem:'geo', z:3, data:[nodo(US, 'EE. UU.', '', '#5C5952', 'left', 8), nodo(GT, 'Guatemala', miles(G), CG, 'bottom', 9, [10,0]), nodo(HN, 'Honduras', miles(H), CHN, 'right', 9)] },
-        { type:'effectScatter', coordinateSystem:'geo', z:4, rippleEffect:{ brushType:'stroke', scale:3, period:4 }, data:[nodo(CH, 'Cd. Hidalgo', 'recibe '+miles(V), '#2B2926', 'left', 10, [-4,-10])] }] },
+      series:serieR.concat([{ type:'scatter', coordinateSystem:'geo', z:4, data:[nodo(US, 'EE. UU.', '', '#5C5952', 'left', 8), nodo(GT, 'Guatemala', miles(G), CG, 'bottom', 9, [10,0]), nodo(HN, 'Honduras', miles(H), CHN, 'right', 9)] },
+        { type:'effectScatter', coordinateSystem:'geo', z:5, rippleEffect:{ brushType:'stroke', scale:3, period:4 }, data:[nodo(CH, 'Cd. Hidalgo', 'recibe '+miles(V), '#2B2926', 'left', 10, [-4,-10])] }]) },
       [{ name:'P_320', itemStyle:{ areaColor:'#DCE7E3', borderColor:MT.mxL } }, { name:'P_340', itemStyle:{ areaColor:'#F0E2DF', borderColor:MT.mxL } }]); }
   // cuadre por día
   if (rch){ const l = dias.map(d => [fecha(d), dd.get(d), rch[d]||0]);
@@ -551,7 +542,7 @@ function pintarCom(){
 const INFO = {
   tr:'<b>¿Cómo cambian los repatriados en el tiempo?</b> Mexicanos que EE. UU. regresó a México, por día, semana o mes. Puedes verlos en total o separados por modalidad (garitas y puentes, o vuelos PRIM), grupo, O.R. o punto.<br><br><b>Cómo leerla:</b> la franja es el rango habitual (calculado fuera de vacaciones); lo que sale de la franja es inusual. Las sombras grises son temporadas vacacionales. El último punto hueco es un periodo aún incompleto.',
   tp:'<b>¿Quién llega y por dónde?</b> Cómo se reparten los repatriados del periodo: hombres y mujeres adultos, y niñas, niños y adolescentes (NNA) con o sin acompañante. Abajo, los puntos y las O.R. que más reciben.<br><br>Toca un grupo para analizar solo ese grupo; toca un punto u O.R. para filtrar. Si tocas un día, semana o mes en la gráfica de la izquierda, este panel muestra solo ese periodo y su cambio contra el anterior.',
-  perfil:'<b>¿A quién recibe cada punto?</b> De cada 100 personas que llegan a un punto, cuántas son hombres adultos, mujeres adultas, NNA acompañados y NNA no acompañados.<br><br><b>Para qué sirve:</b> muestra qué puntos necesitan más atención a la niñez (los que tienen más rojo reciben más NNA que llegan solos). Se muestran los 12 puntos con más llegadas; el botón de abajo despliega todos.',
+  perfil:'<b>¿A quién recibe cada punto?</b> Cada barra es el 100% de las personas que llegan a un punto, repartidas en hombres adultos, mujeres adultas, NNA acompañados y NNA no acompañados. A la derecha, el grupo más grande y el total.<br><br><b>Cómo usarla:</b> pasa el cursor por un color y se resalta en todos los puntos, con su % y su lugar; en «Ordenar por» eliges un grupo para ordenar los puntos de mayor a menor (por ejemplo, dónde pesan más los NNA que llegan solos). Toca un punto para filtrar todo el tablero.',
   prim:'<b>Llegadas de vuelos PRIM</b> (Programa de Repatriación al Interior de México): cada barra es un día con llegada a algún aeropuerto, con adultos y NNA. La línea punteada es el promedio por día con llegada.<br><br>El archivo no trae el número de vuelos: un día muy por encima del promedio puede ser más de un vuelo.',
   mapa:'<b>¿Dónde se recibe?</b> Cada círculo es un punto de repatriación; su tamaño es cuántas personas recibió en el periodo. En ocre, garitas y puentes de la frontera norte; en verde, aeropuertos con vuelos PRIM.<br><br>Toca un círculo para filtrar todo el tablero por ese punto. Las posiciones son la ciudad del punto (aproximadas).',
   ds:'<b>¿Qué días se repatría?</b> A la izquierda, el promedio de personas que llegan cada día de la semana, por garitas y puentes y por vuelos PRIM.<br><br>A la derecha, los 10 puntos con más llegadas y en qué días reciben: la cifra es el promedio de ese día y el color, qué tan concentrada está su semana en ese día. Un punto con pocas celdas oscuras recibe en días fijos (vuelos programados); uno parejo recibe todos los días.',

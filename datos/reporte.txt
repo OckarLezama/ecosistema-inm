@@ -1,13 +1,13 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-15 12:36
+Generado: 2026-10-15 13:22
 Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
 
 == Ingresos  ·  DGCVM INGRESOS 13oct2026.xlsx, DGCVM INGRESOS.xlsx  ·  cargado 2026-10-15
    1,081,893 renglones · total 99,008,314 · del 2024-10-01 al 2026-10-13
    Días sin datos: 0
    En «Otras» nacionalidades: 2,171 (0.0%)
-   · 46 renglones con nacionalidad sin código (van a «Otras»): Islas Navidad, Islas Cocos, Timor-Leste, Islas Reunion, Islas Malvinas, Islas Azores, Islas Faroe, anto Tomé y Príncipe
-   · 44 de 180 puntos de internación tienen coordenadas en el catálogo (96% de los ingresos); el resto no aparece como punto en el mapa
+   · 46 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Navidad, Islas Cocos, Timor-Leste, Islas Reunion, Islas Malvinas, Islas Azores, Islas Faroe, anto Tomé y Príncipe….
+   · Solo 44 de 180 puntos de internación tienen ubicación para dibujarse en el mapa (concentran el 96% de los ingresos). Los demás sí se cuentan en todas las cifras; solo no aparecen como punto en el mapa.
    · DGCVM INGRESOS.xlsx es una versión anterior: sus 742 días también vienen en DGCVM INGRESOS 13oct2026.xlsx y se tomaron de ese. No se suma nada dos veces.
 
 == Segunda revisión  ·  DGCVM SEGUNDA REVISION_ 13oct2026.xlsx, DGCVM SEGUNDA REVISION_.xlsx  ·  cargado 2026-10-15
@@ -22,9 +22,9 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    935,189 renglones · total 935,189 · del 2024-10-02 al 2026-10-13
    Días sin datos: 184 → 2024-10-01, 2024-10-13, 2024-10-19, 2024-10-20, 2024-10-26, 2024-10-27, 2024-11-02, 2024-11-03, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01, 2024-12-08, 2024-12-15 …
    En «Otras» nacionalidades: 37,774 (4.0%)
-   · 7 renglones con nacionalidad sin código (van a «Otras»): Islas Reunion, Timor-Leste, Islas Marianas
+   · 7 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Reunion, Timor-Leste, Islas Marianas.
    · 3,202 renglones son de empleadores, no de personas (se cuentan en el total, sin nacionalidad)
-   · Trae 358,011 renglones anteriores al 2024-10-01 (desde 2024-01-02); no se usan: el tablero empieza el 1 oct 2024.
+   · 358,011 renglones son de antes del 1 oct 2024 (el más antiguo, del 2024-01-02). No se usan: la plataforma empieza el 1 oct 2024.
    · 592,952 trámites con tarjeta marcan también «Sin expedición de documento»; se cuentan solo con su tarjeta.
    · 47,617 trámites no marcan ningún documento: 44,647 terminaron con tarjeta (se cuentan como «Tarjeta sin tipo registrado») y 2,970 sin tarjeta (se cuentan como «Sin expedición»).
    · Entre los trámites concluidos, «Tipo de resolución» dice 27,038 «En proceso» y 19,475 «Cancelados»; 23,927 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
@@ -33,7 +33,7 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    53,591 renglones · total 900,882 · del 2024-10-01 al 2026-10-12
    Días sin datos: 1 → 2026-10-13
    En «Otras» nacionalidades: 16 (0.0%)
-   · 2 renglones con nacionalidad sin código (van a «Otras»): REPÚBLICA DE KOSOVO
+   · 2 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: REPÚBLICA DE KOSOVO.
    · 1 renglones donde TOTAL no es 1RA VEZ + REINCIDENTES
    · 1 renglones repetidos (mismo día, O.R. y nacionalidad)
    · 156,258 rescatados sin destino registrado (ni estación ni DIF)
@@ -49,7 +49,7 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    41,513 renglones · total 41,513 · del 2024-10-01 al 2026-10-13
    Días sin datos: 0
    En «Otras» nacionalidades: 11 (0.0%)
-   · 5 renglones con nacionalidad sin código (van a «Otras»): ISLAS VÍRGENES DE EE.UU.
+   · 5 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: ISLAS VÍRGENES DE EE.UU..
    · 10 renglones sin fecha de nacimiento (se cuentan en el grupo 12 a 17)
 
 == Canalizados adultos  ·  DGCVM CANALIZADOS_ADULTOS ACOMPAÑANTES.xlsx  ·  cargado 2026-10-14
@@ -61,7 +61,7 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    6,212 renglones · total 28,868 · del 2024-10-01 al 2026-10-13
    Días sin datos: 16 → 2024-10-13, 2024-10-20, 2024-10-27, 2024-11-02, 2024-11-04, 2024-12-01, 2024-12-08, 2024-12-15, 2024-12-25, 2025-01-01, 2025-01-02, 2025-01-03, 2025-02-23, 2025-11-16 …
    En «Otras» nacionalidades: 0 (0.0%)
-   · 3 renglones donde deportados + retornos asistidos no es igual a «Retornados a su país» (diferencia +8); se usa la suma
+   · 3 renglones donde deportados + retornos asistidos no da la columna «Retornados a su país» (diferencia de +8 personas). La plataforma usa la suma de deportados + retornos asistidos.
    · DGCVM RETORNADOS A SU PAIS.xlsx es una versión anterior: sus 726 días también vienen en DGCVM RETORNADOS A SU PAIS 13oct2026.xlsx y se tomaron de ese. No se suma nada dos veces.
 
 == Recibidos de EE. UU.  ·  DGCOR RECIBIDOS.xlsx  ·  cargado 2026-10-13
@@ -86,7 +86,7 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
 
 == Caravanas  ·  CARAVANAS MIGRANTES.xlsx  ·  cargado 2026-10-13
    22 caravanas · del 2024-10-05 al 2026-09-22
-   · Lugares sin coordenadas en el catálogo (no se dibuja su recorrido): Corazones, Oaxaca
+   · Estos lugares no tienen ubicación en el catálogo, así que su recorrido no se dibuja en el mapa: Corazones, Oaxaca
 
 == Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES.xlsx  ·  Se muestra en Protección al migrante › Vuelos comerciales. No está en el archivo de Repatriados: se suma aparte.
 

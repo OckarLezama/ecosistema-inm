@@ -15,7 +15,7 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(await p.evaluate(() => document.querySelectorAll('#pm-ds .pm-hm .c').length===70), w+' calendario 10 × 7');
     ok(await p.evaluate(() => /Ver los \d+ puntos/.test(document.getElementById('pm-pf-m').textContent)), w+' perfil con «ver todos»');
     // una garita elegida: la tarjeta de vuelos PRIM se oculta y el perfil ocupa todo el ancho
-    await p.evaluate(() => { const b = [...document.querySelectorAll('[data-ppt]')].find(x => /Matamoros/.test(x.textContent)); if (b) b.click(); }); await p.waitForTimeout(1200);
+    await p.evaluate(() => { const b = [...document.querySelectorAll('#pm-pf [data-mzk]')].find(x => /Matamoros/.test(x.textContent)); if (b) b.click(); }); await p.waitForTimeout(1200);
     ok(await p.evaluate(() => document.getElementById('pm-pr').closest('.caja').hidden && document.getElementById('pm-pf').closest('.rg-g2').classList.contains('solo')), w+' garita: sin tarjeta PRIM, perfil a todo lo ancho');
     await p.evaluate(() => { const b = document.querySelector('[data-pquita="p"]'); if (b) b.click(); }); await p.waitForTimeout(1200);
     for (const k of ['gh','com']){ if (!PM.otros[k]) continue; await p.evaluate(k => document.querySelector('[data-pvista="'+k+'"]').click(), k); await p.waitForTimeout(1500);
@@ -38,6 +38,6 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(pz.celdas>=pz.of.length, w+' mapa de calor oficina × mes');
     await p.screenshot({ path:path.join(__dirname,'capturas','plazos_'+w+'.png') });
     for (const v of ['nat','mot','mes','res']){ await p.evaluate(v => document.querySelector('[data-rmotv="'+v+'"]').click(), v); await p.waitForTimeout(900);
-      ok(await p.evaluate(v => v==='res' || v==='mot' ? document.querySelectorAll('#rg-mot .mot-r').length>3 : !!echarts.getInstanceByDom(document.getElementById('rg-mot-g')), v), w+' motivo de estancia: '+v); }
+      ok(await p.evaluate(v => ({ res:() => document.querySelectorAll('#rg-mot .mot-tile').length>=3, mot:() => document.querySelectorAll('#rg-mot .mot-r').length>3, nat:() => document.querySelectorAll('#rg-mot-g .rg-mz-r').length>3, mes:() => !!echarts.getInstanceByDom(document.getElementById('rg-mot-g')) })[v](), v), w+' motivo de estancia: '+v); }
   }
   console.log(mal ? 'con problemas '+mal : 'todo bien'); console.log('errores', JSON.stringify(errs)); await b.close(); })();

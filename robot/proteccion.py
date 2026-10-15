@@ -94,10 +94,10 @@ def otros(origen, ini):
             t = t[t["d"] >= 0]
         m1 = (t["ADULTOS"] + t["MENORES"]) != t["MEXICANOS REPATRIADOS"]
         if m1.any():
-            lector.avisar(base, f"{int(m1.sum())} registros donde adultos + menores no suman el total.")
+            lector.avisar(base, f"{int(m1.sum())} renglones donde adultos + menores no da el total del renglón; la plataforma usa el total tal como viene.")
         m2 = (t["NNA ACOMPANADOS"] + t["NNA NO ACOMPANADOS"]) != t["MENORES"]
         if m2.any():
-            lector.avisar(base, f"{int(m2.sum())} registros donde NNA acompañados + no acompañados no suman los menores.")
+            lector.avisar(base, f"{int(m2.sum())} renglones donde NNA acompañados + no acompañados no da el total de menores; la plataforma usa cada columna tal como viene.")
         tab = {"d": t["d"].tolist(), "e": t["e"].tolist(), "p": t["p"].tolist(), "pa": t["pa"].tolist() if "PAIS" in t.columns else [0] * len(t)}
         for c, kk in cols.items():
             tab[kk] = t[c].tolist()

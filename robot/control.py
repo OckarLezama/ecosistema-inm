@@ -101,7 +101,7 @@ def main():
     sp = ing["PUNTO DE INTERNACION"].isna() | (ing["PUNTO DE INTERNACION"].astype(str).str.strip().isin(["", "nan"]))
     if sp.any():
         for _, r in ing[sp].head(5).iterrows():
-            lector.avisar("Ingresos", "Registro sin punto de internación: {}, {}, {} personas (se cuenta como «Sin punto registrado»).".format(r["DIA"].date(), r["O.R."], int(pd.to_numeric(r["TOTAL"], errors="coerce") or 0)))
+            lector.avisar("Ingresos", "Un renglón no trae punto de internación ({}, {}, {} personas). Se cuenta en el total como «Sin punto registrado».".format(r["DIA"].date(), r["O.R."], int(pd.to_numeric(r["TOTAL"], errors="coerce") or 0)))
         if sp.sum() > 5:
             lector.avisar("Ingresos", "{:,} registros sin punto de internación en total.".format(int(sp.sum())))
     seg, f_seg = leer(a.origen, {"DETERMINACION", "PUNTO DE INTERNACION"}, base="Segunda revisión")
@@ -137,7 +137,7 @@ def main():
     mx = int(seg.loc[seg["NACIONALIDAD"].map(norm) == "MEXICO", "TOTAL"].sum())
     if mx:
         calidad.append("%d casos de segunda revisión vienen con nacionalidad mexicana; no se cuentan." % mx)
-        lector.avisar("Segunda revisión", "{:,} casos vienen con nacionalidad mexicana; no se cuentan.".format(mx))
+        lector.avisar("Segunda revisión", "{:,} casos de segunda revisión vienen con nacionalidad mexicana. No se cuentan: a un mexicano no se le niega la entrada, así que no son casos de revisión de extranjeros.".format(mx))
 
     # Presentados en estación o estancia
     g = pre.assign(d=dia(pre["DIA"]), e=pre["O.R."].map(estado), s=pre["ESTACION O ESTANCIA MIGRATORIA"].map(estacion), n=pre["NACIONALIDAD"].map(nacionalidad)) \
@@ -156,7 +156,7 @@ def main():
     mayores = int((nna["ge"] == 3).sum())
     if mayores:
         calidad.append("%d registros del archivo de NNA tienen 18 años o más a la fecha del evento; no se cuentan como NNA." % mayores)
-        lector.avisar("Canalizados NNA", "{:,} registros tienen 18 años o más a la fecha del evento; no se cuentan como NNA.".format(mayores))
+        lector.avisar("Canalizados NNA", "{:,} registros tienen 18 años o más a la fecha del evento. No se cuentan como NNA (niñas, niños y adolescentes son menores de 18).".format(mayores))
     g = nna.assign(d=dia(nna["DIA"]), e=nna["O.R."].map(estado), n=nna["NACIONALIDAD"].map(nacionalidad), sx=nna["SEXO"].map(lambda x: 1 if norm(x) == "MUJER" else 0),
                    c=nna["CLASIFICACION"].map(lambda x: next((i for i, m in enumerate(CLASES) if norm(m) == norm(x)), 0)), m=nna["MOTIVO DE SALIDA"].map(motivo)) \
            .groupby(["d", "e", "n", "sx", "ge", "c", "m"], as_index=False).size()

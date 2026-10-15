@@ -121,7 +121,37 @@ window.IANAMI_CUAD = op => { if (!op || op.geo || [].concat(op.series || []).som
     if (x.type!=='log'){ x.minorTick = Object.assign({ show:false, splitNumber:2 }, x.minorTick); x.minorSplitLine = Object.assign({ show:true, lineStyle:{ color:'#F2F0E9' } }, x.minorSplitLine); } });
   const esCat = a => [].concat(a || []).some(x => x && x.type==='category');
   if (esCat(op.xAxis) && esCat(op.yAxis)) return op;          // matrices (cruces): sin cuadrícula
+  if (op.tooltip && op.tooltip.appendToBody===undefined) op.tooltip.appendToBody = true;   // el recuadro flotante no queda cortado ni encimado dentro de un contenedor con desplazamiento
   fija(op.xAxis); fija(op.yAxis); return op; };
+
+// Barras al 100% «¿Qué documento obtiene cada nacionalidad?»: el mismo componente para todas las gráficas de ese tipo.
+// Pasar el cursor (o tocar) un color lo resalta en todas las barras y muestra su % y lugar en cada renglón; la leyenda ordena.
+window.IANAMI_MEZCLA = function(el, c){ if (!el) return;
+  const e = s => String(s).replace(/[&<>"]/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]));
+  const claro = h => { const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(h || ''); if (!m) return false; const [r,g,b] = m.slice(1).map(x => parseInt(x,16)); return .299*r+.587*g+.114*b > 175; };
+  const C = c.cats, num = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' k' : num(n);
+  let F = c.filas.filter(f => f.tot>0);
+  if (c.orden!=null) F = F.slice().sort((a,b) => b.v[c.orden]/b.tot - a.v[c.orden]/a.tot);
+  const mayor = f => f.v.reduce((m,x,i) => x>f.v[m] ? i : m, 0);
+  const tc = k => claro(C[k].col) ? '#7A766C' : C[k].col;
+  const dTxt = (f, k) => '<b class="num" style="color:'+tc(k)+'">'+(f.v[k]/f.tot*100).toFixed(1)+'%</b> '+e(C[k].nom);
+  el.className = 'rg-mz mz-g';
+  el.innerHTML = F.map(f => { const k0 = c.orden!=null ? c.orden : mayor(f);
+      return '<div class="rg-mz-r'+(c.sel!=null && c.sel===f.k ? ' sel' : '')+'" data-mzk="'+f.k+'"><span title="'+e(f.nom)+'">'+e(f.nom)+'</span><span class="rg-mz-b">'+C.map((cat,i) => { const v = f.v[i], p = v/f.tot*100;
+        return v ? '<i data-c="'+i+'" data-p="'+p.toFixed(1)+'" style="flex:'+v+' 1 0;background:'+cat.col+';color:'+(claro(cat.col) ? '#2B2926' : '#fff')+(c.orden!=null && c.orden!==i ? ';opacity:.3' : '')+'" title="'+e(cat.nom)+': '+num(v)+' · '+p.toFixed(1)+'%">'+(p>=12 ? Math.round(p)+'%' : '')+'</i>' : ''; }).join('')+
+        '</span><span class="rg-mz-d" data-base="'+e(dTxt(f, k0))+'">'+dTxt(f, k0)+'</span><span class="x num">'+corto(f.tot)+'</span></div>'; }).join('')+
+    '<div class="rg-ley rg-mz-l"><span>Ordenar por:</span>'+C.map((cat,i) => '<button data-mzo="'+i+'" class="'+(c.orden===i ? 'on' : '')+'"><i style="background:'+cat.col+'"></i>'+e(cat.nom)+'</button>').join('')+'</div>';
+  let foco = null;
+  const enfoca = k => { if (k===foco) return; foco = k; el.classList.toggle('foco', k!=null);
+    const ps = k==null ? [] : [...el.querySelectorAll('.rg-mz-b i[data-c="'+k+'"]')].map(i => +i.dataset.p);
+    el.querySelectorAll('.rg-mz-r').forEach(r => { r.querySelectorAll('.rg-mz-b i').forEach(i => i.classList.toggle('f', k!=null && +i.dataset.c===k));
+      const d = r.querySelector('.rg-mz-d'), s = k!=null ? r.querySelector('.rg-mz-b i[data-c="'+k+'"]') : null, lug = s ? 1+ps.filter(p => p > +s.dataset.p).length : 0;
+      d.innerHTML = k==null ? d.dataset.base : '<b class="num" style="color:'+tc(k)+'">'+(s ? s.dataset.p : '0.0')+'%</b> '+e(C[k].nom)+(lug ? ' <small>· '+lug+'.º de '+ps.length+'</small>' : ''); }); };
+  el.onmouseover = ev => { const t = ev.target.closest('.rg-mz-b i[data-c], [data-mzo]'); enfoca(t ? +(t.dataset.c!=null ? t.dataset.c : t.dataset.mzo) : null); };
+  el.onmouseleave = () => enfoca(null);
+  el.onclick = ev => { const o = ev.target.closest('[data-mzo]'); if (o){ c.onOrden && c.onOrden(c.orden===+o.dataset.mzo ? null : +o.dataset.mzo); return; }
+    const r = ev.target.closest('[data-mzk]'); if (r && c.onFila) c.onFila(isNaN(+r.dataset.mzk) ? r.dataset.mzk : +r.dataset.mzk); };
+};
 
 /* ==== [2] DATOS (cubo y consultas) ================================= */
 // Cubo denso por indicador [semana][estado][nacionalidad] y sus dos resúmenes
@@ -1533,36 +1563,42 @@ function irA(v){
 // (datos/datos.js → bases; datos/observaciones.js → lo que anotó cada robot). Nada se captura a mano.
 function obsDe(b){ const l = (b.obs || []).slice(), O = window.IANAMI_OBS || {};
   Object.keys(O).filter(r => r[0]!=='_').forEach(r => (O[r][b.n] || []).forEach(x => { if (l.indexOf(x)<0) l.push(x); })); return l; }
-// Estado de cada base contra el día de la consulta: lo esperado es que llegue al menos a ayer.
-const AREAS = ['DGCVM','DGCOR','DGRAM','DGPMV','CBP'];
+// Estado de cada base contra el día de la consulta: lo esperado es que las de envío diario lleguen al menos a ayer.
+// Las periódicas (validación de actas, vuelos comerciales, Guatemala-Honduras, documentos vigentes, caravanas) no se cuentan como atrasadas.
+const DGS = [['DGCVM','Dirección General de Control y Verificación Migratoria'], ['DGCOR','Dirección General de Coordinación de Oficinas de Representación'], ['DGRAM','Dirección General de Regulación y Archivo Migratorio'],
+  ['DGPMV','Dirección General de Protección al Migrante y Vinculación'], ['CBP','Oficina de Aduanas y Protección Fronteriza de EE. UU. (fuente externa)'], ['—','Registro propio']];
+const PERIODICAS = /Validación del Registro Civil|vuelos comerciales|Guatemala y Honduras|Documentos vigentes|Caravanas/i;
 function vistaBases(){
   const P = (window.IANAMI_OBS || {})._periodos || {}, hoy = new Date(), ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()-1), iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'), AY = iso(ayer);
   const dif = (a, b) => Math.round((new Date(a+'T00:00:00') - new Date(b+'T00:00:00'))/864e5);
-  // bases de datos.js + las que leen otros robots (Validación del Registro Civil, Repatriados y sus archivos aparte)
   const B = (D.bases || []).map(b => Object.assign({}, b, P[b.n] && !b.hasta ? { desde:P[b.n].desde, hasta:P[b.n].hasta, filas:b.filas!=null ? b.filas : P[b.n].filas, pendiente:false } : {}));
   Object.keys(P).forEach(n => { if (!B.some(b => b.n===n)) B.push({ n:n, archivo:P[n].archivo, desde:P[n].desde, hasta:P[n].hasta, filas:P[n].filas, cargado:null }); });
-  const area = b => AREAS.find(a => new RegExp('(^|, )'+a+' ').test(b.archivo || '')) || '—';
-  B.forEach(b => { b.area = area(b); b.atraso = b.hasta ? Math.max(0, dif(AY, b.hasta)) : null; });
-  const conF = B.filter(b => b.hasta), atras = conF.filter(b => b.atraso>0).sort((a,b) => b.atraso-a.atraso);
-  const orden = B.slice().sort((a,b) => (a.hasta ? 0 : 1)-(b.hasta ? 0 : 1) || (b.atraso||0)-(a.atraso||0) || a.n.localeCompare(b.n));
+  B.forEach(b => { b.area = (DGS.find(a => a[0]!=='—' && new RegExp('(^|, )'+a[0]+' ').test(b.archivo || '')) || DGS[5])[0]; b.per = PERIODICAS.test(b.n); b.atraso = b.hasta && !b.per ? Math.max(0, dif(AY, b.hasta)) : null; });
+  const diarias = B.filter(b => b.hasta && !b.per), atras = diarias.filter(b => b.atraso>0).sort((a,b) => b.atraso-a.atraso);
   const estado = b => !b.hasta ? (b.pendiente ? '<span class="bs-est n">Pendiente</span>' : '<span class="bs-est n">Conteo a una fecha</span>')
+    : b.per ? '<span class="bs-est n" title="No se envía cada día">Periódica</span><br><span class="mini">último dato: '+fechaISO(b.hasta)+'</span>'
     : b.atraso===0 ? '<span class="bs-est ok">Al día</span>' : '<span class="bs-est '+(b.atraso>7 ? 'mal' : 'at')+'">'+b.atraso+' '+(b.atraso===1 ? 'día' : 'días')+' de atraso</span>';
   const periodo = b => b.hasta ? '<b>'+fechaISO(b.desde)+'</b><span class="bs-a">→</span><b>'+fechaISO(b.hasta)+'</b>'
     : b.pendiente ? '—' : b.k==='car' ? '<span class="mini">Registro de eventos, sin días</span>' : '<span class="mini">No trae días: es un conteo a una fecha'+(b.cargado ? '. Archivo del '+fechaISO(b.cargado) : '')+'</span>';
   const fila = b => { const ob = obsDe(b), arch = String(b.archivo || '').split(', ');
-    return '<tr'+(b.pendiente ? ' class="bs-pend"' : '')+'><td><b>'+esc(b.n)+'</b><br><span class="mini">'+arch.map(esc).join('<br>')+'</span></td><td class="x">'+b.area+'</td>'+
+    return '<tr'+(b.pendiente ? ' class="bs-pend"' : '')+'><td><b>'+esc(b.n)+'</b><br><span class="mini">'+arch.map(esc).join('<br>')+'</span></td>'+
       '<td class="x bs-per">'+periodo(b)+'</td><td>'+estado(b)+'</td>'+
       '<td class="x">'+(b.filas!=null ? miles(b.filas) : '—')+'</td><td class="x">'+(b.faltan!=null ? miles(b.faltan) : '—')+'</td>'+
-      '<td class="bs-obs">'+(ob.length ? (ob.length>2 ? '<details><summary>'+ob.length+' observaciones</summary>' : '')+'<ul>'+ob.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul>'+(ob.length>2 ? '</details>' : '') : '<span class="mini">Sin observaciones</span>')+'</td></tr>'; };
+      '<td class="bs-obs">'+(ob.length ? '<ul>'+ob.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul>' : '<span class="mini">Sin observaciones</span>')+'</td></tr>'; };
   const resumen = atras.length===0
-    ? '<div class="bs-sem ok"><b>Todas las bases con fecha están al día:</b> llegan al menos a ayer, '+fechaISO(AY)+'.</div>'
-    : '<div class="bs-sem '+(atras.length===conF.length ? 'at' : 'mal')+'"><b>'+(atras.length===conF.length ? 'Ninguna' : (conF.length-atras.length)+' de '+conF.length)+' '+(atras.length===conF.length ? 'base llega' : 'llegan')+' a ayer, '+fechaISO(AY)+'.</b> '+
-      'Se espera que cada base llegue, como mínimo, al día anterior a la consulta.'+
+    ? '<div class="bs-sem ok"><b>Todas las bases de envío diario están al día:</b> llegan al menos a ayer, '+fechaISO(AY)+'.</div>'
+    : '<div class="bs-sem '+(atras.length===diarias.length ? 'at' : 'mal')+'"><b>'+(atras.length===diarias.length ? 'Ninguna de las '+diarias.length+' bases de envío diario llega' : (diarias.length-atras.length)+' de '+diarias.length+' bases de envío diario llegan')+' a ayer, '+fechaISO(AY)+'.</b> '+
+      'Lo esperado es que cada una llegue, como mínimo, al día anterior a la consulta.'+
       '<div class="bs-sem-g">'+[...new Set(atras.map(b => b.atraso))].map(n => { const l = atras.filter(b => b.atraso===n);
-        return '<p><b>'+n+' '+(n===1 ? 'día' : 'días')+' de atraso</b> <small>(llegan al '+fechaISO(l[0].hasta)+')</small>: '+l.map(b => esc(b.n)+' <small>'+b.area+'</small>').join(' · ')+'</p>'; }).join('')+'</div></div>';
-  return '<h1>Bases</h1><p>Qué trae cada base, del primer al último día con datos, y si está al día. Última conversión: '+esc(D.generado)+'. Las observaciones las escribe el proceso al leer cada archivo; lo que se corrige, se corrige en el archivo que entrega el área.</p>'+resumen+
-    '<div class="caja"><div class="tb-w"><table class="tb bs"><thead><tr><th>Base y archivos</th><th>Área</th><th>Periodo<br><small>primer día → último día con datos</small></th><th>¿Al día?<br><small>contra ayer</small></th><th>Renglones</th><th>Días sin datos<br><small>dentro del periodo</small></th><th>Observaciones</th></tr></thead><tbody>'+
-    orden.map(fila).join('')+'</tbody></table></div><span class="nota">«Días sin datos»: días entre el primero y el último en que el archivo no trae ningún renglón (por ejemplo, fines de semana sin atención). Cada base puede venir en varios archivos (histórico y envíos diarios): el proceso toma cada día del archivo más reciente que lo trae y no suma nada dos veces.</span></div>';
+        return '<p><b>'+n+' '+(n===1 ? 'día' : 'días')+' de atraso</b> <small>(llegan al '+fechaISO(l[0].hasta)+')</small>: '+l.map(b => esc(b.n)+' <small>'+b.area+'</small>').join(' · ')+'</p>'; }).join('')+'</div>'+
+      '<p class="bs-sem-n">Las bases periódicas (validación de actas, vuelos comerciales, Guatemala y Honduras, documentos vigentes y caravanas) no se envían cada día y no se cuentan aquí.</p></div>';
+  const grupo = a => { const l = B.filter(b => b.area===a[0]).sort((x,y) => (x.per?1:0)-(y.per?1:0) || (y.atraso||0)-(x.atraso||0) || x.n.localeCompare(y.n)); if (!l.length) return '';
+    const d = l.filter(b => b.hasta && !b.per), al = d.filter(b => b.atraso===0).length, at = d.length-al, pe = l.length-d.length;
+    return '<details class="bs-dg" open><summary><span class="bs-dg-n"><b>'+a[0]+'</b> <span>'+esc(a[1])+'</span></span><span class="bs-dg-r">'+l.length+' '+(l.length===1 ? 'base' : 'bases')+
+      (d.length ? ' · <span class="bs-est '+(at ? 'at' : 'ok')+'">'+(at ? at+' con atraso' : 'todas al día')+'</span>' : '')+(pe ? ' · '+pe+' periódica'+(pe>1 ? 's' : '') : '')+'</span></summary>'+
+      '<div class="tb-w"><table class="tb bs"><thead><tr><th>Base y archivos</th><th>Periodo<br><small>primer día → último día con datos</small></th><th>¿Al día?<br><small>contra ayer</small></th><th>Renglones</th><th>Días sin datos<br><small>dentro del periodo</small></th><th>Observaciones</th></tr></thead><tbody>'+l.map(fila).join('')+'</tbody></table></div></details>'; };
+  return '<h1>Bases</h1><p>Qué trae cada base, del primer al último día con datos, y si está al día, agrupadas por dirección general. Toca el nombre de una dirección para mostrarla u ocultarla. Última conversión: '+esc(D.generado)+'.</p>'+resumen+
+    '<div class="caja bs-c">'+DGS.map(grupo).join('')+'<span class="nota">«Días sin datos»: días entre el primero y el último en que el archivo no trae ningún renglón (por ejemplo, fines de semana sin atención). «Periódica»: base que no se envía cada día. Cada base puede venir en varios archivos (histórico y envíos diarios): el proceso toma cada día del archivo más reciente que lo trae y no suma nada dos veces. Las observaciones las escribe el proceso al leer cada archivo; lo que haya que corregir se corrige en el archivo que entrega la dirección.</span></div>';
 }
 // El mapa ocupa el alto que queda de la pantalla, dejando asomar la franja de cajas.
 function ajustarAlto(){
