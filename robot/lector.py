@@ -152,13 +152,21 @@ def juntar(partes, base, col_dia="DIA"):
             avisar(base, f"{nombre}: el nombre dice {fn[0].date()} a {fn[1].date()}, pero trae {a.date()} a {b.date()}.")
         info.append((b, nombre, t))
     info.sort(key=lambda x: (x[0], x[1]))                     # el que llega más lejos va al final y gana
-    usados, salida = set(), []
+    usados, salida, filas = set(), [], {}
     for b, nombre, t in reversed(info):
         dias = set(t["_D"].unique())
         rep = dias & usados
         if rep:
+            # salvaguarda: un día que el archivo más nuevo trae con muchos menos renglones puede ser un envío incompleto
+            n_viejo = t[t["_D"].isin(rep)].groupby("_D").size()
+            bajos = [(d.date(), int(n_viejo[d]), filas[d]) for d in sorted(rep) if d in n_viejo and filas.get(d, 0) < 0.5 * n_viejo[d] and n_viejo[d] >= 20]
+            if bajos:
+                avisar(base, "Revisar: " + str(len(bajos)) + " días llegan en el archivo más reciente con menos de la mitad de renglones que en " + nombre +
+                       " (" + ", ".join(f"{d}: {nv:,} → {nn:,}" for d, nv, nn in bajos[:5]) + (" …" if len(bajos) > 5 else "") + "). Puede ser un envío incompleto.")
             avisar(base, f"{nombre}: {len(rep)} días también vienen en un archivo más reciente; se tomaron de ese.")
             t = t[~t["_D"].isin(rep)]
+        for d, n in t.groupby("_D").size().items():
+            filas.setdefault(d, int(n))
         usados |= dias
         salida.append(t)
     t = pd.concat(salida[::-1], ignore_index=True).sort_values("_D", kind="stable")

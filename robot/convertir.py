@@ -666,6 +666,7 @@ def main():
                 lector.avisar(NOMBRES[clave], os.path.basename(ruta) + ": no se leyeron las hojas " + ", ".join(fuera) + " (ocultas o con otras columnas).")
             partes.append((os.path.basename(ruta), t))
         orig = partes[0][1].attrs.get("orig") or list(partes[0][1].columns)
+        orig = [lector.ALIAS.get(lector.norm(c), c) for c in orig]          # encabezados con errores de captura («NACIONADLIDAD»)
         t = lector.juntar(partes, NOMBRES[clave])
         t = t[[c for c in partes[0][1].columns]]
         tablas[clave] = pd.concat([pd.DataFrame([orig], columns=t.columns), t], ignore_index=True)

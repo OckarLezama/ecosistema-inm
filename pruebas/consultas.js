@@ -53,7 +53,7 @@ const casos = [
  ['trámites de mujeres', {ind:'tram', partes:['muj']}, { total:S(G.cols,()=>1), p0:S(G.cols, i=>G.cols.s[i]===1) }],
  ['trámites de Cuba contra Venezuela contra Haití', {ind:'tram', cmp:true}, { total:['Cuba','Venezuela','Haití'].reduce((t,x)=>t+S(G.cols, i=>G.cols.n[i]===G.dic.n.indexOf(x)),0) }],
  ['trámites por oficina en diciembre', {ind:'tram', desg:'of'}, { total:S(G.cols, i=>enR(G.cols, G.inicio, ...DICg)(i)) }],
- ['de los rescatados cuántos fueron presentados comparado con el sistema', {ind:'resc', partes:['pre'], tipo:'fuentes'}, { total:orr(()=>1), p0:orr(()=>1,'pre'), sis:S(C.pre,()=>1) }],
+ ['de los rescatados cuántos fueron presentados comparado con el sistema', {ind:'resc', partes:['pre'], tipo:'fuentes'}, { total:orr(()=>1), p0:orr(()=>1,'pre'), sis:S(C.pre, enR(C.pre, C.inicio, A, Z)) }],
  ['cuántas visas humanitarias', {ind:'tram'}, { total:S(G.cols, i=>G.cols.c[i]===G.condiciones.indexOf('Vis. Humanitario')) }],
  ['repatriados mujeres por punto', {ind:'rep', partes:['am'], desg:'p'}, { total:S(P.rep,()=>1), p0:S(P.rep,()=>1,'am') }],
  ['NNA canalizados en Chiapas contra Tabasco', {ind:'nna', cmp:true}, { total:S(C.nna, i=>C.nna.e[i]===e('Chiapas')||C.nna.e[i]===e('Tabasco')) }],
