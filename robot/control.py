@@ -122,7 +122,7 @@ def main():
     mal = pn.str.contains("AEROPUERTO") & ~pn.str.contains("TERRESTRE") & (ing["vi"] != 0)
     if mal.sum():
         calidad.append("%d personas entraron por aeropuertos registrados como vía terrestre (por confirmar con el área)." % int(ing.loc[mal, "TOTAL"].sum()))
-        lector.avisar("Ingresos", "{:,} personas entraron por aeropuertos registrados como vía terrestre (por confirmar con el área).".format(int(ing.loc[mal, "TOTAL"].sum())))
+        lector.avisar("Ingresos", "{:,} ingresos están registrados como vía terrestre en puntos que son aeropuertos. El tablero los cuenta como terrestres, tal como vienen; el área debe confirmar la vía.".format(int(ing.loc[mal, "TOTAL"].sum())))
     g = ing.assign(d=dia(ing["DIA"]), e=ing["O.R."].map(estado), p=ing["PUNTO DE INTERNACION"].map(punto), n=ing["NACIONALIDAD"].map(nacionalidad)) \
            .groupby(["d", "e", "p", "vi", "n"], as_index=False)["TOTAL"].sum()
     ING = {"d": g["d"].tolist(), "e": [E(x) for x in g["e"]], "p": [P(x) for x in g["p"]], "vi": g["vi"].tolist(),

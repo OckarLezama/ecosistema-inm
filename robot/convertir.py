@@ -663,7 +663,7 @@ def main():
         for ruta, _, _ in l:                                   # todas las hojas visibles con las mismas columnas
             t, fuera = lector.tabla_de(ruta, NOMBRES[clave], ACEPTA)
             if fuera:
-                lector.avisar(NOMBRES[clave], os.path.basename(ruta) + ": no se leyeron las hojas " + ", ".join(fuera) + " (ocultas o con otras columnas).")
+                lector.avisar(NOMBRES[clave], os.path.basename(ruta) + ": las hojas «" + "», «".join(fuera) + "» no se usaron (están ocultas o no tienen las columnas de la base). Si traen datos que deben contar, pedir al área que los pase a la hoja principal.")
             partes.append((os.path.basename(ruta), t))
         orig = partes[0][1].attrs.get("orig") or list(partes[0][1].columns)
         orig = [lector.ALIAS.get(lector.norm(c), c) for c in orig]          # encabezados con errores de captura («NACIONADLIDAD»)

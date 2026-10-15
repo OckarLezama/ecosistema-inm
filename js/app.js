@@ -1532,18 +1532,37 @@ function irA(v){
 // ---- Sección Bases: qué trae cada base, hasta cuándo y qué se observó. Todo lo escriben los robots
 // (datos/datos.js → bases; datos/observaciones.js → lo que anotó cada robot). Nada se captura a mano.
 function obsDe(b){ const l = (b.obs || []).slice(), O = window.IANAMI_OBS || {};
-  Object.keys(O).forEach(r => (O[r][b.n] || []).forEach(x => { if (l.indexOf(x)<0) l.push(x); })); return l; }
+  Object.keys(O).filter(r => r[0]!=='_').forEach(r => (O[r][b.n] || []).forEach(x => { if (l.indexOf(x)<0) l.push(x); })); return l; }
+// Estado de cada base contra el día de la consulta: lo esperado es que llegue al menos a ayer.
+const AREAS = ['DGCVM','DGCOR','DGRAM','DGPMV','CBP'];
 function vistaBases(){
-  const B = D.bases || [], conF = B.filter(b => b.hasta), max = conF.reduce((m,b) => b.hasta>m ? b.hasta : m, ''), atras = conF.filter(b => (new Date(max) - new Date(b.hasta))/864e5 > 7);
+  const P = (window.IANAMI_OBS || {})._periodos || {}, hoy = new Date(), ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()-1), iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'), AY = iso(ayer);
+  const dif = (a, b) => Math.round((new Date(a+'T00:00:00') - new Date(b+'T00:00:00'))/864e5);
+  // bases de datos.js + las que leen otros robots (Validación del Registro Civil, Repatriados y sus archivos aparte)
+  const B = (D.bases || []).map(b => Object.assign({}, b, P[b.n] && !b.hasta ? { desde:P[b.n].desde, hasta:P[b.n].hasta, filas:b.filas!=null ? b.filas : P[b.n].filas, pendiente:false } : {}));
+  Object.keys(P).forEach(n => { if (!B.some(b => b.n===n)) B.push({ n:n, archivo:P[n].archivo, desde:P[n].desde, hasta:P[n].hasta, filas:P[n].filas, cargado:null }); });
+  const area = b => AREAS.find(a => new RegExp('(^|, )'+a+' ').test(b.archivo || '')) || '—';
+  B.forEach(b => { b.area = area(b); b.atraso = b.hasta ? Math.max(0, dif(AY, b.hasta)) : null; });
+  const conF = B.filter(b => b.hasta), atras = conF.filter(b => b.atraso>0).sort((a,b) => b.atraso-a.atraso);
+  const orden = B.slice().sort((a,b) => (a.hasta ? 0 : 1)-(b.hasta ? 0 : 1) || (b.atraso||0)-(a.atraso||0) || a.n.localeCompare(b.n));
+  const estado = b => !b.hasta ? (b.pendiente ? '<span class="bs-est n">Pendiente</span>' : '<span class="bs-est n">Conteo a una fecha</span>')
+    : b.atraso===0 ? '<span class="bs-est ok">Al día</span>' : '<span class="bs-est '+(b.atraso>7 ? 'mal' : 'at')+'">'+b.atraso+' '+(b.atraso===1 ? 'día' : 'días')+' de atraso</span>';
+  const periodo = b => b.hasta ? '<b>'+fechaISO(b.desde)+'</b><span class="bs-a">→</span><b>'+fechaISO(b.hasta)+'</b>'
+    : b.pendiente ? '—' : b.k==='car' ? '<span class="mini">Registro de eventos, sin días</span>' : '<span class="mini">No trae días: es un conteo a una fecha'+(b.cargado ? '. Archivo del '+fechaISO(b.cargado) : '')+'</span>';
   const fila = b => { const ob = obsDe(b), arch = String(b.archivo || '').split(', ');
-    return '<tr'+(b.pendiente ? ' class="bs-pend"' : '')+'><td><b>'+esc(b.n)+'</b>'+(b.pendiente ? ' <span class="bs-tag">Pendiente</span>' : '')+'<br><span class="mini">'+arch.map(esc).join('<br>')+'</span></td>'+
-      '<td class="x">'+(b.desde ? fechaISO(b.desde)+' – '+fechaISO(b.hasta) : b.pendiente ? '—' : b.k==='car' ? 'catálogo de eventos' : 'foto al corte')+'</td><td class="x">'+fechaISO(b.cargado)+'</td>'+
+    return '<tr'+(b.pendiente ? ' class="bs-pend"' : '')+'><td><b>'+esc(b.n)+'</b><br><span class="mini">'+arch.map(esc).join('<br>')+'</span></td><td class="x">'+b.area+'</td>'+
+      '<td class="x bs-per">'+periodo(b)+'</td><td>'+estado(b)+'</td>'+
       '<td class="x">'+(b.filas!=null ? miles(b.filas) : '—')+'</td><td class="x">'+(b.faltan!=null ? miles(b.faltan) : '—')+'</td>'+
       '<td class="bs-obs">'+(ob.length ? (ob.length>2 ? '<details><summary>'+ob.length+' observaciones</summary>' : '')+'<ul>'+ob.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul>'+(ob.length>2 ? '</details>' : '') : '<span class="mini">Sin observaciones</span>')+'</td></tr>'; };
-  return '<h1>Bases</h1><p>Lo que trae cada base, hasta qué día llega y lo que se observó al convertirla (última conversión: '+esc(D.generado)+'). Las observaciones las escriben los robots; se corrigen en el archivo que entrega cada área.</p>'+
-    (atras.length ? '<p class="bs-alerta"><b>Cortes distintos:</b> la mayoría de las bases llega al '+fechaISO(max)+', pero '+atras.map(b => esc(b.n)+' (al '+fechaISO(b.hasta)+')').join(', ')+'. En el tablero, esas cifras solo cubren hasta su fecha.</p>' : '')+
-    '<div class="caja"><div class="tb-w"><table class="tb bs"><thead><tr><th>Base y archivos</th><th>Periodo</th><th>Cargada</th><th>Renglones</th><th>Días sin datos</th><th>Observaciones</th></tr></thead><tbody>'+
-    B.map(fila).join('')+'</tbody></table></div><span class="nota">Archivos nuevos: «FUENTE BASE AAAA-MM-DD a AAAA-MM-DD.xlsx». Una base puede venir en varias hojas o archivos (por año, semana o día): el robot los junta y, si dos traen el mismo día, toma el más reciente.</span></div>';
+  const resumen = atras.length===0
+    ? '<div class="bs-sem ok"><b>Todas las bases con fecha están al día:</b> llegan al menos a ayer, '+fechaISO(AY)+'.</div>'
+    : '<div class="bs-sem '+(atras.length===conF.length ? 'at' : 'mal')+'"><b>'+(atras.length===conF.length ? 'Ninguna' : (conF.length-atras.length)+' de '+conF.length)+' '+(atras.length===conF.length ? 'base llega' : 'llegan')+' a ayer, '+fechaISO(AY)+'.</b> '+
+      'Se espera que cada base llegue, como mínimo, al día anterior a la consulta.'+
+      '<div class="bs-sem-g">'+[...new Set(atras.map(b => b.atraso))].map(n => { const l = atras.filter(b => b.atraso===n);
+        return '<p><b>'+n+' '+(n===1 ? 'día' : 'días')+' de atraso</b> <small>(llegan al '+fechaISO(l[0].hasta)+')</small>: '+l.map(b => esc(b.n)+' <small>'+b.area+'</small>').join(' · ')+'</p>'; }).join('')+'</div></div>';
+  return '<h1>Bases</h1><p>Qué trae cada base, del primer al último día con datos, y si está al día. Última conversión: '+esc(D.generado)+'. Las observaciones las escribe el proceso al leer cada archivo; lo que se corrige, se corrige en el archivo que entrega el área.</p>'+resumen+
+    '<div class="caja"><div class="tb-w"><table class="tb bs"><thead><tr><th>Base y archivos</th><th>Área</th><th>Periodo<br><small>primer día → último día con datos</small></th><th>¿Al día?<br><small>contra ayer</small></th><th>Renglones</th><th>Días sin datos<br><small>dentro del periodo</small></th><th>Observaciones</th></tr></thead><tbody>'+
+    orden.map(fila).join('')+'</tbody></table></div><span class="nota">«Días sin datos»: días entre el primero y el último en que el archivo no trae ningún renglón (por ejemplo, fines de semana sin atención). Cada base puede venir en varios archivos (histórico y envíos diarios): el proceso toma cada día del archivo más reciente que lo trae y no suma nada dos veces.</span></div>';
 }
 // El mapa ocupa el alto que queda de la pantalla, dejando asomar la franja de cajas.
 function ajustarAlto(){

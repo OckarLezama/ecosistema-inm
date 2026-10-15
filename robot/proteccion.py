@@ -103,6 +103,7 @@ def otros(origen, ini):
             tab[kk] = t[c].tolist()
         out[k] = {"archivo": ", ".join(archivos), "d0": int(t["d"].min()), "d1": int(t["d"].max()), "dic": {"e": E.l, "p": P.l, "pa": PA.l}, "t": tab}
         print(f"{base}: {len(t)} registros, {int(t['MEXICANOS REPATRIADOS'].sum()):,} personas, {t['DIA'].min():%d/%m/%Y} – {t['DIA'].max():%d/%m/%Y}")
+        lector.periodo(base, t["DIA"].min().date(), t["DIA"].max().date(), ", ".join(archivos), len(t))
     return out
 
 
@@ -135,16 +136,16 @@ def main():
         n = int(mal.sum())
         if n:
             calidad.append(f"{n} {'registro' if n == 1 else 'registros'}: {texto}.")
-    revisa(t["TOTAL ADULTOS"] + t["TOTAL MENORES"] != t["MEXICANOS REPATRIADOS"], "adultos + menores no suman el total de repatriados")
-    revisa(t["ADULTOS HOMBRES"] + t["ADULTOS MUJERES"] != t["TOTAL ADULTOS"], "hombres + mujeres no suman el total de adultos")
-    revisa(t["MENORES HOMBRES"] + t["MENORES MUJERES"] != t["TOTAL MENORES"], "niños + niñas no suman el total de menores")
-    revisa(t["ACOMPANADOS"] + t["NO_ACOMPANADOS"] != t["TOTAL MENORES"], "NNA acompañados + no acompañados no suman el total de menores")
+    revisa(t["TOTAL ADULTOS"] + t["TOTAL MENORES"] != t["MEXICANOS REPATRIADOS"], "adultos + menores no da el total de repatriados del renglón; el tablero usa el total tal como viene")
+    revisa(t["ADULTOS HOMBRES"] + t["ADULTOS MUJERES"] != t["TOTAL ADULTOS"], "hombres + mujeres no da el total de adultos; el tablero usa cada columna tal como viene")
+    revisa(t["MENORES HOMBRES"] + t["MENORES MUJERES"] != t["TOTAL MENORES"], "niños + niñas no da el total de menores; el tablero usa cada columna tal como viene")
+    revisa(t["ACOMPANADOS"] + t["NO_ACOMPANADOS"] != t["TOTAL MENORES"], "NNA acompañados + no acompañados no da el total de menores; el tablero usa cada columna tal como viene")
     dup = t.duplicated(["d", "p", "m"], keep=False)
-    revisa(dup, "repetidos (mismo día, punto y modalidad)")
+    revisa(dup, "repetidos (mismo día, punto y modalidad); se suman los dos, confirmar con el área si es doble captura")
     dias = (fin - ini).days + 1
     for p, n in t[t["m"] == 0].groupby("p")["d"].nunique().items():
         if n < dias:
-            calidad.append(f"{P.l[p]}: sin registro en {dias - n} de {dias} días (se cuentan como cero; confirmar con el área).")
+            calidad.append(f"{P.l[p]}: {dias - n} de {dias} días no tienen ningún renglón. Se cuentan como cero; si ese día sí llegaron personas, faltan en el archivo.")
     calidad.append("El archivo no trae número de vuelos: en la modalidad aérea (vuelos PRIM) se cuentan los días con llegada.")
 
     # ==== [5] SALIDA ==============================================
@@ -157,6 +158,7 @@ def main():
     for x in calidad:
         print("  ·", x)
         lector.avisar("Repatriados", x)
+    lector.periodo("Repatriados", ini.date(), fin.date(), archivo, len(t))
     lector.guardar(a.destino, "proteccion")
 
 

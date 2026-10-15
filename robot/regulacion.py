@@ -233,6 +233,7 @@ def validaciones(origen):
         if len(poco) > 3 and poco.iloc[:4].sum() < 0.01 * len(filas):
             lector.avisar(base, f"Hay {int(poco.iloc[:4].sum())} solicitudes antes de {str(poco.index[4])}; la base completa empieza en mayo de 2025 (revisar si son fechas mal capturadas).")
         dic = {k: sorted(filas[k].dropna().unique().tolist()) for k in ("ofr", "ent", "n", "t", "acto", "res", "sol")}
+        lector.periodo(base, ini.date(), filas["fs"].max().date(), os.path.basename(ruta), len(filas))
         print(f"Validación del Registro Civil: {len(filas):,} solicitudes del {ini.date()} al {filas['fs'].max().date()} · " +
               ", ".join(f"{k} {v:,}" for k, v in filas["res"].value_counts().items()))
         return {"va_ini": ini.date().isoformat(), "va_dic": dic, "va_archivo": os.path.basename(ruta),

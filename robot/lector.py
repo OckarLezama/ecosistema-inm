@@ -30,6 +30,7 @@ import pandas as pd
 INICIO = pd.Timestamp("2024-10-01")
 ALIAS = {"NACIONADLIDAD": "NACIONALIDAD", "NACIONALIDA": "NACIONALIDAD"}
 AVISOS = {}          # nombre de la base → observaciones (sin repetir)
+PERIODOS = {}        # nombre de la base → {desde, hasta, archivo, filas}: lo que lee cada robot fuera de datos.js (página Bases)
 
 
 # ==== [1] UTILIDADES ==============================================
@@ -37,6 +38,10 @@ def norm(texto):
     t = unicodedata.normalize("NFD", str(texto).upper())
     t = "".join(ch for ch in t if unicodedata.category(ch) != "Mn")
     return " ".join(t.split())
+
+
+def periodo(base, desde, hasta, archivo, filas=None):
+    PERIODOS[base] = {"desde": str(desde)[:10], "hasta": str(hasta)[:10], "archivo": archivo, "filas": None if filas is None else int(filas)}
 
 
 def avisar(base, texto):
@@ -139,7 +144,7 @@ def juntar(partes, base, col_dia="DIA"):
         t["_D"] = dia(t[col_dia])
         sin = int(t["_D"].isna().sum())
         if sin:
-            avisar(base, f"{nombre}: {sin:,} renglones sin fecha válida (no se cuentan).")
+            avisar(base, f"{nombre}: {sin:,} renglones no traen una fecha válida y no se cuentan.")
         t = t[t["_D"].notna()]
         if not len(t):
             avisar(base, f"{nombre}: no trae renglones con fecha.")
@@ -163,7 +168,7 @@ def juntar(partes, base, col_dia="DIA"):
             if bajos:
                 avisar(base, "Revisar: " + str(len(bajos)) + " días llegan en el archivo más reciente con menos de la mitad de renglones que en " + nombre +
                        " (" + ", ".join(f"{d}: {nv:,} → {nn:,}" for d, nv, nn in bajos[:5]) + (" …" if len(bajos) > 5 else "") + "). Puede ser un envío incompleto.")
-            avisar(base, f"{nombre}: {len(rep)} días también vienen en un archivo más reciente; se tomaron de ese.")
+            avisar(base, f"{nombre} es una versión anterior: sus {len(rep):,} días también vienen en {info[-1][1]} y se tomaron de ese. No se suma nada dos veces.")
             t = t[~t["_D"].isin(rep)]
         for d, n in t.groupby("_D").size().items():
             filas.setdefault(d, int(n))
@@ -188,7 +193,7 @@ def leer_por_columnas(origen, columnas, base, sin=frozenset()):
         if columnas <= cols and not (sin & cols):
             t, fuera = tabla_de(ruta, base)
             if fuera:
-                avisar(base, os.path.basename(ruta) + ": no se leyeron las hojas " + ", ".join(fuera) + " (ocultas o con otras columnas).")
+                avisar(base, os.path.basename(ruta) + ": las hojas «" + "», «".join(fuera) + "» no se usaron (están ocultas o no tienen las columnas de la base). Si traen datos que deben contar, pedir al área que los pase a la hoja principal.")
             partes.append((os.path.basename(ruta), t))
     if not partes:
         return None, []
@@ -259,6 +264,8 @@ def guardar(destino, robot):
         except ValueError:
             todo = {}
     todo[robot] = AVISOS
+    if PERIODOS:
+        todo.setdefault("_periodos", {}).update(PERIODOS)
     os.makedirs(destino, exist_ok=True)
     with open(ruta, "w", encoding="utf-8") as f:
         f.write("// Observaciones de cada base, por robot. Lo escribe robot/lector.py · no editar a mano\n")
