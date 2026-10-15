@@ -95,7 +95,7 @@ const titular = h => '<button class="rg-hz-i '+h.cl+'"'+(h.act||'')+'><span clas
 const nomN = n => DIC.n[n], nomP = p => DIC.p[p], nomE = e => DIC.e[e];
 // Barras verticales de mayor a menor con el mismo formato de Totales (nombres en varias líneas, valor encima, cuadrícula)
 function barrasV(id, l, o){
-  const el = $(id), w = el.parentNode.clientWidth || 900, paso0 = (w-60)/Math.max(1,l.length), ancho = Math.max(w, 60+l.length*(w<700 ? 56 : 42)), paso = (ancho-60)/Math.max(1,l.length);
+  const el = $(id), w = el.parentNode.clientWidth || 900, paso0 = (w-60)/Math.max(1,l.length), ancho = Math.max(w, 60+l.length*(o.paso || (w<700 ? 56 : 42))), paso = (ancho-60)/Math.max(1,l.length);
   el.style.width = ancho+'px'; if (ancho>w+4 && o.q) $(o.q).insertAdjacentHTML('beforeend', ' · <b>desliza la gráfica para ver todos →</b>'); const cpl = Math.max(6, Math.floor((paso-6)/5.4));
   const parte = v => String(v).split(' ').reduce((a,x) => { const u = a[a.length-1]; if (u && (u+' '+x).length<=cpl) a[a.length-1] = u+' '+x; else a.push(x); return a; }, []), lin = Math.max(1, ...l.map(x => parte(x.lab).length));
   const series = o.series || [{ name:'', k:'v' }];
@@ -371,11 +371,20 @@ function pintarPr(){
   if (Q.mod===0 || !dias.length){ const ch = echarts.getInstanceByDom($('pm-pr')); if (ch) ch.dispose(); caja.hidden = true; fila.classList.add('solo'); return; }
   caja.hidden = false; fila.classList.remove('solo');
 
-  const s = dias.reduce((t,d) => t+vt[d], 0), prom = s/dias.length;
-  $('pm-pr-q').innerHTML = '<b>'+dias.length+'</b> días con llegada · <b>'+miles(s)+'</b> personas · promedio <b>'+miles(prom)+'</b> por día · punteada: promedio · línea con puntos: tendencia (promedio de los últimos 8 días con llegada)';
-  const l = dias.map(d => ({ lab:fecha(d)+' '+DSEM[dSem(d)], full:DSEML[dSem(d)]+' '+fechaA(d), a:ad[d], n:me[d], d:d }));
-  const ch = barrasV('pm-pr', l, { q:'pm-pr-q', stack:true, ley:true, tend:8, series:[{ name:'Adultos', k:'a', col:VERDE }, { name:'NNA', k:'n', col:ROJO }],
-    tip:ps => { const x = l[ps[0].dataIndex], t = vt[x.d]; return '<b>'+esc(x.full)+'</b><br>'+miles(t)+' personas'+(t>prom*1.25 ? ' · <b>muy arriba del promedio: puede ser más de un vuelo</b>' : t<prom*0.25 ? ' · <b>muy abajo del promedio</b>' : '')+'<br>'+ps.filter(p => p.seriesName!=='Total').map(p => p.marker+esc(p.seriesName)+': <b>'+miles(p.value)+'</b>').join('<br>'); } });
+  // Agrupa sola según el periodo: por día si son pocos, por semana o por mes si no caben (así se ve todo el periodo sin deslizar)
+  const s = dias.reduce((t,d) => t+vt[d], 0), MESL = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const span = Q.d1-Q.d0, gr = dias.length<=31 ? 'd' : span<=26*7 ? 's' : 'm';
+  const llave = d => gr==='d' ? d : gr==='s' ? semDe(d) : (f => f.getFullYear()*12+f.getMonth())(fDia(d)), g = new Map();
+  dias.forEach(d => { const k = llave(d); if (!g.has(k)) g.set(k, { d0:d, a:0, n:0, t:0, nd:0 }); const x = g.get(k); x.a += ad[d]; x.n += me[d]; x.t += vt[d]; x.nd++; x.d1 = d; });
+  const l = [...g.values()].map(x => { const f = fDia(x.d0); return Object.assign(x, gr==='d' ? { lab:fecha(x.d0)+' '+DSEM[dSem(x.d0)], full:DSEML[dSem(x.d0)]+' '+fechaA(x.d0) }
+    : gr==='s' ? { lab:fecha(semIni(semDe(x.d0))), full:'Semana del '+fechaA(semIni(semDe(x.d0))) } : { lab:MESL[f.getMonth()]+' '+String(f.getFullYear()).slice(2), full:cap(MESL[f.getMonth()])+' '+f.getFullYear() }); });
+  // la última semana o mes puede estar a medias (el corte cae a mitad): se avisa en la etiqueta para que no parezca una caída
+  if (gr!=='d' && l.length){ const u = l[l.length-1], f = fDia(Q.d1-1), fin = gr==='s' ? semIni(semDe(u.d0))+6 : Q.d1-1+(new Date(f.getFullYear(), f.getMonth()+1, 0).getDate()-f.getDate());
+    if (fin > Q.d1-1){ u.lab += ' (al\u00a0'+fDia(Q.d1-1).getDate()+')'; u.full += ' · incompleto: datos al '+fechaA(Q.d1-1); } }
+  const prom = s/l.length, uni = { d:'día con llegada', s:'semana', m:'mes' }[gr];
+  $('pm-pr-q').innerHTML = (gr==='d' ? 'por día' : gr==='s' ? '<b>por semana</b>' : '<b>por mes</b>')+' · <b>'+dias.length+'</b> días con llegada · <b>'+miles(s)+'</b> personas · promedio <b>'+miles(prom)+'</b> por '+uni+' · punteada: promedio · línea con puntos: tendencia';
+  const ch = barrasV('pm-pr', l, { q:'pm-pr-q', stack:true, ley:true, tend:gr==='m' ? 3 : gr==='s' ? 4 : 8, paso:gr==='d' ? 0 : 30, series:[{ name:'Adultos', k:'a', col:VERDE }, { name:'NNA', k:'n', col:ROJO }],
+    tip:ps => { const x = l[ps[0].dataIndex], t = x.t; return '<b>'+esc(x.full)+'</b><br>'+miles(t)+' personas'+(gr==='d' ? (t>prom*1.25 ? ' · <b>muy arriba del promedio: puede ser más de un vuelo</b>' : t<prom*0.25 ? ' · <b>muy abajo del promedio</b>' : '') : ' · '+x.nd+' '+(x.nd===1 ? 'día' : 'días')+' con llegada')+'<br>'+ps.filter(p => p.seriesName!=='Total' && p.seriesName!=='Tendencia').map(p => p.marker+esc(p.seriesName)+': <b>'+miles(p.value)+'</b>').join('<br>'); } });
   { const sc = $('pm-pr').parentNode; requestAnimationFrame(() => { sc.scrollLeft = sc.scrollWidth; }); }   // empieza en lo más reciente
   ch.setOption({ series:[{ markLine:{ silent:true, symbol:'none', lineStyle:{ color:'#2B2926', type:'dashed', width:1 }, label:{ formatter:'promedio '+miles(prom), color:'#5C5952', fontSize:10.5, position:'insideEndTop' }, data:[{ yAxis:prom }] } }] });
 }
