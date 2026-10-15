@@ -99,7 +99,7 @@ function barrasV(id, l, o){
   el.style.width = ancho+'px'; if (ancho>w+4 && o.q) $(o.q).insertAdjacentHTML('beforeend', ' · <b>desliza la gráfica para ver todos →</b>'); const cpl = Math.max(6, Math.floor((paso-6)/5.4));
   const parte = v => String(v).split(' ').reduce((a,x) => { const u = a[a.length-1]; if (u && (u+' '+x).length<=cpl) a[a.length-1] = u+' '+x; else a.push(x); return a; }, []), lin = Math.max(1, ...l.map(x => parte(x.lab).length));
   const series = o.series || [{ name:'', k:'v' }];
-  return graf(id, { grid:{ left:46, right:12, top:o.ley ? 34 : 22, bottom:14+lin*12 }, legend:o.ley ? { top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{fontSize:11.5}, data:(o.series || []).map(x => x.name) } : { show:false },
+  return graf(id, { grid:{ left:46, right:12, top:o.ley ? 34 : 22, bottom:14+lin*12 }, legend:o.ley ? { top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{fontSize:11.5}, data:(o.series || []).map(x => x.name).concat(o.tend ? [{ name:'Tendencia', icon:'path://M0,5 L20,5', itemStyle:{ color:'#9A958A' } }] : []) } : { show:false },
     tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:o.tip },
     xAxis:{ type:'category', data:l.map(x => x.lab), axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, splitLine:{ show:true, lineStyle:{ color:'#EEEBE2' } }, triggerEvent:true,
       axisLabel:{ interval:0, fontSize:paso<50 ? 9.5 : 10.5, color:'#2B2926', lineHeight:12, formatter:(v,i) => { const t = parte(v).join('\n'); return l[i] && l[i].on ? t.split('\n').map(x => '{s|'+x+'}').join('\n') : t; },
@@ -109,6 +109,8 @@ function barrasV(id, l, o){
       data:l.map(x => ({ value:x[s.k], itemStyle: series.length===1 ? { color: x.col || (l.some(y => y.on) ? (x.on ? VINO : '#B9CFC6') : VERDE) } : undefined })),
       label: series.length===1 ? { show:paso>=30, position:'top', fontSize:10, color:'#2B2926', lineHeight:12, formatter:o.eti || (p => corto(p.value)) }
         : { show:(o.stack ? false : Q.eti) && paso>=30, position:o.stack ? 'inside' : 'top', fontSize:9, color:o.stack ? '#fff' : '#2B2926', formatter:p => p.value ? corto(p.value) : '' } }))
+      .concat(o.tend ? [(() => { const tt = l.map(x => series.reduce((t,s) => t+(x[s.k]||0), 0)), k = o.tend; return { name:'Tendencia', type:'line', smooth:.5, symbol:'none', silent:true, z:5, tooltip:{ show:false },
+        lineStyle:{ width:1.6, color:'#2B2926', opacity:.35 }, data:tt.map((_,j) => { const a = Math.max(0, j-k+1), w = tt.slice(a, j+1); return +(w.reduce((x,y)=>x+y,0)/w.length).toFixed(1); }) }; })()] : [])
       .concat(o.stack && series.length>1 ? [{ name:'Total', type:'bar', stack:'a', silent:true, barMaxWidth:34, data:l.map(() => 0), itemStyle:{ color:'transparent' }, tooltip:{ show:false },
         label:{ show:paso>=26, position:'top', fontSize:10, color:'#2B2926', fontWeight:600, formatter:p => corto(series.reduce((t,s) => t+(l[p.dataIndex][s.k]||0), 0)) } }] : []) });
 }
@@ -298,7 +300,7 @@ function pintarRep(){
     '<div class="rg-hz" id="cv-hz"></div>'+
     '<div class="rg-g rg-g21 fila-par">'+cajaTend('pm-tr', 'tr')+'<div class="caja"><h2><span id="pm-tp-t"></span>'+info('tp')+'</h2><span class="q" id="pm-tp-q"></span><div id="pm-tp"></div></div></div>'+
     '<div class="rg-g rg-g2"><div class="caja"><h2><span>¿A quién recibe cada punto?</span>'+info('perfil')+'</h2><span class="q" id="pm-pf-q"></span><div id="pm-pf" style="height:420px"></div><div id="pm-pf-m"></div></div>'+
-      '<div class="caja"><h2><span>Llegadas de vuelos PRIM</span>'+info('prim')+'</h2><span class="q" id="pm-pr-q"></span><div class="cv-scroll"><div id="pm-pr" style="height:380px"></div></div></div></div>'+
+      '<div class="caja"><h2><span>Llegadas de vuelos PRIM</span>'+info('prim')+'</h2><span class="q" id="pm-pr-q"></span><div class="cv-scroll cv-fill"><div id="pm-pr"></div></div></div></div>'+
     '<div class="rg-g pm-g3"><div class="caja"><h2><span>¿Dónde se recibe?</span>'+info('mapa')+'</h2><span class="q" id="pm-mp-q"></span>'+leyMapa([['Garitas y puentes (terrestre)', COLMOD[0]], ['Aeropuertos (vuelos PRIM)', COLMOD[1]]])+'<div id="pm-mp" class="cv-fill pm-mapa" style="min-height:400px"></div></div>'+
       '<div class="caja"><h2><span>¿Qué días se repatría?</span>'+info('ds')+'</h2><span class="q" id="pm-ds-q"></span><div id="pm-ds"></div></div></div>'+
     detIni()+
@@ -353,7 +355,8 @@ function pintarPf(){
   const x = GRUPOS.map(g => agg(REP, i => REP.p[i], NP, {pto:-1, v:g[0]})), sg = [...Array(NP).keys()].map(k => x.reduce((t,g) => t+g[k], 0)), tp = agg(REP, i => REP.p[i], NP, {pto:-1, v:'v'}), todos = [...Array(NP).keys()].filter(k => tp[k]).sort((a,b) => tp[b]-tp[a]), TOPF = 12, l = (Q.pfTodos ? todos : todos.slice(0, TOPF).concat(Q.pto>=0 && todos.indexOf(Q.pto)>=TOPF ? [Q.pto] : [])).reverse();
   const caja = $('pm-pf').closest('.caja'); if (!l.length){ caja.hidden = true; return; } caja.hidden = false;
   const sgT = sg.reduce((a,b)=>a+b,0), tpT = tp.reduce((a,b)=>a+b,0);
-  $('pm-pf-q').innerHTML = 'De cada 100 personas que recibe cada punto, cuántas son de cada grupo · de mayor a menor total (entre paréntesis) · toca uno para filtrar'+(Math.abs(tpT-sgT)>=1 ? ' · <span title="Registros donde los grupos no suman el total; ver Notas de calidad">'+miles(Math.abs(tpT-sgT))+' sin desglose por grupo en la base</span>' : '');
+  const sinPrim = Q.mod===0 || (Q.pto>=0 && !AEREO.has(Q.pto));
+  $('pm-pf-q').innerHTML = (sinPrim ? '<b>'+(Q.mod===0 ? 'Solo terrestre' : esc(nomP(Q.pto))+' es garita o puente')+': no hay vuelos PRIM que mostrar.</b> ' : '')+'De cada 100 personas que recibe cada punto, cuántas son de cada grupo · de mayor a menor total (entre paréntesis) · toca uno para filtrar'+(Math.abs(tpT-sgT)>=1 ? ' · <span title="Registros donde los grupos no suman el total; ver Notas de calidad">'+miles(Math.abs(tpT-sgT))+' sin desglose por grupo en la base</span>' : '');
   $('pm-pf').style.height = Math.max(260, l.length*30+64)+'px';
   $('pm-pf-m').innerHTML = todos.length>TOPF ? '<button class="rg-mas-f pm-mas" data-ppftodos>'+(Q.pfTodos ? 'Ver solo los '+TOPF+' principales ▴' : 'Ver los '+todos.length+' puntos ▾')+'</button>' : '';
   const ch = graf('pm-pf', { grid:{ left:8, right:16, top:34, bottom:24, containLabel:true },
@@ -371,16 +374,16 @@ function pintarPf(){
 function pintarPr(){
   const caja = $('pm-pr').closest('.caja'), ad = agg(REP, i => REP.d[i], CV.dias, {mod:1, v:'ad'}), me = agg(REP, i => REP.d[i], CV.dias, {mod:1, v:'me'}), vt = agg(REP, i => REP.d[i], CV.dias, {mod:1, v:'v'});
   const dias = [...vt.keys()].filter(d => vt[d]);
-  caja.hidden = false; const el = $('pm-pr'), sc = el.parentNode;
-  if (Q.mod===0 || !dias.length){ const ch = echarts.getInstanceByDom(el); if (ch) ch.dispose(); sc.style.display = 'none';
-    $('pm-pr-q').innerHTML = '<span class="pm-vacio">'+(Q.mod===0 ? 'Elegiste solo la modalidad terrestre: los vuelos PRIM no aplican.' : Q.pto>=0 ? '<b>'+esc(nomP(Q.pto))+'</b> es '+(AEREO.has(Q.pto) ? 'un aeropuerto sin llegadas en el periodo' : 'una garita o puente: no recibe vuelos PRIM')+'.' : 'Sin llegadas de vuelos PRIM con estos filtros.')+
-      ' <button class="rg-mas-f" data-pquita="'+(Q.mod===0 ? 'm' : 'p')+'">Quitar ese filtro</button></span>'; return; }
-  sc.style.display = '';
+  const fila = caja.parentNode;
+  if (Q.mod===0 || !dias.length){ const ch = echarts.getInstanceByDom($('pm-pr')); if (ch) ch.dispose(); caja.hidden = true; fila.classList.add('solo'); return; }
+  caja.hidden = false; fila.classList.remove('solo');
+
   const s = dias.reduce((t,d) => t+vt[d], 0), prom = s/dias.length;
-  $('pm-pr-q').innerHTML = '<b>'+dias.length+'</b> días con llegada · <b>'+miles(s)+'</b> personas · promedio <b>'+miles(prom)+'</b> por día · la línea punteada es el promedio';
+  $('pm-pr-q').innerHTML = '<b>'+dias.length+'</b> días con llegada · <b>'+miles(s)+'</b> personas · promedio <b>'+miles(prom)+'</b> por día · punteada: promedio · gris: tendencia (últimos 8 días con llegada)';
   const l = dias.map(d => ({ lab:fecha(d)+' '+DSEM[dSem(d)], full:DSEML[dSem(d)]+' '+fechaA(d), a:ad[d], n:me[d], d:d }));
-  const ch = barrasV('pm-pr', l, { q:'pm-pr-q', stack:true, ley:true, series:[{ name:'Adultos', k:'a', col:VERDE }, { name:'NNA', k:'n', col:ROJO }],
+  const ch = barrasV('pm-pr', l, { q:'pm-pr-q', stack:true, ley:true, tend:8, series:[{ name:'Adultos', k:'a', col:VERDE }, { name:'NNA', k:'n', col:ROJO }],
     tip:ps => { const x = l[ps[0].dataIndex], t = vt[x.d]; return '<b>'+esc(x.full)+'</b><br>'+miles(t)+' personas'+(t>prom*1.25 ? ' · <b>muy arriba del promedio: puede ser más de un vuelo</b>' : t<prom*0.25 ? ' · <b>muy abajo del promedio</b>' : '')+'<br>'+ps.filter(p => p.seriesName!=='Total').map(p => p.marker+esc(p.seriesName)+': <b>'+miles(p.value)+'</b>').join('<br>'); } });
+  { const sc = $('pm-pr').parentNode; requestAnimationFrame(() => { sc.scrollLeft = sc.scrollWidth; }); }   // empieza en lo más reciente
   ch.setOption({ series:[{ markLine:{ silent:true, symbol:'none', lineStyle:{ color:'#2B2926', type:'dashed', width:1 }, label:{ formatter:'promedio '+miles(prom), color:'#5C5952', fontSize:10.5, position:'insideEndTop' }, data:[{ yAxis:prom }] } }] });
 }
 /* ==== [5b] MAPAS, DÍAS Y CRUCES ==================================== */
@@ -411,7 +414,7 @@ function mapaGeo(id, caja, op, regiones){ if (!mapaRegion()) return null; const 
 // Burbujas: un punto por lugar, tamaño según personas; nombre y cifra en los principales (la leyenda va en HTML, arriba)
 function burbujas(id, pts, o){ const mx = Math.max(1, ...pts.map(p => p.v)), top = new Set(pts.slice().sort((a,b) => b.v-a.v).slice(0, o.etiq || 8).map(p => p.nom)), el = $(id);
   const lim = el ? Math.min(el.clientWidth || 600, el.clientHeight || 400) : 400, maxR = Math.max(26, Math.min(o.max || 46, lim/8));
-  const ch = mapaGeo(id, o.caja, { tooltip:{ trigger:'item', formatter:p => '<b>'+esc(p.data.nom)+'</b><br>'+miles(p.data.v)+' '+(o.unidad || 'personas')+(o.T ? ' · '+pct(p.data.v, o.T)+'%' : '')+(p.data.extra ? '<br>'+p.data.extra : '') },
+  const ch = mapaGeo(id, o.caja, { tooltip:{ trigger:'item', formatter:p => '<b>'+esc(p.data.nom)+'</b><br>'+miles(p.data.v)+' '+(o.unidad || 'personas')+(o.T ? ' · '+pct(p.data.v, o.T)+'%' : '')+(p.data.extra ? '<br>'+p.data.extra : '')+(o.per ? '<br><span style="font-size:10.5px;opacity:.7">'+o.per+'</span>' : '') },
     series:(o.ley || [[null, VERDE]]).map(L => ({ name:L[0] || 'p', type:'effectScatter', coordinateSystem:'geo', showEffectOn:'render', rippleEffect:{ brushType:'stroke', scale:2.2, period:4.5, number:2 }, itemStyle:{ color:L[1] }, data:pts.filter(p => !L[0] || p.grupo===L[0]).sort((a,b) => b.v-a.v).map(p => ({ name:p.nom, nom:p.nom, v:p.v, k:p.k, extra:p.extra, value:[p.c[0], p.c[1], p.v],
         itemStyle:{ color:L[1], opacity:o.sel!=null && o.sel>=0 && o.sel!==p.k ? .25 : .85, borderColor:'#fff', borderWidth:1.2 },
         label:{ show:top.has(p.nom), position:p.c[0] > -93 ? 'left' : 'right', formatter:'{n|'+p.corto+'} {v|'+corto(p.v)+'}', rich:{ n:{ fontSize:10.5, color:'#2B2926' }, v:{ fontSize:10.5, fontWeight:700, color:'#2B2926' } }, textBorderColor:MT.tierra, textBorderWidth:3 } })),
@@ -426,7 +429,7 @@ function pintarDonde(){
   const pts = [...Array(NP).keys()].filter(k => x[k] && coord(nomP(k))).map(k => ({ k:k, nom:nomP(k), corto:nomP(k).replace(/ \(vuelos PRIM\)/,'').replace(/ \(Libertad\)|El Chaparral, /g,''), v:x[k], c:coord(nomP(k)), grupo:AEREO.has(k) ? 'Aérea (vuelos PRIM)' : 'Terrestre' }));
   const tN = pts.filter(p => p.grupo==='Terrestre').reduce((t,p) => t+p.v, 0);
   $('pm-mp-q').innerHTML = '<b>'+miles(T)+'</b> '+MED[Q.em][0]+' en '+pts.length+' puntos · '+pct(tN, T)+'% por la frontera norte (garitas y puentes) y '+pct(T-tN, T)+'% en vuelos PRIM · el tamaño es la cantidad · toca un punto para filtrar';
-  burbujas('pm-mp', pts, { caja:[[-118.6,33.2],[-86.4,14.3]],  T:T, unidad:MED[Q.em][0], etiq:9, max:44, sel:Q.pto, ley:[['Terrestre', COLMOD[0]], ['Aérea (vuelos PRIM)', COLMOD[1]]],
+  burbujas('pm-mp', pts, { caja:[[-118.6,33.2],[-86.4,14.3]], per:fechaA(Q.d0)+' – '+fechaA(Q.d1-1), T:T, unidad:MED[Q.em][0], etiq:9, max:44, sel:Q.pto, ley:[['Terrestre', COLMOD[0]], ['Aérea (vuelos PRIM)', COLMOD[1]]],
     click:k => { Q.pto = Q.pto===k ? -1 : k; Q.sel = null; cuerpo(); } });
 }
 // ¿Qué días se repatría? Ritmo de la semana (promedio por día, por modalidad) y calendario de cada punto (en qué días recibe)
@@ -455,13 +458,13 @@ function pintarDs(){
 function semanalOtro(X, id, q, series, colK){ const T = X.T, w0 = semDe(X.d0), nw = semDe(X.d1)-w0+1, a = series.map(() => new Array(nw).fill(0));
   for (let i=0;i<T.N;i++){ const w = semDe(T.d[i])-w0; series.forEach((s,j) => { if (s.f(i)) a[j][w] += T.v[i]; }); }
   const l = a[0].map((_,w) => { const o = { lab:fecha(semIni(w0+w)), full:'Semana del '+fechaA(semIni(w0+w)) }; series.forEach((s,j) => { o['s'+j] = a[j][w]; }); return o; });
-  barrasV(id, l, { q:q, stack:series.length>1, ley:series.length>1, series:series.map((s,j) => ({ name:s.name, k:'s'+j, col:s.col })),
+  barrasV(id, l, { q:q, stack:series.length>1, ley:true, tend:4, series:series.map((s,j) => ({ name:s.name, k:'s'+j, col:s.col })),
     tip:ps => '<b>'+esc(l[ps[0].dataIndex].full)+'</b><br>'+ps.filter(p => p.seriesName!=='Total').map(p => (series.length>1 ? p.marker+esc(p.seriesName)+': ' : '')+'<b>'+miles(p.value)+'</b> personas').join('<br>') });
 }
 function diasOtro(X, grupos){ const T = X.T, n = new Array(7).fill(0), a = grupos.map(() => new Array(7).fill(0)), dias = new Set();
   for (let i=0;i<T.N;i++){ const j = dSem(T.d[i]); grupos.forEach((g,k) => { if (g.f(i)) a[k][j] += T.v[i]; }); if (!dias.has(T.d[i])){ dias.add(T.d[i]); n[j]++; } }
   const t = [0,1,2,3,4,5,6].map(j => a.reduce((s,x) => s+x[j], 0)), mx = Math.max(1, ...t), T0 = t.reduce((x,y)=>x+y,0);
-  return '<div class="pm-dia-r">'+[0,1,2,3,4,5,6].map(j => '<div class="pm-dr'+(t[j]===mx ? ' max' : '')+'"><span>'+DSEML[j]+'</span><span class="b">'+grupos.map((g,k) => '<i style="width:'+(a[k][j]/mx*100).toFixed(1)+'%;background:'+g.col+'" title="'+esc(g.name)+': '+miles(a[k][j])+'"></i>').join('')+'</span><b class="num">'+miles(t[j])+'</b><small>'+n[j]+' '+(n[j]===1 ? 'día' : 'días')+' · '+pct(t[j], T0)+'%</small></div>').join('')+
+  return '<div class="pm-dia-r pm-dia-o">'+[0,1,2,3,4,5,6].map(j => '<div class="pm-dr'+(t[j]===mx ? ' max' : '')+'"><span>'+DSEML[j]+'<small>'+n[j]+' '+(n[j]===1 ? 'día' : 'días')+' · '+pct(t[j], T0)+'%</small></span><span class="b">'+grupos.map((g,k) => '<i style="width:'+(a[k][j]/mx*100).toFixed(1)+'%;background:'+g.col+'" title="'+esc(g.name)+': '+miles(a[k][j])+'"></i>').join('')+'</span><b class="num">'+miles(t[j])+'</b></div>').join('')+
     (grupos.length>1 ? '<div class="pm-ley">'+grupos.map(g => '<span><i class="sw" style="background:'+g.col+'"></i>'+esc(g.name)+'</span>').join('')+'</div>' : '')+'</div>';
 }
 const listaO = (l, T, nom, col) => l.map(r => '<div class="barra"><span>'+esc(nom(r[0]))+' <small>'+pct(r[1], T)+'%</small></span><span class="b"><i style="width:'+(r[1]/l[0][1]*100).toFixed(1)+'%;background:'+col+'"></i></span><span class="x">'+miles(r[1])+'</span></div>').join('');
@@ -505,17 +508,18 @@ function pintarGH(){
       '<div class="caja"><h2><span>¿Qué días llegan?</span>'+info('ghd')+'</h2><span class="q">personas por día de la semana en todo el periodo · días con llegada</span>'+diasOtro(X, [{ name:'Guatemala', col:CG, f:fG }, { name:'Honduras', col:CHN, f:fH }])+'</div></div>'+
     '<p class="mini" style="padding:0 16px">Fuente: '+esc(X.archivo)+' (DGPMV) · '+fechaA(X.d0)+' – '+fechaA(X.d1)+'. Mexicanos que EE. UU. envió a Guatemala u Honduras y que México recibe por la frontera sur. La ruta del mapa es ilustrativa: el archivo no trae la ciudad de EE. UU. ni el aeropuerto de llegada.</p>';
   semanalOtro(X, 'pm-gh-sem', 'pm-gh-sq', [{ name:'Guatemala', col:CG, f:fG }, { name:'Honduras', col:CHN, f:fH }]);
-  // mapa de flujo: EE. UU. → Guatemala / Honduras → Ciudad Hidalgo. Grosor y partículas se ajustan al tamaño del recuadro.
-  { const el = $('pm-gh-mapa'), k = Math.max(.8, Math.min(1.7, Math.min(el.clientWidth || 600, el.clientHeight || 400)/420));
-    const US = [-95.4,29.8], GT = [-90.53,14.62], HN = [-87.2,14.9], CH = [-92.15,14.68], mxF = Math.max(G, H, 1), w = v => (2.2+v/mxF*5.5)*k;
-    const nodo = (c, nom, txt, col, pos, r) => ({ name:nom, value:[c[0], c[1]], symbolSize:(r || 11)*k, itemStyle:{ color:col, borderColor:'#fff', borderWidth:2 }, label:{ show:true, position:pos, distance:8, formatter:'{n|'+nom+'}\n{v|'+txt+'}', rich:{ n:{ fontSize:12.5, fontWeight:700, color:'#2B2926', lineHeight:16 }, v:{ fontSize:11, color:'#5C5952' } }, textBorderColor:MT.tierra, textBorderWidth:3 } });
-    const lin = (a, b, v, col, cur) => ({ coords:[a, b], v:v, lineStyle:{ width:w(v), color:col, curveness:cur, opacity:.9, cap:'round', shadowBlur:8*k, shadowColor:col+'66' } });
-    const fx = (per, n) => ({ show:true, period:per, trailLength:.35, symbol:'circle', symbolSize:Math.max(4, 3.5*k+n), color:'#fff', loop:true });
-    mapaGeo('pm-gh-mapa', [[-124,49],[-82.5,10]], { tooltip:{ trigger:'item', formatter:p => p.seriesType==='lines' ? miles(p.data.v)+' personas' : '<b>'+esc(p.name)+'</b>' },
-      series:[{ type:'lines', coordinateSystem:'geo', zlevel:1, effect:fx(3.5, 1), data:[lin(US, GT, G, CG, -.18), lin(GT, CH, G, CG, -.45)] },
-        { type:'lines', coordinateSystem:'geo', zlevel:1, effect:fx(4, 0), data:[lin(US, HN, H, CHN, .28), lin(HN, CH, H, CHN, -.35)] },
-        { type:'effectScatter', coordinateSystem:'geo', zlevel:2, rippleEffect:{ brushType:'stroke', scale:2.6, period:4 }, data:[nodo(US, 'EE. UU.', 'envía', '#5C5952', 'top'), nodo(GT, 'Guatemala', miles(G)+' · '+pct(G, V)+'%', CG, 'bottom', 13), nodo(HN, 'Honduras', miles(H)+' · '+pct(H, V)+'%', CHN, 'right', 12), nodo(CH, 'Cd. Hidalgo, Chis.', 'recibe '+miles(V), '#2B2926', 'left', 14)] }] },
-      [{ name:'P_320', itemStyle:{ areaColor:'#D5E3DD', borderColor:CG, borderWidth:.8 } }, { name:'P_340', itemStyle:{ areaColor:'#EFDCD9', borderColor:CHN, borderWidth:.8 } }]); }
+  // mapa de flujo, centrado en México (como «¿A qué aeropuertos llegan?»): EE. UU. → Guatemala / Honduras → Ciudad Hidalgo.
+  // Trazos finos con partículas; el grosor solo distingue el volumen, sin tapar el mapa.
+  { const US = [-98.2,30.6], GT = [-90.5,14.6], HN = [-87.2,14.9], CH = [-92.15,14.68], mxF = Math.max(G, H, 1), w = v => 1.4+v/mxF*2.2;
+    const nodo = (c, nom, txt, col, pos, r, off) => ({ name:nom, value:[c[0], c[1]], symbolSize:r || 9, itemStyle:{ color:col, borderColor:'#fff', borderWidth:1.5 }, label:{ show:true, position:pos, offset:off || [0,0], distance:7, formatter:'{n|'+nom+'}'+(txt ? '\n{v|'+txt+'}' : ''), rich:{ n:{ fontSize:11.5, fontWeight:700, color:'#2B2926', lineHeight:15 }, v:{ fontSize:10.5, color:'#5C5952' } }, textBorderColor:MT.tierra, textBorderWidth:3 } });
+    const lin = (a, b, v, col, cur) => ({ coords:[a, b], v:v, lineStyle:{ width:w(v), color:col, curveness:cur, opacity:.8 } });
+    const fx = col => ({ show:true, period:5, trailLength:.55, symbol:'circle', symbolSize:3.5, color:col, loop:true });
+    mapaGeo('pm-gh-mapa', [[-112,32],[-84.5,12.6]], { tooltip:{ trigger:'item', formatter:p => p.seriesType==='lines' ? miles(p.data.v)+' personas<br><span style="font-size:10.5px;opacity:.7">'+fechaA(X.d0)+' – '+fechaA(X.d1)+'</span>' : '<b>'+esc(p.name)+'</b>' },
+      series:[{ type:'lines', coordinateSystem:'geo', effect:fx(CG), data:[lin(US, GT, G, CG, -.22), lin(GT, CH, G, CG, .5)] },
+        { type:'lines', coordinateSystem:'geo', effect:fx(CHN), data:[lin(US, HN, H, CHN, .3), lin(HN, CH, H, CHN, .4)] },
+        { type:'scatter', coordinateSystem:'geo', z:3, data:[nodo(US, 'EE. UU.', '', '#5C5952', 'left', 8), nodo(GT, 'Guatemala', miles(G), CG, 'bottom', 9, [10,0]), nodo(HN, 'Honduras', miles(H), CHN, 'right', 9)] },
+        { type:'effectScatter', coordinateSystem:'geo', z:4, rippleEffect:{ brushType:'stroke', scale:3, period:4 }, data:[nodo(CH, 'Cd. Hidalgo', 'recibe '+miles(V), '#2B2926', 'left', 10, [-4,-10])] }] },
+      [{ name:'P_320', itemStyle:{ areaColor:'#DCE7E3', borderColor:MT.mxL } }, { name:'P_340', itemStyle:{ areaColor:'#F0E2DF', borderColor:MT.mxL } }]); }
   // cuadre por día
   if (rch){ const l = dias.map(d => [fecha(d), dd.get(d), rch[d]||0]);
     graf('pm-gh-cq', { grid:{ left:40, right:8, top:26, bottom:22 }, legend:{ top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11 } }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } },
@@ -540,7 +544,7 @@ function pintarCom(){
       '<div class="caja"><h2><span>¿Qué días llegan?</span>'+info('cmd')+'</h2><span class="q">personas por día de la semana en todo el periodo · días con llegada</span>'+diasOtro(X, [{ name:'Personas', col:VERDE, f:() => true }])+'</div></div>'+
     '<p class="mini" style="padding:0 16px">Fuente: '+esc(X.archivo)+' (DGPMV) · '+fechaA(X.d0)+' – '+fechaA(X.d1)+'. Mexicanos repatriados desde EE. UU. en vuelos comerciales (no PRIM). No están en el archivo de Repatriados: se suman aparte.</p>';
   semanalOtro(X, 'pm-cm-sem', 'pm-cm-sq', [{ name:'Personas', col:VERDE, f:() => true }]);
-  burbujas('pm-cm-mapa', lp.filter(x => coord(X.dic.p[x[0]])).map(x => ({ k:x[0], nom:X.dic.p[x[0]], corto:nomA(x[0]), v:x[1], c:coord(X.dic.p[x[0]]) })), { caja:[[-118.6,33.2],[-86.4,14.3]], T:V, etiq:7, max:40 });
+  burbujas('pm-cm-mapa', lp.filter(x => coord(X.dic.p[x[0]])).map(x => ({ k:x[0], nom:X.dic.p[x[0]], corto:nomA(x[0]), v:x[1], c:coord(X.dic.p[x[0]]) })), { caja:[[-118.6,33.2],[-86.4,14.3]], per:fechaA(X.d0)+' – '+fechaA(X.d1), T:V, etiq:7, max:40 });
 }
 
 /* ==== [6] MONTAJE Y EVENTOS ======================================= */

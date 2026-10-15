@@ -612,11 +612,22 @@ function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const 
   // motivos que se dibujan: los 6 principales con motivo declarado; el resto en «Otros motivos» y aparte «Sin motivo registrado»
   const top = l.filter(r => !SINMOT.test(r[0])).slice(0, 6).map(r => r[2]), grupo = j => top.indexOf(j)>=0 ? top.indexOf(j) : SINMOT.test(DIC.m[j]) ? 7 : 6;
   const nomG = g => g<6 ? DIC.m[top[g]] : g===6 ? 'Otros motivos' : 'Sin motivo registrado', colG = g => g<6 ? COLMOT[g] : g===6 ? '#A7A296' : GRISMOT, NGR = 8;
-  if (V==='res'){ el.className = 'rg-mot'; $('rg-mot-q').textContent = 'trámites por motivo de estancia declarado, de mayor a menor'+filt;
-    const mx = l.length ? l[0][1] : 1, fila = r => '<div class="barra pc"><span>'+esc(r[0])+' <small>'+pct(r[1],T)+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:#8F7F2E"></i></span><span class="x">'+corto(r[1])+'</span></div>';
-    const mitad = Math.ceil(l.length/2); el.innerHTML = '<div>'+l.slice(0, mitad).map(fila).join('')+'</div><div>'+l.slice(mitad).map(fila).join('')+'</div>'; return; }
-  el.className = 'rg-mot1';
   const ley = '<div class="mot-ley">'+[...Array(NGR).keys()].map(g => '<span><i style="background:'+colG(g)+'"></i>'+esc(nomG(g))+'</span>').join('')+'</div>';
+  if (V==='res'){ el.className = 'rg-mot1';
+    // composición (una barra al 100%) y, abajo, cada motivo con su cifra, su parte, su tendencia mensual y el cambio reciente
+    const m0 = mesDe(Q.d0), nmz = mesDe(Q.d1-1)-m0+1, mm = agg(i => (mesDe(K.d[i])-m0)*NM+K.m[i], nmz*NM, {}), tmz = [...Array(nmz).keys()].map(j => { let t = 0; for (let k=0;k<NM;k++) t += mm[j*NM+k]; return t; });
+    const ult = fDia(Q.d1-1).getDate()<20 ? nmz-1 : nmz, sh = (k, a, b) => { let x = 0, t = 0; for (let j=Math.max(0,a); j<b; j++){ x += mm[j*NM+k]; t += tmz[j]; } return t ? x/t*100 : null; };
+    const spark = k => { const v = [...Array(ult).keys()].map(j => tmz[j] ? mm[j*NM+k]/tmz[j] : 0); if (v.length<3) return ''; const mx = Math.max(...v) || 1, W = 90, H = 22, pts = v.map((y,i) => (i/(v.length-1)*W).toFixed(1)+','+(H-2-y/mx*(H-4)).toFixed(1)).join(' ');
+      return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" class="mot-sp" aria-hidden="true"><polyline points="'+pts+'" fill="none" stroke="currentColor" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>'; };
+    const g8 = new Float64Array(NGR); l.forEach(r => { g8[grupo(r[2])] += r[1]; });
+    $('rg-mot-q').innerHTML = 'trámites por motivo de estancia declarado, de mayor a menor'+filt+' · la línea es su parte de los trámites mes a mes · el cambio compara los últimos 3 meses completos contra los 3 anteriores';
+    el.innerHTML = '<div class="mot-comp">'+[...Array(NGR).keys()].filter(g => g8[g]).map(g => '<i style="flex:'+g8[g]+';background:'+colG(g)+'" title="'+esc(nomG(g))+': '+miles(g8[g])+' ('+pct(g8[g], T)+'%)">'+(g8[g]/T>=.07 ? '<b>'+Math.round(g8[g]/T*100)+'%</b>' : '')+'</i>').join('')+'</div>'+ley+
+      '<div class="mot-tb"><div class="mot-h"><span>Motivo</span><span></span><span>Trámites</span><span>% del total</span><span>Mes a mes</span><span>Cambio</span></div>'+
+      l.map(r => { const k = r[2], g = grupo(k), a = sh(k, ult-3, ult), b = sh(k, ult-6, ult-3), d = a!=null && b!=null ? a-b : null;
+        return '<div class="mot-r"><span class="mot-n"><i style="background:'+colG(g)+'"></i>'+esc(r[0])+'</span><span class="b"><i style="width:'+(r[1]/l[0][1]*100).toFixed(1)+'%;background:'+colG(g)+'"></i></span><b class="num">'+miles(r[1])+'</b><span class="num">'+pct(r[1], T)+'%</span><span class="mot-spw" style="color:'+(g===7 ? '#9A958A' : colG(g))+'">'+spark(k)+'</span>'+
+          '<span class="mot-d '+(d==null || Math.abs(d)<.5 ? '' : d>0 ? 'u' : 'dn')+'">'+(d==null ? '—' : Math.abs(d)<.5 ? '= estable' : (d>0 ? '▲ ' : '▼ ')+Math.abs(d).toFixed(1)+' pts')+'</span></div>'; }).join('')+'</div>';
+    return; }
+  el.className = 'rg-mot1';
   if (V==='nat'){ const quita = {nats:null}, tn = agg(K.n, NN, quita), ns = [...Array(NN).keys()].filter(n => tn[n]>=300 && !/^sin dato$/i.test(DIC.n[n])).sort((a,b) => tn[b]-tn[a]).slice(0, 12);
     const m = agg(i => K.n[i]*NGR+grupo(K.m[i]), NN*NGR, quita), tg = new Float64Array(NGR); for (let n=0;n<NN;n++) for (let g=0;g<NGR;g++) tg[g] += m[n*NGR+g]; const TG = tg.reduce((a,b)=>a+b,0) || 1;
     // hallazgos: dónde pesa mucho más un motivo que en el promedio (solo los 6 principales, con 10% o más del país)
@@ -633,13 +644,17 @@ function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const 
     ch.off('click'); ch.on('click', p => { if (p.componentType==='series' && p.seriesIndex<6){ Q.motV = 'mot'; Q.motSel = top[p.seriesIndex]; pintarMotivo(); return; }
       const n = rows[p.componentType==='yAxis' ? rows.findIndex(z => DIC.n[z]===p.value) : p.dataIndex]; if (n!=null) alternarNat(n); }); return; }
   if (V==='mot'){ // un motivo: qué nacionalidades lo declaran, cuántos y qué parte de sus trámites
-    const cand = l.filter(r => !SINMOT.test(r[0])).slice(0, 10).map(r => r[2]); if (Q.motSel==null || cand.indexOf(Q.motSel)<0) Q.motSel = cand[0]; const ms = Q.motSel;
+    const cand = l.filter(r => !SINMOT.test(r[0])).map(r => r[2]); if (Q.motSel==null || cand.indexOf(Q.motSel)<0) Q.motSel = cand[0]; const ms = Q.motSel;
     const quita = {nats:null}, tn = agg(K.n, NN, quita), xm = agg(K.n, NN, Object.assign({ ex:i => K.m[i]===ms }, quita)), TM = xm.reduce((a,b)=>a+b,0), TT = tn.reduce((a,b)=>a+b,0) || 1, prom = TM/TT;
-    const ns = [...Array(NN).keys()].filter(n => xm[n]>0 && !/^sin dato$/i.test(DIC.n[n])).sort((a,b) => xm[b]-xm[a]).slice(0, 15), mx = ns.length ? xm[ns[0]] : 1, gi = top.indexOf(ms), col = gi>=0 ? COLMOT[gi] : '#8F7F2E';
-    $('rg-mot-q').innerHTML = 'elige un motivo: qué nacionalidades lo declaran, de mayor a menor · el «×» compara qué tanto pesa ese motivo en sus trámites contra el promedio ('+Math.round(prom*100)+' de cada 100) · toca una para filtrar'+(Q.ests.length || Q.ofiF>=0 || Q.doc>=0 ? filt : '');
-    el.innerHTML = '<div class="mot-ch">'+cand.map(j => '<button class="'+(j===ms ? 'on' : '')+'" data-rmots="'+j+'" style="--c:'+(top.indexOf(j)>=0 ? COLMOT[top.indexOf(j)] : '#A7A296')+'">'+esc(DIC.m[j])+' <small>'+corto(x[j])+'</small></button>').join('')+'</div>'+
-      '<div class="mot-rk">'+ns.map(n => { const p = tn[n] ? xm[n]/tn[n] : 0, v = prom ? p/prom : 0;
-        return '<button class="barra pc'+(Q.nats.indexOf(n)>=0 ? ' on' : '')+'" data-rmotn="'+n+'" title="'+esc(DIC.n[n])+': '+miles(xm[n])+' trámites por '+esc(DIC.m[ms].toLowerCase())+' · '+Math.round(p*100)+' de cada 100 de sus trámites"><span>'+esc(DIC.n[n])+' <small>'+Math.round(p*100)+' de cada 100 de sus trámites</small></span><span class="b"><i style="width:'+(xm[n]/mx*100).toFixed(1)+'%;background:'+col+'"></i></span><span class="x">'+corto(xm[n])+'<em class="mot-x'+(v>=1.5 ? ' alto' : '')+'">×'+v.toFixed(1)+'</em></span></button>'; }).join('')+'</div>';
+    const ns = [...Array(NN).keys()].filter(n => xm[n]>0 && !/^sin dato$/i.test(DIC.n[n])).sort((a,b) => xm[b]-xm[a]).slice(0, 12), mx = ns.length ? xm[ns[0]] : 1, gi = top.indexOf(ms), col = gi>=0 ? COLMOT[gi] : '#8F7F2E', mxm = Math.max(...cand.map(j => x[j]));
+    $('rg-mot-q').innerHTML = 'elige un motivo a la izquierda: a la derecha, las nacionalidades que más lo declaran'+(Q.ests.length || Q.ofiF>=0 || Q.doc>=0 ? filt : '');
+    el.innerHTML = '<div class="mot-md"><nav class="mot-menu" aria-label="Motivos">'+cand.map(j => { const c = top.indexOf(j)>=0 ? COLMOT[top.indexOf(j)] : '#A7A296';
+        return '<button class="'+(j===ms ? 'on' : '')+'" data-rmots="'+j+'" style="--c:'+c+'"><span>'+esc(DIC.m[j])+'</span><b class="num">'+corto(x[j])+'</b><i style="width:'+(x[j]/mxm*100).toFixed(1)+'%"></i></button>'; }).join('')+'</nav>'+
+      '<div class="mot-det"><p class="mot-tit"><b style="color:'+col+'">'+esc(DIC.m[ms])+'</b>: '+miles(TM)+' trámites · en promedio, <b>'+Math.round(prom*100)+' de cada 100</b> trámites de una nacionalidad son por este motivo</p>'+
+        '<div class="mot-tb mot-tb2"><div class="mot-h"><span>Nacionalidad</span><span></span><span>Trámites</span><span>De cada 100 de sus trámites</span><span>Contra el promedio</span></div>'+
+        ns.map(n => { const p = tn[n] ? xm[n]/tn[n] : 0, v = prom ? p/prom : 0;
+          return '<button class="mot-r'+(Q.nats.indexOf(n)>=0 ? ' on' : '')+'" data-rmotn="'+n+'" title="Toca para ver solo '+esc(DIC.n[n])+'"><span class="mot-n">'+esc(DIC.n[n])+'</span><span class="b"><i style="width:'+(xm[n]/mx*100).toFixed(1)+'%;background:'+col+'"></i></span><b class="num">'+miles(xm[n])+'</b><span class="num">'+Math.round(p*100)+'</span>'+
+            '<span class="mot-x'+(v>=1.5 ? ' alto' : v<=.67 ? ' bajo' : '')+'">'+v.toFixed(1)+' veces</span></button>'; }).join('')+'</div></div></div>';
     return; }
   // mes a mes: de cada 100 trámites del mes, por qué motivo
   const mesK = i => mesDe(K.d[i]), m0 = mesDe(Q.d0), nmz = mesDe(Q.d1-1)-m0+1, mm = agg(i => (mesK(i)-m0)*NGR+grupo(K.m[i]), nmz*NGR, {}), tm = [...Array(nmz).keys()].map(j => { let t = 0; for (let g=0;g<NGR;g++) t += mm[j*NGR+g]; return t; });
@@ -647,11 +662,16 @@ function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const 
   const sh = (g, a, b) => { let x = 0, t = 0; for (let j=a;j<b;j++){ x += mm[j*NGR+g]; t += tm[j]; } return t ? x/t*100 : 0; };
   const cmb = nmz>=7 ? [...Array(6).keys()].map(g => [g, sh(g, 0, 3), sh(g, nmz-4, nmz-1)]).sort((a,b) => Math.abs(b[2]-b[1])-Math.abs(a[2]-a[1]))[0] : null;
   $('rg-mot-q').innerHTML = 'de cada 100 trámites de cada mes, por qué motivo'+filt+(cmb && Math.abs(cmb[2]-cmb[1])>=1 ? ' · <b>'+esc(nomG(cmb[0]))+'</b> '+(cmb[2]>cmb[1] ? 'sube' : 'baja')+' de '+Math.round(cmb[1])+' a '+Math.round(cmb[2])+' de cada 100 (primeros 3 meses contra los últimos 3 completos)' : '');
-  el.innerHTML = ley+'<div id="rg-mot-g" style="height:320px"></div>';
-  graf('rg-mot-g', { grid:{ left:40, right:10, top:8, bottom:26 }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => '<b>'+lab[ps[0].dataIndex]+'</b> · '+miles(tm[ps[0].dataIndex])+' trámites<br>'+ps.filter(p => p.value>0).sort((a,b) => b.value-a.value).map(p => p.marker+esc(p.seriesName)+': <b>'+p.value.toFixed(1)+'%</b>').join('<br>') },
-    xAxis:{ type:'category', data:lab, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, axisLabel:{ color:'#5C5952', fontSize:10.5 } },
-    yAxis:{ type:'value', max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 } },
-    series:[...Array(NGR).keys()].map(g => ({ name:nomG(g), type:'bar', stack:'m', barMaxWidth:30, color:colG(g), itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 }, data:lab.map((_,j) => tm[j] ? +(mm[j*NGR+g]/tm[j]*100).toFixed(2) : 0) })) });
+  el.innerHTML = ley+'<div id="rg-mot-g" style="height:400px"></div>';
+  // arriba, en su propio espacio, los trámites totales de cada mes (línea sutil); abajo, la mezcla de motivos al 100%. Sin doble eje.
+  graf('rg-mot-g', { grid:[{ left:44, right:10, top:6, height:62 }, { left:44, right:10, top:92, bottom:26 }],
+    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => { const k = ps[0].dataIndex; return '<b>'+lab[k]+'</b> · '+miles(tm[k])+' trámites<br>'+ps.filter(p => p.seriesName!=='Trámites' && p.value>0).sort((a,b) => b.value-a.value).map(p => p.marker+esc(p.seriesName)+': <b>'+p.value.toFixed(1)+'%</b>').join('<br>'); } },
+    axisPointer:{ link:[{ xAxisIndex:'all' }] },
+    xAxis:[{ type:'category', gridIndex:0, data:lab, show:false }, { type:'category', gridIndex:1, data:lab, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, axisLabel:{ color:'#5C5952', fontSize:10.5 } }],
+    yAxis:[{ type:'value', gridIndex:0, splitNumber:1, min:0, minorSplitLine:{ show:false }, axisLabel:{ color:'#9A958A', fontSize:9.5, showMinLabel:false, formatter:v => corto(v) }, name:'trámites al mes', nameLocation:'end', nameGap:4, nameTextStyle:{ color:'#9A958A', fontSize:9.5, align:'left', padding:[0,0,0,-40] } },
+      { type:'value', gridIndex:1, max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 } }],
+    series:[{ name:'Trámites', type:'line', xAxisIndex:0, yAxisIndex:0, smooth:.4, symbol:'circle', symbolSize:4, data:tm.map((v,j) => j===nmz-1 && fDia(Q.d1-1).getDate()<20 ? null : v), lineStyle:{ width:1.6, color:'#5C5952', opacity:.7 }, itemStyle:{ color:'#5C5952' }, areaStyle:{ color:'rgba(92,89,82,.07)' } }]
+      .concat([...Array(NGR).keys()].map(g => ({ name:nomG(g), type:'bar', xAxisIndex:1, yAxisIndex:1, stack:'m', barMaxWidth:30, color:colG(g), itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 }, data:lab.map((_,j) => tm[j] ? +(mm[j*NGR+g]/tm[j]*100).toFixed(2) : 0) }))) });
 }
 function vistaTramites(){
   $('rg-body').innerHTML = '<div class="ctl rg-ctl" id="rg-ctl"></div><section class="kpis rg-kpis" id="rg-kpis" data-modo="tarjetas"></section>'+
@@ -696,21 +716,20 @@ function pintarPlazos(){
       '<div class="r"><b class="num">'+miles(PF.v)+'</b><span>rezago: en proceso y ya fuera del plazo ('+(P.v ? pct(PF.v, P.v) : '0.0')+'% de los que siguen)</span></div></div>'+
     '<button class="pzb-b'+(ab ? ' on' : '')+'" data-rpza aria-expanded="'+ab+'">'+(ab ? 'Ocultar análisis ▴' : 'Ver análisis de plazos ▾')+'<small>por trámite, oficina y mes</small></button></div>'+
     (sinPZ ? '<p class="pzb-n">Días de respuesta, en proceso y rezago no se pueden separar por nacionalidad ni documento: se muestran para el periodo, estado y oficina elegidos.</p>' : '')+
-    (ab ? '<div class="pzb-a"><div class="rg-g rg-g2"><div class="caja"><h2><span>¿Cumple cada trámite su plazo?</span>'+info('pzt')+'</h2><span class="q">los 12 tipos con más trámites · ordenados por % fuera del plazo · la raya es el plazo de la norma y el punto, lo que tardan en promedio</span><div id="rg-pzt"></div></div>'+
+    (ab ? '<div class="pzb-a"><div class="rg-g rg-g2"><div class="caja"><h2><span>¿Cumple cada trámite su plazo?</span>'+info('pzt')+'</h2><span class="q">los 12 tipos con más trámites, del que más se atrasa al que menos · cada barra es el 100% de sus trámites: verde a tiempo, rojo fuera del plazo</span><div id="rg-pzt"></div></div>'+
         '<div class="caja"><h2><span>¿Dónde y cuándo se atrasan?</span>'+info('pzo')+'</h2><span class="q" id="rg-pzo-q"></span><div id="rg-pzo"></div></div></div>'+
       '<div class="rg-g rg-g2"><div class="caja"><h2><span>Fuera del plazo, mes a mes</span>'+info('pzm')+'</h2><span class="q" id="rg-pzm-q"></span><div id="rg-pzm" class="cuadros" style="height:300px"></div></div>'+
-        '<div class="caja"><h2><span>¿Cuánto tardan?</span>'+info('pzd')+'</h2><span class="q" id="rg-pzd-q"></span><div id="rg-pzd" style="height:300px"></div></div></div></div>' : '');
+        '<div class="caja"><h2><span>¿Cuánto tardan?</span>'+info('pzd')+'</h2><span class="q" id="rg-pzd-q"></span><div id="rg-pzd"></div></div></div></div>' : '');
   if (!ab) return;
-  // 1. por tipo de trámite: plazo de la norma contra días promedio reales
+  // 1. por tipo de trámite: barra al 100% (a tiempo / fuera) y, a la derecha, plazo de la norma contra lo que tardan en promedio
   const tt = agg(K.t, NT, {}), tf = agg(K.t, NT, { ex:i => K.f[i]===1 }), sd = aggPZ(i => PZ.t[i], NT, i => PZ.g[i]===iRes), vv = new Float64Array(NT);
   { const es = Q.ests.length ? new Set(Q.ests) : null; for (let i=0;i<PZ.N;i++){ const d = PZ.d[i]; if (d<Q.d0 || d>=Q.d1 || PZ.g[i]!==iRes) continue; if (Q.ofiF>=0 && PZ.o[i]!==Q.ofiF) continue; if (es && !es.has(RG.ofiEst[PZ.o[i]])) continue; vv[PZ.t[i]] += PZ.sd[i]; } }
   const tipos = [...Array(NT).keys()].filter(j => tt[j]>=100).sort((a,b) => tt[b]-tt[a]).slice(0, 12).map(j => ({ j:j, p:tf[j]/tt[j]*100, n:tt[j], f:tf[j], pl:RG.pzPlazo[j] || 0, dr:sd[j] ? vv[j]/sd[j] : null })).sort((a,b) => b.p-a.p);
-  const esc0 = Math.max(10, ...tipos.map(x => Math.max(x.pl, x.dr || 0)))*1.08;
-  $('rg-pzt').innerHTML = tipos.length ? '<div class="pzt">'+tipos.map(x => { const c = semaf(x.p)[0], tarde = x.dr!=null && x.dr>x.pl;
-      return '<div class="pzt-r" title="'+esc(DIC.t[x.j])+': '+miles(x.f)+' de '+miles(x.n)+' fuera del plazo · plazo '+x.pl+' días'+(x.dr!=null ? ' · promedio real '+x.dr.toFixed(1)+' días' : '')+'"><span class="pzt-n">'+esc(corta(DIC.t[x.j]))+'<small>'+corto(x.n)+' trámites · plazo '+x.pl+' días</small></span>'+
-        '<span class="pzt-t"><i class="pzt-pl" style="left:'+(x.pl/esc0*100).toFixed(1)+'%"></i>'+(x.dr!=null ? '<i class="pzt-ln" style="left:'+(Math.min(x.pl, x.dr)/esc0*100).toFixed(1)+'%;width:'+(Math.abs(x.dr-x.pl)/esc0*100).toFixed(1)+'%;background:'+(tarde ? '#E8B8B3' : '#BFD3CB')+'"></i><i class="pzt-d" style="left:'+(x.dr/esc0*100).toFixed(1)+'%;background:'+(tarde ? '#C4605A' : '#2F6657')+'"></i>' : '')+'</span>'+
-        '<b class="num" style="color:'+c+'">'+x.p.toFixed(1)+'%</b></div>'; }).join('')+
-    '<div class="pzt-ley"><span><i class="pzt-pl"></i>plazo de la norma</span><span><i class="pzt-d" style="background:#2F6657"></i>promedio real, a tiempo</span><span><i class="pzt-d" style="background:#C4605A"></i>promedio real, pasado</span><span>% = fuera del plazo</span></div></div>' : '<p class="mini">Sin tipos con volumen suficiente.</p>';
+  $('rg-pzt').innerHTML = tipos.length ? '<div class="pzt2">'+tipos.map(x => { const tarde = x.dr!=null && Math.round(x.dr)>x.pl, dtx = x.dr==null ? '' : x.dr<1 ? 'menos de 1' : x.dr.toFixed(0);
+      return '<div class="pzt2-r" title="'+esc(DIC.t[x.j])+': '+miles(x.f)+' de '+miles(x.n)+' quedaron fuera del plazo"><span class="pzt2-n">'+esc(corta(DIC.t[x.j]))+'<small>'+corto(x.n)+' trámites</small></span>'+
+        '<span class="pzt2-b"><i style="width:'+(100-x.p).toFixed(1)+'%"></i><i class="f" style="width:'+x.p.toFixed(1)+'%">'+(x.p>=6 ? '<b>'+x.p.toFixed(0)+'%</b>' : '')+'</i></span>'+(x.p<6 ? '<b class="pzt2-p">'+x.p.toFixed(1)+'%</b>' : '<span></span>')+
+        '<span class="pzt2-d'+(tarde ? ' t' : '')+'">'+(x.dr==null ? 'plazo '+x.pl+' d' : x.pl===0 ? 'plazo: el mismo día · tarda <b>'+dtx+'</b>' : (tarde ? '⚠ ' : '')+'tarda <b>'+dtx+'</b> de '+x.pl+' días')+'</span></div>'; }).join('')+
+    '<div class="pzt-ley"><span><i class="sw" style="background:#2F6657"></i>a tiempo</span><span><i class="sw" style="background:#C4605A"></i>fuera del plazo (el % es esta parte)</span><span>«tarda 49 de 30 días» = en promedio se resuelve en 49 días y la norma da 30</span></div></div>' : '<p class="mini">Sin tipos con volumen suficiente.</p>';
   // 2. oficina × mes: % fuera del plazo (los últimos 12 meses del periodo, las 14 oficinas con más trámites)
   const m1 = mesDe(Q.d1-1), m0 = Math.max(mesDe(Q.d0), m1-11), nm = m1-m0+1, ot = agg(K.o, NO, {}), of = agg(K.o, NO, { ex:i => K.f[i]===1 });
   const ofs = [...Array(NO).keys()].filter(o => ot[o]>=300).sort((a,b) => ot[b]-ot[a]).slice(0, 14).sort((a,b) => of[b]/ot[b]-of[a]/ot[a]);
@@ -722,30 +741,33 @@ function pintarPlazos(){
     ofs.map(o => '<button class="n'+(Q.ofiF===o ? ' on' : '')+'" data-rpo="'+o+'" title="'+esc(nomO(DIC.o[o]))+'">'+esc(nomO(DIC.o[o]))+'</button>'+[...Array(nm).keys()].map(j => { const t = om[o*nm+j], p = t>=20 ? omf[o*nm+j]/t*100 : null;
       return '<span class="c" style="background:'+col(p)+';color:'+(p!=null && p>=22 ? '#fff' : '#2B2926')+'" title="'+esc(nomO(DIC.o[o]))+' · '+labM[j]+': '+(t ? miles(omf[o*nm+j])+' de '+miles(t)+' fuera del plazo' : 'sin trámites')+'">'+(p==null ? '' : Math.round(p))+'</span>'; }).join('')+
       '<b class="num" style="color:'+semaf(of[o]/ot[o]*100)[0]+'">'+(of[o]/ot[o]*100).toFixed(1)+'%</b>').join('')+'</div><p class="pzb-n">Celda vacía: menos de 20 trámites ese mes. Los meses más recientes bajan porque muchos trámites aún no cumplen su plazo.</p>' : '<p class="mini">Sin oficinas con volumen suficiente.</p>';
-  // 3. mes a mes
-  const a0 = mesDe(Q.d0), n2 = m1-a0+1, mt = agg(i => mesDe(K.d[i])-a0, n2, {}), mf = agg(i => mesDe(K.d[i])-a0, n2, { ex:i => K.f[i]===1 });
-  const lab = [...Array(n2).keys()].map(j => { const f = new Date(INI.getFullYear(), INI.getMonth()+a0+j, 1); return MES[f.getMonth()]+' '+String(f.getFullYear()).slice(2); });
-  $('rg-pzm-q').textContent = '% de los trámites de cada mes que quedó fuera del plazo · los últimos meses bajan porque muchos trámites aún no cumplen su plazo';
-  graf('rg-pzm', { grid:{ left:44, right:14, top:16, bottom:28 }, tooltip:{ trigger:'axis', formatter:p => '<b>'+p[0].name+'</b><br>'+p[0].value+'% fuera del plazo<br>'+miles(mf[p[0].dataIndex])+' de '+miles(mt[p[0].dataIndex])+' trámites' },
-    xAxis:{ type:'category', data:lab, boundaryGap:false, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, splitLine:{ show:true, lineStyle:{ color:'#EEEBE2' } }, axisLabel:{ fontSize:10.5, color:'#5C5952' } },
-    yAxis:{ type:'value', axisLabel:{ formatter:'{value}%', fontSize:10.5, color:'#5C5952' }, splitLine:{ lineStyle:{ color:'#EEEBE2' } } },
-    series:[{ type:'line', smooth:.3, symbol:'circle', symbolSize:6, data:lab.map((x,j) => mt[j] ? +(mf[j]/mt[j]*100).toFixed(1) : null), lineStyle:{ width:2.4, color:'#C4605A' }, itemStyle:{ color:'#C4605A' }, areaStyle:{ color:'rgba(196,96,90,.10)' },
-      markLine:{ silent:true, symbol:'none', lineStyle:{ color:'#9A958A', type:'dashed' }, label:{ formatter:'promedio '+pf.toFixed(1)+'%', color:'#5C5952', fontSize:10.5, position:'insideEndTop' }, data:[{ yAxis:+pf.toFixed(1) }] } }] });
-  // 4. cuánto tardan: resueltos y en proceso por rango de días
-  const br = aggPZ(i => PZ.b[i], 9, i => PZ.g[i]===iRes), bp = aggPZ(i => PZ.b[i], 9, i => PZ.g[i]===iProc);
-  $('rg-pzd-q').textContent = 'trámites por días que tardó la resolución (resueltos) o que llevan esperando (en proceso)'+(sinPZ ? ' · sin filtro de nacionalidad ni documento' : '');
-  graf('rg-pzd', { grid:{ left:52, right:10, top:30, bottom:28 }, legend:{ top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11.5 }, data:['Resueltos','En proceso'] },
-    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => '<b>'+ps[0].name+(/^\d/.test(ps[0].name) ? ' días' : '')+'</b><br>'+ps.map(p => p.marker+p.seriesName+': <b>'+miles(p.value)+'</b>').join('<br>') },
-    xAxis:{ type:'category', data:RG.pzRangos, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, splitLine:{ show:true, lineStyle:{ color:'#EEEBE2' } }, axisLabel:{ fontSize:10, color:'#2B2926', interval:0 } },
-    yAxis:{ type:'value', axisLabel:{ formatter:v => corto(v), fontSize:10.5, color:'#5C5952' }, splitLine:{ lineStyle:{ color:'#EEEBE2' } } },
-    series:[{ name:'Resueltos', type:'bar', barMaxWidth:22, data:Array.from(br), itemStyle:{ color:'#2F6657', borderRadius:[3,3,0,0] } }, { name:'En proceso', type:'bar', barMaxWidth:22, data:Array.from(bp), itemStyle:{ color:'#C4605A', borderRadius:[3,3,0,0] } }] });
+  // 3. mes a mes: barras del % fuera del plazo (color de semáforo), promedio punteado; el mes en curso, claro
+  const a0 = mesDe(Q.d0), n2 = m1-a0+1, mt = agg(i => mesDe(K.d[i])-a0, n2, {}), mf = agg(i => mesDe(K.d[i])-a0, n2, { ex:i => K.f[i]===1 }), enCurso = fDia(Q.d1-1).getDate()<28;
+  const lab = [...Array(n2).keys()].map(j => { const f = new Date(INI.getFullYear(), INI.getMonth()+a0+j, 1); return MES[f.getMonth()]+(f.getMonth()===0 || j===0 ? ' '+String(f.getFullYear()).slice(2) : ''); });
+  const pm = lab.map((x,j) => mt[j] ? +(mf[j]/mt[j]*100).toFixed(1) : null), mxj = pm.indexOf(Math.max(...pm.filter(v => v!=null)));
+  $('rg-pzm-q').innerHTML = 'de cada 100 trámites concluidos en cada mes, cuántos pasaron su plazo · punteada: promedio del periodo ('+pf.toFixed(1)+')'+(mxj>=0 ? ' · el peor mes: <b>'+lab[mxj]+'</b> ('+pm[mxj]+')' : '')+(enCurso ? ' · el último mes va en curso' : '');
+  graf('rg-pzm', { grid:{ left:40, right:14, top:22, bottom:28 }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => '<b>'+p[0].name+'</b><br>'+p[0].value+' de cada 100 fuera del plazo<br>'+miles(mf[p[0].dataIndex])+' de '+miles(mt[p[0].dataIndex])+' trámites'+(enCurso && p[0].dataIndex===n2-1 ? '<br><i>mes en curso</i>' : '') },
+    xAxis:{ type:'category', data:lab, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, axisLabel:{ fontSize:10, color:'#5C5952' } },
+    yAxis:{ type:'value', axisLabel:{ formatter:'{value}%', fontSize:10.5, color:'#5C5952' } },
+    series:[{ type:'bar', barMaxWidth:26, data:pm.map((v,j) => ({ value:v, itemStyle:{ color:semaf(v || 0)[0], opacity:enCurso && j===n2-1 ? .4 : .9, borderRadius:[3,3,0,0] } })),
+      label:{ show:n2<=26, position:'top', fontSize:9.5, color:'#2B2926', formatter:p => p.value!=null ? Math.round(p.value) : '' },
+      markLine:{ silent:true, symbol:'none', lineStyle:{ color:'#2B2926', type:'dashed', opacity:.5 }, label:{ formatter:'promedio '+pf.toFixed(1)+'%', color:'#5C5952', fontSize:10.5, position:'insideEndTop' }, data:[{ yAxis:+pf.toFixed(1) }] } }] });
+  // 4. cuánto tardan: de cada 100 resueltos, en cuántos días; de cada 100 en proceso, cuánto llevan esperando
+  const br = aggPZ(i => PZ.b[i], 9, i => PZ.g[i]===iRes), bp = aggPZ(i => PZ.b[i], 9, i => PZ.g[i]===iProc), sR = br.reduce((a,b)=>a+b,0), sP = bp.reduce((a,b)=>a+b,0);
+  const VERD = ['#DCE8E3','#BFD5CC','#9FC0B3','#7FA899','#5F907F','#467966','#2F6657','#24503F','#17382F'], ROJ = ['#F6E6E3','#EFD2CD','#E5B9B3','#DBA199','#D38E86','#C97A72','#C4605A','#A8443E','#7E302B'];
+  const barra = (v, S, cols, quien) => '<div class="pzd-b">'+v.map((x,k) => x ? '<i style="flex:'+x+';background:'+cols[k]+'" title="'+RG.pzRangos[k]+(k ? ' días' : '')+': '+miles(x)+' '+quien+' ('+pct(x, S)+'%)">'+(x/S>=.07 ? '<b style="color:'+(k>=4 ? '#fff' : '#2B2926')+'">'+Math.round(x/S*100)+'</b>' : '')+'</i>' : '').join('')+'</div>'+
+    '<div class="pzd-l">'+RG.pzRangos.map((r,k) => v[k] ? '<span><i style="background:'+cols[k]+'"></i>'+r+(k ? ' d' : '')+'</span>' : '').join('')+'</div>';
+  const mas = (v, S, k0) => { let t = 0; for (let k=k0;k<9;k++) t += v[k]; return S ? Math.round(t/S*100) : 0; };
+  $('rg-pzd-q').textContent = 'de cada 100 trámites: cuántos días tardó su resolución, o cuántos llevan esperando los que siguen en proceso'+(sinPZ ? ' · sin filtro de nacionalidad ni documento' : '');
+  $('rg-pzd').innerHTML = (sR ? '<div class="pzd"><p><b class="num" style="color:#2F6657">'+Math.round(br[0]/sR*100)+' de cada 100</b> se resuelven <b>el mismo día</b>; '+mas(br, sR, 5)+' de cada 100 tardan más de 30 días <small>· '+miles(sR)+' resueltos</small></p>'+barra(Array.from(br), sR, VERD, 'resueltos')+'</div>' : '')+
+    (sP ? '<div class="pzd"><p><b class="num" style="color:#A8443E">'+mas(bp, sP, 7)+' de cada 100</b> en proceso llevan <b>más de 90 días</b> esperando; '+mas(bp, sP, 8)+' de cada 100, más de 180 <small>· '+miles(sP)+' en proceso</small></p>'+barra(Array.from(bp), sP, ROJ, 'en proceso')+'</div>' : '');
 }
 // ---- Ayuda (i): qué muestra, de dónde sale y cómo leerlo
 const INFO = {
   pzb:'<b>¿El INM resuelve a tiempo?</b> Cada tipo de trámite tiene un plazo máximo en la norma (por ejemplo, 20 días). La base dice, para cada trámite, si se resolvió dentro o fuera de ese plazo.<br><br>• <b>Dentro del plazo:</b> resueltos a tiempo o en proceso que aún no vencen.<br>• <b>Días promedio:</b> lo que tardan los trámites ya resueltos.<br>• <b>Rezago:</b> trámites que siguen sin resolver y ya pasaron su plazo; son los que hay que atender primero.<br><br>Semáforo: verde menos de 5% fuera, ocre 5 a 15%, rojo más de 15%.',
-  pzm:'<b>Fuera del plazo, mes a mes:</b> qué parte de los trámites de cada mes pasó los días que marca la norma. La línea punteada es el promedio del periodo.<br><br>Los últimos meses siempre se ven más bajos: muchos trámites recientes todavía no llegan a su plazo.',
-  pzd:'<b>¿Cuánto tardan?</b> En verde, los trámites resueltos según los días que tardó su resolución («0 días» = el mismo día). En rojo, los que siguen en proceso según los días que llevan esperando.',
-  pzt:'<b>¿Cumple cada trámite su plazo?</b> Los 12 tipos de trámite con más volumen. La raya negra es el plazo que marca la norma; el punto es lo que tardan en promedio los ya resueltos (rojo si pasa el plazo). La cifra de la derecha es qué parte de sus trámites quedó fuera del plazo.<br><br>Ordenados de más a menos atraso.',
+  pzm:'<b>Fuera del plazo, mes a mes:</b> de cada 100 trámites que concluyeron en el mes, cuántos pasaron los días que marca la norma. Color de semáforo (verde menos de 5, ocre 5 a 15, rojo más de 15); la línea punteada es el promedio del periodo.<br><br>El último mes, en tono claro, va en curso y puede cambiar.',
+  pzd:'<b>¿Cuánto tardan?</b> Dos barras, cada una es el 100%:<br>• <b>Verde, resueltos:</b> en cuántos días se resolvieron (de claro, el mismo día, a oscuro, más de 180 días).<br>• <b>Rojo, en proceso:</b> cuántos días llevan esperando los que aún no se resuelven. Lo oscuro es el rezago más viejo.<br><br>Los números dentro de la barra son «de cada 100».',
+  pzt:'<b>¿Cumple cada trámite su plazo?</b> Los 12 tipos de trámite con más volumen, del que más se atrasa al que menos. Cada barra es el 100% de sus trámites: <b>verde</b>, resueltos a tiempo; <b>rojo</b>, fuera del plazo (el % escrito es esa parte).<br><br>A la derecha, cuánto tardan en promedio contra lo que da la norma: «tarda 49 de 30 días» significa que en promedio se resuelve en 49 días y el plazo es de 30 (⚠ = se pasa).',
   pzo:'<b>¿Dónde y cuándo se atrasan?</b> Las oficinas con más trámites (filas, de más a menos atraso) contra los últimos 12 meses (columnas). Cada celda es el % de los trámites de ese mes que quedó fuera del plazo: más rojo = más atraso. Así se ve si un atraso es de una oficina o de todo el país, y si es reciente o viene de antes.<br><br>Toca una oficina para ver solo esa.',
   mot:'<b>¿Por qué se quedan?</b> El motivo de estancia que la persona declara en su trámite (unidad familiar, empleo, estudio, razones humanitarias…).<br>• <b>Resumen:</b> todos los motivos, de mayor a menor.<br>• <b>Por nacionalidad:</b> de cada 100 trámites de cada país, por qué motivo. Abajo, los países donde un motivo pesa mucho más que en el promedio. Toca un país para filtrar.<br>• <b>Por motivo:</b> elige un motivo y ve qué nacionalidades lo declaran; el «×» dice cuántas veces pesa ese motivo en sus trámites contra el promedio. También se abre al tocar un color en «Por nacionalidad».<br>• <b>Mes a mes:</b> cómo cambia la mezcla de motivos en el tiempo.<br><br>Colores: los 6 motivos principales; en gris, otros motivos y trámites sin motivo registrado.',
   hz:'<b>Titulares:</b> cuánto subieron o bajaron los trámites contra el periodo de comparación, la nacionalidad que más cambió y la oficina con más rechazos de lo esperado.',

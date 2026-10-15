@@ -14,6 +14,10 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(await p.evaluate(() => !!echarts.getInstanceByDom(document.getElementById('pm-mp'))), w+' mapa de puntos');
     ok(await p.evaluate(() => document.querySelectorAll('#pm-ds .pm-hm .c').length===70), w+' calendario 10 × 7');
     ok(await p.evaluate(() => /Ver los \d+ puntos/.test(document.getElementById('pm-pf-m').textContent)), w+' perfil con «ver todos»');
+    // una garita elegida: la tarjeta de vuelos PRIM se oculta y el perfil ocupa todo el ancho
+    await p.evaluate(() => { const b = [...document.querySelectorAll('[data-ppt]')].find(x => /Matamoros/.test(x.textContent)); if (b) b.click(); }); await p.waitForTimeout(1200);
+    ok(await p.evaluate(() => document.getElementById('pm-pr').closest('.caja').hidden && document.getElementById('pm-pf').closest('.rg-g2').classList.contains('solo')), w+' garita: sin tarjeta PRIM, perfil a todo lo ancho');
+    await p.evaluate(() => { const b = document.querySelector('[data-pquita="p"]'); if (b) b.click(); }); await p.waitForTimeout(1200);
     for (const k of ['gh','com']){ if (!PM.otros[k]) continue; await p.evaluate(k => document.querySelector('[data-pvista="'+k+'"]').click(), k); await p.waitForTimeout(1500);
       const txt = await p.evaluate(() => document.getElementById('cv-body').innerText);
       ok(txt.indexOf(miles(suma(PM.otros[k], "v")))>=0, w+' '+k+' total '+miles(suma(PM.otros[k], 'v')));
@@ -26,7 +30,7 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(await p.evaluate(() => !document.querySelector('[data-rvista="pz"]')), w+' sin pestaña Plazos');
     await p.evaluate(() => document.querySelector('[data-rpza]').click()); await p.waitForTimeout(1500);
     const pz = await p.evaluate(() => { const n = s => +s.replace(/[^\d]/g,''); const l = document.querySelector('.pzb-l').innerText, m = l.match(/Dentro ([\d,]+)[\s\S]*Fuera ([\d,]+)/), T = n(document.querySelector('.pzb-big span b').textContent);
-      const pc = [...document.querySelectorAll('.pzt-r b.num')].map(e => parseFloat(e.textContent)), of = [...document.querySelectorAll('.pzh b.num')].map(e => parseFloat(e.textContent));
+      const pc = [...document.querySelectorAll('.pzt2-b i.f')].map(e => parseFloat(e.style.width)), of = [...document.querySelectorAll('.pzh b.num')].map(e => parseFloat(e.textContent));
       return { d:n(m[1]), f:n(m[2]), T:T, pc:pc, of:of, celdas:document.querySelectorAll('.pzh .c').length }; });
     ok(pz.d+pz.f===pz.T, w+' plazos: dentro + fuera = total ('+pz.d+' + '+pz.f+' vs '+pz.T+')');
     ok(pz.pc.length>0 && pz.pc.every((x,i,a) => !i || x<=a[i-1]), w+' tipos de trámite de mayor a menor atraso');
@@ -34,6 +38,6 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(pz.celdas>=pz.of.length, w+' mapa de calor oficina × mes');
     await p.screenshot({ path:path.join(__dirname,'capturas','plazos_'+w+'.png') });
     for (const v of ['nat','mot','mes','res']){ await p.evaluate(v => document.querySelector('[data-rmotv="'+v+'"]').click(), v); await p.waitForTimeout(900);
-      ok(await p.evaluate(v => v==='res' || v==='mot' ? document.querySelectorAll('#rg-mot .barra').length>3 : !!echarts.getInstanceByDom(document.getElementById('rg-mot-g')), v), w+' motivo de estancia: '+v); }
+      ok(await p.evaluate(v => v==='res' || v==='mot' ? document.querySelectorAll('#rg-mot .mot-r').length>3 : !!echarts.getInstanceByDom(document.getElementById('rg-mot-g')), v), w+' motivo de estancia: '+v); }
   }
   console.log(mal ? 'con problemas '+mal : 'todo bien'); console.log('errores', JSON.stringify(errs)); await b.close(); })();
