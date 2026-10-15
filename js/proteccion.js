@@ -355,7 +355,7 @@ function pintarPf(){
   const sgT = sg.reduce((a,b)=>a+b,0), tpT = tp.reduce((a,b)=>a+b,0);
   $('pm-pf-q').innerHTML = 'De cada 100 personas que recibe cada punto, cuántas son de cada grupo · de mayor a menor total (entre paréntesis) · toca uno para filtrar'+(Math.abs(tpT-sgT)>=1 ? ' · <span title="Registros donde los grupos no suman el total; ver Notas de calidad">'+miles(Math.abs(tpT-sgT))+' sin desglose por grupo en la base</span>' : '');
   $('pm-pf').style.height = Math.max(260, l.length*30+64)+'px';
-  $('pm-pf-m').innerHTML = todos.length>TOPF ? '<button class="cv-lnk pm-mas" data-ppftodos>'+(Q.pfTodos ? 'Ver solo los '+TOPF+' principales ▴' : 'Ver los '+todos.length+' puntos ▾')+'</button>' : '';
+  $('pm-pf-m').innerHTML = todos.length>TOPF ? '<button class="rg-mas-f pm-mas" data-ppftodos>'+(Q.pfTodos ? 'Ver solo los '+TOPF+' principales ▴' : 'Ver los '+todos.length+' puntos ▾')+'</button>' : '';
   const ch = graf('pm-pf', { grid:{ left:8, right:16, top:34, bottom:24, containLabel:true },
     legend:{ top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11.5 }, data:GRUPOS.map(g => g[1]) },
     tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => { const k = l[ps[0].dataIndex]; return '<b>'+esc(nomP(k))+'</b> · '+miles(tp[k])+' personas<br>'+ps.map(p => p.marker+esc(p.seriesName)+': <b>'+miles(x[p.seriesIndex][k])+'</b> ('+p.value.toFixed(1)+'%)').join('<br>'); } },
@@ -371,7 +371,11 @@ function pintarPf(){
 function pintarPr(){
   const caja = $('pm-pr').closest('.caja'), ad = agg(REP, i => REP.d[i], CV.dias, {mod:1, v:'ad'}), me = agg(REP, i => REP.d[i], CV.dias, {mod:1, v:'me'}), vt = agg(REP, i => REP.d[i], CV.dias, {mod:1, v:'v'});
   const dias = [...vt.keys()].filter(d => vt[d]);
-  if (Q.mod===0 || !dias.length){ caja.hidden = true; return; } caja.hidden = false;
+  caja.hidden = false; const el = $('pm-pr'), sc = el.parentNode;
+  if (Q.mod===0 || !dias.length){ const ch = echarts.getInstanceByDom(el); if (ch) ch.dispose(); sc.style.display = 'none';
+    $('pm-pr-q').innerHTML = '<span class="pm-vacio">'+(Q.mod===0 ? 'Elegiste solo la modalidad terrestre: los vuelos PRIM no aplican.' : Q.pto>=0 ? '<b>'+esc(nomP(Q.pto))+'</b> es '+(AEREO.has(Q.pto) ? 'un aeropuerto sin llegadas en el periodo' : 'una garita o puente: no recibe vuelos PRIM')+'.' : 'Sin llegadas de vuelos PRIM con estos filtros.')+
+      ' <button class="rg-mas-f" data-pquita="'+(Q.mod===0 ? 'm' : 'p')+'">Quitar ese filtro</button></span>'; return; }
+  sc.style.display = '';
   const s = dias.reduce((t,d) => t+vt[d], 0), prom = s/dias.length;
   $('pm-pr-q').innerHTML = '<b>'+dias.length+'</b> días con llegada · <b>'+miles(s)+'</b> personas · promedio <b>'+miles(prom)+'</b> por día · la línea punteada es el promedio';
   const l = dias.map(d => ({ lab:fecha(d)+' '+DSEM[dSem(d)], full:DSEML[dSem(d)]+' '+fechaA(d), a:ad[d], n:me[d], d:d }));
@@ -394,6 +398,7 @@ function mapaRegion(){ if (echarts.getMap('pm-region')) return true; const G = w
   echarts.registerMap('pm-region', { type:'FeatureCollection', features:G.features.filter(f => f.properties.t==='m' || f.properties.t==='u' || CA.has(f.properties.key)) }); return true; }
 // Encuadre que llena la caja sin deformar el mapa: la zona de interés siempre cabe completa y se extiende la geografía alrededor
 function encuadreGeo(el, caja){ const w = el.clientWidth || 600, h = el.clientHeight || 400; let x0 = caja[0][0], y1 = caja[0][1], x1 = caja[1][0], y0 = caja[1][1];
+  const px = (x1-x0)*.07, py = (y1-y0)*.05; x0 -= px; x1 += px; y0 -= py; y1 += py;
   const a = Math.cos((y0+y1)/2*Math.PI/180), R = (x1-x0)*a/(y1-y0), Rc = w/h;
   if (Rc>R){ const e = ((y1-y0)*Rc/a-(x1-x0))/2; x0 -= e; x1 += e; } else { const e = ((x1-x0)*a/Rc-(y1-y0))/2; y0 -= e; y1 += e; }
   return { boundingCoords:[[x0,y1],[x1,y0]], aspectScale:a, layoutCenter:['50%','50%'], layoutSize:Math.max(w, h) }; }
@@ -407,7 +412,7 @@ function mapaGeo(id, caja, op, regiones){ if (!mapaRegion()) return null; const 
 function burbujas(id, pts, o){ const mx = Math.max(1, ...pts.map(p => p.v)), top = new Set(pts.slice().sort((a,b) => b.v-a.v).slice(0, o.etiq || 8).map(p => p.nom)), el = $(id);
   const lim = el ? Math.min(el.clientWidth || 600, el.clientHeight || 400) : 400, maxR = Math.max(26, Math.min(o.max || 46, lim/8));
   const ch = mapaGeo(id, o.caja, { tooltip:{ trigger:'item', formatter:p => '<b>'+esc(p.data.nom)+'</b><br>'+miles(p.data.v)+' '+(o.unidad || 'personas')+(o.T ? ' · '+pct(p.data.v, o.T)+'%' : '')+(p.data.extra ? '<br>'+p.data.extra : '') },
-    series:(o.ley || [[null, VERDE]]).map(L => ({ name:L[0] || 'p', type:'scatter', coordinateSystem:'geo', itemStyle:{ color:L[1] }, data:pts.filter(p => !L[0] || p.grupo===L[0]).sort((a,b) => b.v-a.v).map(p => ({ name:p.nom, nom:p.nom, v:p.v, k:p.k, extra:p.extra, value:[p.c[0], p.c[1], p.v],
+    series:(o.ley || [[null, VERDE]]).map(L => ({ name:L[0] || 'p', type:'effectScatter', coordinateSystem:'geo', showEffectOn:'render', rippleEffect:{ brushType:'stroke', scale:2.2, period:4.5, number:2 }, itemStyle:{ color:L[1] }, data:pts.filter(p => !L[0] || p.grupo===L[0]).sort((a,b) => b.v-a.v).map(p => ({ name:p.nom, nom:p.nom, v:p.v, k:p.k, extra:p.extra, value:[p.c[0], p.c[1], p.v],
         itemStyle:{ color:L[1], opacity:o.sel!=null && o.sel>=0 && o.sel!==p.k ? .25 : .85, borderColor:'#fff', borderWidth:1.2 },
         label:{ show:top.has(p.nom), position:p.c[0] > -93 ? 'left' : 'right', formatter:'{n|'+p.corto+'} {v|'+corto(p.v)+'}', rich:{ n:{ fontSize:10.5, color:'#2B2926' }, v:{ fontSize:10.5, fontWeight:700, color:'#2B2926' } }, textBorderColor:MT.tierra, textBorderWidth:3 } })),
       symbolSize:v => 6+Math.sqrt(v[2]/mx)*maxR, labelLayout:{ hideOverlap:true }, emphasis:{ scale:1.15, label:{ show:true } } })) });
@@ -421,7 +426,7 @@ function pintarDonde(){
   const pts = [...Array(NP).keys()].filter(k => x[k] && coord(nomP(k))).map(k => ({ k:k, nom:nomP(k), corto:nomP(k).replace(/ \(vuelos PRIM\)/,'').replace(/ \(Libertad\)|El Chaparral, /g,''), v:x[k], c:coord(nomP(k)), grupo:AEREO.has(k) ? 'Aérea (vuelos PRIM)' : 'Terrestre' }));
   const tN = pts.filter(p => p.grupo==='Terrestre').reduce((t,p) => t+p.v, 0);
   $('pm-mp-q').innerHTML = '<b>'+miles(T)+'</b> '+MED[Q.em][0]+' en '+pts.length+' puntos · '+pct(tN, T)+'% por la frontera norte (garitas y puentes) y '+pct(T-tN, T)+'% en vuelos PRIM · el tamaño es la cantidad · toca un punto para filtrar';
-  burbujas('pm-mp', pts, { caja:[[-120.5,33.4],[-85.5,13.8]], T:T, unidad:MED[Q.em][0], etiq:9, max:44, sel:Q.pto, ley:[['Terrestre', COLMOD[0]], ['Aérea (vuelos PRIM)', COLMOD[1]]],
+  burbujas('pm-mp', pts, { caja:[[-118.6,33.2],[-86.4,14.3]],  T:T, unidad:MED[Q.em][0], etiq:9, max:44, sel:Q.pto, ley:[['Terrestre', COLMOD[0]], ['Aérea (vuelos PRIM)', COLMOD[1]]],
     click:k => { Q.pto = Q.pto===k ? -1 : k; Q.sel = null; cuerpo(); } });
 }
 // ¿Qué días se repatría? Ritmo de la semana (promedio por día, por modalidad) y calendario de cada punto (en qué días recibe)
@@ -480,8 +485,8 @@ function pintarGH(){
   // cruce con Repatriados: el mismo día, el punto Ciudad Hidalgo
   const pCH = DIC.p.findIndex(p => /hidalgo/i.test(p)), rch = pCH>=0 ? agg(REP, i => REP.d[i], CV.dias, {pto:pCH, mod:-1, ests:null, d0:0, d1:CV.dias, v:'v'}) : null;
   let coin = 0, sRep = 0; if (rch){ dias.forEach(d => { coin += Math.min(dd.get(d), rch[d]||0); }); for (let d=X.d0; d<=X.d1; d++) sRep += rch[d]||0; }
-  const pc = V ? coin/V*100 : 0, mismo = pc>=90;
-  $('cv-ctl').innerHTML = '<div class="rango"><b>'+fechaA(X.d0)+' – '+fechaA(X.d1)+'</b><span>periodo propio de la base · '+(mismo ? '<b>ya está contado en Repatriados (Ciudad Hidalgo): no se suma otra vez</b>' : 'no se suma a Repatriados')+'</span></div>';
+  const pc = V ? coin/V*100 : 0, mismo = pc>=90, dSolo = rch ? dias.filter(d => !(rch[d]>0)).length : 0;
+  $('cv-ctl').innerHTML = '<div class="rango"><b>'+fechaA(X.d0)+' – '+fechaA(X.d1)+'</b><span>'+(mismo ? 'Estas personas <b>ya forman parte de los repatriados</b> (llegan por Ciudad Hidalgo): no se suman otra vez. Este archivo agrega <b>de qué país</b> vienen.' : 'periodo propio de la base · no se suma a Repatriados')+'</span></div>';
   const fG = i => T.pa[i]===iG, fH = i => T.pa[i]===iH, CG = VERDE, CHN = VINO;
   $('cv-body').innerHTML = kpisOtro([
       { col:'#2B2926', eti:'Total', html:cartaO('Recibidos', 'por Ciudad Hidalgo, Chiapas', V, '#2B2926', IC.tot, dias.length+' días con llegada') },
@@ -490,25 +495,27 @@ function pintarGH(){
     cambiosOtro(X, [{ name:'Guatemala', f:fG }, { name:'Honduras', f:fH }], 'recibidos')+
     '<div class="rg-g rg-g21"><div class="caja"><h2><span>La ruta: de EE. UU. a México por Centroamérica</span>'+info('ghm')+'</h2><span class="q">EE. UU. envía a mexicanos a Guatemala u Honduras; desde ahí cruzan a México por Ciudad Hidalgo, Chiapas · el grosor es la cantidad</span>'+
         '<ol class="pm-pasos"><li><b>1</b><span>EE. UU. los envía a <b>Guatemala</b> ('+miles(G)+') o a <b>Honduras</b> ('+miles(H)+')</span></li><li><b>2</b><span>Viajan por tierra hasta la frontera sur de México</span></li><li><b>3</b><span>México los recibe en <b>Ciudad Hidalgo</b>, Chiapas</span></li></ol><div id="pm-gh-mapa" class="cv-fill pm-mapa" style="min-height:400px"></div></div>'+
-      '<div class="caja"><h2><span>¿Es el mismo dato que Repatriados?</span>'+info('ghc')+'</h2><span class="q">cruce día por día con el punto Ciudad Hidalgo de Repatriados</span>'+
-        (rch ? '<div class="pm-cuadre"><div class="pm-cq"><b class="num">'+pct(coin, V)+'%</b><span>de las <b>'+miles(V)+'</b> personas de este archivo aparecen <b>el mismo día</b> en Repatriados como <b>Ciudad Hidalgo</b> ('+miles(coin)+').</span></div>'+
-          '<p>'+(mismo ? 'Es el mismo flujo registrado en dos archivos: Repatriados ya los cuenta (terrestre, Ciudad Hidalgo). Este archivo agrega el dato que Repatriados no trae: <b>desde qué país</b> llegan.' : 'La coincidencia es baja: conviene confirmar con el área si son flujos distintos.')+'</p>'+
-          '<div class="pm-cq2"><div><b class="num">'+miles(V-coin)+'</b><span>solo en este archivo</span></div><div><b class="num">'+miles(Math.max(0, sRep-coin))+'</b><span>solo en Repatriados en el mismo periodo</span></div><div><b class="num">'+miles(rch.reduce((a,b)=>a+b,0)-sRep)+'</b><span>en Repatriados después del '+fecha(X.d1)+' (este archivo aún no los trae)</span></div></div></div>'+
+      '<div class="caja"><h2><span>¿Estas personas ya están en Repatriados?</span>'+info('ghc')+'</h2><span class="q">se compara este archivo, día por día, con el punto Ciudad Hidalgo del archivo de Repatriados</span>'+
+        (rch ? '<div class="pm-cuadre"><div class="pm-cq"><b class="num">'+(mismo ? 'Sí' : 'No del todo')+'</b><span><b>'+Math.round(pc)+' de cada 100</b> personas de este archivo aparecen en Repatriados <b>el mismo día y con la misma cifra</b>, como llegadas a Ciudad Hidalgo.</span></div>'+
+          '<p>'+(mismo ? 'Por eso no se suman a los repatriados: ya están dentro de ese total. Lo único nuevo que trae este archivo es <b>de qué país llegaron</b> (Guatemala u Honduras).' : 'La coincidencia es baja: conviene confirmar con el área si son flujos distintos.')+'</p>'+
+          '<div class="pm-cq2"><div><b class="num">'+miles(coin)+'</b><span>coinciden en los dos archivos</span></div><div><b class="num">'+miles(V-coin)+'</b><span>solo en este archivo ('+dSolo+' '+(dSolo===1 ? 'día' : 'días')+' que Repatriados no registró)</span></div><div><b class="num">'+miles(rch.reduce((a,b)=>a+b,0)-sRep)+'</b><span>ya en Repatriados después del '+fecha(X.d1)+': este archivo aún no se actualiza</span></div></div></div>'+
+          '<span class="mini pm-cq-l">Barras grises: este archivo · verdes: Repatriados en Ciudad Hidalgo. Si la verde tapa a la gris, es el mismo registro.</span>'+
           '<div id="pm-gh-cq" style="height:230px"></div>' : '<p class="mini">Repatriados no trae el punto Ciudad Hidalgo.</p>')+'</div></div>'+
     '<div class="rg-g rg-g21"><div class="caja"><h2><span>Por semana y país</span>'+info('ghs')+'</h2><span class="q" id="pm-gh-sq">personas por semana · '+fechaA(X.d0)+' – '+fechaA(X.d1)+'</span><div class="cv-scroll"><div id="pm-gh-sem" style="height:300px"></div></div></div>'+
       '<div class="caja"><h2><span>¿Qué días llegan?</span>'+info('ghd')+'</h2><span class="q">personas por día de la semana en todo el periodo · días con llegada</span>'+diasOtro(X, [{ name:'Guatemala', col:CG, f:fG }, { name:'Honduras', col:CHN, f:fH }])+'</div></div>'+
     '<p class="mini" style="padding:0 16px">Fuente: '+esc(X.archivo)+' (DGPMV) · '+fechaA(X.d0)+' – '+fechaA(X.d1)+'. Mexicanos que EE. UU. envió a Guatemala u Honduras y que México recibe por la frontera sur. La ruta del mapa es ilustrativa: el archivo no trae la ciudad de EE. UU. ni el aeropuerto de llegada.</p>';
   semanalOtro(X, 'pm-gh-sem', 'pm-gh-sq', [{ name:'Guatemala', col:CG, f:fG }, { name:'Honduras', col:CHN, f:fH }]);
-  // mapa de flujo: EE. UU. → Guatemala / Honduras → Ciudad Hidalgo, con partículas como los flujos del Pulso
-  { const US = [-95.4,29.8], GT = [-90.53,14.62], HN = [-87.2,14.9], CH = [-92.15,14.68], mxF = Math.max(G, H, 1), w = v => 1.2+v/mxF*5;
-    const nodo = (c, nom, txt, col, pos, r) => ({ name:nom, value:[c[0], c[1]], symbolSize:r || 11, itemStyle:{ color:col, borderColor:'#fff', borderWidth:1.5 }, label:{ show:true, position:pos, formatter:'{n|'+nom+'}\n{v|'+txt+'}', rich:{ n:{ fontSize:12, fontWeight:700, color:'#2B2926', lineHeight:15 }, v:{ fontSize:11, color:'#5C5952' } }, textBorderColor:MT.tierra, textBorderWidth:3 } });
-    const lin = (a, b, v, col, cur) => ({ coords:[a, b], v:v, lineStyle:{ width:w(v), color:col, curveness:cur, opacity:.55 } });
-    const fx = (col, per) => ({ show:true, period:per, trailLength:.18, symbol:'circle', symbolSize:5, color:col, loop:true });
-    mapaGeo('pm-gh-mapa', [[-99,30.8],[-85.6,12.1]], { tooltip:{ trigger:'item', formatter:p => p.seriesType==='lines' ? miles(p.data.v)+' personas' : '<b>'+esc(p.name)+'</b>' },
-      series:[{ type:'lines', coordinateSystem:'geo', effect:fx(CG, 4.5), data:[lin(US, GT, G, CG, -.12), lin(GT, CH, G, CG, -.35)] },
-        { type:'lines', coordinateSystem:'geo', effect:fx(CHN, 5), data:[lin(US, HN, H, CHN, .3), lin(HN, CH, H, CHN, -.3)] },
-        { type:'scatter', coordinateSystem:'geo', data:[nodo(US, 'EE. UU.', 'envía', '#5C5952', 'right'), nodo(GT, 'Guatemala', miles(G)+' · '+pct(G, V)+'%', CG, 'bottom', 13), nodo(HN, 'Honduras', miles(H)+' · '+pct(H, V)+'%', CHN, 'right', 11), nodo(CH, 'Cd. Hidalgo, Chis.', 'recibe '+miles(V), '#2B2926', 'left', 14)] }] },
-      [{ name:'P_320', itemStyle:{ areaColor:'#DCE7E3', borderColor:MT.mxL } }, { name:'P_340', itemStyle:{ areaColor:'#EFDFDC', borderColor:MT.mxL } }]); }
+  // mapa de flujo: EE. UU. → Guatemala / Honduras → Ciudad Hidalgo. Grosor y partículas se ajustan al tamaño del recuadro.
+  { const el = $('pm-gh-mapa'), k = Math.max(.8, Math.min(1.7, Math.min(el.clientWidth || 600, el.clientHeight || 400)/420));
+    const US = [-95.4,29.8], GT = [-90.53,14.62], HN = [-87.2,14.9], CH = [-92.15,14.68], mxF = Math.max(G, H, 1), w = v => (2.2+v/mxF*5.5)*k;
+    const nodo = (c, nom, txt, col, pos, r) => ({ name:nom, value:[c[0], c[1]], symbolSize:(r || 11)*k, itemStyle:{ color:col, borderColor:'#fff', borderWidth:2 }, label:{ show:true, position:pos, distance:8, formatter:'{n|'+nom+'}\n{v|'+txt+'}', rich:{ n:{ fontSize:12.5, fontWeight:700, color:'#2B2926', lineHeight:16 }, v:{ fontSize:11, color:'#5C5952' } }, textBorderColor:MT.tierra, textBorderWidth:3 } });
+    const lin = (a, b, v, col, cur) => ({ coords:[a, b], v:v, lineStyle:{ width:w(v), color:col, curveness:cur, opacity:.9, cap:'round', shadowBlur:8*k, shadowColor:col+'66' } });
+    const fx = (per, n) => ({ show:true, period:per, trailLength:.35, symbol:'circle', symbolSize:Math.max(4, 3.5*k+n), color:'#fff', loop:true });
+    mapaGeo('pm-gh-mapa', [[-124,49],[-82.5,10]], { tooltip:{ trigger:'item', formatter:p => p.seriesType==='lines' ? miles(p.data.v)+' personas' : '<b>'+esc(p.name)+'</b>' },
+      series:[{ type:'lines', coordinateSystem:'geo', zlevel:1, effect:fx(3.5, 1), data:[lin(US, GT, G, CG, -.18), lin(GT, CH, G, CG, -.45)] },
+        { type:'lines', coordinateSystem:'geo', zlevel:1, effect:fx(4, 0), data:[lin(US, HN, H, CHN, .28), lin(HN, CH, H, CHN, -.35)] },
+        { type:'effectScatter', coordinateSystem:'geo', zlevel:2, rippleEffect:{ brushType:'stroke', scale:2.6, period:4 }, data:[nodo(US, 'EE. UU.', 'envía', '#5C5952', 'top'), nodo(GT, 'Guatemala', miles(G)+' · '+pct(G, V)+'%', CG, 'bottom', 13), nodo(HN, 'Honduras', miles(H)+' · '+pct(H, V)+'%', CHN, 'right', 12), nodo(CH, 'Cd. Hidalgo, Chis.', 'recibe '+miles(V), '#2B2926', 'left', 14)] }] },
+      [{ name:'P_320', itemStyle:{ areaColor:'#D5E3DD', borderColor:CG, borderWidth:.8 } }, { name:'P_340', itemStyle:{ areaColor:'#EFDCD9', borderColor:CHN, borderWidth:.8 } }]); }
   // cuadre por día
   if (rch){ const l = dias.map(d => [fecha(d), dd.get(d), rch[d]||0]);
     graf('pm-gh-cq', { grid:{ left:40, right:8, top:26, bottom:22 }, legend:{ top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11 } }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } },
@@ -533,7 +540,7 @@ function pintarCom(){
       '<div class="caja"><h2><span>¿Qué días llegan?</span>'+info('cmd')+'</h2><span class="q">personas por día de la semana en todo el periodo · días con llegada</span>'+diasOtro(X, [{ name:'Personas', col:VERDE, f:() => true }])+'</div></div>'+
     '<p class="mini" style="padding:0 16px">Fuente: '+esc(X.archivo)+' (DGPMV) · '+fechaA(X.d0)+' – '+fechaA(X.d1)+'. Mexicanos repatriados desde EE. UU. en vuelos comerciales (no PRIM). No están en el archivo de Repatriados: se suman aparte.</p>';
   semanalOtro(X, 'pm-cm-sem', 'pm-cm-sq', [{ name:'Personas', col:VERDE, f:() => true }]);
-  burbujas('pm-cm-mapa', lp.filter(x => coord(X.dic.p[x[0]])).map(x => ({ k:x[0], nom:X.dic.p[x[0]], corto:nomA(x[0]), v:x[1], c:coord(X.dic.p[x[0]]) })), { caja:[[-115.5,31],[-85,16]], T:V, etiq:7, max:40 });
+  burbujas('pm-cm-mapa', lp.filter(x => coord(X.dic.p[x[0]])).map(x => ({ k:x[0], nom:X.dic.p[x[0]], corto:nomA(x[0]), v:x[1], c:coord(X.dic.p[x[0]]) })), { caja:[[-118.6,33.2],[-86.4,14.3]], T:V, etiq:7, max:40 });
 }
 
 /* ==== [6] MONTAJE Y EVENTOS ======================================= */
@@ -547,7 +554,7 @@ const INFO = {
   tot:'<b>Totales por punto o por O.R.</b>, de mayor a menor, divididos en hombres y mujeres adultos y NNA acompañados y no acompañados. Toca una barra para filtrar.<br><br>Si la suma de los grupos no da el total es porque algunos registros de la base no cuadran (ver «Notas de calidad de los datos»).',
   hz:'<b>Lo que cambió:</b> cuánto subieron o bajaron los repatriados contra el periodo de comparación (y qué punto lo explica más), el punto donde una mayor parte de los NNA llega sin acompañante y el resumen de los vuelos PRIM. Toca un titular para filtrar.',
   ghm:'<b>La ruta:</b> EE. UU. envía a algunos mexicanos a Guatemala u Honduras; desde ahí viajan por tierra y México los recibe en Ciudad Hidalgo, Chiapas. El grosor de cada flecha es cuántas personas siguieron esa ruta.<br><br>El trazo es ilustrativo: el archivo dice el país, pero no la ciudad de EE. UU. ni el aeropuerto de llegada.',
-  ghc:'<b>¿Es el mismo dato?</b> Se compara, día por día, este archivo con el punto Ciudad Hidalgo del archivo de Repatriados. Si coinciden casi todos los días y cifras, son las mismas personas registradas dos veces: no deben sumarse.<br><br>La gráfica pone las dos cifras de cada día una sobre otra: si la barra verde llena la gris, coinciden.',
+  ghc:'<b>¿Estas personas ya están en Repatriados?</b> El archivo de Repatriados tiene un punto llamado Ciudad Hidalgo. Se compara, día por día, cuántas personas registra ese punto contra este archivo.<br><br>Si casi todos los días tienen la misma cifra, son <b>las mismas personas registradas en dos archivos</b>: ya están en el total de repatriados y no deben sumarse otra vez. Este archivo sirve para saber <b>de qué país</b> (Guatemala u Honduras) llegaron.',
   ghs:'<b>Personas por semana</b>, separadas por el país desde donde llegaron (Guatemala u Honduras).',
   ghd:'<b>¿Qué días llegan?</b> Personas por día de la semana en todo el periodo, y en cuántos de esos días hubo llegadas. Sirve para planear personal en Ciudad Hidalgo.',
   cmm:'<b>¿A qué aeropuertos llegan?</b> Mexicanos repatriados desde EE. UU. en vuelos comerciales (no son vuelos PRIM). El tamaño del círculo es cuántas personas llegaron a cada aeropuerto.',

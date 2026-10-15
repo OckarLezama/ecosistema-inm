@@ -20,7 +20,7 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
       ok(await p.evaluate(k => !!echarts.getInstanceByDom(document.getElementById(k==='gh' ? 'pm-gh-mapa' : 'pm-cm-mapa')), k), w+' '+k+' mapa');
       const v = await p.evaluate(() => [...document.querySelectorAll('#cv-body .barra .x')].map(e => +e.textContent.replace(/,/g,'')));
       ok(k!=='com' || v.slice(0, PM.otros.com.dic.p.length).every((x,i,a) => !i || x<=a[i-1]), w+' '+k+' aeropuertos de mayor a menor');
-      if (k==='gh') ok(/aparecen el mismo día/.test(txt), w+' gh cruce con Ciudad Hidalgo'); }
+      if (k==='gh') ok(/el mismo día y con la misma cifra/.test(txt), w+' gh cruce con Ciudad Hidalgo'); }
     await p.evaluate(() => document.querySelector('[data-pvista="rep"]').click()); await p.waitForTimeout(1000);
     await p.evaluate(() => IANAMI_NAV.ir('regulacion', {})); await p.waitForSelector('#rg-pzb [data-rpza]', { timeout:60000 });
     ok(await p.evaluate(() => !document.querySelector('[data-rvista="pz"]')), w+' sin pestaña Plazos');
@@ -33,7 +33,7 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(pz.of.length>0 && pz.of.every((x,i,a) => !i || x<=a[i-1]), w+' oficinas de mayor a menor atraso');
     ok(pz.celdas>=pz.of.length, w+' mapa de calor oficina × mes');
     await p.screenshot({ path:path.join(__dirname,'capturas','plazos_'+w+'.png') });
-    for (const v of ['nat','mes','res']){ await p.evaluate(v => document.querySelector('[data-rmotv="'+v+'"]').click(), v); await p.waitForTimeout(900);
-      ok(await p.evaluate(v => v==='res' ? document.querySelectorAll('#rg-mot .barra').length>3 : !!echarts.getInstanceByDom(document.getElementById('rg-mot-g')), v), w+' motivo de estancia: '+v); }
+    for (const v of ['nat','mot','mes','res']){ await p.evaluate(v => document.querySelector('[data-rmotv="'+v+'"]').click(), v); await p.waitForTimeout(900);
+      ok(await p.evaluate(v => v==='res' || v==='mot' ? document.querySelectorAll('#rg-mot .barra').length>3 : !!echarts.getInstanceByDom(document.getElementById('rg-mot-g')), v), w+' motivo de estancia: '+v); }
   }
   console.log(mal ? 'con problemas '+mal : 'todo bien'); console.log('errores', JSON.stringify(errs)); await b.close(); })();

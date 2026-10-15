@@ -1324,3 +1324,20 @@ body.en-sala{overflow:hidden}
 .pm-ley-m{margin:2px 0 8px}
 .cv-cien-c small{white-space:nowrap;line-height:1.15;text-align:center}
 @media (max-width:700px){ .cv-cien-c small.o{visibility:hidden} .cv-cien-c span{font-size:8.5px;letter-spacing:-.02em} }
+.pm-vacio{display:block;font-size:13px;color:#2B2926;line-height:1.5;margin-top:6px}.pm-vacio .rg-mas-f{margin-left:6px}
+.pm-cq-l{display:block;margin:2px 0 4px}
+/* ¿Qué días se repatría?: ocupa todo el alto de la tarjeta */
+.pm-g3>.caja{display:flex;flex-direction:column}
+.pm #pm-ds{flex:1;display:flex;min-height:0}
+.pm .pm-dia{flex:1;align-items:stretch}
+.pm .pm-dia-r,.pm .pm-dia-c{display:flex;flex-direction:column}
+.pm .pm-dia-r .pm-dr{flex:1 1 0;min-height:30px}
+.pm .pm-dia-c .pm-hm{flex:1;grid-template-rows:auto;grid-auto-rows:minmax(26px,1fr)}
+.pm .pm-dia-c .pm-hm .c{height:auto;min-height:24px}
+.mot-ch{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.mot-ch button{all:unset;cursor:pointer;font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--line,#E2DED0);color:#2B2926;border-left:4px solid var(--c)}
+.mot-ch button small{color:#7A766C;margin-left:3px}.mot-ch button.on{background:var(--c);color:#fff;border-color:var(--c)}.mot-ch button.on small{color:#fff;opacity:.85}
+.mot-rk{display:grid;grid-template-columns:1fr 1fr;gap:2px 28px}@media (max-width:760px){.mot-rk{grid-template-columns:1fr}}
+.mot-rk .barra .x{display:flex;gap:8px;align-items:baseline;justify-content:flex-end}
+.mot-x{font-style:normal;font-size:11px;color:#7A766C;min-width:34px;text-align:right}.mot-x.alto{color:#7E302B;font-weight:700}
+.mot-rk .barra .x{white-space:nowrap;min-width:96px}

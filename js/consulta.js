@@ -241,7 +241,17 @@ function valoresLargos(){ if (VLARGOS) return VLARGOS; const S = new Set();
   // los que también son nombre de una parte («retorno asistido», «deportación») se dejan libres para que la parte se reconozca
   IND.forEach(x => (x.partes || []).forEach(q => [q.nom].concat(q.sin || []).forEach(t => S.delete(norm(t)))));
   return VLARGOS = [...S].sort((a,b) => b.length-a.length); }
-function entender(txt){
+// Sin indicador, pero con un valor que solo existe en una base («razones humanitarias», «retorno asistido», «garita»):
+// se toma el indicador de esa base. Las dimensiones comunes (país, estado, oficina, sexo, edad) no deciden.
+const COMUNES = new Set(['n','e','of','sexo','edad']);
+function entender(txt){ const q = entender0(txt);
+  if (q.perfil || !(q.avisos || []).some(a => /^No reconocí qué quieres ver/.test(a))) return q;
+  const t = ' '+norm(txt)+' ', vistos = new Set();
+  for (const ind of IND){ const B = BASES[ind.b]; if (!B || vistos.has(ind.b)) continue; vistos.add(ind.b);
+    const hay = Object.keys(B.dims).some(k => !COMUNES.has(k) && B.dims[k].vals.some(v => { const n = norm(String(v).replace(/\s*\([^)]*\)/g,'')); return n.length>=5 && t.indexOf(' '+n+' ')>=0; }));
+    if (hay){ const q2 = entender0(ind.nom+' '+txt); if (!(q2.avisos || []).some(a => /^No reconocí qué quieres ver/.test(a))) return q2; } }
+  return q; }
+function entender0(txt){
   // nombre completo de un indicador (lo escribe el autocompletado): se reconoce antes de aplicar sinónimos, que lo deformarían
   // («ingresos al país (extranjeros y mexicanos)» → «internaciones al nacionalidad mexicanos»). Solo nombres de dos palabras o más.
   const crudo = ' '+norm(txt)+' '; let fijo = null;
@@ -333,6 +343,10 @@ function entender(txt){
   // solo un país o solo un estado, sin indicador: perfil con todo lo del Pulso
   const fk = Object.keys(q.filtros), solo = fk.length===1 && (fk[0]==='n' || fk[0]==='e') && q.filtros[fk[0]].length===1;
   if (!cand.length && !resto.length && solo && !q.desg && !q.cmpA && !q.cmp && !q.partes.length){ const nm = B.dims[fk[0]].vals[q.filtros[fk[0]][0]]; if (nm!=='México') q.perfil = { dim:fk[0], nom:nm }; }
+  // un país y un estado, sin indicador: perfil del cruce («Puebla Alemania» → todo lo de alemanes en Puebla)
+  const cruce = fk.length===2 && q.filtros.n && q.filtros.e && q.filtros.n.length===1 && q.filtros.e.length===1;
+  if (!cand.length && !resto.length && cruce && !q.desg && !q.cmpA && !q.cmp && !q.partes.length){ const nn = B.dims.n.vals[q.filtros.n[0]], ne = B.dims.e.vals[q.filtros.e[0]];
+    if (nn!=='México') q.perfil = { dim:'n', nom:nn, cz:{ dim:'e', nom:ne } }; }
   if (!cand.length && !q.perfil) avisos.unshift('No reconocí qué quieres ver; se muestra '+ind.nom+'. Elígelo en «Qué» o prueba una de las sugerencias.');
   limitar(q);
   if (!cand.length && !q.perfil){ const fx = fraseFiltros(q), per = mes>=0 ? ' en '+MES[mes] : ''; q.sugs = ['rescatados','internaciones','NNA canalizados'].map(x => x+(fx ? ' '+fx : '')+per); } q.avisos = avisos; q.entendi = usado; q.fix = pre.fix; return q;
@@ -348,13 +362,14 @@ const IR_PF = { can:'nna' };
 const palabras = v => v>=1e6 ? (v/1e6).toFixed(1).replace('.0','')+' millones' : v>=1e4 ? Math.round(v/1e3)+' mil' : miles(v);
 function idxNom(vals, nom){ let i = vals.indexOf(nom); if (i<0){ const n = norm(nom); i = vals.findIndex(v => norm(v)===n); } return i; }
 // Mide un renglón del perfil sumando sus bases; null si ninguna base trae esa dimensión (repatriados no tiene nacionalidad)
-function medirPF(ks, dim, nom, d0, d1, C, M){
+function medirPF(ks, dim, nom, d0, d1, C, M, cz){
   const otra = dim==='n' ? 'e' : 'n', top = new Map(); let tot = 0, dias = 0, ok = false, fin = null; const sem = new Array(C.l.length).fill(0), cmp = M ? [0, 0, 0, 0] : null;
-  ks.forEach(k => { const ind = INDK[k]; if (!ind) return; const B = BASES[ind.b]; if (!B.dims[dim]) return; ok = true;
+  ks.forEach(k => { const ind = INDK[k]; if (!ind) return; const B = BASES[ind.b]; if (!B.dims[dim] || (cz && !B.dims[cz.dim])) return; ok = true;
+    const j = cz ? idxNom(B.dims[cz.dim].vals, cz.nom) : -1; if (cz && j<0) return;
     const i = idxNom(B.dims[dim].vals, nom), a = d0>B.inicio ? d0 : B.inicio, z = d1<finBase(B) ? d1 : finBase(B); if (fin==null || finBase(B)<fin) fin = finBase(B);
     dias = Math.max(dias, z>=a ? difDias(a, z)+1 : 0); if (i<0 || z<a) return;
-    const o = { ind:ind, filtros:{ [dim]:[i] }, d0:a, d1:z }; tot += total(o); serie(o, C).forEach((x,j) => sem[j] += x);
-    if (B.dims[otra]) porDim(o, otra).forEach(([j,x]) => { const nm = B.dims[otra].vals[j]; top.set(nm, (top.get(nm) || 0) + x); });
+    const o = { ind:ind, filtros:Object.assign({ [dim]:[i] }, cz ? { [cz.dim]:[j] } : {}), d0:a, d1:z }; tot += total(o); serie(o, C).forEach((x,j) => sem[j] += x);
+    if (!cz && B.dims[otra]) porDim(o, otra).forEach(([j,x]) => { const nm = B.dims[otra].vals[j]; top.set(nm, (top.get(nm) || 0) + x); });
     if (M) M.forEach((p,j) => { const pa = p[0]>B.inicio ? p[0] : B.inicio, pz = p[1]<finBase(B) ? p[1] : finBase(B); if (pz<pa) return; cmp[j*2] += total(Object.assign({}, o, { d0:pa, d1:pz })); cmp[j*2+1] = difDias(pa, pz)+1; }); });
   if (!ok) return null;
   const t1 = [...top].filter(x => x[0]!=='México').sort((a,b) => b[1]-a[1])[0];
@@ -371,9 +386,9 @@ function docsPF(dim, nom){ const D = window.IANAMI_DATOS; if (!D || !D.docs) ret
   if (dim==='n'){ const i = idxNom(D.nats.map(x => x[0]), nom), r = i>=0 && D.docs.nat ? D.docs.nat[i] : null; return r ? { tot:r[0], h:r[1], m:r[2] } : null; }
   const i = idxNom(D.ests, nom); return i>=0 && D.docs.est ? { tot:D.docs.est[i] } : null; }
 function perfil(q){
-  const dim = q.perfil.dim, nom = q.perfil.nom, C = cubetas(q.d0, q.d1, 's'), cp = comparacionPF(q.d0, q.d1), g = [];
-  PFD().forEach(([gn, col, l]) => { const cs = []; l.forEach(([k, n, ks]) => { if (k==='docs'){ const d = docsPF(dim, nom); if (d && d.tot) cs.push(Object.assign({ k:k, nom:n }, d)); return; }
-      const m = medirPF(ks, dim, nom, q.d0, q.d1, C, cp && cp.M); if (m && m.tot>0) cs.push(Object.assign({ k:k, nom:n, ir:IR_PF[k] || k }, m)); });
+  const dim = q.perfil.dim, nom = q.perfil.nom, cz = q.perfil.cz, C = cubetas(q.d0, q.d1, 's'), cp = comparacionPF(q.d0, q.d1), g = [];
+  PFD().forEach(([gn, col, l]) => { const cs = []; l.forEach(([k, n, ks]) => { if (k==='docs'){ const d = cz ? null : docsPF(dim, nom); if (d && d.tot) cs.push(Object.assign({ k:k, nom:n }, d)); return; }
+      const m = medirPF(ks, dim, nom, q.d0, q.d1, C, cp && cp.M, cz); if (m && m.tot>0) cs.push(Object.assign({ k:k, nom:n, ir:IR_PF[k] || k }, m)); });
     g.push({ nom:gn, col:col, cs:cs }); });
   const todas = [].concat(...g.map(x => x.cs)), de = k => todas.find(c => c.k===k), ing = de('ing'), res = de('resc'), nat = dim==='n';
   const vac = c => c.k==='tram' && cp && cp.B && cp.B[0].slice(5,7)==='12';      // el INM cierra oficinas a fin de año
@@ -384,7 +399,8 @@ function perfil(q){
   let resp = fr.length ? fr.join(ing && !nat ? ', y ' : ' y ')+'.' : 'No hay registros de '+esc(nom)+' en el periodo.';
   if (cam.length) resp += ' Lo que más cambió ('+cp.txt+'): '+cam.map(c => '<b>'+esc(minus(c.nom))+'</b> ('+pct1(c.cam)+(vac(c) ? ', vacaciones de fin de año' : '')+')').join(' y ')+'.';
   const ind = INDK.resc, fin = todas.map(c => c.fin).filter(Boolean).sort().slice(-1)[0] || FIN;
-  return { q:q, ind:ind, B:BASES[ind.b], tipo:'perfil', pf:{ dim:dim, nom:nom, g:g, cp:cp, C:C, dias:difDias(q.d0, q.d1)+1, fin:fin }, total:todas.reduce((s,c) => s+c.tot, 0), resp:'', frasePF:resp, avisos:(q.avisos || []).slice(), listas:[], partes:[], nomF:nom };
+  if (cz) resp = resp.replace(/personas de [^<]+<\/b> por puntos de internación/, 'personas de '+esc(nom)+'</b> por '+esc(cz.nom)).replace('No hay registros de '+esc(nom), 'No hay registros de '+esc(nom)+' en '+esc(cz.nom));
+  return { q:q, ind:ind, B:BASES[ind.b], tipo:'perfil', pf:{ dim:dim, nom:cz ? nom+' en '+cz.nom : nom, nomN:nom, cz:cz, g:g, cp:cp, C:C, dias:difDias(q.d0, q.d1)+1, fin:fin }, total:todas.reduce((s,c) => s+c.tot, 0), resp:'', frasePF:resp, avisos:(q.avisos || []).slice(), listas:[], partes:[], nomF:nom };
 }
 function sparkPF(s, col){ if (s.length<3) return ''; const mx = Math.max(...s, 1), W = 200, H = 24, p = s.map((v,i) => (i/(s.length-1)*W).toFixed(1)+','+(H-2-v/mx*(H-4)).toFixed(1)).join(' ');
   return '<svg class="pc-sp" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,'+H+' '+p+' '+W+','+H+'" fill="'+col+'" fill-opacity=".13"/><polyline points="'+p+'" fill="none" stroke="'+col+'" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>'; }
@@ -832,7 +848,8 @@ const SLOT = ['n','e','p','est','of','doc','tt'];
 const TODO = { n:'todas las nacionalidades', e:'todas las O.R.', p:'todos los puntos', est:'todas las estaciones', of:'todas las oficinas', doc:'todos los documentos', tt:'todos los trámites', mod:'toda modalidad', via:'todas las vías', sexo:'ambos sexos', edad:'todas las edades', cond:'toda condición', mot:'todo motivo' };
 function pintarFrase(){
   if (Q.perfil){ const B0 = BASES[INDK[Q.ind].b], d = Q.perfil.dim, i = (Q.filtros[d] || [])[0];
-    $('cq-frase').innerHTML = '<span class="cq-cj">Todo de</span><button type="button" class="cq-pz fil" data-cqquita="'+d+':'+i+'" title="Quitar">'+(d==='e' ? 'O.R. ' : '')+esc(Q.perfil.nom)+' <small>×</small></button><span class="cq-cj">en</span><button type="button" class="cq-pz" data-pz="per">'+esc(rangoTxt(Q.d0, Q.d1))+' <small>▾</small></button><button type="button" class="cq-pz mas" data-pz="ind">+ ver un solo indicador</button>'; return; }
+    const cz = Q.perfil.cz, j = cz ? (Q.filtros[cz.dim] || [])[0] : null;
+    $('cq-frase').innerHTML = '<span class="cq-cj">Todo de</span><button type="button" class="cq-pz fil" data-cqquita="'+d+':'+i+'" title="Quitar">'+(d==='e' ? 'O.R. ' : '')+esc(Q.perfil.nom)+' <small>×</small></button>'+(cz ? '<span class="cq-cj">en</span><button type="button" class="cq-pz fil" data-cqquita="'+cz.dim+':'+j+'" title="Quitar">'+esc(cz.nom)+' <small>×</small></button>' : '')+'<span class="cq-cj">en</span><button type="button" class="cq-pz" data-pz="per">'+esc(rangoTxt(Q.d0, Q.d1))+' <small>▾</small></button><button type="button" class="cq-pz mas" data-pz="ind">+ ver un solo indicador</button>'; return; }
   const ind = INDK[Q.ind], B = BASES[ind.b], pz = (k, txt, cl, x) => '<button type="button" class="cq-pz '+(cl || '')+'" data-pz="'+k+'">'+txt+(x ? '' : ' <small>▾</small>')+'</button>';
   let h = pz('ind', esc(cap(ind.nom)), 'ind');
   if (ind.partes && ind.partes.length){ if (Q.partes.length){ h += '<span class="cq-cj">¿'+ind.cu+'</span>'+Q.partes.map(k => '<button type="button" class="cq-pz parte" data-cqquitap="'+k+'" title="Quitar">'+esc(minus(parteDe(ind,k).nom))+' <small>×</small></button>').join('<span class="cq-cj">y</span>')+'<span class="cq-cj">?</span>'+(Q.partes.length<3 ? pz('parte', '+', 'mas', true) : ''); }
@@ -1011,7 +1028,7 @@ function noPasan(){ const a = ACEPTA[R.ind.ir.vista==='dv' || R.ind.ir.vista==='
 function notaTablero(){ const l = noPasan(), cruce = R.tipo==='fuentes';
   return (cruce ? 'La comparación con el sistema se abrirá completa en Analizar; por ahora te lleva a Rescates. ' : '')+(l.length ? 'En el tablero no se aplica: '+l.join('; ')+'.' : ''); }
 function irTablero(){
-  if (R.tipo==='perfil'){ const pf = R.pf; if (window.IANAMI_PULSO && window.IANAMI_PULSO.verLugar){ cerrar(); window.IANAMI_PULSO.verLugar(pf.dim, pf.nom); } return; }
+  if (R.tipo==='perfil'){ const pf = R.pf; if (window.IANAMI_PULSO && window.IANAMI_PULSO.verLugar){ cerrar(); window.IANAMI_PULSO.verLugar(pf.dim, pf.nomN || pf.nom); } return; }
   const ind = R.ind, B = R.B, f = Q.filtros, nom = d => (f[d] || []).map(i => B.dims[d].vals[i]);
   if (ind.ir.d==='pulso'){ const P = window.IANAMI_PULSO; if (!P) return; cerrar(); if (ind.ir.capa) P.verCapa(ind.ir.capa); else P.verInd(ind.ir.ind, nom('n')[0]); return; }
   const p = Object.assign({}, ind.ir, { d0:Q.d0, d1:Q.d1, nats:nom('n'), ests:nom('e'), ptos:nom('p') });
