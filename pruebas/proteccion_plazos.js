@@ -18,8 +18,8 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     await p.evaluate(() => { const b = [...document.querySelectorAll('#pm-pf [data-mzk]')].find(x => /Matamoros/.test(x.textContent)); if (b) b.click(); }); await p.waitForTimeout(1200);
     ok(await p.evaluate(() => document.getElementById('pm-pr').closest('.caja').hidden && document.getElementById('pm-pf').closest('.rg-g2').classList.contains('solo')), w+' garita: sin tarjeta PRIM, perfil a todo lo ancho');
     await p.evaluate(() => { const b = document.querySelector('[data-pquita="p"]'); if (b) b.click(); }); await p.waitForTimeout(1200);
-    // vuelos PRIM por aeropuerto: el total es la suma de los renglones
-    ok(await p.evaluate(() => { const t = document.querySelector('.pm-vt'); if (!t) return false; const f = [...t.querySelectorAll('tbody tr')].map(r => +r.cells[2].textContent); return f.length>0 && +t.querySelector('tfoot tr').cells[2].textContent===f.reduce((x,y)=>x+y,0); }), w+' tabla de días con vuelo PRIM');
+    // vuelos PRIM por aeropuerto: los días de la derecha son los puntos rellenos de la última semana
+    ok(await p.evaluate(() => { const f = [...document.querySelectorAll('.pm-tp-r:not(.pm-tp-h)')]; return f.length>0 && f.every(r => r.querySelectorAll('.pm-tp-s')[1].querySelectorAll('i.si').length===parseInt(r.children[3].textContent)); }), w+' días con vuelo PRIM por aeropuerto');
     ok(await p.evaluate(() => !document.querySelector('[data-pvista="com"]')), w+' sin pestaña de vuelos comerciales');
     for (const k of ['gh','com']){ if (!PM.otros[k]) continue;
       if (k==='com'){ await p.evaluate(() => document.querySelector('[data-pvista="rep"]').click()); await p.waitForTimeout(1500); await p.evaluate(() => document.querySelector('[data-pcom]').click()); }

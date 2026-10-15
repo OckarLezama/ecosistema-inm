@@ -306,7 +306,6 @@ function pintarInt(){
         kc({ nom:'% rechazado', sub:'de quienes llegan', ic:IC.no, col:VINO, val:crucero ? '—' : tasaTxt(base), d: crucero ? '<span class="kc-d">no aplica a cruceros</span>' : w ? chipD(tasa(tot(SEG, {ex:rech, d0:w[0][0], d1:w[0][1]}), tot(ING, {ex:llegada, d0:w[0][0], d1:w[0][1]}))*1e3, tasa(tot(SEG, {ex:rech, d0:w[1][0], d1:w[1][1]}), tot(ING, {ex:llegada, d0:w[1][0], d1:w[1][1]}))*1e3) : '' })+'</div></div>'+plegar()+'</section>'+
     totalPais()+'<div class="rg-hz" id="cv-hz"></div>'+
     '<div class="rg-g rg-g21 fila-par">'+cajaTend('cv-tr', 'tr')+'<div class="caja"><h2><span id="cv-tp-t"></span>'+info('tp')+'</h2><span class="q" id="cv-tp-q"></span><div id="cv-tp"></div></div></div>'+
-    '<h3 class="cv-sec">Segunda revisión y rechazos <small>solo llegadas por aire y tierra</small></h3>'+
     (crucero ? '<p class="cv-cal" style="background:var(--panel2);color:var(--ink2)">Los pasajeros de crucero no pasan por segunda revisión. Quita el filtro de vía marítima para ver los rechazos.</p>' :
     '<div class="rg-g rg-g21"><div class="caja"><h2><span>¿Dónde y a quién se rechaza?</span>'+info('disp')+pil('data-csc', Q.sc, [['n','Nacionalidades'],['p','Puntos']])+'</h2><span class="q" id="cv-disp-q"></span><div id="cv-disp" class="cv-fill" style="min-height:440px"></div></div>'+
       '<div class="caja"><h2><span id="cv-emb-t"></span>'+info('emb')+'<span class="cv-h2r" id="cv-emb-o"></span></h2><span class="q" id="cv-emb-q"></span><div id="cv-emb"></div></div></div>')+
@@ -358,7 +357,7 @@ function pintarTp(){
 function pintarDisp(tn, tp, base){
   const dimN = Q.sc==='n', l = (dimN ? tn : tp).filter(x => x.r>=10 && x.l>0), sel = dimN ? Q.nats : (Q.pto>=0 ? [Q.pto] : []), nom = dimN ? nomN : nomP;
   const mxR = Math.max(1, ...l.map(x => x.r)), tops = l.slice().sort((a,b) => b.r-a.r).slice(0, 9).map(x => x.k);
-  $('cv-disp-q').innerHTML = (dimN ? 'Cada círculo es una nacionalidad' : 'Cada círculo es un punto de internación')+' con 10 rechazos o más · tamaño = número de rechazos · línea punteada = promedio nacional ('+deCada(base)+') · <b>arriba a la derecha: muchas llegadas y alto rechazo</b> · toca uno para filtrar';
+  $('cv-disp-q').innerHTML = '<b>Solo llegadas por aire y tierra</b> · '+(dimN ? 'Cada círculo es una nacionalidad' : 'Cada círculo es un punto de internación')+' con 10 rechazos o más · tamaño = número de rechazos · línea punteada = promedio nacional ('+deCada(base)+') · <b>arriba a la derecha: muchas llegadas y alto rechazo</b> · toca uno para filtrar';
   const ch = graf('cv-disp', { grid:{ left:56, right:24, top:34, bottom:46 },
     tooltip:{ formatter:p => { const x = l[p.dataIndex]; return '<b>'+esc(nom(x.k))+'</b><br>Llegaron <b>'+miles(x.ll)+'</b> personas: '+miles(x.l)+' se internaron y '+miles(x.r)+' fueron rechazadas<br>'+
       miles(x.s)+' pasaron a segunda revisión'+(x.s ? ' (de ellas, '+pct(x.r, x.s)+'% rechazadas)' : '')+'<br><b>Se rechaza a '+deCada(x.t)+'</b> · promedio nacional: '+deCada(base); } },
