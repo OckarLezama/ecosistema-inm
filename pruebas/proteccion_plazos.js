@@ -1,7 +1,7 @@
 // Prueba automática de IA-NAMI. Ejecutar desde la carpeta pruebas: node proteccion_plazos.js
 // Protección al migrante: las tres pestañas se pintan sin errores, con mapas, y las cifras cuadran con los datos;
 // Guatemala-Honduras se cruza con Ciudad Hidalgo de Repatriados. Regulación: el análisis de plazos (dentro de Trámites)
-// abre, dentro + fuera = total y las listas van de mayor a menor. Se prueba en escritorio y en celular.
+// abre, dentro + fuera = total y las listas van de mayor a menor; el motivo de estancia se cruza con nacionalidad y mes. Se prueba en escritorio y en celular.
 const { chromium } = require('playwright'); const path = require('path'); const dir = path.resolve(__dirname, '..');
 global.window = {}; require(dir+'/datos/proteccion.js'); const PM = window.IANAMI_PMV;
 const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n).toLocaleString('en-US');
@@ -16,7 +16,7 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(await p.evaluate(() => /Ver los \d+ puntos/.test(document.getElementById('pm-pf-m').textContent)), w+' perfil con «ver todos»');
     for (const k of ['gh','com']){ if (!PM.otros[k]) continue; await p.evaluate(k => document.querySelector('[data-pvista="'+k+'"]').click(), k); await p.waitForTimeout(1500);
       const txt = await p.evaluate(() => document.getElementById('cv-body').innerText);
-      ok(txt.indexOf(miles(suma(PM.otros[k], 'v')))>=0, w+' '+k+' total '+miles(suma(PM.otros[k], 'v')));
+      ok(txt.indexOf(miles(suma(PM.otros[k], "v")))>=0, w+' '+k+' total '+miles(suma(PM.otros[k], 'v')));
       ok(await p.evaluate(k => !!echarts.getInstanceByDom(document.getElementById(k==='gh' ? 'pm-gh-mapa' : 'pm-cm-mapa')), k), w+' '+k+' mapa');
       const v = await p.evaluate(() => [...document.querySelectorAll('#cv-body .barra .x')].map(e => +e.textContent.replace(/,/g,'')));
       ok(k!=='com' || v.slice(0, PM.otros.com.dic.p.length).every((x,i,a) => !i || x<=a[i-1]), w+' '+k+' aeropuertos de mayor a menor');
@@ -33,5 +33,7 @@ const suma = (o, k) => o.t[k].reduce((a,b) => a+b, 0), miles = n => Math.round(n
     ok(pz.of.length>0 && pz.of.every((x,i,a) => !i || x<=a[i-1]), w+' oficinas de mayor a menor atraso');
     ok(pz.celdas>=pz.of.length, w+' mapa de calor oficina × mes');
     await p.screenshot({ path:path.join(__dirname,'capturas','plazos_'+w+'.png') });
+    for (const v of ['nat','mes','res']){ await p.evaluate(v => document.querySelector('[data-rmotv="'+v+'"]').click(), v); await p.waitForTimeout(900);
+      ok(await p.evaluate(v => v==='res' ? document.querySelectorAll('#rg-mot .barra').length>3 : !!echarts.getInstanceByDom(document.getElementById('rg-mot-g')), v), w+' motivo de estancia: '+v); }
   }
   console.log(mal ? 'con problemas '+mal : 'todo bien'); console.log('errores', JSON.stringify(errs)); await b.close(); })();

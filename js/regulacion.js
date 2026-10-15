@@ -58,6 +58,7 @@ const COLN = ['#2B2926','#A8443E','#766820'];
 const corta = s => s.replace(' por parte de residentes','').replace('Expedición','Exp.').replace('documento migratorio','doc. migratorio');
 const nomO = s => s.replace(/^(OR|SRL|SRF|RL|SR) /,'');
 function graf(id, op){ const el = $(id); if (!el) return null; let ch = echarts.getInstanceByDom(el); if (!ch){ ch = echarts.init(el); new ResizeObserver(() => ch.resize()).observe(el); }
+  if (window.IANAMI_CUAD) op = window.IANAMI_CUAD(op);
   ch.setOption(Object.assign({ textStyle:{ fontFamily:'Barlow, sans-serif', color:'#2B2926' }, animationDuration:800, animationDurationUpdate:600, animationEasingUpdate:'cubicInOut',
     tooltip:{ backgroundColor:'#2B2926', borderWidth:0, textStyle:{ color:'#F4F2EA', fontSize:12 }, extraCssText:'border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)' } }, op), true); return ch; }
 const sinAcento = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
@@ -603,11 +604,45 @@ function elegirBusca(x){
   if (x.t==='Estado'){ agregarEst(x.v); return; } else { Q.ofiF = x.v; Q.ests = []; }
   Q.ofi = -1; Q.pv = 'res'; tramites();
 }
-function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const x = agg(K.m, DIC.m.length, {}), T = x.reduce((a,b) => a+b, 0);
-  const l = DIC.m.map((n,j) => [n, x[j]]).filter(r => r[1]>0).sort((a,b) => b[1]-a[1]);
-  $('rg-mot-q').textContent = 'trámites por motivo de estancia declarado'+(filtros().length || Q.doc>=0 ? ' · con los filtros elegidos' : '');
-  const mx = l.length ? l[0][1] : 1, fila = r => '<div class="barra pc"><span>'+esc(r[0])+' <small>'+pct(r[1],T)+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:#8F7F2E"></i></span><span class="x">'+corto(r[1])+'</span></div>';
-  const mitad = Math.ceil(l.length/2); el.innerHTML = '<div>'+l.slice(0, mitad).map(fila).join('')+'</div><div>'+l.slice(mitad).map(fila).join('')+'</div>'; }
+// ¿Por qué se quedan? Resumen, cruce con nacionalidad (de cada 100 trámites de cada país, por qué motivo) y cómo cambia mes a mes
+const COLMOT = ['#2F6657','#8F7F2E','#C4605A','#778E88','#7E302B','#BDB58D'], GRISMOT = '#D8D3C4', SINMOT = /^(sin motivo|no disponible)/i;
+function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const NM = DIC.m.length, x = agg(K.m, NM, {}), T = x.reduce((a,b) => a+b, 0), V = Q.motV || 'res';
+  $('rg-mot-o').innerHTML = '<div class="pil chica">'+[['res','Resumen'],['nat','Por nacionalidad'],['mes','Mes a mes']].map(o => '<button data-rmotv="'+o[0]+'" class="'+(V===o[0]?'on':'')+'">'+o[1]+'</button>').join('')+'</div>';
+  const l = DIC.m.map((n,j) => [n, x[j], j]).filter(r => r[1]>0).sort((a,b) => b[1]-a[1]), filt = filtros().length || Q.doc>=0 ? ' · con los filtros elegidos' : '';
+  // motivos que se dibujan: los 6 principales con motivo declarado; el resto en «Otros motivos» y aparte «Sin motivo registrado»
+  const top = l.filter(r => !SINMOT.test(r[0])).slice(0, 6).map(r => r[2]), grupo = j => top.indexOf(j)>=0 ? top.indexOf(j) : SINMOT.test(DIC.m[j]) ? 7 : 6;
+  const nomG = g => g<6 ? DIC.m[top[g]] : g===6 ? 'Otros motivos' : 'Sin motivo registrado', colG = g => g<6 ? COLMOT[g] : g===6 ? '#A7A296' : GRISMOT, NGR = 8;
+  if (V==='res'){ el.className = 'rg-mot'; $('rg-mot-q').textContent = 'trámites por motivo de estancia declarado, de mayor a menor'+filt;
+    const mx = l.length ? l[0][1] : 1, fila = r => '<div class="barra pc"><span>'+esc(r[0])+' <small>'+pct(r[1],T)+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:#8F7F2E"></i></span><span class="x">'+corto(r[1])+'</span></div>';
+    const mitad = Math.ceil(l.length/2); el.innerHTML = '<div>'+l.slice(0, mitad).map(fila).join('')+'</div><div>'+l.slice(mitad).map(fila).join('')+'</div>'; return; }
+  el.className = 'rg-mot1';
+  const ley = '<div class="mot-ley">'+[...Array(NGR).keys()].map(g => '<span><i style="background:'+colG(g)+'"></i>'+esc(nomG(g))+'</span>').join('')+'</div>';
+  if (V==='nat'){ const quita = {nats:null}, tn = agg(K.n, NN, quita), ns = [...Array(NN).keys()].filter(n => tn[n]>=300 && !/^sin dato$/i.test(DIC.n[n])).sort((a,b) => tn[b]-tn[a]).slice(0, 12);
+    const m = agg(i => K.n[i]*NGR+grupo(K.m[i]), NN*NGR, quita), tg = new Float64Array(NGR); for (let n=0;n<NN;n++) for (let g=0;g<NGR;g++) tg[g] += m[n*NGR+g]; const TG = tg.reduce((a,b)=>a+b,0) || 1;
+    // hallazgos: dónde pesa mucho más un motivo que en el promedio (solo los 6 principales, con 10% o más del país)
+    const hz = []; ns.forEach(n => { for (let g=0; g<6; g++){ const p = m[n*NGR+g]/tn[n], pg = tg[g]/TG; if (p>=.10 && pg>0 && p/pg>=1.8) hz.push([n, g, p, p/pg]); } });
+    hz.sort((a,b) => b[3]-a[3]); const vis = []; hz.forEach(h => { if (vis.length<3 && !vis.some(v => v[0]===h[0])) vis.push(h); });
+    $('rg-mot-q').innerHTML = 'de cada 100 trámites de cada nacionalidad, por qué motivo se quedan · las 12 con más trámites · toca una para filtrar'+(Q.ests.length || Q.ofiF>=0 || Q.doc>=0 ? filt : '');
+    el.innerHTML = ley+'<div id="rg-mot-g" style="height:'+(ns.length*34+40)+'px"></div>'+(vis.length ? '<div class="mot-hz">'+vis.map(h => '<p><b>'+esc(DIC.n[h[0]])+'</b>: '+esc(nomG(h[1]).toLowerCase())+' es '+Math.round(h[2]*100)+' de cada 100 trámites, <b>'+(h[3]).toFixed(1)+' veces</b> el promedio ('+Math.round(tg[h[1]]/TG*100)+').</p>').join('')+'</div>' : '');
+    const rows = ns.slice().reverse(), ch = graf('rg-mot-g', { grid:{ left:8, right:14, top:4, bottom:20, containLabel:true },
+      tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => { const n = rows[ps[0].dataIndex]; return '<b>'+esc(DIC.n[n])+'</b> · '+miles(tn[n])+' trámites<br>'+ps.filter(p => p.value>0).sort((a,b) => b.value-a.value).map(p => p.marker+esc(p.seriesName)+': <b>'+p.value.toFixed(1)+'%</b> ('+miles(m[n*NGR+p.seriesIndex])+')').join('<br>'); } },
+      xAxis:{ type:'value', max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 } },
+      yAxis:{ type:'category', data:rows.map(n => DIC.n[n]), axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, triggerEvent:true, axisLabel:{ color:'#2B2926', fontSize:11.5, formatter:(v,i) => (Q.nats.indexOf(rows[i])>=0 ? '{s|'+v+'}' : v)+'\n{t|'+corto(tn[rows[i]])+' trámites}', rich:{ s:{ fontWeight:700, color:'#7E302B', fontSize:11.5 }, t:{ fontSize:9.5, color:'#8A8579', lineHeight:12 } } } },
+      series:[...Array(NGR).keys()].map(g => ({ name:nomG(g), type:'bar', stack:'m', barMaxWidth:20, color:colG(g), itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 },
+        data:rows.map(n => +(m[n*NGR+g]/tn[n]*100).toFixed(2)), label:{ show:true, position:'inside', fontSize:9.5, color:g===7 ? '#2B2926' : '#fff', formatter:p => p.value>=9 ? Math.round(p.value)+'%' : '' } })) });
+    ch.off('click'); ch.on('click', p => { const n = rows[p.componentType==='yAxis' ? rows.findIndex(z => DIC.n[z]===p.value) : p.dataIndex]; if (n!=null) alternarNat(n); }); return; }
+  // mes a mes: de cada 100 trámites del mes, por qué motivo
+  const mesK = i => mesDe(K.d[i]), m0 = mesDe(Q.d0), nmz = mesDe(Q.d1-1)-m0+1, mm = agg(i => (mesK(i)-m0)*NGR+grupo(K.m[i]), nmz*NGR, {}), tm = [...Array(nmz).keys()].map(j => { let t = 0; for (let g=0;g<NGR;g++) t += mm[j*NGR+g]; return t; });
+  const lab = [...Array(nmz).keys()].map(j => { const f = new Date(INI.getFullYear(), INI.getMonth()+m0+j, 1); return MES[f.getMonth()]+(f.getMonth()===0 || j===0 ? ' '+String(f.getFullYear()).slice(2) : ''); });
+  const sh = (g, a, b) => { let x = 0, t = 0; for (let j=a;j<b;j++){ x += mm[j*NGR+g]; t += tm[j]; } return t ? x/t*100 : 0; };
+  const cmb = nmz>=7 ? [...Array(6).keys()].map(g => [g, sh(g, 0, 3), sh(g, nmz-4, nmz-1)]).sort((a,b) => Math.abs(b[2]-b[1])-Math.abs(a[2]-a[1]))[0] : null;
+  $('rg-mot-q').innerHTML = 'de cada 100 trámites de cada mes, por qué motivo'+filt+(cmb && Math.abs(cmb[2]-cmb[1])>=1 ? ' · <b>'+esc(nomG(cmb[0]))+'</b> '+(cmb[2]>cmb[1] ? 'sube' : 'baja')+' de '+Math.round(cmb[1])+' a '+Math.round(cmb[2])+' de cada 100 (primeros 3 meses contra los últimos 3 completos)' : '');
+  el.innerHTML = ley+'<div id="rg-mot-g" style="height:320px"></div>';
+  graf('rg-mot-g', { grid:{ left:40, right:10, top:8, bottom:26 }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => '<b>'+lab[ps[0].dataIndex]+'</b> · '+miles(tm[ps[0].dataIndex])+' trámites<br>'+ps.filter(p => p.value>0).sort((a,b) => b.value-a.value).map(p => p.marker+esc(p.seriesName)+': <b>'+p.value.toFixed(1)+'%</b>').join('<br>') },
+    xAxis:{ type:'category', data:lab, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, axisLabel:{ color:'#5C5952', fontSize:10.5 } },
+    yAxis:{ type:'value', max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 } },
+    series:[...Array(NGR).keys()].map(g => ({ name:nomG(g), type:'bar', stack:'m', barMaxWidth:30, color:colG(g), itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 }, data:lab.map((_,j) => tm[j] ? +(mm[j*NGR+g]/tm[j]*100).toFixed(2) : 0) })) });
+}
 function vistaTramites(){
   $('rg-body').innerHTML = '<div class="ctl rg-ctl" id="rg-ctl"></div><section class="kpis rg-kpis" id="rg-kpis" data-modo="tarjetas"></section>'+
     '<div class="rg-hz" id="rg-hz"></div>'+
@@ -615,7 +650,7 @@ function vistaTramites(){
       '<aside class="caja rg-pnl" id="rg-pnl"></aside></div>'+
     '<section class="caja rg-ancho rg-pzb" id="rg-pzb"></section>'+
     '<div class="caja rg-ancho rg-nv"><h2><span>¿Cuántas personas nuevas se documentan?</span>'+info('nv')+'</h2><div id="rg-nv" class="rg-nv-g"></div></div>'+
-    (K.m ? '<div class="caja rg-ancho"><h2><span>¿Por qué se quedan? · Motivo de estancia</span>'+info('mot')+'</h2><span class="q" id="rg-mot-q"></span><div id="rg-mot" class="rg-mot"></div></div>' : '')+
+    (K.m ? '<div class="caja rg-ancho"><h2><span>¿Por qué se quedan? · Motivo de estancia</span>'+info('mot')+'<span class="rg-h2r" id="rg-mot-o"></span></h2><span class="q" id="rg-mot-q"></span><div id="rg-mot" class="rg-mot"></div></div>' : '')+
     '<button class="rg-det-b'+(Q.det?' on':'')+'" data-rdet>'+(Q.det ? 'Ocultar detalle ▴' : 'Ver detalle: oficinas, tipo de trámite, edad y sexo, documento por nacionalidad ▾')+'</button>'+
     (Q.det ? '<p class="rg-det-n" id="rg-det-n"></p><div class="caja rg-cru" id="rg-totales"><h2><span>Totales</span>'+info('tot')+'<div class="pil chica" id="rg-tot-sel"></div></h2><span class="q" id="rg-tot-q"></span><div id="rg-tot-w"><div id="rg-tot"></div></div></div><div class="rg-g rg-g3"><div class="caja"><h2><span>Oficinas</span>'+info('of')+'</h2><span class="q" id="rg-of-q"></span><div class="rg-of" id="rg-of"></div></div>'+
       '<div class="caja"><h2><span>Tipo de trámite</span>'+info('tipo')+'</h2><span class="q">principales · el % es la parte del total</span><div id="rg-tipo"></div></div>'+
@@ -702,7 +737,7 @@ const INFO = {
   pzd:'<b>¿Cuánto tardan?</b> En verde, los trámites resueltos según los días que tardó su resolución («0 días» = el mismo día). En rojo, los que siguen en proceso según los días que llevan esperando.',
   pzt:'<b>¿Cumple cada trámite su plazo?</b> Los 12 tipos de trámite con más volumen. La raya negra es el plazo que marca la norma; el punto es lo que tardan en promedio los ya resueltos (rojo si pasa el plazo). La cifra de la derecha es qué parte de sus trámites quedó fuera del plazo.<br><br>Ordenados de más a menos atraso.',
   pzo:'<b>¿Dónde y cuándo se atrasan?</b> Las oficinas con más trámites (filas, de más a menos atraso) contra los últimos 12 meses (columnas). Cada celda es el % de los trámites de ese mes que quedó fuera del plazo: más rojo = más atraso. Así se ve si un atraso es de una oficina o de todo el país, y si es reciente o viene de antes.<br><br>Toca una oficina para ver solo esa.',
-  mot:'<b>¿Por qué se quedan?</b> El motivo de estancia que la persona declara en su trámite (unidad familiar, trabajo, estudio, razones humanitarias…), de mayor a menor, con su parte del total. Responde a todos los filtros.',
+  mot:'<b>¿Por qué se quedan?</b> El motivo de estancia que la persona declara en su trámite (unidad familiar, empleo, estudio, razones humanitarias…).<br>• <b>Resumen:</b> todos los motivos, de mayor a menor.<br>• <b>Por nacionalidad:</b> de cada 100 trámites de cada país, por qué motivo. Abajo, los países donde un motivo pesa mucho más que en el promedio. Toca un país para filtrar.<br>• <b>Mes a mes:</b> cómo cambia la mezcla de motivos en el tiempo.<br><br>Colores: los 6 motivos principales; en gris, otros motivos y trámites sin motivo registrado.',
   hz:'<b>Titulares:</b> cuánto subieron o bajaron los trámites contra el periodo de comparación, la nacionalidad que más cambió y la oficina con más rechazos de lo esperado.',
   evo:'<b>Trámites concluidos en el INM:</b> todos los que terminaron en el periodo, con o sin documento (tarjetas, constancias, oficios, rechazos y cancelaciones), en total o por documento, nacionalidad u O.R.<br>• <b>Franja verde:</b> rango habitual, calculado con las semanas fuera de vacaciones; un punto fuera de la franja es un cambio real.<br>• <b>Sombra gris:</b> temporada vacacional, cuando una baja es lo esperado.<br>• <b>Punto hueco:</b> periodo con pocos días de datos.',
   nv:'<b>Personas que se documentan por primera vez</b>: regularizaciones, visas y tarjetas de visitante regional o trabajador fronterizo. No incluye renovaciones, cambios de condición ni avisos. El % sobre el stock compara contra las personas con documento vigente al último corte.',
@@ -1005,6 +1040,7 @@ function eventos(cont){
     if (T('[data-reti]')){ Q.eti = !Q.eti; pintarPrincipal(); return; }
     if ((b = T('[data-rdesg]'))){ Q.desg = b.dataset.rdesg; PANEL = null; pintarPrincipal(); if ((Q.pv || 'res')==='res') pintarPanel(); return; }
     if (T('[data-rcierra]')){ cerrarPanel(); return; }
+    if ((b = T('[data-rmotv]'))){ Q.motV = b.dataset.rmotv; pintarMotivo(); return; }
     if (T('[data-rpza]')){ Q.pzA = !Q.pzA; pintarPlazos(); return; }
     if (T('[data-rdet]')){ Q.det = !Q.det; vistaTramites(); return; }
     if ((b = T('[data-rver]'))){ Q.det = true; Q.ofi = +b.dataset.rver; vistaTramites(); const of = $('rg-of'); if (of) of.closest('.caja').scrollIntoView({ behavior:'smooth', block:'center' }); return; }

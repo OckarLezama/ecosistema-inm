@@ -756,7 +756,7 @@ function hojaBul(r, fmt){ const x = bullets(r), ahora = new Date(), ind = r.ind;
     '<footer><span>Fuente: <b>'+esc(x.fte)+'</b> · datos al '+fechaTxt(x.fin)+'</span><span>Generado '+fechaTxt(iso(ahora))+' '+String(ahora.getHours()).padStart(2,'0')+':'+String(ahora.getMinutes()).padStart(2,'0')+'</span></footer></article>'; }
 // Dibuja las gráficas de una hoja ya insertada
 function dibujar(cont, ops, anim){
-  const l = []; cont.querySelectorAll('[data-ch]').forEach(el => { const op = ops[+el.dataset.ch.slice(1)]; if (!op) return; const c = echarts.init(el); c.setOption(Object.assign(BASEOP(anim), op)); l.push(c); });
+  const l = []; cont.querySelectorAll('[data-ch]').forEach(el => { const op = ops[+el.dataset.ch.slice(1)]; if (!op) return; const c = echarts.init(el); c.setOption(Object.assign(BASEOP(anim), window.IANAMI_CUAD ? window.IANAMI_CUAD(op) : op)); l.push(c); });
   return l;
 }
 

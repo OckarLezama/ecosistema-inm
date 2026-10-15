@@ -58,6 +58,7 @@ const COLC = ['#778E88','#C4605A','#8F7F2E'];                                   
 // Objeto vacío que acepta cualquier llamada: las gráficas del detalle plegado no se dibujan hasta abrirlo
 const NADA = new Proxy(function(){}, { get:(t,k) => k===Symbol.toPrimitive ? () => 0 : NADA, apply:() => NADA });
 function graf(id, op){ const el = $(id); if (!el) return null; if (el.closest('.cv-det[hidden]')) return NADA; let ch = echarts.getInstanceByDom(el); if (!ch){ ch = echarts.init(el); new ResizeObserver(() => ch.resize()).observe(el); }
+  if (window.IANAMI_CUAD) op = window.IANAMI_CUAD(op);
   ch.setOption(Object.assign({ textStyle:{ fontFamily:'Barlow, sans-serif', color:'#2B2926' }, animationDuration:800, animationDurationUpdate:600,
     tooltip:{ backgroundColor:'#2B2926', borderWidth:0, textStyle:{ color:'#F4F2EA', fontSize:12 }, extraCssText:'border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)' } }, op), true); return ch; }
 const ejeY = { type:'value', axisLabel:{ color:'#5C5952', fontSize:10.5, formatter:v => corto(v) }, splitLine:{ lineStyle:{ color:'#EEEBE2' } } };
@@ -639,6 +640,7 @@ function pintarCan(){
   if (lr.length) barrasV('cv-re', lr, { stack:true, ley:true, series:[{ name:'Menores', k:'s0', col:ROJO }, { name:'Adultos', k:'s1', col:'#9A958A' }], tip:ps => '<b>'+esc(ps[0].name)+'</b><br>'+ps.map(p => p.marker+p.seriesName+': <b>'+miles(p.value)+'</b>').join('<br>') });
 }
 // «¿Cómo salen?»: de cada 100 canalizados, cuántos salen por cada motivo, en una cuadrícula de 100 y semana a semana
+const cap1 = t => t.charAt(0).toUpperCase()+t.slice(1);
 function pintarSal(T, nna){
   const MO = CV.motivos, x = agg(T, i => T.m[i], MO.length, {}), t = x.reduce((a,b)=>a+b,0), caja = $('cv-sal').closest('.caja');
   if (!t){ caja.hidden = true; return; } caja.hidden = false;
@@ -653,12 +655,17 @@ function pintarSal(T, nna){
   // semana a semana: % del motivo principal
   const S = semanas(), s0 = S[0].w, k0 = orden[0], sem = agg(T, i => (semDe(T.d[i])-s0)*MO.length + T.m[i], S.length*MO.length, {});
   const col = S.map((s,w) => { const tt = MO.reduce((a,_,m) => a+sem[w*MO.length+m], 0); return [s, tt, tt ? sem[w*MO.length+k0]/tt : 0]; }).filter(c => c[1]>0);
+  // con más de 20 semanas, las barras se vuelven ilegibles: se agrupa por mes (con el año en enero y en la primera)
+  let porMes = false, colM = col;
+  if (col.length>20){ porMes = true; const mk = d => { const f = fDia(d); return f.getFullYear()*12+f.getMonth(); }, m0 = mk(Q.d0), nm = mk(Q.d1-1)-m0+1, mm = agg(T, i => (mk(T.d[i])-m0)*MO.length + T.m[i], nm*MO.length, {});
+    colM = [...Array(nm).keys()].map(j => { const tt = MO.reduce((a,_,m) => a+mm[j*MO.length+m], 0), y = Math.floor((m0+j)/12), mo = (m0+j)%12, ult = j===nm-1 && fDia(Q.d1-1).getDate()<28;
+      return [{ a:0, lab:MES[mo]+(mo===0 || j===0 ? ' '+String(y).slice(2) : ''), full:MES[mo]+' '+y, inc:ult }, tt, tt ? mm[j*MO.length+k0]/tt : 0]; }).filter(c => c[1]>0); }
   $('cv-sal').innerHTML = '<div class="cien cv-sal-w"><div class="cien-g cv-cien" role="img" aria-label="De cada 100 '+quien+'">'+celdas.join('')+'</div><div class="cien-d">'+
       '<p class="cien-f">De cada <b>100</b> '+quien+', '+top3.slice(0, -1).join(', ')+(top3.length>1 ? ' y ' : '')+top3[top3.length-1]+'.</p>'+
       orden.map((k,i) => '<div class="cien-l" data-salm="'+k+'"><i style="background:'+COLM[k]+'"></i><span>'+esc(MO[k])+' <small>'+base[i]+' de cada 100</small></span><b class="num">'+miles(x[k])+'</b></div>').join('')+
       '<div class="cien-l t"><span>Total</span><b class="num">'+miles(t)+'</b></div></div></div>'+
-    (col.length>1 ? '<div class="cien-m"><span class="mini"><b>Semana a semana</b> · de cada 100, cuántos '+verbo[k0]+'</span><div class="cien-c cv-cien-c">'+col.map((c,i) => '<div title="Semana del '+fecha(c[0].a)+' · '+Math.round(c[2]*100)+' de cada 100 ('+miles(c[1])+' en total)'+(c[0].inc ? ' · semana incompleta' : '')+'"><span>'+Math.round(c[2]*100)+'</span>'+
-      '<i style="animation-delay:'+(i*40)+'ms"><b style="height:'+(c[2]*100).toFixed(1)+'%;background:'+COLM[k0]+(c[0].inc ? ';opacity:.5' : '')+'"></b><b style="height:'+((1-c[2])*100).toFixed(1)+'%;background:#E2DED0"></b></i><small>'+c[0].lab.replace(/ .*/,'')+'</small></div>').join('')+'</div></div>' : '')+
+    (colM.length>1 ? '<div class="cien-m"><span class="mini"><b>'+(porMes ? 'Mes a mes' : 'Semana a semana')+'</b> · de cada 100, cuántos '+verbo[k0]+'</span><div class="cien-c cv-cien-c">'+colM.map((c,i) => '<div title="'+(porMes ? cap1(c[0].full) : 'Semana del '+fecha(c[0].a))+' · '+Math.round(c[2]*100)+' de cada 100 ('+miles(c[1])+' en total)'+(c[0].inc ? ' · semana incompleta' : '')+'"><span>'+Math.round(c[2]*100)+'</span>'+
+      '<i style="animation-delay:'+(i*40)+'ms"><b style="height:'+(c[2]*100).toFixed(1)+'%;background:'+COLM[k0]+(c[0].inc ? ';opacity:.5' : '')+'"></b><b style="height:'+((1-c[2])*100).toFixed(1)+'%;background:#E2DED0"></b></i><small'+(colM.length>12 && i%3 ? ' class="o"' : '')+'>'+(porMes ? c[0].lab : c[0].lab.replace(/ .*/,''))+'</small></div>').join('')+'</div></div>' : '')+
     '<p class="rg-base">«Abandono de PAM» es como viene en la base; su definición oficial está por confirmar con el área.</p>';
 }
 function pintarCp(){

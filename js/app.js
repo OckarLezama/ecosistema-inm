@@ -111,6 +111,18 @@ const TM = {
            r_reg:['#E3ECE8','#AFC9C1','#7AA598','#2F6657','#17382F'], r_irr:['#F6E6E3','#E5B9B3','#D38E86','#C4605A','#7E302B'], r_usa:['#F1EBD0','#DDD09A','#C2B15E','#8F7F2E','#55490F'] }
 };
 
+// Cuadrícula («cuadritos») de todas las gráficas: líneas alineadas a los ejes, nunca un fondo aparte que se encime.
+// Eje de valores: línea principal y una secundaria más tenue entre cada par; eje de categorías: una línea por categoría.
+window.IANAMI_CUAD = op => { if (!op || op.geo || [].concat(op.series || []).some(s => s && /^(pie|heatmap|sankey|graph|map|lines)$/.test(s.type))) return op;
+  const fija = (a, cat) => [].concat(a || []).forEach(x => { if (!x || x.show===false) return; const sl = x.splitLine || {};
+    if (sl.show===false) return;
+    if (x.type==='category'){ const n = (x.data || []).length; x.splitLine = Object.assign({ show:true }, sl, { interval:n && n<=60 ? 0 : 'auto', lineStyle:Object.assign({}, sl.lineStyle, { color:'#ECE9DF' }) }); return; }
+    x.splitLine = Object.assign({}, sl, { show:true, lineStyle:Object.assign({}, sl.lineStyle, { color:'#E3DFD3' }) });
+    if (x.type!=='log'){ x.minorTick = Object.assign({ show:false, splitNumber:2 }, x.minorTick); x.minorSplitLine = Object.assign({ show:true, lineStyle:{ color:'#F2F0E9' } }, x.minorSplitLine); } });
+  const esCat = a => [].concat(a || []).some(x => x && x.type==='category');
+  if (esCat(op.xAxis) && esCat(op.yAxis)) return op;          // matrices (cruces): sin cuadrícula
+  fija(op.xAxis); fija(op.yAxis); return op; };
+
 /* ==== [2] DATOS (cubo y consultas) ================================= */
 // Cubo denso por indicador [semana][estado][nacionalidad] y sus dos resúmenes
 // Cubo semanal de todas las fechas (…0); CUBO, WS y WN son la vista del periodo elegido
@@ -1414,9 +1426,9 @@ function bajarJS(src){ return BAJADOS[src] || (BAJADOS[src] = new Promise((ok, m
   s.onload = ok; s.onerror = () => { delete BAJADOS[src]; s.remove(); mal(new Error(src)); }; document.body.appendChild(s); })); }
 function cargarModulo(k){
   if (modListo(k)) return Promise.resolve();
-  const av = $('cargando'); av.textContent = 'Cargando '+NOM_MOD[k]+'…'; av.hidden = false;
+  const av = $('cargando'); av.classList.remove('error'); av.textContent = 'Cargando '+NOM_MOD[k]+'…'; av.hidden = false;
   return (MODULOS[k] || []).reduce((p, src) => p.then(() => bajarJS(src)), Promise.resolve())
-    .then(() => { av.hidden = true; }, e => { av.textContent = 'No se pudo cargar '+NOM_MOD[k]+'. Revisa tu conexión e inténtalo de nuevo.'; setTimeout(() => { av.hidden = true; }, 4500); throw e; });
+    .then(() => { av.hidden = true; }, e => { av.classList.add('error'); av.textContent = 'No se pudo cargar '+NOM_MOD[k]+'. Revisa tu conexión e inténtalo de nuevo.'; setTimeout(() => { av.hidden = true; }, 4500); throw e; });
 }
 window.IANAMI_CARGAR = cargarModulo;
 // Pregunta a INAMI vive en js/consulta.js; aquí solo se abre y se le da la navegación hacia los procesos.
@@ -1502,7 +1514,7 @@ function irA(v){
   S.vista = v; pintarNav(); const pulso = v==='pulso'; $('vista-pulso').hidden = !pulso; $('vista-otra').hidden = pulso;
   if (pulso){ ajustarAlto(); reencuadrar(); ajustarLienzo(); pintarTodo(); return; }
   if (S.play) detener();
-  if (v==='dir'){ const k = DIRS[S.dir || 0].k; if (MODULOS[k] && !modListo(k)){ $('vista-otra').innerHTML = '<p class="mini" style="padding:24px 0">Cargando '+esc(NOM_MOD[k])+'…</p>';
+  if (v==='dir'){ const k = DIRS[S.dir || 0].k; if (MODULOS[k] && !modListo(k)){ $('vista-otra').innerHTML = '<div class="esq" role="status" aria-label="Cargando '+esc(NOM_MOD[k])+'"><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
     cargarModulo(k).then(() => { if (S.vista==='dir' && DIRS[S.dir || 0].k===k) irA('dir'); }, () => {}); return; } }
   const F0 = {ss:null, n:null}; let h = '';
   if (v==='dir' && DIRS[S.dir || 0].k==='regulacion' && window.IANAMI_REGULACION){ window.IANAMI_REGULACION.pintar($('vista-otra')); return; }   // Regulación tiene su propia vista
