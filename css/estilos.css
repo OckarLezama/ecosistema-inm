@@ -1220,3 +1220,6 @@ body.en-sala{overflow:hidden}
 .cq-bul li.lead::before{left:0;top:10px;bottom:10px;height:auto;width:3px;border-radius:2px}
 .cq-bul li.lead b{font-size:1.5em;color:#2B2926}
 @media (max-width:560px){ .cb-top{flex-direction:column;gap:6px} .cb-meta{text-align:left;max-width:none} .cq-bul li.lead{padding:10px 12px 10px 14px} }
+.rg-mot{display:grid;grid-template-columns:1fr 1fr;gap:4px 28px}@media (max-width:760px){.rg-mot{grid-template-columns:1fr}}
+.rg-eti-n{font-size:1.25em;color:var(--ink);letter-spacing:0;margin:0 2px}
+.rg .rg-kpis .kg:first-child .kc-n{white-space:normal;line-height:1.1}

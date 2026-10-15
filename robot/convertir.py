@@ -267,7 +267,8 @@ def cargar_tram(t):
     columnas = list(t.columns)
     despues = columnas[columnas.index("RANGOS DE EDAD") + 1:]
     t, docs = lector.documentos_tramite(t)                      # solo columnas de documento, con los errores de captura corregidos
-    otras = [c for c in despues if c not in docs]
+    usadas = {"PLAZO NORMATIVO DE RESOLUCION", "DIAS DE RESOLUCION / TRANSCURIDOS SIN RESOLVER", "DENTRO O FUERA DEL PLAZO NORMATIVO", "MOTIVO DE ESTANCIA"}   # las usa Regulación (Plazos)
+    otras = [c for c in despues if c not in docs and c not in usadas]
     if otras:
         lector.avisar("Trámites", "Columnas nuevas que todavía no se usan: " + ", ".join(c.capitalize() for c in otras) + ".")
     t["PAIS / EMPLEADOR"] = t["PAIS / EMPLEADOR"].fillna("SIN DATO")
@@ -276,6 +277,9 @@ def cargar_tram(t):
     t["sexo"] = t["SEXO"].map(lambda x: {"HOMBRE": 0, "MUJER": 1}.get(norm(x), -1))
     edades = {"00": 0, "12": 1, "18": 2, "25": 3, "35": 4, "45": 5, "55": 6, "65": 7}
     t["edad"] = t["RANGOS DE EDAD"].map(lambda x: edades.get(str(x).strip()[:2], -1))
+    # Expiden / no expiden tarjeta («Tipo de conclusión») y dentro / fuera del plazo normativo
+    t["exp"] = t["TIPO DE CONCLUSION"].map(lambda x: 0 if norm(x).startswith("CON EXPEDICION") else 1) if "TIPO DE CONCLUSION" in t.columns else 0
+    t["plz"] = t["DENTRO O FUERA DEL PLAZO NORMATIVO"].map(lambda x: 1 if "FUERA" in norm(x) else 0) if "DENTRO O FUERA DEL PLAZO NORMATIVO" in t.columns else 0
     t["res"] = t["TIPO DE RESOLUCION ESPECIFICA"].map(lambda x: {"POSITIVOS": 0, "NEGATIVOS": 1}.get(norm(x), 2))
     empleador = int((t["PAIS / EMPLEADOR"].map(norm) == "EMPLEADOR").sum())
     if empleador:
@@ -434,6 +438,8 @@ def composiciones(B):
     con_edad = tram[(tram["sexo"] >= 0) & (tram["edad"] >= 0)]
     o["tram_se"] = composicion(con_edad, con_edad["sexo"] * 8 + con_edad["edad"], con_edad["v"])
     o["tram_res"] = composicion(tram, tram["res"], tram["v"])
+    o["tram_exp"] = composicion(tram, tram["exp"], tram["v"])
+    o["tram_plz"] = composicion(tram, tram["plz"], tram["v"])
     # tipo de trámite: los 14 más frecuentes y "Otros"
     global TIPOS_TRAM
     orden = list(tram.groupby("TIPO DE TRAMITE").v.sum().sort_values(ascending=False).index)

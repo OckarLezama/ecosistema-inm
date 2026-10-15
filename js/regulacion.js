@@ -146,12 +146,13 @@ function pintarKpis(){
     return kc({ attr:' data-rdoc="'+c+'" aria-pressed="'+(Q.doc===c)+'"', on:Q.doc===c, col:col, ic:ic, nom:nom, sub: c<0 ? 'en el periodo' : '', val:corto(v), num:v,
       d: w ? chipD(suma(a,ids), suma(b,ids)) : '', b:minibarras(serie(ids)), title:nom+': '+miles(v)+' trámites'+(c<0 ? '' : ' · '+pct(v,T)+'% del total') }); };
   const tO = suma(por, otros);
+  // tarjeta de grupo (no filtra): suma de varias condiciones, con su cambio y su línea semanal
   $('rg-kpis').dataset.modo = Q.compacto ? 'compacto' : 'tarjetas';
   $('rg-kpis').innerHTML =
     '<div class="kg" style="flex:1 1 0;--g:#2B2926"><div class="eti" title="'+esc(['Total'].concat(filtros()).join(' · '))+'"><span class="eti-t">Total'+(filtros().length ? ' · '+filtrosTxt() : '')+'</span></div><div>'+carta(-1, todos, 'Todos los trámites', IC.tot, '#2B2926')+'</div></div>'+
-    '<div class="kg g-reg" style="flex:'+RG.tarjetas+' 1 0"><div class="eti">Tarjetas · condición de estancia</div><div>'+tarj.map(c => carta(c, [c], RG.condiciones[c], IC.tarj, '#2F6657')).join('')+'</div></div>'+
-    '<button class="rg-tog'+(Q.mas?' on':'')+'" data-rmas aria-expanded="'+Q.mas+'" title="'+(Q.mas?'Ocultar':'Ver')+' constancias y oficios"><span>Constancias<br>y oficios</span><b class="num">'+corto(tO)+'</b><i>'+(Q.mas?'‹':'›')+'</i></button>'+
-    '<div class="kg rg-mas" style="--g:#5C5952"><div class="eti">Constancias y oficios</div><div>'+otros.map(c => carta(c, [c], RG.condiciones[c], IC.doc, '#5C5952')).join('')+'</div></div>'+plegar();
+    '<div class="kg g-reg" style="flex:'+RG.tarjetas+' 1 0"><div class="eti" title="Trámites que terminaron con tarjeta («Tipo de conclusión»: con expedición de tarjeta migratoria). Expiden + no expiden = todos los trámites.">Expiden tarjetas <b class="num rg-eti-n">'+miles(suma(por, tarj))+'</b> · '+pct(suma(por, tarj), T)+'% · condición de estancia</div><div>'+tarj.map(c => carta(c, [c], RG.condiciones[c]==='Tarjeta sin tipo' ? 'Tipo no registrado' : RG.condiciones[c], IC.tarj, '#2F6657')).join('')+'</div></div>'+
+    '<button class="rg-tog'+(Q.mas?' on':'')+'" data-rmas aria-expanded="'+Q.mas+'" title="'+(Q.mas?'Ocultar':'Ver')+' trámites que no expiden tarjeta"><span>No expiden<br>tarjetas</span><b class="num">'+corto(tO)+'</b><i>'+(Q.mas?'‹':'›')+'</i></button>'+
+    '<div class="kg rg-mas" style="--g:#5C5952"><div class="eti">No expiden tarjetas</div><div>'+otros.map(c => carta(c, [c], RG.condiciones[c], IC.doc, '#5C5952')).join('')+'</div></div>'+plegar();
   if (Q.mas) abrirMas(false);
 }
 // Muestra u oculta constancias y oficios; la franja se desliza para dejarlas a la vista
@@ -591,7 +592,8 @@ function pintarTotales(){
 function alternarNat(n){ const k = Q.nats.indexOf(n); if (k>=0) Q.nats.splice(k,1); else { if (Q.nats.length>=3) Q.nats.shift(); Q.nats.push(n); }
   if (Q.nats.length>=2) Q.desg = 'nat'; else if (Q.desg==='nat' && Q.nats.length===1) Q.desg = 'tot'; tramites(); }
 function tramites(){
-  $('rg-ctl').innerHTML = htmlCtl(); NEG = negEsperado(); pintarKpis(); pintarHallazgos(); pintarPrincipal(); pintarPanel(); pintarNuevos();
+  if (Q.vista==='pz'){ plazos(); return; }
+  $('rg-ctl').innerHTML = htmlCtl(); NEG = negEsperado(); pintarKpis(); pintarHallazgos(); pintarPrincipal(); pintarPanel(); pintarNuevos(); pintarMotivo();
   if (Q.det){ pintarTotales(); pintarOficinas(); pintarTipoEdad(); pintarMezcla(); const n = $('rg-det-n'); if (n) n.innerHTML = 'Detalle de: <b>'+(filtros().length || Q.doc>=0 ? filtros().concat(Q.doc>=0 ? [RG.condiciones[Q.doc]] : []).map(esc).join(Q.nats.length>=2 ? ' + ' : ' · ') : 'todo el país')+'</b>'+(Q.nats.length>=2 ? ' (suma de las '+Q.nats.length+' nacionalidades)' : ''); }
   autocompletar($('rg-bus'), $('rg-bus-r'), DIC.n.map((x,i) => ({n:x, t:'Nacionalidad', v:i})).concat(DIC.e.map((x,i) => ({n:x, t:'Estado', v:i})), DIC.o.map((x,i) => ({n:nomO(x), t:'Oficina', v:i}))), elegirBusca);
 }
@@ -602,12 +604,18 @@ function elegirBusca(x){
   if (x.t==='Estado'){ agregarEst(x.v); return; } else { Q.ofiF = x.v; Q.ests = []; }
   Q.ofi = -1; Q.pv = 'res'; tramites();
 }
+function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const x = agg(K.m, DIC.m.length, {}), T = x.reduce((a,b) => a+b, 0);
+  const l = DIC.m.map((n,j) => [n, x[j]]).filter(r => r[1]>0).sort((a,b) => b[1]-a[1]);
+  $('rg-mot-q').textContent = 'trámites por motivo de estancia declarado'+(filtros().length || Q.doc>=0 ? ' · con los filtros elegidos' : '');
+  const mx = l.length ? l[0][1] : 1, fila = r => '<div class="barra pc"><span>'+esc(r[0])+' <small>'+pct(r[1],T)+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:#8F7F2E"></i></span><span class="x">'+corto(r[1])+'</span></div>';
+  const mitad = Math.ceil(l.length/2); el.innerHTML = '<div>'+l.slice(0, mitad).map(fila).join('')+'</div><div>'+l.slice(mitad).map(fila).join('')+'</div>'; }
 function vistaTramites(){
   $('rg-body').innerHTML = '<div class="ctl rg-ctl" id="rg-ctl"></div><section class="kpis rg-kpis" id="rg-kpis" data-modo="tarjetas"></section>'+
     '<div class="rg-hz" id="rg-hz"></div>'+
     '<div class="rg-pp abierto" id="rg-pp"><div class="caja rg-main"><h2><span id="rg-evo-t"></span>'+info('evo')+'</h2><span class="q" id="rg-evo-q"></span><div class="rg-desg" id="rg-desg"></div><div class="rg-evo-ley" id="rg-evo-ley"></div><div id="rg-evo" class="rg-evo"></div></div>'+
       '<aside class="caja rg-pnl" id="rg-pnl"></aside></div>'+
     '<div class="caja rg-ancho rg-nv"><h2><span>¿Cuántas personas nuevas se documentan?</span>'+info('nv')+'</h2><div id="rg-nv" class="rg-nv-g"></div></div>'+
+    (K.m ? '<div class="caja rg-ancho"><h2><span>¿Por qué se quedan? · Motivo de estancia</span>'+info('mot')+'</h2><span class="q" id="rg-mot-q"></span><div id="rg-mot" class="rg-mot"></div></div>' : '')+
     '<button class="rg-det-b'+(Q.det?' on':'')+'" data-rdet>'+(Q.det ? 'Ocultar detalle ▴' : 'Ver detalle: oficinas, tipo de trámite, edad y sexo, documento por nacionalidad ▾')+'</button>'+
     (Q.det ? '<p class="rg-det-n" id="rg-det-n"></p><div class="caja rg-cru" id="rg-totales"><h2><span>Totales</span>'+info('tot')+'<div class="pil chica" id="rg-tot-sel"></div></h2><span class="q" id="rg-tot-q"></span><div id="rg-tot-w"><div id="rg-tot"></div></div></div><div class="rg-g rg-g3"><div class="caja"><h2><span>Oficinas</span>'+info('of')+'</h2><span class="q" id="rg-of-q"></span><div class="rg-of" id="rg-of"></div></div>'+
       '<div class="caja"><h2><span>Tipo de trámite</span>'+info('tipo')+'</h2><span class="q">principales · el % es la parte del total</span><div id="rg-tipo"></div></div>'+
@@ -615,8 +623,71 @@ function vistaTramites(){
       '<div class="caja rg-cru"><h2><span id="rg-mz-t"></span>'+info('mz')+'<div class="pil chica" id="rg-mz-sel"></div></h2><span class="q" id="rg-mz-q"></span><div id="rg-mz" class="rg-mz"></div></div>' : '');
   tramites();
 }
+/* ==== [4b] PLAZOS: ¿el INM responde a tiempo? ======================== */
+// Dentro/fuera del plazo normativo viene de la base (un dato por trámite); se cuenta con todos los filtros (nacionalidad, estado, oficina, documento).
+// Los días de respuesta vienen en rangos (RG.pz, sin nacionalidad ni documento): responden al periodo, estado y oficina.
+if (!RG.pz && window.IANAMI_REG_PZ) Object.assign(RG, window.IANAMI_REG_PZ);   // datos/plazos.js
+const PZ = RG.pz ? (() => { const o = {}; Object.keys(RG.pz).forEach(k => { o[k] = Int32Array.from(RG.pz[k]); }); o.N = o.v.length; return o; })() : null;
+const iRes = DIC.g.indexOf('Resueltos'), iProc = DIC.g.indexOf('En proceso');
+function aggPZ(key, nk, ex){ const out = new Float64Array(nk), es = Q.ests.length ? new Set(Q.ests) : null;
+  for (let i=0;i<PZ.N;i++){ const d = PZ.d[i]; if (d<Q.d0 || d>=Q.d1) continue; if (Q.ofiF>=0 && PZ.o[i]!==Q.ofiF) continue; if (es && !es.has(RG.ofiEst[PZ.o[i]])) continue; if (ex && !ex(i)) continue; out[key ? key(i) : 0] += PZ.v[i]; }
+  return out; }
+const sumaPZ = ex => { let v = 0, sd = 0; const es = Q.ests.length ? new Set(Q.ests) : null;
+  for (let i=0;i<PZ.N;i++){ const d = PZ.d[i]; if (d<Q.d0 || d>=Q.d1) continue; if (Q.ofiF>=0 && PZ.o[i]!==Q.ofiF) continue; if (es && !es.has(RG.ofiEst[PZ.o[i]])) continue; if (ex && !ex(i)) continue; v += PZ.v[i]; sd += PZ.sd[i]; }
+  return { v:v, sd:sd }; };
+function vistaPlazos(){
+  if (!PZ){ $('rg-body').innerHTML = '<div class="caja"><p class="mini">La base de trámites no trae las columnas de plazo.</p></div>'; return; }
+  $('rg-body').innerHTML = '<div class="ctl rg-ctl" id="rg-ctl"></div><section class="kpis rg-kpis" id="rg-kpis" data-modo="tarjetas"></section>'+
+    '<div class="rg-g rg-g21 fila-par"><div class="caja"><h2><span>Fuera del plazo, mes a mes</span>'+info('pzm')+'</h2><span class="q" id="rg-pzm-q"></span><div id="rg-pzm" style="height:400px"></div></div>'+
+      '<div class="caja"><h2><span>¿Cuánto tardan?</span>'+info('pzd')+'</h2><span class="q" id="rg-pzd-q"></span><div id="rg-pzd" style="height:400px"></div></div></div>'+
+    '<div class="rg-g rg-g2"><div class="caja"><h2><span>Trámites que más se atrasan</span>'+info('pzt')+'</h2><span class="q">% fuera del plazo · solo tipos con 300 trámites o más</span><div id="rg-pzt"></div></div>'+
+      '<div class="caja"><h2><span>Oficinas que más se atrasan</span>'+info('pzo')+'</h2><span class="q">% fuera del plazo · oficinas con 300 trámites o más · toca una para ver solo esa</span><div id="rg-pzo"></div></div></div>';
+  plazos();
+}
+function plazos(){
+  $('rg-ctl').innerHTML = htmlCtl();
+  autocompletar($('rg-bus'), $('rg-bus-r'), DIC.n.map((x,i) => ({n:x, t:'Nacionalidad', v:i})).concat(DIC.e.map((x,i) => ({n:x, t:'Estado', v:i})), DIC.o.map((x,i) => ({n:nomO(x), t:'Oficina', v:i}))), elegirBusca);
+  const T = tot({}), F = tot({ ex:i => K.f[i]===1 }), w = ventanas(), fA = w ? tot({ ex:i => K.f[i]===1, d0:w[0][0], d1:w[0][1] }) : 0, tA = w ? tot({ d0:w[0][0], d1:w[0][1] }) : 0, fB = w ? tot({ ex:i => K.f[i]===1, d0:w[1][0], d1:w[1][1] }) : 0, tB = w ? tot({ d0:w[1][0], d1:w[1][1] }) : 0;
+  const sinPZ = Q.nats.length || Q.doc>=0, R = sumaPZ(i => PZ.g[i]===iRes), R0 = sumaPZ(i => PZ.g[i]===iRes && PZ.b[i]===0), P = sumaPZ(i => PZ.g[i]===iProc), PF = sumaPZ(i => PZ.g[i]===iProc && PZ.f[i]===1);
+  const g = (flex, col, eti, c) => '<div class="kg" style="flex:'+flex+' 1 0;--g:'+col+'"><div class="eti">'+eti+'</div><div>'+c+'</div></div>';
+  const k = (nom, sub, v, val, col, ic, d, ti) => kc({ col:col, ic:ic, nom:nom, sub:sub, val:val, num:v, d:'<span class="kc-d">'+d+'</span>', title:ti });
+  const camb = '';
+  $('rg-kpis').innerHTML = g(1, '#2B2926', 'Total'+(filtros().length ? ' · '+filtrosTxt() : ''), k('Todos los trámites', 'en el periodo', T, corto(T), '#2B2926', IC.tot, '100%', ''))+
+    g(2, '#2F6657', 'Plazo normativo · según la base', k('Dentro del plazo', '', T-F, corto(T-F), '#2F6657', IC.tot, pct(T-F, T)+'% de los trámites', 'Trámites resueltos (o que siguen en curso) dentro de los días que marca la norma')+
+      k('Fuera del plazo', '', F, corto(F), '#C4605A', IC.tot, pct(F, T)+'% de los trámites'+camb, 'Trámites que pasaron los días que marca la norma'))+
+    g(3, '#8F7F2E', 'Tiempo de respuesta'+(sinPZ ? ' · sin filtro de nacionalidad ni documento' : ''), k('Días promedio', 'trámites resueltos', R.v ? R.sd/R.v : 0, R.v ? (R.sd/R.v).toFixed(1) : '—', '#8F7F2E', IC.tot, pct(R0.v, R.v)+'% se resuelve el mismo día', 'Promedio de días entre el inicio y la resolución')+
+      k('En proceso', 'siguen sin resolver', P.v, corto(P.v), '#5C5952', IC.tot, P.v ? 'llevan '+Math.round(P.sd/P.v)+' días en promedio' : '—', 'Trámites que siguen en proceso: días transcurridos sin resolver')+
+      k('Rezago', 'en proceso y fuera del plazo', PF.v, corto(PF.v), '#7E302B', IC.tot, P.v ? pct(PF.v, P.v)+'% de los que siguen en proceso' : '—', 'Trámites en proceso que ya pasaron el plazo normativo'));
+  // mes a mes: % fuera del plazo (con todos los filtros)
+  const m0 = mesDe(Q.d0), m1 = mesDe(Q.d1-1), nm = m1-m0+1, mt = agg(i => mesDe(K.d[i])-m0, nm, {}), mf = agg(i => mesDe(K.d[i])-m0, nm, { ex:i => K.f[i]===1 });
+  const lab = [...Array(nm).keys()].map(j => { const f = new Date(INI.getFullYear(), INI.getMonth()+m0+j, 1); return MES[f.getMonth()]+' '+String(f.getFullYear()).slice(2); });
+  $('rg-pzm-q').textContent = '% de los trámites de cada mes que quedaron fuera del plazo · los últimos meses bajan porque muchos trámites aún no cumplen su plazo';
+  graf('rg-pzm', { grid:{ left:44, right:14, top:16, bottom:28 }, tooltip:{ trigger:'axis', formatter:p => '<b>'+p[0].name+'</b><br>'+p[0].value+'% fuera del plazo<br>'+miles(mf[p[0].dataIndex])+' de '+miles(mt[p[0].dataIndex])+' trámites' },
+    xAxis:{ type:'category', data:lab, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, splitLine:{ show:true, lineStyle:{ color:'#EEEBE2' } }, axisLabel:{ fontSize:10.5, color:'#5C5952' } },
+    yAxis:{ type:'value', axisLabel:{ formatter:'{value}%', fontSize:10.5, color:'#5C5952' }, splitLine:{ lineStyle:{ color:'#EEEBE2' } } },
+    series:[{ type:'line', smooth:.3, symbolSize:6, data:lab.map((x,j) => mt[j] ? +(mf[j]/mt[j]*100).toFixed(1) : null), lineStyle:{ width:2.4, color:'#C4605A' }, itemStyle:{ color:'#C4605A' }, areaStyle:{ color:'rgba(196,96,90,.10)' } }] });
+  // cuánto tardan: resueltos y en proceso por rango de días
+  const br = aggPZ(i => PZ.b[i], 9, i => PZ.g[i]===iRes), bp = aggPZ(i => PZ.b[i], 9, i => PZ.g[i]===iProc);
+  $('rg-pzd-q').textContent = 'trámites por días de respuesta (resueltos) o días esperando (en proceso)'+(sinPZ ? ' · sin filtro de nacionalidad ni documento' : '');
+  graf('rg-pzd', { grid:{ left:52, right:10, top:30, bottom:28 }, legend:{ top:0, left:0, icon:'roundRect', itemWidth:12, itemHeight:8, textStyle:{ fontSize:11.5 }, data:['Resueltos','En proceso'] },
+    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } },
+    xAxis:{ type:'category', data:RG.pzRangos, axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9C4B5'}}, splitLine:{ show:true, lineStyle:{ color:'#EEEBE2' } }, axisLabel:{ fontSize:10, color:'#2B2926', interval:0 } },
+    yAxis:{ type:'value', axisLabel:{ formatter:v => corto(v), fontSize:10.5, color:'#5C5952' }, splitLine:{ lineStyle:{ color:'#EEEBE2' } } },
+    series:[{ name:'Resueltos', type:'bar', barMaxWidth:22, data:Array.from(br), itemStyle:{ color:'#2F6657', borderRadius:[3,3,0,0] } }, { name:'En proceso', type:'bar', barMaxWidth:22, data:Array.from(bp), itemStyle:{ color:'#C4605A', borderRadius:[3,3,0,0] } }] });
+  // rankings: % fuera del plazo por tipo de trámite y por oficina
+  const rk = (col, n, nom, extra, attr) => { const t = agg(i => col[i], n, {}), f = agg(i => col[i], n, { ex:i => K.f[i]===1 });
+    const l = [...Array(n).keys()].filter(j => t[j]>=300).map(j => [j, f[j]/t[j]*100, f[j], t[j]]).sort((a,b) => b[1]-a[1]).slice(0, 12);
+    return l.length ? l.map(r => '<'+(attr ? 'button' : 'div')+' class="barra pc"'+(attr ? ' '+attr+'="'+r[0]+'"' : '')+'><span>'+esc(nom(r[0]))+(extra ? ' <small>'+extra(r[0])+'</small>' : '')+'</span><span class="b"><i style="width:'+Math.min(100, r[1]).toFixed(1)+'%;background:#C4605A"></i></span><span class="x">'+r[1].toFixed(1)+'%</span></'+(attr ? 'button' : 'div')+'>').join('') : '<span class="mini">Sin tipos con volumen suficiente.</span>'; };
+  $('rg-pzt').innerHTML = rk(K.t, NT, x => corta(DIC.t[x]), x => 'plazo '+(RG.pzPlazo[x] || 0)+' días');
+  $('rg-pzo').innerHTML = rk(K.o, NO, x => nomO(DIC.o[x]), x => DIC.e[RG.ofiEst[x]] || '', 'data-rpo');
+}
 // ---- Ayuda (i): qué muestra, de dónde sale y cómo leerlo
 const INFO = {
+  pzm:'<b>Trámites fuera del plazo normativo</b>, mes a mes: qué parte de los trámites de cada mes pasó los días que marca la norma para su tipo de trámite. Sale de la columna «Dentro o fuera del plazo normativo».',
+  pzd:'<b>Días de respuesta.</b> Verde: días entre el inicio y la resolución de los trámites resueltos. Rojo: días que llevan esperando los que siguen en proceso. «0 días» = se resuelve el mismo día.',
+  pzt:'<b>Tipos de trámite con más atraso:</b> la parte de sus trámites que quedó fuera del plazo normativo (junto al nombre, el plazo que marca la norma).',
+  pzo:'<b>Oficinas con más atraso:</b> la parte de sus trámites que quedó fuera del plazo normativo. Toca una para ver solo esa oficina.',
+  mot:'<b>Motivo de estancia</b> que declara la persona en su trámite (unidad familiar, trabajo, estudio, turismo, razones humanitarias…).',
   hz:'<b>Titulares:</b> cuánto subieron o bajaron los trámites contra el periodo de comparación, la nacionalidad que más cambió y la oficina con más rechazos de lo esperado.',
   evo:'<b>Trámites concluidos en el INM:</b> todos los que terminaron en el periodo, con o sin documento (tarjetas, constancias, oficios, rechazos y cancelaciones), en total o por documento, nacionalidad u O.R.<br>• <b>Franja verde:</b> rango habitual, calculado con las semanas fuera de vacaciones; un punto fuera de la franja es un cambio real.<br>• <b>Sombra gris:</b> temporada vacacional, cuando una baja es lo esperado.<br>• <b>Punto hueco:</b> periodo con pocos días de datos.',
   nv:'<b>Personas que se documentan por primera vez</b>: regularizaciones, visas y tarjetas de visitante regional o trabajador fronterizo. No incluye renovaciones, cambios de condición ni avisos. El % sobre el stock compara contra las personas con documento vigente al último corte.',
@@ -660,7 +731,7 @@ function vistaVigentes(){
   const totTipo = kT>=0 ? RG.dv_tipo[kT][1]+RG.dv_tipo[kT][2] : T;
   const nomSel = s => !s ? '' : s.t==='e' ? RG.dv_e[s.i] : s.t==='p' ? RG.dv_p[s.i] : RG.dv_n[s.i][0];
   const porTipo = (f, cols) => cols.map((x,k) => [nomT(x), f[3+k]]).filter(x => x[1]>0).sort((a,b)=>b[1]-a[1]);
-  $('rg-body').innerHTML = '<div class="ctl rg-ctl"><div class="rango"><b>Corte al '+esc(corte)+'</b><span>stock semanal · no depende del periodo</span></div>'+cajaBusca('rg-dvg-bus', 'Buscar estado o nacionalidad')+'</div>'+
+  $('rg-body').innerHTML = '<div class="ctl rg-ctl"><div class="rango"><b>Corte al '+esc(corte)+'</b><span>stock semanal · no depende del periodo</span></div></div>'+
     '<section class="kpis rg-kpis" data-modo="'+(Q.compacto?'compacto':'tarjetas')+'"><div class="kg" style="flex:1 1 0;--g:#2B2926"><div class="eti">Total</div><div>'+tarjeta('Con documento vigente', ['', T-M, M], '#2B2926', 'personas extranjeras', IC.tot, -1)+'</div></div>'+
       '<div class="kg g-reg" style="flex:5 1 0"><div class="eti">Por tipo de documento · toca uno para filtrar</div><div>'+ti.slice(0,5).map(x => tarjeta(nomT(x[0]), x, '#2F6657', '', IC.tarj, x[3])).join('')+'</div></div>'+plegar()+'</section>'+
     // 1) tabla por estado o nacionalidad
@@ -688,9 +759,7 @@ function vistaVigentes(){
   // buscador: estados, los 25 países del cruce con estados y el resto de las nacionalidades (sin estado)
   const opDV = RG.dv_e.map((e,i) => ({n:e, t:'Estado', v:{t:'e',i:i}})).concat(RG.dv_p.map((p,j) => ({n:p, t:'País', v:{t:'p',i:j}})),
     (RG.dv_n || []).map((f,j) => RG.dv_p.indexOf(f[0])>=0 ? null : {n:f[0], t:'País', v:{t:'n',i:j}}).filter(Boolean));
-  const elegirDV = (inp, x) => { Q.dvSel = x.v; inp.value = ''; detalle(); const c = $('rg-dvd'); if (c && inp.id==='rg-dvg-bus') c.closest('.caja').scrollIntoView({ behavior:'smooth', block:'center' }); };
-  autocompletar($('rg-dv-bus'), $('rg-dv-bus-r'), opDV, x => elegirDV($('rg-dv-bus'), x));
-  autocompletar($('rg-dvg-bus'), $('rg-dvg-bus-r'), opDV, x => elegirDV($('rg-dvg-bus'), x));
+  autocompletar($('rg-dv-bus'), $('rg-dv-bus-r'), opDV, x => { Q.dvSel = x.v; $('rg-dv-bus').value = ''; detalle(); });
   detalle();
   // ---- matriz o ranking
   const todo = Q.dvMxTodo, el = $('rg-dv');
@@ -890,9 +959,9 @@ function vistaValidacion(){
 /* ==== [7] MONTAJE Y EVENTOS ======================================= */
 function montar(cont){
   cont.innerHTML = '<div class="rg"><div class="rg-sub"><div><span class="mini">Procesos › DGRAM</span><h1>Regulación migratoria <button type="button" class="pc-b" data-rsala aria-label="Pantalla completa" title="Pantalla completa: lo principal en un vistazo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg><span>Pantalla completa</span></button></h1></div><div class="rg-vistas">'+
-    [['tram','Trámites'],['dv','Documentos vigentes'],['val','Validación R. Civil']].map(x => '<button data-rvista="'+x[0]+'" class="'+(Q.vista===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div></div><div id="rg-body" class="rg-body anim"></div></div>';
+    [['tram','Trámites'],['pz','Plazos'],['dv','Documentos vigentes'],['val','Validación R. Civil']].map(x => '<button data-rvista="'+x[0]+'" class="'+(Q.vista===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div></div><div id="rg-body" class="rg-body anim"></div></div>';
   setTimeout(() => { const b = $('rg-body'); if (b) b.classList.remove('anim'); }, 1100);
-  ({ tram:vistaTramites, dv:vistaVigentes, val:vistaValidacion })[Q.vista]();
+  ({ tram:vistaTramites, pz:vistaPlazos, dv:vistaVigentes, val:vistaValidacion })[Q.vista]();
   contar();
 }
 function eventos(cont){

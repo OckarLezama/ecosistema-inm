@@ -46,7 +46,7 @@ const INDS = [
 ].filter(m => D.cube[m.k] && (m.k!=='cbp' || (D.cbpT && D.cbp)));
 const IND = {}; INDS.forEach(m => IND[m.k] = m);
 // Indicadores que solo existen en la pantalla completa de Regulación (no están en el cubo; ver [13])
-IND.co = {k:'co', n:'Constancias y oficios', g:'reg', nat:true}; IND.va = {k:'va', n:'Validación de actas', g:'reg', nat:true};
+IND.co = {k:'co', n:'No expiden tarjetas', g:'reg', nat:true}; IND.va = {k:'va', n:'Validación de actas', g:'reg', nat:true};
 const GRUPOS = [['reg','Regular',3],['irr','Irregular',4],['usa','Desde EE. UU.',IND.cbp ? 3 : 2]];
 const ICONO = {
   ing:'M3 12h12M11 7l5 5-5 5M20 4v16', rech:'M5.6 5.6l12.8 12.8M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18z', tram:'M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5',
@@ -118,7 +118,7 @@ const CUBO0 = {}, WS0 = {}, WN0 = {}, CUBO = {}, WS = {}, WN = {};
 INDS.forEach(m => { const a = new Float32Array(NW*NS*NN), ws = new Float64Array(NW*NS), wn = new Float64Array(NW*NN), c = D.cube[m.k];
   for (let i=0;i<c.length;i+=4){ a[(c[i]*NS + c[i+1])*NN + c[i+2]] += c[i+3]; ws[c[i]*NS+c[i+1]] += c[i+3]; wn[c[i]*NN+c[i+2]] += c[i+3]; }
   CUBO0[m.k] = a; WS0[m.k] = ws; WN0[m.k] = wn; });
-const NCAT = {ing_via:3, rech_det:2, tram_se:16, tram_res:3, tram_tipo:(D.tramTipos||[]).length, resc_rei:2, resc_des:3, pres_est:D.estaciones.length, can_nna:12, can_ad:2, ret_tipo:2, recib_edad:2, rep_comp:8};
+const NCAT = {ing_via:3, rech_det:2, tram_se:16, tram_res:3, tram_exp:2, tram_plz:2, tram_tipo:(D.tramTipos||[]).length, resc_rei:2, resc_des:3, pres_est:D.estaciones.length, can_nna:12, can_ad:2, ret_tipo:2, recib_edad:2, rep_comp:8};
 const COMP = {};                                  // desgloses del periodo (llegan por mes: [mes, estado, nacionalidad, categoría, valor])
 // Parte de un mes de las bases que cae dentro del periodo elegido (0 a 1)
 // Con el play en pantalla completa, los desgloses siguen al día del cursor: cada mes se prorratea dentro de [a, b)
@@ -500,7 +500,7 @@ function pintarKpis(){
 const DEF_IND = {
   ing:'Entradas de personas extranjeras por puntos de internación aéreos, terrestres y marítimos. Los mexicanos que regresan se cuentan aparte.',
   rech:'Personas a las que, en segunda revisión, se les negó la internación al país.',
-  tram:'Documentos migratorios resueltos en oficinas del INM (residencias, visas, regularizaciones y otros).',
+  tram:'Trámites migratorios concluidos en oficinas del INM: los que expiden tarjeta (residencias y visitantes) y los que no (constancias, oficios, permisos o sin documento).',
   resc:'Personas extranjeras en situación irregular rescatadas, según el reporte de las oficinas de representación.',
   pres:'Personas presentadas ante una estación o estancia migratoria.',
   can:'Niñas, niños y adolescentes, y sus acompañantes, canalizados a la protección del DIF.',
@@ -534,6 +534,7 @@ function tipKpi(el){
   return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+(k==='ing' && F.n==null ? totalPais(acum('ing',F.ss,null), ingMx(F.ss)) : '')+(k==='cbp' && F.n==null ? cbpMx(acum('cbp',null,F.r ? F.nd : null), F.r ? 0 : acum('cbp',null,MX)) : '')+
     (va.ok ? '<span>'+(S.cmp==='aa' ? 'Este periodo' : S.cmp==='sem' ? 'Última semana completa' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(S.cmp==='aa' ? 'año anterior' : S.cmp==='sem' ? 'semana previa' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
     (U => U>0 ? '<span>Promedio: <b>'+miles(suma(diario(k,F),0,U)/U)+'</b> al día · <b>'+miles(suma(diario(k,F),0,U)/U*7)+'</b> a la semana'+(U>=60 ? ' · <b>'+miles(suma(diario(k,F),0,U)/U*30.4)+'</b> al mes' : '')+'</span>' : '')(finDatos(k))+
+    (k==='tram' && D.comp.tram_exp ? (e => { const p = comp('tram_plz',F.ss,F.nd), te = e[0]+e[1], tp = p[0]+p[1]; return te ? '<span>Expiden tarjetas: <b>'+miles(e[0])+'</b> · no expiden: <b>'+miles(e[1])+'</b>'+(tp && p[1] ? ' · <b>'+pct(p[0], tp)+'%</b> dentro del plazo normativo' : '')+'</span>' : ''; })(comp('tram_exp',F.ss,F.nd)) : '')+
     (k==='resc' ? (r => '<span>Eventos: <b>'+miles(r[0]+r[1])+'</b> · personas (1ra vez): <b>'+miles(r[0])+'</b> · reincidentes: '+miles(r[1])+'</span>')(comp('resc_rei',F.ss,F.nd)) : '')+
     (tn.length ? '<span>Principales: '+tn.map(r => esc(D.nats[r[0]][0])+' '+pct(r[1],tot)+'%').join(' · ')+'</span>' : '')+
     (finDatos(k)<ND ? '<span>Días pendientes: la base llega al '+fechaLarga(finDatos(k)-1)+'; la comparación se hace hasta ese día.</span>' : '')+
@@ -1403,7 +1404,7 @@ function marcarFiltro(){
 // Carga diferida: con dos años de datos, Control, Regulación y Protección pesan decenas de MB. El Pulso abre solo
 // con datos/datos.js; lo demás se baja la primera vez que se abre esa parte y queda en memoria.
 const VERSION = ((document.querySelector('script[src*="js/app.js"]') || {}).src || '').split('?')[1] || '';
-const MODULOS = { control:['datos/control.js','js/control.js'], regulacion:['datos/regulacion.js','js/regulacion.js'], proteccion:['datos/proteccion.js','js/proteccion.js'],
+const MODULOS = { control:['datos/control.js','js/control.js'], regulacion:['datos/regulacion.js','datos/plazos.js','js/regulacion.js'], proteccion:['datos/proteccion.js','js/proteccion.js'],
   consulta:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js'] };
 const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI' };
 const LISTO_MOD = { control:'IANAMI_CONTROL', regulacion:'IANAMI_REGULACION', proteccion:'IANAMI_PROTECCION', consulta:'IANAMI_CONSULTA' };
@@ -1547,7 +1548,7 @@ function escala(){ const n = window.innerWidth>=2200 ? Math.min(4, window.innerW
 // una gráfica de barras y la barra de tiempo. Usa el mismo motor del Pulso (periodo, filtro, día del cursor),
 // así que el mapa, las cifras y la reproducción siempre dicen lo mismo. Al salir, el Pulso queda como estaba.
 const SALA = { on:false, cmp:false, A:null, B:null, guarda:null, gr:null, anim:{}, por:{}, fijo:false };
-const PALABRA = { ing:'ingresos de extranjeros', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados', cbp:'encuentros de la CBP (EE. UU.)', co:'constancias y oficios', va:'solicitudes de validación de actas' };
+const PALABRA = { ing:'ingresos de extranjeros', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados', cbp:'encuentros de la CBP (EE. UU.)', co:'trámites que no expiden tarjeta', va:'solicitudes de validación de actas' };
 const ORDEN_SALA = ['ing','resc','rep','rech','can','pres'];
 const IND_SALA = [['', 'Resumen', 'Panorama', 'Lo principal de todo en un vistazo'], ['ing', 'Regular', 'Ingresos', 'Extranjeros que entraron al país'], ['tram', 'Regular', 'Trámites', 'Trámites migratorios concluidos'],
   ['resc', 'Irregular', 'Rescatados', 'Personas en situación irregular'], ['can', 'Irregular', 'Canalizados', 'NNA y acompañantes al DIF'], ['rep', 'Desde EE. UU.', 'Repatriados', 'Mexicanos devueltos por EE. UU.']].concat(IND.cbp ? [['cbp', 'Desde EE. UU.', 'Encuentros', 'Los registra la CBP en EE. UU.']] : []);
@@ -1811,20 +1812,20 @@ const RGD = { mapE:null, mapN:null };
 function docTram(F){ const R = window.IANAMI_REG; if (!R || !R.cols) return null; const C = R.cols, off = idxBase(R.inicio), a = P0, b = P0 + Math.min(S.dia, ND);
   if (!RGD.mapE){ const ie = {}, in_ = {}; EST.forEach((e,i) => ie[sinAcento(e)] = i); D.nats.forEach((x,i) => in_[sinAcento(x[0])] = i);
     RGD.mapE = R.dic.e.map(e => ie[sinAcento(e)]!=null ? ie[sinAcento(e)] : -1); RGD.mapN = R.dic.n.map(x => in_[sinAcento(x)]!=null ? in_[sinAcento(x)] : -1); }
-  const nl = F.nd==null ? null : (Array.isArray(F.nd) ? F.nd : [F.nd]), v = new Array(R.condiciones.length).fill(0);
+  const nl = F.nd==null ? null : (Array.isArray(F.nd) ? F.nd : [F.nd]), v = new Array(R.condiciones.length).fill(0); let fu = 0;
   for (let i=0; i<C.c.length; i++){ const d = off + C.d[i]; if (d<a || d>=b) continue;
-    if (F.ss && F.ss.indexOf(RGD.mapE[C.e[i]])<0) continue; if (nl && nl.indexOf(RGD.mapN[C.n[i]])<0) continue; v[C.c[i]] += C.v ? C.v[i] : 1; }
+    if (F.ss && F.ss.indexOf(RGD.mapE[C.e[i]])<0) continue; if (nl && nl.indexOf(RGD.mapN[C.n[i]])<0) continue; v[C.c[i]] += C.v ? C.v[i] : 1; if (C.f && C.f[i]) fu += C.v ? C.v[i] : 1; }
   const T = R.tarjetas, tar = v.slice(0,T).reduce((x,y) => x+y, 0), sin = v[v.length-1], otros = v.slice(T, v.length-1).map((x,j) => [R.condiciones[T+j], x]);
-  return { tar:tar, co:otros.reduce((x,y) => x+y[1], 0), sin:sin, otros:otros }; }
+  return { tar:tar, co:otros.reduce((x,y) => x+y[1], 0), sin:sin, otros:otros, fuera:fu, plazo:!!C.f }; }
 // ---- Constancias y oficios: trámites cuyo documento no es tarjeta (condiciones entre las tarjetas y «Sin expedición»).
 // Se separan una vez; cada consulta recorre solo esos renglones. Días en el mismo índice que las bases del Pulso (P0…).
-const NOM_CO = { 'Oficio S.R.E.':'Oficio de la S.R.E.', 'Permiso salida y regreso':'Permiso de salida y regreso' };
+const NOM_CO = { 'Oficio S.R.E.':'Oficio de la S.R.E.', 'Permiso salida y regreso':'Permiso de salida y regreso', 'Sin expedición':'Sin expedición de documento' };
 const CO = {};
 function coFilas(){ if (CO.d) return CO; const R = window.IANAMI_REG; if (!R || !R.cols) return { d:[], nom:[] };
   docTram({ ss:null, nd:null });                       // arma la equivalencia de estados y nacionalidades
   const C = R.cols, off = idxBase(R.inicio), T = R.tarjetas, U = R.condiciones.length-1; CO.e = []; CO.n = []; CO.c = []; CO.v = []; const d = [];
-  for (let i=0; i<C.c.length; i++){ const c = C.c[i]; if (c<T || c>=U) continue; d.push(off + C.d[i]); CO.e.push(RGD.mapE[C.e[i]]); CO.n.push(RGD.mapN[C.n[i]]); CO.c.push(c-T); CO.v.push(C.v ? C.v[i] : 1); }
-  CO.nom = R.condiciones.slice(T, U); CO.d = d; return CO; }
+  for (let i=0; i<C.c.length; i++){ const c = C.c[i]; if (c<T) continue; d.push(off + C.d[i]); CO.e.push(RGD.mapE[C.e[i]]); CO.n.push(RGD.mapN[C.n[i]]); CO.c.push(c-T); CO.v.push(C.v ? C.v[i] : 1); }
+  CO.nom = R.condiciones.slice(T); CO.d = d; return CO; }
 function coRango(a, b, ss, n, reparto){ const X = coFilas(), nl = n==null ? null : (Array.isArray(n) ? n : [n]), v = new Array(X.nom.length).fill(0);
   for (let i=0; i<X.d.length; i++){ const d = X.d[i]; if (d<a || d>=b) continue; if (ss && ss.indexOf(X.e[i])<0) continue; if (nl && nl.indexOf(X.n[i])<0) continue; v[X.c[i]] += X.v[i]; }
   return reparto ? v : v.reduce((s,x) => s+x, 0); }
@@ -1890,7 +1891,7 @@ const PERFILES = {
         '. Hubo <b>'+v('resc')+' rescates</b>'+(d[0]+d[1] ? ': '+Math.round(d[0]/(d[0]+d[1]+d[2])*100)+'% a estación migratoria y '+Math.round(d[1]/(d[0]+d[1]+d[2])*100)+'% al DIF' : '')+', según el reporte de las O.R.'; } }
 };
 PERFILES.regulacion = { nom:'Regulación migratoria', ctx:'Panorama: trámites del periodo y documentos vigentes', dos:true, mapa:'tram', solo:true, orden:['tram'], cam:['tram'],
-  inds:[['', 'Resumen', 'Panorama', 'Trámites y documentos en un vistazo'], ['tram', 'Trámites', 'Trámites', 'Trámites migratorios concluidos'], ['co', 'Trámites', 'Constancias y oficios', 'Trámites que no terminan en tarjeta'],
+  inds:[['', 'Resumen', 'Panorama', 'Trámites y documentos en un vistazo'], ['tram', 'Trámites', 'Trámites', 'Trámites migratorios concluidos'], ['co', 'Trámites', 'No expiden tarjetas', 'Constancias, oficios, permisos y sin expedición'],
     ['va', 'Registro Civil · periodo propio', 'Validación de actas', 'Base nueva: desde el 28 sep 2026']],
   pan:[['tram','Trámites concluidos','reg','en el periodo','Lo que se tramitó en el periodo'], ['docs','Con documento vigente','reg','extranjeros','Lo que hay al corte', DOCS_ITEM]],
   frase:(F, ent, v) => { const r = compSala('tram_res', F), ti = compSala('tram_tipo', F).map((x,i) => [x, D.tramTipos[i]]).filter(x => x[1]!=='Otros').sort((a,b) => b[0]-a[0])[0], dv = docsVig(F)[0];
@@ -1967,7 +1968,7 @@ function fraseSala(k, F, nF, pa, pb, otros){
     return 'En '+B+' hubo <b>'+cortoK(pb)+' '+PALABRA[k]+ent+' por día</b>, '+dir+' en '+A+'.'+(cam && Math.abs(cam[3])>=5 ? ' Lo que más cambió: <b>'+PALABRA[cam[0]]+'</b> ('+(cam[3]<0 ? '−' : '+')+Math.abs(cam[3]).toFixed(0)+'%).' : '');
   }
   if (k==='co'){ const v = valAcum(k, F.ss, nF), dt = docTram(F), T = dt ? dt.tar+dt.co+dt.sin : 0;
-    return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' salieron <b>'+cortoK(v)+' constancias y oficios</b>'+(T ? ': el '+Math.round(v/T*100)+'% de los trámites concluidos no terminó en tarjeta sino en uno de estos documentos.' : '.'); }
+    return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' <b>'+cortoK(v)+' trámites no expidieron tarjeta</b>'+(T ? ': el '+Math.round(v/T*100)+'% de los trámites concluidos (constancias, oficios, permisos o sin documento).' : '.'); }
   const v = valAcum(k, F.ss, nF), top = AVISOS.find(a => relevante(a) && a.k===k) || AVISOS.find(relevante);
   return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+' se registraron <b>'+cortoK(v)+' '+PALABRA[k]+ent+'</b>.'+(top && S.dia>=ND ? ' Lo que más cambió ('+ventanaCmp()+'): '+textoAviso(top).replace(/\s*\([^)]*\)\.?$/, '.') : '');
 }

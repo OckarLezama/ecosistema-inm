@@ -78,8 +78,13 @@ def codificar(t):
     t.columns = [norm(c) for c in t.columns]
     t, docs = lector.documentos_tramite(t)
     t["DIA"] = pd.to_datetime(t["DIA"], errors="coerce", dayfirst=True).dt.normalize()
-    t = t[t["DIA"].notna()]
-    m = t.melt(id_vars=["DIA", "O.R.", "OFICINA DE TRAMITES", "PAIS / EMPLEADOR", "SEXO", "RANGOS DE EDAD", "TIPO DE TRAMITE", "TIPO DE RESOLUCION ESPECIFICA", "TIPO DE RESOLUCION GENERAL"],
+    t = t[t["DIA"].notna()].copy()
+    # Columnas de plazo y motivo (desde 2026 vienen en todos los periodos). Sin ellas, el tablero simplemente no muestra Plazos.
+    hay = {"PLAZO NORMATIVO DE RESOLUCION", "DIAS DE RESOLUCION / TRANSCURIDOS SIN RESOLVER", "DENTRO O FUERA DEL PLAZO NORMATIVO"} <= set(t.columns)
+    t["MOTIVO"] = (t["MOTIVO DE ESTANCIA"].astype(str).str.strip().str.capitalize().replace({"Tiempo": "Por tiempo", "Nan": "Sin dato"})
+                   if "MOTIVO DE ESTANCIA" in t.columns else "Sin dato")
+    t["F"] = t["DENTRO O FUERA DEL PLAZO NORMATIVO"].map(lambda x: 1 if "FUERA" in norm(x) else 0) if hay else 0
+    m = t.melt(id_vars=["DIA", "O.R.", "OFICINA DE TRAMITES", "PAIS / EMPLEADOR", "SEXO", "RANGOS DE EDAD", "TIPO DE TRAMITE", "TIPO DE RESOLUCION ESPECIFICA", "TIPO DE RESOLUCION GENERAL", "MOTIVO", "F"],
                value_vars=docs, var_name="doc", value_name="v")
     m["v"] = pd.to_numeric(m["v"], errors="coerce").fillna(0)
     m = m[m["v"] > 0].copy()
@@ -97,8 +102,21 @@ def codificar(t):
     m["t"] = m["TIPO DE TRAMITE"].astype(str).str.strip()
     m["r"] = m["TIPO DE RESOLUCION ESPECIFICA"].astype(str).str.strip()
     m["g"] = m["TIPO DE RESOLUCION GENERAL"].astype(str).str.strip()
-    g = m.groupby(["DIA", "e", "o", "n", "s", "a", "t", "r", "g", "c"], as_index=False)["v"].sum()
-    return g
+    m["m"] = m["MOTIVO"]
+    m["f"] = m["F"].astype(int)
+    g = m.groupby(["DIA", "e", "o", "n", "s", "a", "t", "r", "g", "c", "m", "f"], as_index=False)["v"].sum()
+    pz = None
+    if hay:   # un renglón por trámite: días de resolución (o transcurridos si sigue en proceso) en rangos, y su suma
+        x = pd.DataFrame({"DIA": t["DIA"], "e": t["O.R."].map(lambda v: ESTADO.get(norm(v), str(v).strip())), "o": t["OFICINA DE TRAMITES"].astype(str).str.strip(),
+                          "t": t["TIPO DE TRAMITE"].astype(str).str.strip(), "g": t["TIPO DE RESOLUCION GENERAL"].astype(str).str.strip(), "f": t["F"].astype(int),
+                          "dd": pd.to_numeric(t["DIAS DE RESOLUCION / TRANSCURIDOS SIN RESOLVER"], errors="coerce").fillna(0).clip(lower=0),
+                          "pl": pd.to_numeric(t["PLAZO NORMATIVO DE RESOLUCION"], errors="coerce").fillna(0)})
+        x["b"] = pd.cut(x["dd"], [-1, 0, 3, 7, 15, 30, 60, 90, 180, 1e9], labels=False).astype(int)
+        x["v"] = 1
+        pz = x.groupby(["DIA", "o", "t", "g", "f", "b"], as_index=False)   # el estado sale de la oficina (ofiEst)
+        pz = pz.agg(v=("v", "sum"), sd=("dd", "sum"))
+        pz.attrs["plazo"] = x.groupby("t")["pl"].agg(lambda s: int(s.mode().iloc[0])).to_dict()
+    return g, pz
 
 
 def vigentes(origen):
@@ -227,7 +245,7 @@ def main():
     ap.add_argument("--destino", default="datos")
     a = ap.parse_args()
     t, archivo = leer(a.origen)
-    g = codificar(t)
+    g, pz = codificar(t)
     inicio = g["DIA"].min()
     dic = {}
     salida = {"inicio": inicio.date().isoformat(), "dias": int((g["DIA"].max() - inicio).days) + 1, "archivo": archivo,
@@ -238,17 +256,31 @@ def main():
         dic[k] = orden
         idx = {x: i for i, x in enumerate(orden)}
         cols[k] = g[k].map(idx).astype(int).tolist()
-    for k in ("s", "a", "c"):
+    for k in ("s", "a", "c", "f"):
         cols[k] = g[k].astype(int).tolist()
+    orden = list(g.groupby("m")["v"].sum().sort_values(ascending=False).index)
+    dic["m"] = orden
+    cols["m"] = g["m"].map({x: i for i, x in enumerate(orden)}).astype(int).tolist()
     cols["v"] = g["v"].astype(int).tolist()
     # oficina → estado al que pertenece
     oe = g.groupby("o")["e"].agg(lambda s: s.value_counts().index[0])
     salida["ofiEst"] = [dic["e"].index(oe[o]) for o in dic["o"]]
     salida["dic"] = dic
+    if pz is not None:   # Plazos: mismos catálogos (estado, oficina, tipo de trámite, resolución general)
+        ix = {k: {x: i for i, x in enumerate(dic[k])} for k in ("o", "t", "g")}
+        pz = pz[pz["o"].isin(ix["o"]) & pz["t"].isin(ix["t"]) & pz["g"].isin(ix["g"])]
+        salida["pz"] = {"d": (pz["DIA"] - inicio).dt.days.astype(int).tolist(), **{k: pz[k].map(ix[k]).astype(int).tolist() for k in ("o", "t", "g")},
+                        "f": pz["f"].astype(int).tolist(), "b": pz["b"].astype(int).tolist(), "v": pz["v"].astype(int).tolist(), "sd": pz["sd"].round().astype(int).tolist()}
+        salida["pzPlazo"] = [pz.attrs.get("plazo", {}).get(x, 0) for x in dic["t"]]
+        salida["pzRangos"] = ["0 días", "1–3", "4–7", "8–15", "16–30", "31–60", "61–90", "91–180", "más de 180"]
     salida.update(vigentes(a.origen))
     salida.update(validaciones(a.origen))
     salida["cols"] = cols
     os.makedirs(a.destino, exist_ok=True)
+    # Plazos va en su propio archivo (datos/plazos.js): así ningún archivo pasa de ~25 MB
+    pzs = {k: salida.pop(k) for k in ("pz", "pzPlazo", "pzRangos") if k in salida}
+    with open(os.path.join(a.destino, "plazos.js"), "w", encoding="utf-8") as f:
+        f.write("window.IANAMI_REG_PZ=" + json.dumps(pzs, ensure_ascii=False, separators=(",", ":")) + ";\n")
     txt = json.dumps(salida, ensure_ascii=False, separators=(",", ":"))
     with open(os.path.join(a.destino, "regulacion.js"), "w", encoding="utf-8") as f:
         f.write("window.IANAMI_REG=" + txt + ";\n")

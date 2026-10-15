@@ -136,6 +136,10 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 
 ## Reglas de los datos
 
+- **Trámites:** todos = expiden tarjetas + no expiden tarjetas, según la columna «Tipo de conclusión» (con / sin expedición de tarjeta migratoria). «Tipo no registrado» = salieron con tarjeta pero no marcan cuál. No expiden = constancias, oficios, permisos y sin expedición.
+- **Plazos (Regulación › Plazos):** «Dentro o fuera del plazo normativo», días de resolución (o transcurridos si sigue en proceso) y plazo de la norma por tipo de trámite. Los días de respuesta no se separan por nacionalidad ni documento. Los meses recientes tienen menos «fuera del plazo» porque muchos trámites aún no cumplen su plazo.
+- **Motivo de estancia:** en Trámites (caja «¿Por qué se quedan?») y en Pregunta a INAMI.
+
 - **% de rechazo:** rechazos ÷ (extranjeros que llegan por aire o tierra + rechazos). Sin mexicanos ni vía marítima (tripulación de cruceros). Es la misma cifra en Pulso y en Control migratorio.
 - **Ingresos:** las tarjetas cuentan extranjeros (76.51 M). Los mexicanos que regresan se muestran aparte y suman el total del país (extranjeros + mexicanos = 98.90 M) en la ayuda de la tarjeta del Pulso, en Control › Internaciones y en Pregunta a INAMI.
 - **Segunda revisión y rechazos:** solo extranjeros en todas las vistas; los casos con nacionalidad mexicana se avisan en Bases.

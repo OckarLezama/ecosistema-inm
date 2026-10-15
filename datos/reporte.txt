@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-14 20:33
+Generado: 2026-10-14 21:48
 Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
 
 == Ingresos  ·  DGCVM INGRESOS.xlsx  ·  cargado 2026-10-13
@@ -24,7 +24,6 @@ Periodo de las bases: 2024-10-01 a 2026-10-13 (743 días)
    · Trae 358,011 renglones anteriores al 2024-10-01 (desde 2024-01-02); no se usan: el tablero empieza el 1 oct 2024.
    · 592,952 trámites con tarjeta marcan también «Sin expedición de documento»; se cuentan solo con su tarjeta.
    · 47,617 trámites no marcan ningún documento: 44,647 terminaron con tarjeta (se cuentan como «Tarjeta sin tipo registrado») y 2,970 sin tarjeta (se cuentan como «Sin expedición»).
-   · Columnas nuevas que todavía no se usan: Plazo normativo de resolucion, Dias de resolucion / transcuridos sin resolver, Dentro o fuera del plazo normativo, Motivo de estancia.
 
 == Rescates  ·  DGCOR RESCATES.xlsx  ·  cargado 2026-10-13
    53,591 renglones · total 900,882 · del 2024-10-01 al 2026-10-12
