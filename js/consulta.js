@@ -46,6 +46,12 @@ if (CV){
   base('ingall', Object.assign({}, c, { T:T.ing, dias:BASES.ing.dias, dims:Object.assign({ n:N }, dI) }));
 }
 if (PM) base('rep', { inicio:PM.inicio, dias:PM.dias, fuente:'DGPMV', T:tabla(PM.rep), dims:{ e:{nom:'O.R.', col:'e', vals:PM.dic.e}, p:{nom:'Punto de repatriación', col:'p', vals:PM.dic.p}, mod:{nom:'Modalidad', col:'m', vals:['Terrestre','Aérea (vuelos PRIM)']} } });
+// Vuelos comerciales y Guatemala-Honduras: archivos aparte de DGPMV (no están en el total de repatriados), cada uno con su corte
+if (PM && PM.otros){ const O = PM.otros, aer = s => String(s).replace(/^A\.\s*I\.?\s*(de\s+)?/,'').replace(/^CD\./,'Ciudad');
+  // cada archivo empieza en su primer día (no en el de Repatriados), para que el periodo de la respuesta sea el real
+  const propio = X => { const f = fecha0(PM.inicio); f.setDate(f.getDate()+X.d0); const t = Object.assign({}, X.t, { d:X.t.d.map(d => d-X.d0) }); return { inicio:f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0')+'-'+String(f.getDate()).padStart(2,'0'), dias:X.d1-X.d0+1, T:tabla(t) }; };
+  if (O.com) base('com', { ...propio(O.com), fuente:'DGPMV · vuelos comerciales', dims:{ e:{nom:'O.R.', col:'e', vals:O.com.dic.e}, p:{nom:'Aeropuerto', col:'p', vals:O.com.dic.p.map(aer)} } });
+  if (O.gh) base('gh', { ...propio(O.gh), fuente:'DGPMV · Guatemala y Honduras', dims:{ pa:{nom:'País desde donde llegan', col:'pa', vals:O.gh.dic.pa} } }); }
 if (RG) base('tram', { inicio:RG.inicio, dias:RG.dias, fuente:'DGRAM', T:tabla(RG.cols), dims:{ e:{nom:'O.R.', col:'e', vals:RG.dic.e}, n:{nom:'Nacionalidad', col:'n', vals:RG.dic.n}, of:{nom:'Oficina', col:'o', vals:RG.dic.o},
   doc:{nom:'Documento', col:'c', vals:RG.condiciones}, tipo:{nom:'Tipo de trámite', col:'t', vals:RG.dic.t}, res:{nom:'Resultado', col:'r', vals:RG.dic.r}, sexo:{nom:'Sexo', col:'s', vals:RG.sexos}, edad:{nom:'Edad', col:'a', vals:RG.edades},
   ...(RG.dic.m ? { mot:{nom:'Motivo de estancia', col:'m', vals:RG.dic.m}, plz:{nom:'Plazo normativo', col:'f', vals:['Dentro del plazo','Fuera del plazo']} } : {}) } });
@@ -119,6 +125,13 @@ const IND = [
              {k:'ah', nom:'Hombres adultos', q:'eran hombres adultos', med:'ah', g:2, sin:['hombre']}, {k:'am', nom:'Mujeres adultas', q:'eran mujeres adultas', med:'am', g:2, sin:['mujer']},
              {k:'ac', nom:'NNA acompañados', q:'eran NNA acompañados', med:'ac', g:3, sin:['acompanad']}, {k:'na', nom:'NNA no acompañados', q:'eran NNA no acompañados', med:'na', g:3, sin:['no acompanad','solos']},
              {k:'aer', nom:'Vuelos PRIM', q:'llegaron en vuelos PRIM', ex:(T,i) => T.m[i]===1, g:4, sin:['vuelo','aere','prim']} ] },
+  { k:'com', prio:true, nom:'mexicanos repatriados en vuelos comerciales', art:'los', cu:'cuántos', b:'com', sin:['vuelos comerciales','vuelo comercial','comerciales','comercial'], tambien:['repatriad','repatriacion','mexican','vuelo'], proc:'Protección al migrante · Repatriados · Vuelos comerciales', ir:{d:'proteccion', com:true}, nna:true,
+    nota:'Mexicanos que EE. UU. regresó en vuelos comerciales (no son vuelos PRIM). Vienen en otro archivo: no están en el total de repatriados.',
+    partes:[ {k:'ad', nom:'Adultos', q:'eran adultos', med:'ad', g:1, sin:['adulto']}, {k:'me', nom:'NNA', q:'eran NNA', med:'me', g:1, sin:['nna','menores']}, {k:'na', nom:'NNA no acompañados', q:'eran NNA no acompañados', med:'na', g:2, sin:['no acompanad','solos']} ] },
+  { k:'gh', prio:true, nom:'mexicanos enviados por EE. UU. a Guatemala u Honduras', art:'los', cu:'cuántos', b:'gh', sin:['guatemala y honduras','guatemala-honduras','guatemala honduras','guatemala u honduras','honduras y guatemala','enviados a guatemala','enviados a honduras','enviados a otros paises','mexicanos enviados','tercer pais','terceros paises','desde guatemala','desde honduras','via guatemala','via honduras','por guatemala','por honduras'], tambien:['repatriad','repatriacion','mexican'], proc:'Protección al migrante · Guatemala y Honduras', ir:{d:'proteccion', vista:'gh'}, nna:true,
+    nota:'Mexicanos que EE. UU. envió a Guatemala u Honduras y que México recibe por Ciudad Hidalgo, Chiapas. Casi todos ya están contados en Repatriados (Ciudad Hidalgo): no se suman otra vez.',
+    partes:[ {k:'gt', nom:'Desde Guatemala', q:'llegaron desde Guatemala', ex:(T,i) => T.pa[i]===0, g:1, sin:['desde guatemala','enviados a guatemala','via guatemala','por guatemala','guatemala']}, {k:'hn', nom:'Desde Honduras', q:'llegaron desde Honduras', ex:(T,i) => T.pa[i]===1, g:1, sin:['desde honduras','enviados a honduras','via honduras','por honduras','honduras']},
+             {k:'me', nom:'NNA', q:'eran NNA', med:'me', g:2, sin:['nna','menores']} ] },
   { k:'cbp', nom:'encuentros de la CBP', art:'los', cu:'cuántos', b:'cbp', sin:['encuentro','cbp','patrulla fronteriza'], proc:'Pulso · Encuentros en EE. UU.', ir:{d:'pulso', ind:'cbp'},
     nota:'Encuentros que registra la CBP en la frontera de EE. UU. con México: los hace EE. UU., no el INM. Incluye mexicanos.',
     partes:[ {k:'mx', nom:'Mexicanos', q:'eran mexicanos', ex:(T,i) => T.n[i]===BASES.cbp.mx, g:1, sin:['mexican']}, {k:'ext', nom:'Extranjeros', q:'eran de otros países', ex:(T,i) => T.n[i]!==BASES.cbp.mx, g:1, sin:['extranjer']} ]
@@ -256,6 +269,8 @@ function entender0(txt){
   // («ingresos al país (extranjeros y mexicanos)» → «internaciones al nacionalidad mexicanos»). Solo nombres de dos palabras o más.
   const crudo = ' '+norm(txt)+' '; let fijo = null;
   IND.filter(x => norm(x.nom).indexOf(' ')>0).sort((a,b) => norm(b.nom).length-norm(a.nom).length).some(x => { const n = ' '+norm(x.nom)+' ', i = crudo.indexOf(n); if (i<0) return false; fijo = x; txt = crudo.slice(0, i)+' '+crudo.slice(i+n.length); return true; });
+  // «mexicanos repatriados» + comerciales / Guatemala-Honduras: se va al archivo específico
+  if (fijo && fijo.k==='rep'){ if (INDK.com && / comercial/.test(crudo)) fijo = INDK.com; else if (INDK.gh && / (guatemala|honduras)/.test(crudo)) fijo = INDK.gh; }
   // nombres de lugares y países de varias palabras («países bajos», «puente internacional ojinaga»): se protegen antes de aplicar
   // sinónimos y correcciones, que los deformarían, y se devuelven tal cual después
   const ALLV = valoresLargos(); let txt2 = ' '+norm(txt)+' '; ALLV.forEach((n,k) => { if (txt2.indexOf(' '+n+' ')>=0) txt2 = txt2.split(' '+n+' ').join(' qv'+k+'q '); });
@@ -268,7 +283,8 @@ function entender0(txt){
   // 0. quincena: se lee antes que todo («primera» no es «vuelos PRIM»)
   const quin = t.match(/ (primera|segunda) quincena /); if (quin){ toma(quin[1]); toma('quincena'); }
   // 1. indicador: el que aparece primero; se consume solo esa palabra (las demás pueden ser partes, como «deportados»)
-  const cand = fijo ? [[fijo, 0, '']] : IND.map(x => { let at = 1e9, w = ''; x.sin.forEach(s => { const m = t.match(new RegExp(' ('+s+'[a-zñ]*)')); if (m && m.index<at){ at = m.index; w = m[1]; } }); return [x, at, w]; }).filter(x => x[1]<1e9).sort((a,b) => a[1]-b[1] || b[2].length-a[2].length);
+  const cand = fijo ? [[fijo, 0, '']] : IND.map(x => { let at = 1e9, w = ''; x.sin.forEach(s => { const m = t.match(new RegExp(' ('+s+'[a-zñ]*)')); if (m && m.index<at){ at = m.index; w = m[1]; } }); if (x.k==='gh' && at===1e9 && / repatri/.test(t)){ const m = t.match(/ (guatemala|honduras)/); if (m){ at = m.index; w = ''; } }   // repatriados + Guatemala/Honduras: solo existe como envío a esos países
+    return [x, at, w]; }).filter(x => x[1]<1e9).sort((a,b) => (b[0].prio ? 1 : 0)-(a[0].prio ? 1 : 0) || a[1]-b[1] || b[2].length-a[2].length);   // los más específicos (vuelos comerciales, Guatemala-Honduras) ganan a «repatriados»
   if (cand.length){ q.ind = cand[0][0].k; if (cand[0][2]) toma(cand[0][2]);
     // si la palabra que dio el indicador es también una de sus partes («deportados»), cuenta como parte
     (cand[0][0].partes || []).forEach(p => { if (p.sin.some(sx => cand[0][2].startsWith(sx))) q.partes.push(p.k); }); }
@@ -283,7 +299,8 @@ function entender0(txt){
   const P = (ind.partes || []).slice().sort((a,b) => norm(b.nom).length-norm(a.nom).length);
   P.forEach(p => { if (toma(norm(p.nom))){ q.partes.push(p.k); p.sin.forEach(tomaTodo); } });
   P.slice().sort((a,b) => Math.max(...b.sin.map(x => x.length))-Math.max(...a.sin.map(x => x.length))).forEach(p => { if (q.partes.indexOf(p.k)<0 && p.sin.some(sx => tomaRaiz(sx))){ q.partes.push(p.k); p.sin.forEach(tomaTodo); } });
-  ind.sin.forEach(tomaTodo);
+  ind.sin.concat(ind.tambien || []).forEach(tomaTodo);
+  if (q.ind==='gh' && / guatemala/.test(crudo) && / honduras/.test(crudo)) q.partes = q.partes.filter(k => k!=='gt' && k!=='hn');
   // 4. valores de filtro (nombres de nacionalidades, estados, puntos…), el más largo primero; se guardan en el orden del texto
   t = t.replace(/qv(\d+)q/g, (m,k) => ALLV[+k]);
   const vals = []; Object.keys(B.dims).forEach(dim => B.dims[dim].vals.forEach((v,i) => { const n = norm(v); if (n.length>=4) vals.push([n, dim, i]);
@@ -448,7 +465,7 @@ function limitar(q){
 }
 const plantilla = q => q.fuente==='cmp' ? 'fuentes' : q.cmpA ? 'cambio' : q.partes.length ? 'prop' : q.desg==='t' ? 'tiempo' : q.cmp && Object.values(q.filtros).some(v => v.length>=2) ? 'comp' : 'rank';
 // Dimensiones de las listas: la elegida y una segunda útil
-function dimsLista(q, base){ const B = BASES[INDK[q.ind].b], orden = (q.partes.length ? ['e','n'] : ['n','e']).concat(['sal','car','sec','ag','acto','ent','p','est','mod','doc','via','cond','mot','sexo','edad','tipo','tr','of','res','sol']);
+function dimsLista(q, base){ const B = BASES[INDK[q.ind].b], orden = (q.partes.length ? ['e','n'] : ['n','e']).concat(['pa','sal','car','sec','ag','acto','ent','p','est','mod','doc','via','cond','mot','sexo','edad','tipo','tr','of','res','sol']);
   const l = []; if (q.desg && q.desg!=='t') l.push(q.desg);
   orden.forEach(d => { if (B.dims[d] && l.indexOf(d)<0 && l.length<2 && !((q.filtros[d] || []).length===1) && (!base || porDim(base, d).length>=2)) l.push(d); }); return l; }
 const filtrosTxt = q => { const B = BASES[INDK[q.ind].b]; return Object.keys(q.filtros).map(k => q.filtros[k].map(i => B.dims[k].vals[i]).join(q.cmp ? ' contra ' : ', ')); };
