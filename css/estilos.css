@@ -1512,6 +1512,16 @@ body.en-inf{overflow:hidden}
 .inf-c h3{margin:0 0 calc(var(--u)*.45);display:flex;align-items:baseline;gap:calc(var(--u)*.7);flex-wrap:wrap;font:600 calc(var(--u)*.95)/1.2 var(--f-txt);color:var(--ink)}
 .inf-c h3 small{font-weight:400;font-size:calc(var(--u)*.72);color:#8A857A}
 .inf-gr{flex:1;min-height:0;width:100%}
+/* ampliar una tarjeta: ocupa todo el ancho y las demás se ocultan */
+.inf-ex{display:none;margin-left:auto;align-self:center;width:calc(var(--u)*1.8);height:calc(var(--u)*1.8);border-radius:50%;place-items:center;color:#8A857A;border:1px solid #E7E2D6;background:#fff;transition:color .2s,border-color .2s,background .2s}
+.inf-ex svg{width:calc(var(--u)*.95);height:calc(var(--u)*.95)}.inf-ex:hover{color:#7E302B;border-color:#7E302B}
+.inf-g2 .inf-ex,.inf-g12 .inf-ex,.inf-sec .inf-ex,.inf-cv .inf-ex{display:grid}
+.inf-ex.flota{position:absolute;top:calc(var(--u)*.7);right:calc(var(--u)*.7);z-index:2;box-shadow:0 2px 6px rgba(43,41,38,.12)}
+.inf-sec-m{position:relative}
+.inf-g2.ex,.inf-g12.ex,.inf-cv.ex,.inf-sec.ex{grid-template-columns:1fr}
+.inf-g2.ex>:not(.ex-on),.inf-g12.ex>:not(.ex-on),.inf-cv.ex>:not(.ex-on),.inf-sec.ex>:not(.ex-on):not(.inf-sec-k){display:none}
+.ex-on{animation:infCrece .5s cubic-bezier(.22,.8,.22,1)}.ex-on .inf-ex{color:#fff;background:#7E302B;border-color:#7E302B}
+@keyframes infCrece{from{opacity:.35;transform:scale(.97)}}
 .inf-g2{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*1);flex:1;min-height:0}
 .inf-g12{display:grid;grid-template-columns:33% 1fr;gap:calc(var(--u)*1);flex:1;min-height:0}
 .inf-col{display:flex;flex-direction:column;gap:calc(var(--u)*.7);min-height:0}

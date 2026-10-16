@@ -56,6 +56,8 @@ const ICO = {
   iz:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   de:'<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   nar:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h10M5 17h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  amp:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  red:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M10 14l-7 7M14 10l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   gira:'<svg viewBox="0 0 24 24"><path d="M7 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM19 8a5 5 0 0 1 0 8M21 6v4h-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' };
 function abrirVisor(o){
   cerrarVisor(); const el = document.createElement('div'); el.className = 'inf'; el.setAttribute('role','dialog'); el.setAttribute('aria-label', o.titulo);
@@ -82,15 +84,27 @@ function cerrarVisor(){ if (!VISOR) return; VISOR.ch.forEach(c => c.dispose()); 
 function medir(){ if (!VISOR) return; const w = innerWidth, h = innerHeight, W = Math.min(w-16, (h-104)*16/9), st = $('inf-st');
   st.style.width = W+'px'; st.style.height = (W*9/16)+'px'; VISOR.U = W/100; VISOR.el.style.setProperty('--u', VISOR.U+'px'); }
 const FUENTE = "Barlow, 'Segoe UI', system-ui, sans-serif";
-function dibujar(){ const V0 = VISOR; V0.ch.forEach(c => c.dispose()); V0.ch = [];
+// opciones de cada gráfica: la cuadrícula de la plataforma (cuadritos) y una entrada animada
+function opcion(g, U){ const op = Object.assign({ textStyle:{ fontFamily:FUENTE }, animationDuration:1100, animationEasing:'cubicOut', animationDurationUpdate:500 }, g.op(U));
+  [].concat(op.series || []).forEach((x, k) => { if (x && x.type==='bar' && x.animationDelay==null) x.animationDelay = i => i*12; });
+  return window.IANAMI_CUAD ? window.IANAMI_CUAD(op) : op; }
+function dibujar(){ const V0 = VISOR; V0.ch.forEach(c => c.dispose()); V0.ch = []; V0.gr = [];
   V0.o.laminas.forEach((l, i) => (l.graf || []).forEach(g => { const el = V0.el.querySelector('.inf-sl[data-i="'+i+'"] #'+g.id); if (!el) return;
-    const ch = echarts.init(el, null, { devicePixelRatio:Math.max(2, window.devicePixelRatio || 1) }); ch.setOption(Object.assign({ textStyle:{ fontFamily:FUENTE }, animationDuration:700 }, g.op(V0.U))); V0.ch.push(ch); })); }
+    const ch = echarts.init(el, null, { devicePixelRatio:Math.max(2, window.devicePixelRatio || 1) }); ch.setOption(opcion(g, V0.U)); V0.ch.push(ch); V0.gr.push({ ch, g, i }); })); }
+// al llegar a una lámina sus gráficas se vuelven a dibujar con su animación
+function animar(i){ const V0 = VISOR; if (!V0 || V0.el.classList.contains('imprimiendo')) return; (V0.gr || []).filter(x => x.i===i).forEach(x => { x.ch.clear(); x.ch.setOption(opcion(x.g, V0.U)); }); }
+// ampliar una tarjeta: ocupa todo el ancho y la otra se oculta; otro toque la regresa
+function ampliar(b){ const card = b.closest('.inf-c'), par = card.parentElement, on = !card.classList.contains('ex-on'), sl = b.closest('.inf-sl');
+  par.classList.toggle('ex', on); [...par.children].forEach(c => c.classList.toggle('ex-on', on && c===card));
+  par.querySelectorAll('[data-infex]').forEach(x => { x.innerHTML = on ? ICO.red : ICO.amp; x.title = on ? 'Regresar' : 'Ampliar'; });
+  const i = +sl.dataset.i, rs = () => (VISOR.gr || []).filter(x => x.i===i).forEach(x => x.ch.resize()); requestAnimationFrame(rs); setTimeout(rs, 460); }
 let tCambio = 0; function alCambiar(){ clearTimeout(tCambio); tCambio = setTimeout(() => { medir(); dibujar(); ir(VISOR.i, true); }, 120); }
 function ir(i, sin){ const V0 = VISOR; if (!V0) return; const n = V0.o.laminas.length; i = Math.max(0, Math.min(n-1, i)); V0.i = i;
   const tr = $('inf-tr'); tr.style.transition = sin ? 'none' : ''; tr.style.transform = 'translateX('+(-i*100)+'%)';
   V0.el.querySelectorAll('[data-infir]').forEach(b => b.classList.toggle('on', +b.dataset.infir===i));
   V0.el.querySelector('.inf-fl.iz').disabled = i===0; V0.el.querySelector('.inf-fl.de').disabled = i===n-1;
-  V0.el.querySelectorAll('.inf-sl').forEach((s,j) => { s.classList.toggle('activa', j===i); s.setAttribute('aria-hidden', j!==i); }); }
+  V0.el.querySelectorAll('.inf-sl').forEach((s,j) => { s.classList.toggle('activa', j===i); s.setAttribute('aria-hidden', j!==i); });
+  if (!sin) setTimeout(() => animar(i), 260); }
 function narrativa(sl, on){ const a = sl.querySelector('.inf-hz'), b = sl.querySelector('[data-infhz]'); if (!a) return; on = on==null ? a.hidden : on; a.hidden = !on; b.classList.toggle('on', on); b.setAttribute('aria-expanded', on); }
 function teclas(e){ if (!VISOR) return; if (e.key==='ArrowRight' || e.key==='PageDown'){ ir(VISOR.i+1); e.preventDefault(); } else if (e.key==='ArrowLeft' || e.key==='PageUp'){ ir(VISOR.i-1); e.preventDefault(); } else if (e.key==='Escape') cerrarVisor(); }
 function eventosVisor(el){
@@ -99,6 +113,7 @@ function eventosVisor(el){
     if ((b = T('[data-infmov]'))) return ir(VISOR.i + +b.dataset.infmov);
     if ((b = T('[data-infir]'))) return ir(+b.dataset.infir);
     if ((b = T('[data-infhz]'))) return narrativa(b.closest('.inf-sl'));
+    if ((b = T('[data-infex]'))) return ampliar(b);
     if (T('[data-infx]')) return cerrarVisor();
     if (T('[data-infpdf]')) return bajarPDF();
     if (T('[data-infwa]')) return whatsapp();
@@ -117,7 +132,7 @@ async function hacerPDF(){ const V0 = VISOR; if (!window.html2canvas || !window.
   const st = $('inf-st'), w = st.offsetWidth, h = st.offsetHeight, { jsPDF } = window.jspdf, doc = new jsPDF({ orientation:'landscape', unit:'px', format:[1600, 900], hotfixes:['px_scaling'] }), i0 = V0.i;
   V0.el.classList.add('imprimiendo');
   try { for (let i=0;i<V0.o.laminas.length;i++){ ir(i, true); await new Promise(r => setTimeout(r, 140)); const sl = V0.el.querySelector('.inf-sl[data-i="'+i+'"]');
-      const cv = await html2canvas(sl, { scale:1600/w*1.5, backgroundColor:'#FCFBF7', useCORS:true, width:w, height:h, ignoreElements:x => x.classList && (x.classList.contains('inf-nb') || x.classList.contains('inf-hz')) });
+      const cv = await html2canvas(sl, { scale:1600/w*1.5, backgroundColor:'#FCFBF7', useCORS:true, width:w, height:h, ignoreElements:x => x.classList && (x.classList.contains('inf-nb') || x.classList.contains('inf-hz') || x.classList.contains('inf-ex')) });
       if (i) doc.addPage([1600, 900], 'landscape'); doc.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 1600, 900); } }
   finally { V0.el.classList.remove('imprimiendo'); ir(i0, true); }
   return doc; }
@@ -146,14 +161,15 @@ function cifra(o){ const T = o.rp ? o.rp.reduce((x,y) => x+y.v, 0) : 0;
     (o.rp ? '<div class="inf-cf-r"><div class="inf-cf-rl">'+o.rp.map(x => '<span><i style="background:'+x.c+'"></i>'+x.nom+' <b>'+pc(x.v, T)+'</b> <em>'+miles(x.v)+'</em></span>').join('')+'</div>'+
       '<div class="inf-cf-rb">'+o.rp.map(x => '<i style="flex:'+Math.max(x.v, T*0.012)+' 1 0;background:'+x.c+'"></i>').join('')+'</div></div>' : '')+'</div>'; }
 const kk = (eti, n, sub, cl) => '<div class="inf-kk '+(cl || '')+'"><span>'+eti+'</span><b class="num">'+n+'</b><small>'+sub+'</small></div>';
-const caja = (tit, sub, cuerpo, cls) => '<div class="inf-c '+(cls || '')+'"><h3>'+tit+(sub ? '<small>'+sub+'</small>' : '')+'</h3>'+cuerpo+'</div>';
+const caja = (tit, sub, cuerpo, cls) => '<div class="inf-c '+(cls || '')+'"><h3>'+tit+(sub ? '<small>'+sub+'</small>' : '')+(/inf-gr/.test(cuerpo) ? '<button class="inf-ex" data-infex title="Ampliar" aria-label="Ampliar o regresar">'+ICO.amp+'</button>' : '')+'</h3>'+cuerpo+'</div>';
 // Gráficas: tamaños en --u, rejilla tenue, ejes discretos
 const ejeX = (u, data, o) => Object.assign({ type:'category', data:data, axisTick:{ show:false }, axisLine:{ lineStyle:{ color:'#D6D1C2' } }, axisLabel:{ color:C.ink3, fontSize:u*0.66, hideOverlap:true, margin:u*0.6 } }, o || {});
 const ejeY = u => ({ type:'value', splitNumber:4, splitLine:{ lineStyle:{ color:'#EFECE3' } }, axisLabel:{ color:C.ink3, fontSize:u*0.62, formatter:v => corto(v) } });
 const ley = (u, l) => ({ top:0, left:0, icon:'roundRect', itemWidth:u*0.9, itemHeight:u*0.32, itemGap:u*1.5, textStyle:{ fontSize:u*0.7, color:C.ink2 }, data:l });
 const tip = u => ({ trigger:'axis', confine:true, backgroundColor:'rgba(255,255,255,.97)', borderColor:'#E2DED0', textStyle:{ fontSize:Math.max(12, u*0.78), color:C.ink }, axisPointer:{ lineStyle:{ color:'#C9C4B5' } }, valueFormatter:v => v==null ? '—' : miles(v) });
-const linea = (u, nom, data, col, o) => Object.assign({ name:nom, type:'line', data:data, symbol:'circle', symbolSize:u*0.34, showSymbol:true, lineStyle:{ width:u*0.13, color:col }, itemStyle:{ color:col }, emphasis:{ focus:'series' } }, o || {});
-const punteada = (u, col) => ({ lineStyle:{ width:u*0.11, color:col, type:[u*0.35, u*0.28] }, symbolSize:u*0.26 });
+const linea = (u, nom, data, col, o) => Object.assign({ name:nom, type:'line', data:data, symbol:'circle', symbolSize:data.length>50 ? u*0.38 : u*0.52, showSymbol:true, showAllSymbol:'auto', z:4, lineStyle:{ width:u*0.15, color:col, shadowBlur:u*0.2, shadowColor:'rgba(43,41,38,.12)', shadowOffsetY:u*0.05 },
+  itemStyle:{ color:col, borderColor:'#fff', borderWidth:Math.max(1, u*0.09), shadowBlur:u*0.35, shadowColor:'rgba(43,41,38,.3)', shadowOffsetY:u*0.04 }, emphasis:{ focus:'series', scale:1.5 } }, o || {});
+const punteada = (u, col) => ({ lineStyle:{ width:u*0.12, color:col, type:[u*0.35, u*0.28] }, symbolSize:u*0.38 });
 // Etiqueta solo en el último punto y en el máximo: lo demás se lee en el eje
 function marcas(data, u, col){ let mx = -1, j = -1; data.forEach((v,i) => { if (v!=null && v>mx){ mx = v; j = i; } }); const ult = data.length-1;
   return data.map((v,i) => (i===ult || i===j) && v!=null ? { value:v, label:{ show:true, position:'top', distance:u*0.35, fontSize:u*0.64, fontWeight:600, color:col, formatter:p => miles(p.value) } } : v); }
@@ -221,7 +237,7 @@ function laminaSectores(X){
   return { tit:IDX[1], fte:'Fuente: CBP · sectores de la Patrulla Fronteriza y puertos de entrada, de mayor a menor · «Semana»: '+X.fch, hz:hz,
     html:enc('Encuentros por sector', esc(X.etR)+' · '+X.fchR, 'Informe migratorio · lámina 2')+
       '<div class="inf-sec"><div class="inf-sec-k">'+kk('Mexicanos', miles(MX), pc(MX, T)+' del total', 'v')+kk('Extranjeros', miles(T-MX), pc(T-MX, T)+' del total', 'r')+kk('Total', miles(T), miles(T/X.dR)+' por día')+'</div>'+
-      '<div class="inf-c inf-sec-m"><div id="g-sec" class="inf-gr"></div></div><div class="inf-c inf-sec-t">'+tabla+'</div></div>',
+      '<div class="inf-c inf-sec-m"><button class="inf-ex flota" data-infex title="Ampliar" aria-label="Ampliar o regresar">'+ICO.amp+'</button><div id="g-sec" class="inf-gr"></div></div><div class="inf-c inf-sec-t">'+tabla+'</div></div>',
     graf:[{ id:'g-sec', op:u => { if (!mapaRegion()) return {}; const mv = Math.max(1, ...fil.map(f => f.v));
       return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, boundingCoords:[[-118.6,33.6],[-96.4,25.0]], aspectScale:0.86, layoutCenter:['50%','50%'], layoutSize:'100%',
           itemStyle:{ areaColor:'#F6F4EE', borderColor:'#D3CEC0', borderWidth:0.6 }, regions:window.IANAMI_GEO.features.filter(f => f.properties.t==='m').map(f => ({ name:f.properties.key, itemStyle:{ areaColor:'#FDFCF9', borderColor:'#C6C0B1' } })) },
@@ -272,7 +288,7 @@ function laminaRetorno(X){
       '<div class="inf-anos">'+anos.map(y => '<div class="inf-ano"><span class="inf-ano-y">'+y.y+'</span><b class="num">'+miles(y.t)+'</b><small>'+rango(y.a, y.b)+'</small><div class="inf-ano-b"><i style="flex:'+y.te+' 1 0;background:'+C.ocre+'"></i><i style="flex:'+y.ae+' 1 0;background:'+C.verde+'"></i></div><div class="inf-ano-r"><span>Terrestre <b>'+pc(y.te, y.t)+'</b> '+miles(y.te)+'</span><span>Aérea <b>'+pc(y.ae, y.t)+'</b> '+miles(y.ae)+'</span></div></div>').join('')+'</div>',
     graf:[{ id:'g-ret', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Terrestre','Aérea']), tooltip:tip(u), xAxis:ejeX(u, lw), yAxis:ejeY(u),
       series:[barra(u, 'Total', st.v, C.arena2, { barCategoryGap:'22%', markLine:ja>0 ? { silent:true, symbol:'none', lineStyle:{ color:C.ink3, type:'dashed', width:1 }, label:{ formatter:st.C.l[ja].a.slice(0,4), fontSize:u*0.72, fontWeight:600, color:C.ink2 }, data:[{ xAxis:ja }] } : undefined }),
-        linea(u, 'Terrestre', marcas(ster, u, C.ocre), C.ocre, { symbolSize:u*0.24 }), linea(u, 'Aérea', marcas(sa.v, u, C.verde), C.verde, { symbolSize:u*0.24 })] }) }] };
+        linea(u, 'Terrestre', marcas(ster, u, C.ocre), C.ocre), linea(u, 'Aérea', marcas(sa.v, u, C.verde), C.verde)] }) }] };
 }
 // Lámina 5: rescatados por el INM, primera vez y reincidencia
 function laminaRescates(X){
@@ -291,7 +307,7 @@ function laminaRescates(X){
       caja('Por mes', X.fchR+' · barras: total · líneas: primera vez y reincidencia', '<div id="g-res" class="inf-gr"></div>', 'inf-c-alta')+
       '<p class="inf-fr">En '+ua.y+' se han rescatado <b>'+miles(ua.t)+'</b> extranjeros: '+miles(ua.pv)+' por primera vez y '+miles(ua.re)+' reincidencias.</p>',
     graf:[{ id:'g-res', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Primera vez','Reincidencia']), tooltip:tip(u), xAxis:ejeX(u, lm), yAxis:ejeY(u),
-      series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2, label:{ show:true, position:'top', fontSize:u*0.56, color:C.ink2, formatter:p => corto(p.value) } }), linea(u, 'Primera vez', spv.v, C.verde, { symbolSize:u*0.28 }), linea(u, 'Reincidencia', sre.v, C.vino, { symbolSize:u*0.28 })] }) }] };
+      series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2, label:{ show:true, position:'top', fontSize:u*0.56, color:C.ink2, formatter:p => corto(p.value) } }), linea(u, 'Primera vez', spv.v, C.verde), linea(u, 'Reincidencia', sre.v, C.vino)] }) }] };
 }
 // Lámina 6: caravanas (registro de caravanas: nombre, salida y personas estimadas)
 function laminaCaravanas(X){
@@ -376,7 +392,7 @@ function analisis(A){
   if (dimD && top.length) L.push({ tit:'Desglose', fte:fte, hz:hz.slice(-2), html:enc('Por '+esc(nomD(dimD)), esc(tit)+' · '+esc(perTxt), 'Análisis')+caja(top.length>=12 ? 'Las 12 con más registros' : 'De mayor a menor', '', '<div id="g-an-d" class="inf-gr"></div>', 'inf-c-total') });
   L.push({ tit:'Narrativa', cls:'inf-sl-nar', fte:fte, html:enc('Narrativa', esc(tit), 'Análisis')+'<div class="inf-hzt uno'+(hz.length<=4 ? ' una' : '')+'"><div class="inf-c"><ul>'+hz.map(h => '<li>'+h+'</li>').join('')+'</ul></div></div>' });
   L[0].graf = [{ id:'g-an-t', op:u => ({ grid:{ left:u*3.2, right:u*2, top:u*2.8, bottom:u*2 }, legend:ley(u, SS.map(s => s.corto)), tooltip:Object.assign(tip(u), dos ? { formatter:ps => ps.map(p => { const s = SS[p.seriesIndex], c = s.ser.C.l[p.dataIndex]; return p.marker+esc(s.corto)+(c ? ' <small>('+rango(c.a, c.b)+')</small>' : '')+': <b>'+(p.value==null ? '—' : miles(p.value))+'</b>'; }).join('<br>') } : {}),
-    xAxis:ejeX(u, xs), yAxis:ejeY(u), series:SS.map(s => linea(u, s.corto, s.j===jB ? marcas(s.ser.v, u, s.col) : s.ser.v, s.col, Object.assign({ connectNulls:false, symbolSize:u*0.3 }, s.j!==jB ? punteada(u, s.col) : {}, s.j!==jB ? { itemStyle:{ color:'#fff', borderColor:s.col, borderWidth:1 } } : {}))) }) }];
+    xAxis:ejeX(u, xs), yAxis:ejeY(u), series:SS.map(s => linea(u, s.corto, s.j===jB ? marcas(s.ser.v, u, s.col) : s.ser.v, s.col, Object.assign({ connectNulls:false }, s.j!==jB ? punteada(u, s.col) : {}, s.j!==jB ? { itemStyle:{ color:'#fff', borderColor:s.col, borderWidth:Math.max(1, u*0.09) } } : {}))) }) }];
   if (dimD && top.length) L[1].graf = [{ id:'g-an-d', op:u => ({ grid:{ left:u*11, right:u*4, top:SD.length>1 ? u*2.4 : u*0.4, bottom:u*0.4 }, legend:SD.length>1 ? ley(u, SD.map(s => s.corto)) : { show:false }, tooltip:Object.assign(tip(u), { axisPointer:{ type:'shadow', shadowStyle:{ color:'rgba(0,0,0,.03)' } } }),
     xAxis:{ type:'value', show:false }, yAxis:{ type:'category', inverse:true, data:top, axisTick:{ show:false }, axisLine:{ show:false }, axisLabel:{ fontSize:u*0.78, color:C.ink, width:u*10, overflow:'truncate' } },
     series:SD.map((s,k) => ({ name:s.corto, type:'bar', data:top.map(n => des[k].get(n) || 0), itemStyle:{ color:s.j!==jB ? 'rgba(0,0,0,0)' : s.col, borderColor:s.col, borderWidth:s.j!==jB ? 1.2 : 0, borderRadius:[0,u*0.2,u*0.2,0] }, barMaxWidth:u*1.3, barGap:'20%',
