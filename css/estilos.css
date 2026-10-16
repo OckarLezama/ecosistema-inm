@@ -1800,3 +1800,4 @@ body.en-inf{overflow:hidden}
 .ar-cvn .inf-hzt li{font-size:calc(var(--u)*1.12);line-height:1.5}.ar-cvn .inf-hzt ul{gap:calc(var(--u)*.9)}.ar-cvn .inf-hzt .inf-c{padding:calc(var(--u)*1.6) calc(var(--u)*1.8)}
 .ar-cvn .inf-hzt .inf-ey{font-size:calc(var(--u)*.85);color:#2F6657;font-weight:600}
 .ar-vrow{flex-wrap:wrap;row-gap:2px;gap:2px 12px}.ar-vi i{font-size:12.5px}
+.ar-pop button.ar-off,.ar-pop .t.ar-off{display:none!important}.ar-nada{display:none;padding:10px;color:var(--k3);font-size:13px}.ar-nada.on{display:block}

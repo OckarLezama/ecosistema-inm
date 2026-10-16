@@ -350,7 +350,7 @@ async function pdf(){ if (OCUPADO) return null; if (!PR.length){ toast('Agrega a
     for (let i=0;i<L.length;i++){ toast('Preparando el PDF · lámina '+(i+1)+' de '+L.length+'…'); d.innerHTML = '<div class="ar-lam ar-print"></div>'; render(d.firstChild, L[i], false);
       d.querySelectorAll('.ar-gr').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.setOption({ animation:false }); });
       await new Promise(r => setTimeout(r, 60));
-      const cv = await window.html2canvas(d.firstChild, { scale:1, backgroundColor:'#FBFAF6', logging:false, onclone:dd => { const e = dd.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}'; dd.head.appendChild(e); dd.querySelectorAll('[_echarts_instance_] > div:nth-child(n+2)').forEach(x => { x.style.display = 'none'; }); window.IANAMI_COLORFIJO && window.IANAMI_COLORFIJO(dd); } });
+      const cv = await window.html2canvas(d.firstChild, { scale:1, backgroundColor:'#FBFAF6', logging:false, onclone:dd => { const e = dd.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}.ar-cvp{background:#FBFAF6!important}'; dd.head.appendChild(e); dd.querySelectorAll('[_echarts_instance_] > div:nth-child(n+2)').forEach(x => { x.style.display = 'none'; }); window.IANAMI_COLORFIJO && window.IANAMI_COLORFIJO(dd); } });
       if (i) doc.addPage([1600, 900], 'landscape'); const h = Math.min(900, cv.height*1600/cv.width); doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, (900-h)/2, 1600, h);
       d.querySelectorAll('.ar-gr').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.dispose(); }); }
     d.remove(); return doc; } finally { OCUPADO = false; } }
@@ -386,7 +386,12 @@ function pintar(host){ HOST = host; HZ = hallazgos();
       '<button class="ar-va" style="left:16px" id="ar-vp">‹</button><button class="ar-va" style="right:16px" id="ar-vn">›</button><div class="ar-stage"><div class="ar-fr" id="ar-fr"></div></div></div>'+
     '<div class="ar-toast" id="ar-toast"></div></div>';
   const lam = $('ar-lam'); lam.addEventListener('click', clic);
-  lam.addEventListener('input', ev => { if (!ev.target.classList.contains('ar-pf')) return; const t = norm(ev.target.value); ev.target.parentNode.querySelectorAll('button[data-o]').forEach(b => b.style.display = norm(b.textContent).includes(t) ? '' : 'none'); ev.target.parentNode.querySelectorAll('.t').forEach(z => z.style.display = t ? 'none' : ''); });
+  // buscador de cada combo: filtra mientras escribes (sin acentos ni mayúsculas); Enter elige la primera opción visible
+  const etq = x => { const em = x.querySelector('em'); return norm(em ? x.textContent.slice(0, -em.textContent.length) : x.textContent); };
+  lam.addEventListener('input', ev => { if (!ev.target.classList.contains('ar-pf')) return; const t = norm(ev.target.value.trim()), pp = ev.target.closest('.ar-pop'); let n = 0;
+    pp.querySelectorAll('button[data-o]').forEach(x => { const si = !t || etq(x).includes(t); x.classList.toggle('ar-off', !si); if (si) n++; });
+    pp.querySelectorAll('.t').forEach(z => z.classList.toggle('ar-off', !!t)); let v = pp.querySelector('.ar-nada'); if (!v){ v = document.createElement('div'); v.className = 'ar-nada'; v.textContent = 'Sin coincidencias'; pp.appendChild(v); } v.classList.toggle('on', !n); });
+  lam.addEventListener('keydown', ev => { if (!ev.target.classList.contains('ar-pf') || ev.key!=='Enter') return; ev.preventDefault(); const x = [...ev.target.closest('.ar-pop').querySelectorAll('button[data-o]:not(.ar-off)')][0]; x && x.click(); });
   lam.addEventListener('focusout', ev => { if (ev.target.dataset && ev.target.dataset.fra!=null && S){ const t = ev.target.innerText.trim(); if (t && t!==lam._fra) S.fra = t; else delete S.fra; marca(); } });
   lam.addEventListener('keydown', ev => { if (ev.target.dataset && ev.target.dataset.fra!=null && ev.key==='Enter'){ ev.preventDefault(); ev.target.blur(); } });
   host.addEventListener('click', ev => { if (!ev.target.closest('.ar-pop')) host.querySelectorAll('.ar-pop.on').forEach(x => x.classList.remove('on')); if (!ev.target.closest('.ar-sw')) $('ar-dd').classList.remove('on'); });

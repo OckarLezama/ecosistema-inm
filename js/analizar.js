@@ -147,7 +147,7 @@ async function hacerPDF(avance){ const V0 = VISOR; if (!window.html2canvas || !w
   V0.el.classList.add('imprimiendo');
   try { for (let i=0;i<n;i++){ if (avance) avance(i+1, n); ir(i, true); V0.el.querySelectorAll('[_echarts_instance_]').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.dispatchAction({ type:'hideTip' }); }); await new Promise(r => setTimeout(r, 60)); const sl = V0.el.querySelector('.inf-sl[data-i="'+i+'"]');
       const cv = await html2canvas(sl, { scale:1600/w, backgroundColor:'#FBFAF6', useCORS:true, logging:false, width:w, height:h, ignoreElements:fuera,
-        onclone:d => { const e = d.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}'; d.head.appendChild(e); d.querySelectorAll('[_echarts_instance_] > div:nth-child(n+2)').forEach(e => { e.style.display = 'none'; }); if (window.IANAMI_COLORFIJO) window.IANAMI_COLORFIJO(d); } });
+        onclone:d => { const e = d.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}.inf-sl,.inf-sl-port,.inf-st{background:#FBFAF6!important}'; d.head.appendChild(e); d.querySelectorAll('[_echarts_instance_] > div:nth-child(n+2)').forEach(e => { e.style.display = 'none'; }); if (window.IANAMI_COLORFIJO) window.IANAMI_COLORFIJO(d); } });
       if (i) doc.addPage([1600, 900], 'landscape'); doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 1600, 900); } }
   finally { V0.el.classList.remove('imprimiendo'); ir(i0, true); }
   return doc; }
