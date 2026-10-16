@@ -75,6 +75,7 @@ function abrirVisor(o){
   document.body.appendChild(el); document.body.classList.add('en-inf');
   VISOR = { el:el, o:o, i:0, ch:[] };
   medir(); dibujar(); ir(Math.max(0, Math.min(L.length-1, o.inicio || 0)), true);
+  setTimeout(() => { if (VISOR) contarNums(VISOR.el.querySelector('.inf-sl.activa')); }, 200);
   if (document.documentElement.requestFullscreen && !document.fullscreenElement && o.completa!==false) document.documentElement.requestFullscreen().catch(() => {});
   eventosVisor(el);
 }
@@ -93,18 +94,26 @@ function dibujar(){ const V0 = VISOR; V0.ch.forEach(c => c.dispose()); V0.ch = [
     const ch = echarts.init(el, null, { devicePixelRatio:Math.max(2, window.devicePixelRatio || 1) }); ch.setOption(opcion(g, V0.U)); V0.ch.push(ch); V0.gr.push({ ch, g, i }); })); }
 // al llegar a una lámina sus gráficas se vuelven a dibujar con su animación
 function animar(i){ const V0 = VISOR; if (!V0 || V0.el.classList.contains('imprimiendo')) return; (V0.gr || []).filter(x => x.i===i).forEach(x => { x.ch.clear(); x.ch.setOption(opcion(x.g, V0.U)); }); }
-// ampliar una tarjeta: ocupa todo el ancho y la otra se oculta; otro toque la regresa
+// ampliar una tarjeta: crece suave hasta todo el ancho mientras la otra se recoge; otro toque la regresa
 function ampliar(b){ const card = b.closest('.inf-c'), par = card.parentElement, on = !card.classList.contains('ex-on'), sl = b.closest('.inf-sl');
-  par.classList.toggle('ex', on); [...par.children].forEach(c => c.classList.toggle('ex-on', on && c===card));
+  const cols = [...par.children].filter(c => !c.classList.contains('inf-sec-k'));
+  par.classList.toggle('ex', on); cols.forEach(c => { c.classList.toggle('ex-on', on && c===card); c.classList.toggle('ex-off', on && c!==card); });
+  par.style.gridTemplateColumns = on ? cols.map(c => c===card ? '1fr' : '0fr').join(' ') : '';
   par.querySelectorAll('[data-infex]').forEach(x => { x.innerHTML = on ? ICO.red : ICO.amp; x.title = on ? 'Regresar' : 'Ampliar'; });
-  const i = +sl.dataset.i, rs = () => (VISOR.gr || []).filter(x => x.i===i).forEach(x => x.ch.resize()); requestAnimationFrame(rs); setTimeout(rs, 460); }
+  // las gráficas se ajustan cuadro por cuadro mientras dura la transición
+  const i = +sl.dataset.i, gr = (VISOR.gr || []).filter(x => x.i===i), t0 = performance.now(), paso = t => { gr.forEach(x => x.ch.resize()); if (t-t0<700) requestAnimationFrame(paso); }; requestAnimationFrame(paso); }
+// las cifras grandes suben de cero a su valor al llegar a la lámina, como en el resto de la plataforma
+function contarNums(sl){ if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const els = [...sl.querySelectorAll('.num')].filter(e => { if (!e.dataset.f) e.dataset.f = e.childNodes[0] && e.childNodes[0].nodeType===3 ? e.childNodes[0].nodeValue : ''; return /^[\d,]+$/.test(e.dataset.f.trim()); });
+  const t0 = performance.now(), dur = 900, paso = t => { const k = Math.min(1, (t-t0)/dur), f = 1-Math.pow(1-k, 3);
+    els.forEach(e => { e.childNodes[0].nodeValue = miles(+e.dataset.f.replace(/,/g, '')*f); }); if (k<1) requestAnimationFrame(paso); }; requestAnimationFrame(paso); }
 let tCambio = 0; function alCambiar(){ clearTimeout(tCambio); tCambio = setTimeout(() => { medir(); dibujar(); ir(VISOR.i, true); }, 120); }
 function ir(i, sin){ const V0 = VISOR; if (!V0) return; const n = V0.o.laminas.length; i = Math.max(0, Math.min(n-1, i)); V0.i = i;
   const tr = $('inf-tr'); tr.style.transition = sin ? 'none' : ''; tr.style.transform = 'translateX('+(-i*100)+'%)';
   V0.el.querySelectorAll('[data-infir]').forEach(b => b.classList.toggle('on', +b.dataset.infir===i));
   V0.el.querySelector('.inf-fl.iz').disabled = i===0; V0.el.querySelector('.inf-fl.de').disabled = i===n-1;
   V0.el.querySelectorAll('.inf-sl').forEach((s,j) => { s.classList.toggle('activa', j===i); s.setAttribute('aria-hidden', j!==i); });
-  if (!sin) setTimeout(() => animar(i), 260); }
+  if (!sin) setTimeout(() => { animar(i); contarNums(V0.el.querySelector('.inf-sl[data-i="'+i+'"]')); }, 260); }
 function narrativa(sl, on){ const a = sl.querySelector('.inf-hz'), b = sl.querySelector('[data-infhz]'); if (!a) return; on = on==null ? a.hidden : on; a.hidden = !on; b.classList.toggle('on', on); b.setAttribute('aria-expanded', on); }
 function teclas(e){ if (!VISOR) return; if (e.key==='ArrowRight' || e.key==='PageDown'){ ir(VISOR.i+1); e.preventDefault(); } else if (e.key==='ArrowLeft' || e.key==='PageUp'){ ir(VISOR.i-1); e.preventDefault(); } else if (e.key==='Escape') cerrarVisor(); }
 function eventosVisor(el){
@@ -164,17 +173,21 @@ const kk = (eti, n, sub, cl) => '<div class="inf-kk '+(cl || '')+'"><span>'+eti+
 const caja = (tit, sub, cuerpo, cls) => '<div class="inf-c '+(cls || '')+'"><h3>'+tit+(sub ? '<small>'+sub+'</small>' : '')+(/inf-gr/.test(cuerpo) ? '<button class="inf-ex" data-infex title="Ampliar" aria-label="Ampliar o regresar">'+ICO.amp+'</button>' : '')+'</h3>'+cuerpo+'</div>';
 // Gráficas: tamaños en --u, rejilla tenue, ejes discretos
 const ejeX = (u, data, o) => Object.assign({ type:'category', data:data, axisTick:{ show:false }, axisLine:{ lineStyle:{ color:'#D6D1C2' } }, axisLabel:{ color:C.ink3, fontSize:u*0.66, hideOverlap:true, margin:u*0.6 } }, o || {});
-const ejeY = u => ({ type:'value', splitNumber:4, splitLine:{ lineStyle:{ color:'#EFECE3' } }, axisLabel:{ color:C.ink3, fontSize:u*0.62, formatter:v => corto(v) } });
+const ejeY = u => ({ type:'value', splitNumber:4, splitLine:{ lineStyle:{ color:'#EFECE3' } }, axisLabel:{ color:C.ink3, fontSize:u*0.62, formatter:v => miles(v) } });
 const ley = (u, l) => ({ top:0, left:0, icon:'roundRect', itemWidth:u*0.9, itemHeight:u*0.32, itemGap:u*1.5, textStyle:{ fontSize:u*0.7, color:C.ink2 }, data:l });
 const tip = u => ({ trigger:'axis', confine:true, backgroundColor:'rgba(255,255,255,.97)', borderColor:'#E2DED0', textStyle:{ fontSize:Math.max(12, u*0.78), color:C.ink }, axisPointer:{ lineStyle:{ color:'#C9C4B5' } }, valueFormatter:v => v==null ? '—' : miles(v) });
 const linea = (u, nom, data, col, o) => Object.assign({ name:nom, type:'line', data:data, symbol:'circle', symbolSize:data.length>50 ? u*0.38 : u*0.52, showSymbol:true, showAllSymbol:'auto', z:4, lineStyle:{ width:u*0.15, color:col, shadowBlur:u*0.2, shadowColor:'rgba(43,41,38,.12)', shadowOffsetY:u*0.05 },
-  itemStyle:{ color:col, borderColor:'#fff', borderWidth:Math.max(1, u*0.09), shadowBlur:u*0.35, shadowColor:'rgba(43,41,38,.3)', shadowOffsetY:u*0.04 }, emphasis:{ focus:'series', scale:1.5 } }, o || {});
+  itemStyle:{ color:col, borderColor:'#fff', borderWidth:Math.max(1, u*0.09), shadowBlur:u*0.35, shadowColor:'rgba(43,41,38,.3)', shadowOffsetY:u*0.04 },
+  label:{ show:true, position:'top', distance:u*0.3, fontSize:u*0.5, color:col, formatter:p => p.value==null ? '' : miles(p.value) }, labelLayout:{ hideOverlap:true },
+  emphasis:{ focus:'series', scale:1.6, lineStyle:{ width:u*0.26 }, label:{ show:true, fontSize:u*0.72, fontWeight:700, color:col, backgroundColor:'rgba(255,255,255,.85)', padding:[u*0.08, u*0.2], borderRadius:u*0.15 } },
+  blur:{ lineStyle:{ opacity:0.18 }, itemStyle:{ opacity:0.18 }, label:{ opacity:0.12 } } }, o || {});
 const punteada = (u, col) => ({ lineStyle:{ width:u*0.12, color:col, type:[u*0.35, u*0.28] }, symbolSize:u*0.38 });
 // Etiqueta solo en el último punto y en el máximo: lo demás se lee en el eje
 function marcas(data, u, col){ let mx = -1, j = -1; data.forEach((v,i) => { if (v!=null && v>mx){ mx = v; j = i; } }); const ult = data.length-1;
-  return data.map((v,i) => (i===ult || i===j) && v!=null ? { value:v, label:{ show:true, position:'top', distance:u*0.35, fontSize:u*0.64, fontWeight:600, color:col, formatter:p => miles(p.value) } } : v); }
+  return data.map((v,i) => (i===ult || i===j) && v!=null ? { value:v, label:{ show:true, position:'top', distance:u*0.35, fontSize:u*0.62, fontWeight:700, color:col, formatter:p => miles(p.value) }, labelLayout:{ hideOverlap:false } } : v); }
 const etiq = c => c.g==='m' ? c.l.map(x => MESC[f0(x.a).getMonth()]+' '+String(f0(x.a).getFullYear()).slice(2)) : c.l.map(x => fx(x.a));
-const barra = (u, nom, data, col, o) => Object.assign({ name:nom, type:'bar', data:data, itemStyle:{ color:col, borderRadius:[u*0.18,u*0.18,0,0] }, barMaxWidth:u*1.8 }, o || {});
+const etqBarra = (u, n, col) => ({ show:true, position:n>16 ? 'insideBottom' : 'top', rotate:n>16 ? 90 : 0, align:n>16 ? 'left' : 'center', verticalAlign:'middle', distance:u*0.3, fontSize:u*0.52, color:col || C.ink2, formatter:p => p.value ? miles(p.value) : '' });
+const barra = (u, nom, data, col, o) => Object.assign({ name:nom, type:'bar', data:data, itemStyle:{ color:col, borderRadius:[u*0.18,u*0.18,0,0] }, barMaxWidth:u*1.8, label:etqBarra(u, data.length), emphasis:{ focus:'series', label:{ fontWeight:700 } } }, o || {});
 // Narrativa: frases que cuentan qué pasó, con las cifras en negritas
 const cuanto = d => { const a = Math.abs(d); return a<1.5 ? 'prácticamente igual que' : (d>0 ? 'subió ' : 'bajó ')+'<b>'+a.toFixed(a<10 ? 1 : 0)+'%</b> contra'; };
 const deCada = p => { const c = [[50,'la mitad'],[25,'1 de cada 4'],[75,'3 de cada 4'],[33.3,'1 de cada 3'],[66.7,'2 de cada 3'],[20,'1 de cada 5'],[80,'4 de cada 5'],[10,'1 de cada 10'],[90,'9 de cada 10']].find(x => Math.abs(x[0]-p)<=1.8);
@@ -200,7 +213,7 @@ function laminaPortada(X){
 function laminaCBP(X){
   const t = V('cbp', null, X.a, X.b), mx = V('cbp', 'mx', X.a, X.b), ex = t-mx, tp = V('cbp', null, X.pa, X.pb), T = V('cbp', null, X.r0, X.b), MX = V('cbp', 'mx', X.r0, X.b);
   const sw = S('cbp', null, X.w0, X.b, 's'), swm = S('cbp', 'mx', X.w0, X.b, 's'), swr = S('resc', null, X.w0, X.b, 's');
-  const sm = S('cbp', null, X.r0, X.b, 'm'), smm = S('cbp', 'mx', X.r0, X.b, 'm'), lw = etiq(sw.C), lm = etiq(sm.C), sx = sw.v.map((v,i) => v-swm.v[i]), smx = sm.v.map((v,i) => v-smm.v[i]);
+  const sm = S('cbp', null, X.r0, X.b, 'm'), smm = S('cbp', 'mx', X.r0, X.b, 'm'), smr = S('resc', null, X.r0, X.b, 'm'), conR = Math.max(...smr.v)<=Math.max(...sm.v)*1.5, lw = etiq(sw.C), lm = etiq(sm.C), sx = sw.v.map((v,i) => v-swm.v[i]), smx = sm.v.map((v,i) => v-smm.v[i]);
   const sec = D('cbp', null, X.a, X.b, 'sec'), ult4 = sw.v.slice(-5, -1), prom4 = ult4.length ? ult4.reduce((x,y)=>x+y,0)/ult4.length : 0, rs = V('resc', null, X.a, X.b), hz = [];
   hz.push('La CBP registró <b>'+miles(t)+'</b> encuentros en la frontera'+(tp ? '; '+cuanto(pct(t, tp)-100)+' '+X.ant+' ('+miles(tp)+')' : '')+'.');
   if (prom4 && X.sem) hz.push('Frente al promedio de las cuatro semanas previas ('+miles(prom4)+'), el nivel '+(Math.abs(pct(t, prom4)-100)<3 ? 'se mantiene <b>estable</b>' : (t>prom4 ? 'está <b>por encima</b>' : 'está <b>por debajo</b>')+' ('+flecha(pct(t, prom4)-100)+')')+'.');
@@ -212,17 +225,20 @@ function laminaCBP(X){
       cifra({ eti:X.eti, fechas:X.fch, n:t, uni:'encuentros', prom:t/X.dias, chip:chip(t, tp, 'vs '+X.ant.replace(/^(la|el) /, '')), rp:[{ nom:'Mexicanos', v:mx, c:C.verde }, { nom:'Extranjeros', v:ex, c:C.vino }], tono:'a' })+
       cifra({ eti:X.etR, fechas:X.fchR, n:T, uni:'encuentros', prom:T/X.dR, rp:[{ nom:'Mexicanos', v:MX, c:C.verde }, { nom:'Extranjeros', v:T-MX, c:C.vino }], tono:'b' })+'</div>'+
       '<div class="inf-g2">'+caja('Por semana en '+f0(X.b).getFullYear(), 'punteada: rescates del INM en México', '<div id="g-cbp-s" class="inf-gr"></div>')+
-        caja('Por mes', X.fchR, '<div id="g-cbp-m" class="inf-gr"></div>')+'</div>',
+        caja('Por mes', X.fchR+' · barras: total'+(conR ? ' · punteada: rescates del INM' : ' · los rescates por mes están en la lámina 5'), '<div id="g-cbp-m" class="inf-gr"></div>')+'</div>',
     graf:[{ id:'g-cbp-s', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Mexicanos','Extranjeros','Rescates INM']), tooltip:tip(u), xAxis:ejeX(u, lw), yAxis:ejeY(u),
-        series:[linea(u, 'Total', marcas(sw.v, u, C.ink), C.ink), linea(u, 'Mexicanos', swm.v, C.verde), linea(u, 'Extranjeros', sx, C.vino), linea(u, 'Rescates INM', swr.v, C.ocre, punteada(u, C.ocre))] }) },
-      { id:'g-cbp-m', op:u => ({ grid:{ left:u*3, right:u*1, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Mexicanos','Extranjeros']), tooltip:tip(u), xAxis:ejeX(u, lm), yAxis:ejeY(u),
-        series:[barra(u, 'Mexicanos', smm.v, C.verde, { stack:'t', itemStyle:{ color:C.verde } }), barra(u, 'Extranjeros', smx, C.vino, { stack:'t', label:{ show:true, position:'top', fontSize:u*0.56, color:C.ink2, formatter:p => corto(sm.v[p.dataIndex]) } })] }) }] };
+        series:[linea(u, 'Total', marcas(sw.v, u, C.ink), C.ink), linea(u, 'Mexicanos', swm.v, C.verde), linea(u, 'Extranjeros', sx, C.vino), linea(u, 'Rescates INM', swr.v, C.rojo, punteada(u, C.rojo))] }) },
+      { id:'g-cbp-m', op:u => { const ja = sm.C.l.findIndex(c => c.a.slice(0,4)!==sm.C.l[0].a.slice(0,4));
+        return { grid:{ left:u*3.4, right:u*1.2, top:u*3, bottom:u*1.8 }, legend:ley(u, ['Total','Mexicanos','Extranjeros'].concat(conR ? ['Rescates INM'] : [])), tooltip:tip(u), xAxis:ejeX(u, lm), yAxis:ejeY(u),
+        series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2, markLine:ja>0 ? { silent:true, symbol:'none', lineStyle:{ color:C.ink3, type:'dashed', width:1 }, label:{ formatter:sm.C.l[ja].a.slice(0,4), fontSize:u*0.7, fontWeight:600, color:C.ink2 }, data:[{ xAxis:ja-0.5 }] } : undefined }),
+          linea(u, 'Mexicanos', smm.v, C.verde), linea(u, 'Extranjeros', smx, C.vino)].concat(conR ? [linea(u, 'Rescates INM', smr.v, C.rojo, punteada(u, C.rojo))] : []) }; } }] };
 }
 // Lámina 2: sectores de la CBP con el estado mexicano con el que colindan
 const SECTOR = { 'San Diego':[[-117.0,32.6],'Baja California'], 'El Centro':[[-115.55,32.75],'Baja California'], 'Yuma':[[-114.6,32.55],'Sonora'], 'Tucson':[[-110.95,31.45],'Sonora'], 'El Paso':[[-106.5,31.75],'Chihuahua'],
   'Big Bend':[[-103.6,29.6],'Chihuahua y Coahuila'], 'Del Rio':[[-100.9,29.4],'Coahuila'], 'Laredo':[[-99.5,27.5],'Coahuila, N. León y Tamaulipas'], 'Rio Grande':[[-98.2,26.2],'Tamaulipas'] };
 function mapaRegion(){ if (echarts.getMap('inf-region')) return true; const G = window.IANAMI_GEO; if (!G) return false;
-  echarts.registerMap('inf-region', { type:'FeatureCollection', features:G.features.filter(f => f.properties.t==='m' || f.properties.t==='u') }); return true; }
+  const CA = new Set(['P_320','P_340','P_222','P_084','P_558','P_188','P_591']);
+  echarts.registerMap('inf-region', { type:'FeatureCollection', features:G.features.filter(f => f.properties.t==='m' || f.properties.t==='u' || CA.has(f.properties.key)) }); return true; }
 function laminaSectores(X){
   const T = V('cbp', null, X.r0, X.b), MX = V('cbp', 'mx', X.r0, X.b), l = D('cbp', null, X.r0, X.b, 'sec'), lm = new Map(D('cbp', 'mx', X.r0, X.b, 'sec')), ls = new Map(D('cbp', null, X.a, X.b, 'sec')), lp = new Map(D('cbp', null, X.pa, X.pb, 'sec'));
   const fil = l.map(([n,v],i) => ({ n, v, mx:lm.get(n) || 0, ex:v-(lm.get(n) || 0), s:ls.get(n) || 0, p:lp.get(n) || 0, r:i+1 })), hz = [], top3 = fil.slice(0,3).reduce((x,f) => x+f.v, 0);
@@ -231,9 +247,13 @@ function laminaSectores(X){
   const cam = fil.filter(f => f.p>=50).map(f => [f, f.s-f.p]).sort((a,b) => Math.abs(b[1])-Math.abs(a[1]))[0];
   if (cam && cam[1]) hz.push('En la semana, el mayor movimiento fue en <b>'+esc(cam[0].n)+'</b>: pasó de '+miles(cam[0].p)+' a '+miles(cam[0].s)+' encuentros ('+flecha(pct(cam[0].s, cam[0].p)-100)+').');
   const mxv = Math.max(1, ...fil.map(f => f.v));
-  const tabla = '<table class="inf-tb"><thead><tr><th></th><th>Sector</th><th class="x">Total</th><th class="x">Mexicanos</th><th class="x">Extranjeros</th><th class="x">Semana</th></tr></thead><tbody>'+
-    fil.map(f => '<tr><td class="rk">'+f.r+'</td><td><b>'+esc(f.n)+'</b><small>'+esc((SECTOR[f.n] || [0,''])[1])+'</small><span class="inf-tb-b"><i style="width:'+(f.mx/mxv*100).toFixed(1)+'%;background:'+C.verde+'"></i><i style="width:'+(f.ex/mxv*100).toFixed(1)+'%;background:'+C.vino+'"></i></span></td>'+
-      '<td class="x"><b>'+miles(f.v)+'</b><small>'+pc(f.v, T)+'</small></td><td class="x">'+miles(f.mx)+'</td><td class="x">'+miles(f.ex)+'</td><td class="x">'+miles(f.s)+(f.p ? '<i class="'+(f.s>=f.p ? 'u' : 'd')+'">'+(f.s>=f.p ? '▲' : '▼')+'</i>' : '')+'</td></tr>').join('')+'</tbody></table>';
+  // tabla como la del informe: lugar, sector, estado con el que colinda, total, % y el reparto; el color de cada celda crece con su cifra
+  const mxM = Math.max(1, ...fil.map(f => f.mx)), mxE = Math.max(1, ...fil.map(f => f.ex)), tinte = (v, m, rgb) => { const a = 0.06+0.6*v/m; return 'background:rgba('+rgb+','+a.toFixed(2)+');'+(a>0.42 ? 'color:#fff' : ''); };
+  const tabla = '<table class="inf-tb inf-tb-s"><thead><tr><th></th><th>Sector</th><th>Colinda con</th><th class="x">Total</th><th class="x">%</th><th class="x">Mexicanos</th><th class="x">Extranjeros</th><th class="x">Semana</th></tr></thead><tbody>'+
+    fil.map(f => '<tr><td class="rk">'+f.r+'</td><td><b>'+esc(f.n)+'</b><span class="inf-tb-b"><i style="width:'+(f.mx/mxv*100).toFixed(1)+'%;background:'+C.verde+'"></i><i style="width:'+(f.ex/mxv*100).toFixed(1)+'%;background:'+C.vino+'"></i></span></td><td class="m">'+esc((SECTOR[f.n] || [0,''])[1])+'</td>'+
+      '<td class="x c" style="'+tinte(f.v, mxv, '143,127,46')+'"><b>'+miles(f.v)+'</b></td><td class="x p">'+pc(f.v, T)+'</td><td class="x c" style="'+tinte(f.mx, mxM, '47,102,87')+'">'+miles(f.mx)+'</td><td class="x c" style="'+tinte(f.ex, mxE, '126,48,43')+'">'+miles(f.ex)+'</td>'+
+      '<td class="x">'+miles(f.s)+(f.p ? '<i class="'+(f.s>=f.p ? 'u' : 'd')+'">'+(f.s>=f.p ? '▲' : '▼')+'</i>' : '')+'</td></tr>').join('')+
+    '<tr class="tot"><td></td><td><b>Total</b></td><td class="m">frontera norte</td><td class="x"><b>'+miles(T)+'</b></td><td class="x p">100%</td><td class="x">'+miles(MX)+'</td><td class="x">'+miles(T-MX)+'</td><td class="x">'+miles(fil.reduce((x,f) => x+f.s, 0))+'</td></tr></tbody></table>';
   return { tit:IDX[1], fte:'Fuente: CBP · sectores de la Patrulla Fronteriza y puertos de entrada, de mayor a menor · «Semana»: '+X.fch, hz:hz,
     html:enc('Encuentros por sector', esc(X.etR)+' · '+X.fchR, 'Informe migratorio · lámina 2')+
       '<div class="inf-sec"><div class="inf-sec-k">'+kk('Mexicanos', miles(MX), pc(MX, T)+' del total', 'v')+kk('Extranjeros', miles(T-MX), pc(T-MX, T)+' del total', 'r')+kk('Total', miles(T), miles(T/X.dR)+' por día')+'</div>'+
@@ -244,7 +264,7 @@ function laminaSectores(X){
         tooltip:{ confine:true, textStyle:{ fontSize:Math.max(12, u*0.78) }, formatter:p => '<b>'+esc(p.data.n)+'</b><br>'+miles(p.data.v)+' encuentros · '+pc(p.data.mx, p.data.v)+' mexicanos' },
         series:[{ type:'scatter', coordinateSystem:'geo', data:fil.filter(f => SECTOR[f.n]).map(f => ({ n:f.n, v:f.v, mx:f.mx, value:SECTOR[f.n][0].concat(f.v) })),
           symbolSize:d => u*0.7 + Math.sqrt(d[2]/mv)*u*4, itemStyle:{ color:'rgba(126,48,43,.62)', borderColor:'#fff', borderWidth:1.2 },
-          label:{ show:true, position:'top', distance:u*0.3, fontSize:u*0.7, color:C.ink, formatter:p => p.data.n+'  {v|'+corto(p.data.v)+'}', rich:{ v:{ fontSize:u*0.66, color:C.ink3 } } }, labelLayout:{ hideOverlap:true } }] }; } }] };
+          label:{ show:true, position:'top', distance:u*0.3, fontSize:u*0.7, color:C.ink, formatter:p => p.data.n+'  {v|'+miles(p.data.v)+'}', rich:{ v:{ fontSize:u*0.66, color:C.ink3 } } }, labelLayout:{ hideOverlap:true } }] }; } }] };
 }
 // Lámina 3: personas que EE. UU. entrega a México (mexicanos repatriados + extranjeros recibidos)
 function laminaRecibidos(X){
@@ -307,7 +327,7 @@ function laminaRescates(X){
       caja('Por mes', X.fchR+' · barras: total · líneas: primera vez y reincidencia', '<div id="g-res" class="inf-gr"></div>', 'inf-c-alta')+
       '<p class="inf-fr">En '+ua.y+' se han rescatado <b>'+miles(ua.t)+'</b> extranjeros: '+miles(ua.pv)+' por primera vez y '+miles(ua.re)+' reincidencias.</p>',
     graf:[{ id:'g-res', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Primera vez','Reincidencia']), tooltip:tip(u), xAxis:ejeX(u, lm), yAxis:ejeY(u),
-      series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2, label:{ show:true, position:'top', fontSize:u*0.56, color:C.ink2, formatter:p => corto(p.value) } }), linea(u, 'Primera vez', spv.v, C.verde), linea(u, 'Reincidencia', sre.v, C.vino)] }) }] };
+      series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2 }), linea(u, 'Primera vez', spv.v, C.verde), linea(u, 'Reincidencia', sre.v, C.vino)] }) }] };
 }
 // Lámina 6: caravanas (registro de caravanas: nombre, salida y personas estimadas)
 function laminaCaravanas(X){
@@ -321,8 +341,22 @@ function laminaCaravanas(X){
     html:enc('Caravanas', 'migrantes', 'Informe migratorio · lámina 6')+
       '<div class="inf-cv"><div class="inf-cv-k">'+kk('Desde '+fxa(desde), String(L.length), 'caravanas registradas')+kk(esc(X.etR), String(enR.length), 'caravanas', 'r')+
         '<div class="inf-c inf-cv-u"><span class="inf-ey">La más reciente</span><b>«'+esc(u0.n)+'»</b><span>Salió el <b>'+fxa(u0.f)+'</b><br>de '+esc(u0.s)+'</span><span class="num">'+miles(u0.p || 0)+'<small>personas estimadas</small></span></div></div>'+
+      caja('¿De dónde salen y hasta dónde llegan?', 'línea: de la salida al lugar donde se disolvió (cuando se registró)', '<div id="g-carm" class="inf-gr"></div>', 'inf-cv-g')+
       caja('Cada caravana, por fecha de salida', 'altura y tamaño: personas estimadas · en vino, las del '+esc(enPer(X)), '<div id="g-car" class="inf-gr"></div>', 'inf-cv-g')+'</div>',
-    graf:[{ id:'g-car', op:u => ({ grid:{ left:u*5.5, right:u*5, top:u*2, bottom:u*2 }, tooltip:{ confine:true, textStyle:{ fontSize:Math.max(12, u*0.78) }, formatter:p => '<b>«'+esc(p.data.n)+'»</b><br>'+fxa(p.data.f)+' · '+esc(p.data.s)+'<br>'+miles(p.data.p)+' personas estimadas' },
+    graf:[{ id:'g-carm', op:u => { if (!mapaRegion()) return {}; const sal = new Map(); L.forEach(c => { if (!c.sx) return; const k = c.sx.join(','); if (!sal.has(k)) sal.set(k, { c:c.sx, s:c.s, n:0, p:0 }); const x = sal.get(k); x.n++; x.p += c.p || 0; });
+        const nomL = s => String(s).split(',').slice(-2)[0].trim(), mxS = Math.max(1, ...[...sal.values()].map(x => x.n)), rut = L.filter(c => c.sx && c.dx);
+        return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, boundingCoords:[[-97.2,18.0],[-85.6,13.0]], aspectScale:0.96, layoutCenter:['50%','50%'], layoutSize:'100%',
+            itemStyle:{ areaColor:'#F6F4EE', borderColor:'#D3CEC0', borderWidth:0.6 }, regions:window.IANAMI_GEO.features.filter(f => f.properties.t==='m').map(f => ({ name:f.properties.key, itemStyle:{ areaColor:'#FDFCF9', borderColor:'#C6C0B1' } })) },
+          tooltip:{ confine:true, textStyle:{ fontSize:Math.max(12, u*0.78) } },
+          series:[{ type:'lines', coordinateSystem:'geo', zlevel:1, data:rut.map(c => ({ n:c.n, coords:[c.sx, c.dx], lineStyle:{ color:c.f>=X.r0 ? '#7E302B' : '#9A958A', width:u*0.08+Math.sqrt((c.p||0)/mxp)*u*0.3, opacity:0.55, curveness:0.25 } })),
+              effect:{ show:true, period:5, trailLength:0.25, symbol:'circle', symbolSize:u*0.35, color:'#C4605A' }, tooltip:{ formatter:p => '<b>«'+esc(p.data.n)+'»</b>' } },
+            { type:'effectScatter', coordinateSystem:'geo', zlevel:2, rippleEffect:{ scale:2.6, brushType:'stroke' }, data:[...sal.values()].map(x => ({ value:x.c, n:x.n, s:x.s, p:x.p })),
+              symbolSize:d => u*0.9+Math.sqrt(1)*u*0.4, itemStyle:{ color:'#7E302B', shadowBlur:u*0.4, shadowColor:'rgba(43,41,38,.3)' },
+              label:{ show:true, position:'right', fontSize:u*0.72, color:C.ink, formatter:p => nomL(p.data.s)+'  {v|'+p.data.n+' '+(p.data.n===1 ? 'caravana' : 'caravanas')+'}', rich:{ v:{ fontSize:u*0.66, color:C.ink3 } } },
+              tooltip:{ formatter:p => '<b>'+esc(p.data.s)+'</b><br>'+p.data.n+' caravanas · '+miles(p.data.p)+' personas estimadas' } },
+            { type:'scatter', coordinateSystem:'geo', zlevel:2, symbolSize:u*0.45, itemStyle:{ color:'#fff', borderColor:'#7E302B', borderWidth:1.2 }, data:rut.map(c => ({ value:c.dx, n:c.n, d:c.d })),
+              tooltip:{ formatter:p => '«'+esc(p.data.n)+'» se disolvió en '+esc(p.data.d) } }] }; } },
+      { id:'g-car', op:u => ({ grid:{ left:u*5.5, right:u*5, top:u*2, bottom:u*2 }, tooltip:{ confine:true, textStyle:{ fontSize:Math.max(12, u*0.78) }, formatter:p => '<b>«'+esc(p.data.n)+'»</b><br>'+fxa(p.data.f)+' · '+esc(p.data.s)+'<br>'+miles(p.data.p)+' personas estimadas' },
       xAxis:{ type:'time', axisLabel:{ fontSize:u*0.66, color:C.ink3, formatter:v => { const f = new Date(v); return MESC[f.getMonth()]+' '+String(f.getFullYear()).slice(2); } }, splitLine:{ show:false }, axisLine:{ lineStyle:{ color:'#D6D1C2' } } },
       yAxis:ejeY(u), series:[{ type:'scatter', data:L.map(c => ({ n:c.n, f:c.f, s:c.s, p:c.p || 0, value:[c.f, c.p || 0] })), symbolSize:d => u*0.6 + Math.sqrt(d[1]/mxp)*u*3.2,
         itemStyle:{ color:p => p.data.f>=X.r0 ? 'rgba(126,48,43,.7)' : 'rgba(154,149,138,.45)', borderColor:'#fff', borderWidth:1 },
@@ -396,7 +430,7 @@ function analisis(A){
   if (dimD && top.length) L[1].graf = [{ id:'g-an-d', op:u => ({ grid:{ left:u*11, right:u*4, top:SD.length>1 ? u*2.4 : u*0.4, bottom:u*0.4 }, legend:SD.length>1 ? ley(u, SD.map(s => s.corto)) : { show:false }, tooltip:Object.assign(tip(u), { axisPointer:{ type:'shadow', shadowStyle:{ color:'rgba(0,0,0,.03)' } } }),
     xAxis:{ type:'value', show:false }, yAxis:{ type:'category', inverse:true, data:top, axisTick:{ show:false }, axisLine:{ show:false }, axisLabel:{ fontSize:u*0.78, color:C.ink, width:u*10, overflow:'truncate' } },
     series:SD.map((s,k) => ({ name:s.corto, type:'bar', data:top.map(n => des[k].get(n) || 0), itemStyle:{ color:s.j!==jB ? 'rgba(0,0,0,0)' : s.col, borderColor:s.col, borderWidth:s.j!==jB ? 1.2 : 0, borderRadius:[0,u*0.2,u*0.2,0] }, barMaxWidth:u*1.3, barGap:'20%',
-      label:{ show:SD.length<=3, position:'right', fontSize:u*0.64, color:C.ink2, formatter:p => p.value ? corto(p.value) : '' } })) }) }];
+      label:{ show:SD.length<=3, position:'right', fontSize:u*0.64, color:C.ink2, formatter:p => p.value ? miles(p.value) : '' } })) }) }];
   abrirVisor({ titulo:'Análisis · '+tit, sub:perTxt, pie:'IA-NAMI · Análisis', laminas:L, archivo:'Analisis '+tit, resumen:hz.slice(0, 3).map(h => '• '+h.replace(/<\/?b>/g, '*').replace(/<[^>]+>/g, '')).join('\n') });
 }
 
