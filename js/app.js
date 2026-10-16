@@ -351,7 +351,7 @@ async function hacerPDF(){
     pdf.setFontSize(9); pdf.setTextColor(92, 89, 82); pdf.text(tit, m, m); pdf.text('Hoja '+(p+1), W-m, m, { align:'right' });
     pdf.addImage(c.toDataURL('image/jpeg', .9), 'JPEG', m, m+8, W-2*m, h*esc2);
   }
-  return { pdf:pdf, nombre:('IA-NAMI_'+tituloVista()).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w]+/g,'_').replace(/_+$/,'')+'.pdf', tit:tit };
+  return { pdf:pdf, nombre:('IA-NAMI_'+tituloVista()).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w]+/g,'_').replace(/_+$/,'')+'_'+(() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })()+'.pdf', tit:tit };
 }
 // WhatsApp: el celular y la tableta solo abren su menú de compartir en el instante del toque, y la computadora bloquea ventanas
 // que no salen del clic. Por eso: en computadora WhatsApp Web se abre en el clic y el PDF se descarga al estar listo;

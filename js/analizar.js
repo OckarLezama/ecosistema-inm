@@ -151,7 +151,7 @@ async function hacerPDF(avance){ const V0 = VISOR; if (!window.html2canvas || !w
       if (i) doc.addPage([1600, 900], 'landscape'); doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 1600, 900); } }
   finally { V0.el.classList.remove('imprimiendo'); ir(i0, true); }
   return doc; }
-const nombrePDF = () => (VISOR.o.archivo || 'informe').replace(/[\\/:*?"<>|]/g, '')+'.pdf';
+const nombrePDF = () => (VISOR.o.archivo || 'informe').replace(/[\\/:*?"<>|]/g, '')+' - descargado '+(() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })()+'.pdf';
 const avancePDF = pre => (k, n) => aviso(pre+' · lámina '+k+' de '+n+'…');
 async function bajarPDF(){ if (!VISOR || OCUPADO) return; OCUPADO = true; try { (await hacerPDF(avancePDF('Preparando el PDF'))).save(nombrePDF()); aviso('PDF descargado.'); } catch(e){ aviso('No se pudo generar el PDF. Inténtalo de nuevo.'); } finally { OCUPADO = false; } }
 // WhatsApp: en celular o tableta se manda el PDF con el menú de compartir; en computadora se abre WhatsApp Web con el resumen y se descarga el PDF para adjuntarlo
@@ -212,10 +212,11 @@ const IDX = ['Encuentros con extranjeros por la CBP','Encuentros por sector de l
 function portadaCifras(X){ const l = [['Encuentros CBP','cbp'],['Repatriados','rep'],['Rescatados por el INM','resc']].map(([n,k]) => { const a = V(k, null, X.a, X.b), b = V(k, null, X.pa, X.pb); return { n, a, b }; });
   return '<div class="inf-port-k">'+l.map(x => '<div><span>'+x.n+'</span><b class="num">'+miles(x.a)+'</b>'+(x.b ? '<em class="'+(Math.abs(pct(x.a, x.b)-100)<1 ? 'n' : x.a>=x.b ? 'u' : 'd')+'">'+flecha(pct(x.a, x.b)-100)+'</em>' : '')+'</div>').join('')+'</div>'; }
 function laminaPortada(X){
-  return { tit:'Portada', fte:'', cls:'inf-sl-port', html:'<div class="inf-port"><div class="inf-port-a"><span class="inf-ey">IA-NAMI · Inteligencia migratoria</span>'+
+  return { tit:'Portada', fte:'', cls:'inf-sl-port', html:'<div class="inf-port pt"><div class="pt-ilu"><img src="assets/portada/ilustracion.webp" alt=""></div><div class="pt-c"><img class="pt-logos" src="assets/portada/logos.webp" alt="Gobernación · Instituto Nacional de Migración"><div class="inf-port-a"><span class="inf-ey">IA-NAMI · Inteligencia migratoria</span>'+
     '<h1><b>Informe</b> migratorio</h1><i class="inf-port-r"></i><p class="inf-port-f">'+(X.sem ? 'Semana del <b>'+fx(X.a)+'</b> al <b>'+fxa(X.b)+'</b>' : 'Periodo personalizado · <b>'+rango(X.a, X.b)+'</b>')+'</p>'+
-    '<p class="inf-port-p">Comparado con el '+esc(enPer(X))+' · '+X.fchR+'</p>'+portadaCifras(X)+'<p class="inf-port-c">Datos de las bases del INM y de la CBP · generado el '+fxa(iso(new Date()))+'</p></div>'+
-    '<ol class="inf-port-i">'+IDX.map((t,i) => '<li data-infir="'+(i+1)+'"><b>'+String(i+1).padStart(2,'0')+'</b><span>'+t+'</span><i>'+ICO.de+'</i></li>').join('')+'</ol></div>' };
+    '<p class="inf-port-p">Comparado con el '+esc(enPer(X))+' · '+X.fchR+'</p>'+portadaCifras(X)+'</div>'+
+    '<ol class="inf-port-i">'+IDX.map((t,i) => '<li data-infir="'+(i+1)+'"><b>'+String(i+1).padStart(2,'0')+'</b><span>'+t+'</span><i>'+ICO.de+'</i></li>').join('')+'</ol>'+
+    '<p class="inf-port-c">Datos de las bases del INM y de la CBP · generado el '+fxa(iso(new Date()))+'</p></div></div>' };
 }
 // Lámina 1: encuentros de la CBP (en EE. UU.), semana y periodo, por semana en el año y por mes desde el inicio del periodo
 function laminaCBP(X){

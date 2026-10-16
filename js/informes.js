@@ -101,10 +101,10 @@ const IK = { sum:'<path d="M5 4h10M5 16h10M5 4l6 6-6 6" stroke="currentColor" st
   via:'<path d="M3 11l14-6-6 13-2-5z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>',
   doc:'<rect x="4" y="2.5" width="12" height="15" rx="2" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M7 7h6M7 10.5h6M7 14h4" stroke="currentColor" stroke-width="1.6"/>' };
 // Íconos de vía, homologados (mismo trazo y tamaño)
-const IVIA = { 'Aérea':'<path d="M2.5 11.5l15-6.5-6.5 15-2.2-6.3z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/>',
-  'Marítima (cruceros)':'<path d="M3 12.5h14l-2.2 4H5.2zM6 12.5V8h5l3 4.5M8.5 8V5" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round" stroke-linecap="round"/>',
-  'Terrestre':'<path d="M3.5 13V9.5l2-4h9l2 4V13M3.5 13h13M3.5 13v2.5M16.5 13v2.5" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round" stroke-linecap="round"/><circle cx="6.5" cy="13" r="1.2" fill="currentColor"/><circle cx="13.5" cy="13" r="1.2" fill="currentColor"/>',
-  'Aérea (vuelos PRIM)':'<path d="M2.5 11.5l15-6.5-6.5 15-2.2-6.3z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/>' };
+const AV = '<path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="currentColor"/>';
+const IVIA = { 'Aérea':AV, 'Aérea (vuelos PRIM)':AV,
+  'Marítima (cruceros)':'<path d="M20 21c-1.4 0-2.8-.5-4-1.3a7 7 0 0 1-8 0c-1.2.8-2.6 1.3-4 1.3H2v2h2c1.4 0 2.7-.4 4-1a8.6 8.6 0 0 0 8 0c1.3.6 2.6 1 4 1h2v-2h-2zM4 19c1.6 0 3-.9 4-2 1 1.1 2.4 2 4 2s3-.9 4-2c1 1.1 2.4 2 4 2l1.9-6.7c.2-.5-.1-1.1-.6-1.3L20 10.6V6a2 2 0 0 0-2-2h-3V1H9v3H6a2 2 0 0 0-2 2v4.6l-1.3.4c-.5.2-.8.8-.6 1.3L4 19zM6 6h12v4L12 8 6 10V6z" fill="currentColor"/>',
+  'Terrestre':'<path d="M18.9 6c-.2-.6-.8-1-1.4-1h-11c-.7 0-1.2.4-1.4 1L3 12v8c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-1h12v1c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-8l-2.1-6zM6.5 16a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM5 11l1.5-4.5h11L19 11H5z" fill="currentColor"/>' };
 const chip = r => '<span class="ar-dch '+(Math.abs(r)<0.01 ? 'eq' : r<0 ? 'neg' : 'pos')+'">'+(Math.abs(r)<0.01 ? '≈' : r<0 ? '▼' : '▲')+' '+pc(r)+'%</span>';
 const pts = (d, c) => '<span class="ar-pts '+(Math.abs(d)<0.5 ? 'eq' : d<0 ? 'neg' : 'pos')+'" title="'+(Math.abs(d)<0.5 ? 'sin cambio' : (d<0 ? 'bajó ' : 'subió ')+Math.abs(d).toFixed(1)+' puntos porcentuales')+'">'+(Math.abs(d)<0.5 ? '=' : d<0 ? '▼' : '▲')+(c ? '' : ' ')+Math.abs(d).toFixed(Math.abs(d)<10 ? 1 : 0)+(c ? '' : ' pts')+'</span>';
 function mspk(y, y2, col){ const v = y.map(z => z || 0), w = 110, h = 46, mx = Math.max(...v, ...(y2 || []).map(z => z || 0), 1), P = a => a.map((z,i) => [(i/(a.length-1 || 1)*w).toFixed(1), (h-4-(z || 0)/mx*(h-10)).toFixed(1)]), p1 = P(v), l = p1[p1.length-1];
@@ -146,18 +146,21 @@ function render(host, s, inter){
   const u = nota ? '<abbr title="'+esc(nota)+'">'+c.u+' ⓘ</abbr>' : c.u;
   K.push(kc('sum', 'Total · '+esc(cn ? s.fa : P.lab+(P.sub ? ' ('+P.sub+')' : '')), f(V), cm && W ? chip(V/W-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">'+u+'</span>',
     cm && W ? esc(ref)+': <b>'+f(W)+'</b> · '+(V-W<0 ? '−' : '+')+f(Math.abs(V-W)) : '', mspk(ys1, ys2 && !disp ? ys2 : null, '#2F6657')));
-  K.push(kc('day', 'Promedio por día', f(V/dias), cm && W && !cn ? chip((V/dias)/(W/cd)-1)+'<span class="ar-dvs">que '+esc(lab2)+'</span>' : '<span class="ar-dvs">máximo '+f(Math.max(...ys1, 0))+' '+gl.replace('por ', 'en un ')+'</span>',
-    cm && W && !cn ? esc(ref)+': <b>'+f(W/cd)+'</b> por día' : '', mbar(ys1, '#8F7F2E')));
-  const share = (m, m2, sel, D_, lado) => { if (!m) return ''; const o = ord(m), s1 = sm(m); if (!o.length || !s1) return '';
+  K.push(kc('day', 'Promedio por día', f(V/dias), cm && W ? chip((V/dias)/(W/cd)-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">máximo '+f(Math.max(...ys1, 0))+' '+gl.replace('por ', 'en un ')+'</span>',
+    cm && W ? esc(ref)+': <b>'+f(W/cd)+'</b> por día' : '', mbar(ys1, '#8F7F2E')));
+  const share = (m, m2, sel, D_, lado, sel2) => { if (!m) return ''; const o = ord(m), s1 = sm(m); if (!o.length || !s1) return '';
+    const pp = p => (p<0.01 ? (p*100).toFixed(2) : Math.round(p*100))+'%';
+    if (sel!=null && sel2!=null){ const p = (m.get(sel) || 0)/s1, p2 = (m.get(sel2) || 0)/s1, R2 = o.findIndex(x => x[0]===sel2);
+      return kc(D_.ic, esc(sel)+' en el total', pp(p), '<span class="ar-dvs">de todo el '+(c.u==='entradas' ? 'flujo' : 'total')+'</span>'+pts((p-p2)*100), esc(sel2)+': <b>'+pp(p2)+'</b>'+(R2>=0 ? ' · lugar '+(R2+1)+' de '+o.length : ''), ring(p, '#7E302B')); }
     if (sel==null){ const t = o[0], p = t[1]/s1, s2 = m2 ? sm(m2) : 0, p2 = m2 && s2 ? (m2.get(t[0]) || 0)/s2 : null;
       return kc(D_.ic, 'Primer lugar · '+D_.tipo, esc(t[0]), '<span class="ar-dvs"><b>'+Math.round(p*100)+'</b> de cada 100</span>'+(p2!=null ? pts((p-p2)*100) : ''), p2!=null ? 'en '+esc(ref)+' eran '+Math.round(p2*100)+' de cada 100' : '', ring(p, '#7E302B'), 'kn'); }
     const v = m.get(sel) || 0, p = v/s1, R = o.findIndex(x => x[0]===sel);
     return kc(D_.ic, esc(sel)+' en el total', (p<0.01 ? (p*100).toFixed(2) : Math.round(p*100))+'%', '<span class="ar-dvs">de todo el '+(c.u==='entradas' ? 'flujo' : 'total')+'</span>', R>=0 ? 'lugar <b>'+(R+1)+'</b> de '+o.length+' · '+esc(P.lab) : '', ring(p, '#7E302B')); };
-  if (da) K.push(share(mA, mA2, cn ? null : s.fa, DA, 'A'));
-  if (db && !(c.V && db===c.V)) K.push(share(mB, cn ? null : mB2, s.fb, DB, 'B'));
-  if (c.V && db!==c.V && (s.fb==null || db!=='p')){ const Fv = Object.assign({}, F), mV = porNom(k, c.V, a, b, Fv), mV2 = cm && !cn ? porNom(k, c.V, ca, cb, Fv) : null, tv = sm(mV), tv2 = mV2 ? sm(mV2) : 0, ov = ord(mV);
+  if (da) K.push(share(mA, mA2, s.fa, DA, 'A', cn ? cm.fa : null));
+  if (db && !(c.V && db===c.V)) K.push(share(mB, mB2, s.fb, DB, 'B'));
+  if (c.V && db!==c.V && (s.fb==null || db!=='p')){ const Fv = Object.assign({}, F), mV = porNom(k, c.V, a, b, Fv), mV2 = cm ? (cn ? porNom(k, c.V, a, b, filtros(s, cm.fa)) : porNom(k, c.V, ca, cb, Fv)) : null, tv = sm(mV), tv2 = mV2 ? sm(mV2) : 0, ov = ord(mV);
     if (tv) K.push(kc('via', '¿Por qué vía de internación?', esc(ov[0][0].replace(' (cruceros)',''))+' '+Math.round(ov[0][1]/tv*100)+'%', '<div class="ar-vrow">'+[...mV.keys()].map(n => { const p = mV.get(n)/tv*100, p2 = mV2 && tv2 ? (mV2.get(n) || 0)/tv2*100 : null;
-      return '<span class="ar-vi" title="'+esc(n)+': '+p.toFixed(1)+'% de las entradas'+(p2!=null ? '; en '+esc(ref)+' era '+p2.toFixed(1)+'%' : '')+'"><svg width="15" height="15" viewBox="0 0 20 20">'+(IVIA[n] || IK.via)+'</svg><i>'+esc(n.replace(/ \(.*\)/, ''))+'</i><b>'+(p<10 ? p.toFixed(1) : Math.round(p))+'%</b>'+(p2!=null ? pts(p-p2, 1) : '')+'</span>'; }).join('')+'</div>', '', '', 'wide')); }
+      return '<span class="ar-vi" title="'+esc(n)+': '+p.toFixed(1)+'% de las entradas'+(p2!=null ? '; en '+esc(ref)+' era '+p2.toFixed(1)+'%' : '')+'"><svg width="16" height="16" viewBox="0 0 24 24">'+(IVIA[n] || AV)+'</svg><i>'+esc(n.replace(/ \(.*\)/, ''))+'</i><b>'+(p<10 ? p.toFixed(1) : Math.round(p))+'%</b>'+(p2!=null ? pts(p-p2, 1) : '')+'</span>'; }).join('')+'</div>', '', '', 'wide')); }
   const show = id => !H.includes(id), x = id => inter ? '<button class="ar-qz" data-hide="'+id+'" title="Quitar de la lámina">✕</button>' : '';
   const tw = show('t'), aw = da && show('a'), bw = db && show('b');
   const segA = inter && c.A.length>1 ? '<span class="ar-sg2">'+c.A.map((d, i) => '<button data-o="iA" data-v="'+i+'" class="'+((s.iA || 0)===i ? 'on' : '')+'">'+DIM(k, d).tipo+'</button>').join('')+'</span>' : '';
@@ -221,12 +224,12 @@ function render(host, s, inter){
   host._fra = fra; host._hz = hz; host._k = { n:c.t, v:V, r:cm && W && !cn ? V/W-1 : null, ref:cm && !cn ? ref : '', per:P.lab };
 }
 function portada(host, s){ const it = s.items || [], ks = (s.ks || []).slice(0, 3), t = esc(s.titulo || 'Informe').split(' ');
-  host.innerHTML = '<div class="ar-cv ar-cvp"><div class="inf-port"><div class="inf-port-a"><span class="inf-ey">IA-NAMI · Inteligencia migratoria</span>'+
-    '<h1><b>'+t[0]+'</b> '+t.slice(1).join(' ')+'</h1><i class="inf-port-r"></i><p class="inf-port-f">'+esc(s.fecha || '')+'</p><p class="inf-port-p">'+esc(s.datos || '')+'</p>'+
-    (ks.length ? '<div class="inf-port-k">'+ks.map(x => '<div><span>'+esc(x.n)+'</span><b class="num">'+f(x.v)+'</b>'+(x.r!=null ? '<em class="'+(Math.abs(x.r)<0.01 ? 'n' : x.r>0 ? 'u' : 'd')+'">'+(Math.abs(x.r)<0.01 ? '≈' : x.r<0 ? '▼' : '▲')+' '+pc(x.r)+'% · que '+esc(x.ref)+'</em>' : '')+'</div>').join('')+'</div>' : '')+
-    '<p class="inf-port-c">Datos de las bases del INM y de la CBP</p></div>'+
-    '<ol class="inf-port-i">'+it.map((x, i) => '<li><b>'+String(i+1).padStart(2, '0')+'</b><span>'+esc(x[0])+'<small>'+esc(x[1] || '')+'</small></span><i></i></li>').join('')+
-      '<li><b>'+String(it.length+1).padStart(2, '0')+'</b><span>Narrativa</span><i></i></li></ol></div></div>'; }
+  host.innerHTML = '<div class="ar-cv ar-cvp"><div class="inf-port pt"><div class="pt-ilu"><img src="assets/portada/ilustracion.webp" alt=""></div><div class="pt-c"><img class="pt-logos" src="assets/portada/logos.webp" alt="Gobernación · Instituto Nacional de Migración">'+
+    '<div class="inf-port-a"><span class="inf-ey">IA-NAMI · Inteligencia migratoria</span><h1><b>'+t[0]+'</b> '+t.slice(1).join(' ')+'</h1><i class="inf-port-r"></i><p class="inf-port-f">'+esc(s.fecha || '')+'</p><p class="inf-port-p">'+esc(s.datos || '')+'</p>'+
+    (ks.length ? '<div class="inf-port-k">'+ks.map(x => '<div><span>'+esc(x.n)+'</span><b class="num">'+f(x.v)+'</b>'+(x.r!=null ? '<em class="'+(Math.abs(x.r)<0.01 ? 'n' : x.r>0 ? 'u' : 'd')+'">'+(Math.abs(x.r)<0.01 ? '≈' : x.r<0 ? '▼' : '▲')+' '+pc(x.r)+'% · que '+esc(x.ref)+'</em>' : '')+'</div>').join('')+'</div>' : '')+'</div>'+
+    '<ol class="inf-port-i">'+it.map((x, i) => '<li data-arir="'+(i+1)+'"><b>'+String(i+1).padStart(2, '0')+'</b><span>'+esc(x[0])+'<small>'+esc(x[1] || '')+'</small></span><i>›</i></li>').join('')+
+      '<li data-arir="'+(it.length+1)+'"><b>'+String(it.length+1).padStart(2, '0')+'</b><span>Narrativa</span><i>›</i></li></ol>'+
+    '<p class="inf-port-c">Datos de las bases del INM y de la CBP</p></div></div></div>'; }
 function narrativa(host, s){ const n = s.items.length;
   host.innerHTML = '<div class="ar-cv ar-cvn"><header class="inf-h"><span class="inf-ey">'+esc(s.titulo || 'Informe')+' · cierre</span><h2><b>Narrativa</b> <span>'+esc(s.fecha || '')+'</span></h2></header>'+
     '<div class="inf-hzt'+(n===1 ? ' uno' : '')+'" style="grid-template-columns:repeat('+Math.min(n, 3)+',1fr)">'+s.items.map(x => '<div class="inf-c"><span class="inf-ey">'+esc(x[0])+'</span><ul>'+(x[2] && x[2].length ? x[2] : [esc(x[1])]).map(h => '<li>'+h+'</li>').join('')+'</ul></div>').join('')+'</div>'+
@@ -335,9 +338,13 @@ function frases(){ const d = document.createElement('div'); d.style.cssText = 'p
 function completo(){ const it = frases(), hoy = new Date();
   const fe = hoy.getDate()+' de '+ML[hoy.getMonth()]+' de '+hoy.getFullYear();
   return [{ tipo:'port', titulo:TIT, fecha:fe, datos:'Datos al '+fd(finK('resc')), items:it.map(x => [x[0], x[3] ? x[3].per+(x[3].ref ? ' · contra '+x[3].ref : '') : '']), ks:it.map(x => x[3]).filter(Boolean) }].concat(PR, it.length ? [{ tipo:'nar', titulo:TIT, fecha:fe, items:it.map(x => [x[0], x[1], x[2]]) }] : []); }
-function vshow(){ const fr = $('ar-fr'); fr.innerHTML = '<div class="ar-lam"></div>'; render(fr.firstChild, VL[VI], false); $('ar-vt').textContent = 'Lámina '+(VI+1)+' de '+VL.length+' · ← → o desliza'; fit(); }
+function vshow(){ const fr = $('ar-fr'); fr.innerHTML = '<div class="ar-lam"></div>'; const L = fr.firstChild; render(L, VL[VI], false); $('ar-vt').textContent = 'Lámina '+(VI+1)+' de '+VL.length+' · ← → o desliza';
+  const hz = L._hz || [], nb = $('ar-vnb'); nb.hidden = !hz.length; nb.classList.remove('on'); nb.querySelector('b').textContent = hz.length;
+  if (hz.length) L.insertAdjacentHTML('beforeend', '<aside class="inf-hz ar-hz" hidden><span class="inf-hz-e">Narrativa</span><h4>'+esc(tit(VL[VI]))+'</h4><ol>'+hz.map((h, j) => '<li style="--d:'+(j*0.14+0.12)+'s">'+h+'</li>').join('')+'</ol></aside>');
+  fit(); }
+function vnar(){ const a = $('ar-fr').querySelector('.ar-hz'), nb = $('ar-vnb'); if (!a) return; a.hidden = !a.hidden; nb.classList.toggle('on', !a.hidden); }
 function fit(){ const fr = $('ar-fr'), st = fr.parentNode.getBoundingClientRect(); fr.style.transform = 'translate(-50%,-50%)'; const z = fr.getBoundingClientRect().width/1600 || 1;
-  const sc = Math.min((st.width-120)/(1600*z), (st.height-24)/(fr.offsetHeight*z)); fr.style.transform = 'translate(-50%,-50%) scale('+sc+')'; }
+  const sc = Math.min((st.width-(innerWidth<700 ? 16 : 96)*z)/(1600*z), (st.height-8*z)/(900*z)); fr.style.transform = 'translate(-50%,-50%) scale('+sc+')'; }
 function abrirV(l, t){ VL = l; VI = 0; $('ar-vh').textContent = t || TIT; $('ar-vis').classList.add('on'); document.body.style.overflow = 'hidden'; vshow(); }
 function cerrarV(){ $('ar-vis').classList.remove('on'); document.body.style.overflow = ''; }
 
@@ -354,7 +361,7 @@ async function pdf(){ if (OCUPADO) return null; if (!PR.length){ toast('Agrega a
       if (i) doc.addPage([1600, 900], 'landscape'); const h = Math.min(900, cv.height*1600/cv.width); doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, (900-h)/2, 1600, h);
       d.querySelectorAll('.ar-gr').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.dispose(); }); }
     d.remove(); return doc; } finally { OCUPADO = false; } }
-const nombre = () => 'IA-NAMI '+TIT.replace(/[^\wÁÉÍÓÚÑáéíóúñ -]+/g, '').slice(0, 60)+'.pdf';
+const nombre = () => TIT.replace(/[^\wÁÉÍÓÚÑáéíóúñ -]+/g, '').slice(0, 60)+' - descargado '+(() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })()+'.pdf';
 async function bajar(){ const doc = await pdf(); if (doc){ doc.save(nombre()); toast('PDF listo'); } }
 function liga(){ try { const u = location.origin+location.pathname+'?arma='+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify({ t:TIT, l:PR }))))); return u; } catch(e){ return location.href; } }
 async function whatsapp(){ const txt = '*'+TIT+'*\n'+frases().map((x, i) => (i+1)+'. '+x[1]).join('\n')+'\n'+liga();
@@ -382,7 +389,7 @@ function pintar(host){ HOST = host; HZ = hallazgos();
     '<div class="ar-sec" id="ar-lsec"><div class="ar-lam" id="ar-lam"></div><div class="ar-acts"><button class="ar-btn bv" id="ar-add" hidden>＋ Agregar a mi informe</button><button class="ar-btn bo" id="ar-full" hidden>⤢ Ver como se presenta</button></div></div>'+
     '<div class="ar-tray"><div class="ar-tt"><input id="ar-tit" value="'+esc(TIT)+'" aria-label="Título de tu informe" title="Título de la portada"><div id="ar-tc">vacío</div></div><div class="ar-tl" id="ar-tl"></div>'+
       '<div class="ar-tb"><button class="ar-btn bk" id="ar-liga">Liga</button><button class="ar-btn bk" id="ar-pdf">PDF</button><button class="ar-btn bw" id="ar-wa">WhatsApp</button><button class="ar-btn bp" id="ar-pres">▶ Presentar</button></div></div>'+
-    '<div class="ar-vis" id="ar-vis"><div class="ar-vbar"><div><b id="ar-vh"></b><br><small id="ar-vt"></small></div><span class="sp"></span><button class="ar-btn bk" id="ar-vx">✕ Cerrar</button></div>'+
+    '<div class="ar-vis" id="ar-vis"><div class="ar-vbar"><div><b id="ar-vh"></b><br><small id="ar-vt"></small></div><span class="sp"></span><button class="inf-nb ar-vnb" id="ar-vnb" hidden title="Ver la narrativa de esta lámina"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Narrativa</span><b></b></button><button class="ar-btn bk" id="ar-vx">✕ Cerrar</button></div>'+
       '<button class="ar-va" style="left:16px" id="ar-vp">‹</button><button class="ar-va" style="right:16px" id="ar-vn">›</button><div class="ar-stage"><div class="ar-fr" id="ar-fr"></div></div></div>'+
     '<div class="ar-toast" id="ar-toast"></div></div>';
   const lam = $('ar-lam'); lam.addEventListener('click', clic);
@@ -407,10 +414,12 @@ function pintar(host){ HOST = host; HZ = hallazgos();
   $('ar-pres').addEventListener('click', () => { if (!PR.length){ toast('Agrega al menos una lámina'); return; } abrirV(completo()); });
   $('ar-pdf').addEventListener('click', bajar); $('ar-wa').addEventListener('click', whatsapp); $('ar-liga').addEventListener('click', copiarLiga);
   $('ar-vx').addEventListener('click', cerrarV); $('ar-vn').addEventListener('click', () => { if (VI<VL.length-1){ VI++; vshow(); } }); $('ar-vp').addEventListener('click', () => { if (VI>0){ VI--; vshow(); } });
+  $('ar-vnb').addEventListener('click', vnar);
+  $('ar-fr').addEventListener('click', e => { const li = e.target.closest('[data-arir]'); if (li){ VI = +li.dataset.arir; vshow(); } });
   const vis = $('ar-vis'); let sx = null; vis.addEventListener('pointerdown', e => sx = e.clientX); vis.addEventListener('pointerup', e => { if (sx==null) return; const d = e.clientX-sx; if (Math.abs(d)>50) $(d<0 ? 'ar-vn' : 'ar-vp').click(); sx = null; });
   // Liga compartida
   const m = location.search.match(/[?&]arma=([^&]+)/); if (m){ try { const o = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1]))))); TIT = o.t || TIT; PR = (o.l || []).filter(x => x && CK[x.k]); $('ar-tit').value = TIT; } catch(e){} }
-  tray(); render(lam, S, true); marca(); }
+  tray(); render(lam, S, true); marca(); if (m && PR.length) setTimeout(() => abrirV(completo()), 250); }
 addEventListener('keydown', e => { const v = $('ar-vis'); if (!v || !v.classList.contains('on')) return; if (e.key==='ArrowRight') $('ar-vn').click(); if (e.key==='ArrowLeft') $('ar-vp').click(); if (e.key==='Escape') cerrarV(); });
 addEventListener('resize', () => { document.querySelectorAll('.ar-gr').forEach(g => { const c = window.echarts && echarts.getInstanceByDom(g); c && c.resize(); }); const v = $('ar-vis'); if (v && v.classList.contains('on')) fit(); });
 

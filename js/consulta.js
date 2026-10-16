@@ -979,7 +979,7 @@ const LIBS = ['lib/html2canvas.min.js', 'lib/jspdf.umd.min.js'];   // incluidas 
 const RESPALDO = { 'lib/html2canvas.min.js':'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'lib/jspdf.umd.min.js':'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js' };
 const cargar = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok;
   s.onerror = () => { s.remove(); if (!RESPALDO[u]) return mal(); const r = document.createElement('script'); r.src = RESPALDO[u]; r.onload = ok; r.onerror = mal; document.head.appendChild(r); }; document.head.appendChild(s); });
-const nombreArch = () => { let t = (Q.modo==='b' ? 'bullets ' : '')+norm(titulo(R)); if (t.length>56) t = t.slice(0, t.lastIndexOf(' ', 56)); return 'IA-NAMI_'+t.replace(/ /g,'_')+'_'+Q.d0.slice(0,7); };
+const nombreArch = () => { let t = (Q.modo==='b' ? 'bullets ' : '')+norm(titulo(R)); if (t.length>56) t = t.slice(0, t.lastIndexOf(' ', 56)); return 'IA-NAMI_'+t.replace(/ /g,'_')+'_'+Q.d0.slice(0,7)+'_descargado_'+(() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })(); };
 // La imagen se dibuja aparte, a tamaño fijo, para que salga igual desde cualquier pantalla
 // Una imagen a la vez: la que se prepara para Compartir y la de Imagen/PDF usan el mismo espacio de dibujo
 let COLA = Promise.resolve();

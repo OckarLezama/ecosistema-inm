@@ -1801,3 +1801,27 @@ body.en-inf{overflow:hidden}
 .ar-cvn .inf-hzt .inf-ey{font-size:calc(var(--u)*.85);color:#2F6657;font-weight:600}
 .ar-vrow{flex-wrap:wrap;row-gap:2px;gap:2px 12px}.ar-vi i{font-size:12.5px}
 .ar-pop button.ar-off,.ar-pop .t.ar-off{display:none!important}.ar-nada{display:none;padding:10px;color:var(--k3);font-size:13px}.ar-nada.on{display:block}
+/* Portada con ilustración y logos (informe migratorio y Arma tu informe) */
+.inf-port.pt{grid-template-columns:38% 1fr;gap:0;padding:0;align-items:stretch;height:100%;min-height:0}
+.pt-ilu{position:relative;overflow:hidden;background:linear-gradient(180deg,#F1EDE3 0%,#E7E1D3 100%);border-right:1px solid #E1DACB}
+.pt-ilu img{position:absolute;left:52%;bottom:0;transform:translateX(-50%);height:94%;width:auto;max-width:none;filter:grayscale(1) contrast(1.03)}
+.pt-ilu::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,#2F6657 0 33.3%,#E8E4DA 33.3% 66.6%,#7E302B 66.6%)}
+.pt-c{display:flex;flex-direction:column;min-width:0;min-height:0;padding:calc(var(--u)*2.8) calc(var(--u)*4) calc(var(--u)*2.4) calc(var(--u)*4.4)}
+.pt-logos{height:calc(var(--u)*3.3);width:auto;align-self:flex-start;margin-bottom:auto}
+.pt .inf-port-a{margin-top:calc(var(--u)*2)}
+.pt .inf-port h1,.pt h1{font-size:calc(var(--u)*4.6)}
+.pt .inf-port-i{display:grid;grid-template-columns:1fr 1fr;column-gap:calc(var(--u)*2.2);margin-top:calc(var(--u)*2.2);border-top:0}
+.pt .inf-port-i li{padding:calc(var(--u)*.6) calc(var(--u)*.3);font-size:calc(var(--u)*.86);grid-template-columns:calc(var(--u)*2.1) 1fr auto;border-top:1px solid #E4E0D4;border-bottom:0}
+.pt .inf-port-i li:nth-last-child(-n+2){border-bottom:1px solid #E4E0D4}
+.pt .inf-port-i b{font-size:calc(var(--u)*.86)}
+.pt .inf-port-c{margin-top:calc(var(--u)*1.4)}
+.ar-cvp .pt .inf-port-i li{cursor:pointer}.ar-cvp .pt .inf-port-i i{font-style:normal;color:#C2BCAE;font-size:calc(var(--u)*1.2)}
+/* Visor de Arma tu informe: 16:9 exacto y del tamaño del informe migratorio */
+.ar-stage{top:50px;bottom:10px}
+.ar-fr .ar-lam,.ar-print{height:900px;box-sizing:border-box;padding:22px 30px;overflow:hidden}
+.ar-fr .ar-cv,.ar-print .ar-cv{height:100%;aspect-ratio:auto}
+.ar-fr .ar-cvp,.ar-print .ar-cvp{margin:-22px -30px;height:calc(100% + 44px)}
+.ar-fr .ar-cvp .inf-port,.ar-print .ar-cvp .inf-port{flex:1}
+.ar-vnb{position:static;height:34px;padding:0 6px 0 12px;font-size:13px;gap:7px;margin-right:10px;--u:16px}.ar-vnb svg{width:16px;height:16px}.ar-vnb b{min-width:22px;height:22px;font-size:11px}.ar-vnb[hidden]{display:none}
+.ar-hz{--u:16px;top:84px;right:30px;bottom:40px}
+.pt-ilu img{left:auto;right:-3%;transform:none}
