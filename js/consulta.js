@@ -257,7 +257,9 @@ function valoresLargos(){ if (VLARGOS) return VLARGOS; const S = new Set();
 // Sin indicador, pero con un valor que solo existe en una base («razones humanitarias», «retorno asistido», «garita»):
 // se toma el indicador de esa base. Las dimensiones comunes (país, estado, oficina, sexo, edad) no deciden.
 const COMUNES = new Set(['n','e','of','sexo','edad']);
-function entender(txt){ const q = entender0(txt);
+// «este año», «el año pasado»: se cambian por el año (el del último dato)
+const anioRel = txt => { const y = +FIN.slice(0,4); return String(txt).replace(/\b(del|en el|el|de)?\s*a[ñn]o\s+(pasado|anterior)\b/gi, ' '+(y-1)+' ').replace(/\b(este|en este|del|de este|en el)\s+a[ñn]o(\s+en\s+curso)?\b/gi, ' '+y+' ').replace(/\ba[ñn]o\s+en\s+curso\b/gi, ' '+y+' '); };
+function entender(txt){ txt = anioRel(txt); const q = entender0(txt);
   if (q.perfil || !(q.avisos || []).some(a => /^No reconocí qué quieres ver/.test(a))) return q;
   const t = ' '+norm(txt)+' ', vistos = new Set();
   for (const ind of IND){ const B = BASES[ind.b]; if (!B || vistos.has(ind.b)) continue; vistos.add(ind.b);
@@ -1057,5 +1059,8 @@ function irTablero(){
   if (window.IANAMI_NAV){ cerrar(); window.IANAMI_NAV.ir(p.d, p); }
 }
 
+// Motor de cálculo para Analizar (js/analizar.js): mismas bases, mismas reglas y mismos textos que Pregunta a INAMI
+window.IANAMI_MOTOR = { BASES:BASES, IND:IND, INDK:INDK, suma:suma, total:total, porDim:porDim, serie:serie, cubetas:cubetas, medParte:medParte, parteDe:parteDe,
+  entender:entender, calcular:calcular, limitar:limitar, nuevaQ:nuevaQ, bullets:bullets, titulo:titulo, sumaDias:sumaDias, difDias:difDias, finBase:finBase, fechaTxt:fechaTxt, rangoTxt:rangoTxt, INI:INI, FIN:FIN, mesa:mesa, flB:flB };
 window.IANAMI_CONSULTA = { abrir:abrir, cerrar:cerrar, _prueba:{ entender:entender, calcular:calcular, nuevaQ:nuevaQ, limitar:limitar, titulo:titulo, IND:IND, BASES:BASES, suma:suma, bullets:bullets, textoBullets:textoBullets } };
 })();

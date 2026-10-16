@@ -321,6 +321,7 @@ function ayuda(b, fija){ let p = $('rg-pop'); if (!p){ p = document.createElemen
   const r = b.getBoundingClientRect(), w = p.offsetWidth; p.style.left = Math.max(8, Math.min(r.left-12, window.innerWidth-w-8))+'px'; p.style.top = (r.bottom+8)+'px'; }
 /* ==== COMPARTIR: PDF de lo que está en pantalla, para descargar o mandar por WhatsApp ==== */
 const LIBS_PDF = ['lib/html2canvas.min.js', 'lib/jspdf.umd.min.js'];   // incluidas en el sitio (versiones 1.4.1 y 2.5.1)
+window.IANAMI_LIBS_PDF = () => Promise.all(LIBS_PDF.map(u => cargarJS(u)));   // Analizar las usa para el PDF de las láminas
 // Carga una librería del sitio; si no está, la toma de la red como respaldo
 const RESPALDO = { 'lib/html2canvas.min.js':'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'lib/jspdf.umd.min.js':'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js' };
 const cargarJS = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok;
@@ -1447,9 +1448,10 @@ function marcarFiltro(){
 // con datos/datos.js; lo demás se baja la primera vez que se abre esa parte y queda en memoria.
 const VERSION = ((document.querySelector('script[src*="js/app.js"]') || {}).src || '').split('?')[1] || '';
 const MODULOS = { control:['datos/control.js','js/control.js'], regulacion:['datos/regulacion.js','datos/plazos.js','js/regulacion.js'], proteccion:['datos/proteccion.js','js/proteccion.js'],
-  consulta:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js'] };
-const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI' };
-const LISTO_MOD = { control:'IANAMI_CONTROL', regulacion:'IANAMI_REGULACION', proteccion:'IANAMI_PROTECCION', consulta:'IANAMI_CONSULTA' };
+  consulta:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js'],
+  analizar:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/analizar.js'] };
+const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI', analizar:'Analizar' };
+const LISTO_MOD = { control:'IANAMI_CONTROL', regulacion:'IANAMI_REGULACION', proteccion:'IANAMI_PROTECCION', consulta:'IANAMI_CONSULTA', analizar:'IANAMI_ANALIZAR' };
 const BAJADOS = {};
 const modListo = k => !!window[LISTO_MOD[k]];
 function bajarJS(src){ return BAJADOS[src] || (BAJADOS[src] = new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src+(VERSION ? '?'+VERSION : '');
@@ -1546,6 +1548,9 @@ function irA(v){
   if (S.play) detener();
   if (v==='dir'){ const k = DIRS[S.dir || 0].k; if (MODULOS[k] && !modListo(k)){ $('vista-otra').innerHTML = '<div class="esq" role="status" aria-label="Cargando '+esc(NOM_MOD[k])+'"><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
     cargarModulo(k).then(() => { if (S.vista==='dir' && DIRS[S.dir || 0].k===k) irA('dir'); }, () => {}); return; } }
+  if (v==='analizar'){ if (!modListo('analizar')){ $('vista-otra').innerHTML = '<div class="esq" role="status" aria-label="Cargando Analizar"><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
+      cargarModulo('analizar').then(() => { if (S.vista==='analizar') irA('analizar'); }, () => {}); return; }
+    window.IANAMI_ANALIZAR.pintar($('vista-otra')); return; }
   const F0 = {ss:null, n:null}; let h = '';
   if (v==='dir' && DIRS[S.dir || 0].k==='regulacion' && window.IANAMI_REGULACION){ window.IANAMI_REGULACION.pintar($('vista-otra')); return; }   // Regulación tiene su propia vista
   if (v==='dir' && DIRS[S.dir || 0].k==='control' && window.IANAMI_CONTROL){ window.IANAMI_CONTROL.pintar($('vista-otra')); return; }      // Control migratorio también
@@ -2276,6 +2281,7 @@ function iniciar(){
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && SALA.on) cerrarSala(); });
   // «?completa» en la dirección (pantallas táctiles de sala): el navegador no deja entrar solo a pantalla completa,
   // así que el primer toque, clic o tecla la activa; si alguien sale, el siguiente toque vuelve a entrar
+  if (/[?&]informe=/.test(location.search)) setTimeout(() => irA('analizar'), 0);   // liga compartida de un informe: abre Analizar y el informe
   if (/[?&#]completa\b/i.test(location.search+location.hash)){ const ir = () => { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); };
     addEventListener('pointerdown', ir, true); addEventListener('keydown', ir, true); }
   $('tgraf').addEventListener('pointermove', tipTiempo); $('tgraf').addEventListener('pointerleave', () => tipTiempo(null)); $('tgraf').addEventListener('pointerup', e => { if (e.pointerType==='touch') setTimeout(() => tipTiempo(null), 1800); });
