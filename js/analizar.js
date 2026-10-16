@@ -88,6 +88,8 @@ const FUENTE = "Barlow, 'Segoe UI', system-ui, sans-serif";
 // opciones de cada gráfica: la cuadrícula de la plataforma (cuadritos) y una entrada animada
 function opcion(g, U){ const op = Object.assign({ textStyle:{ fontFamily:FUENTE }, animationDuration:1100, animationEasing:'cubicOut', animationDurationUpdate:500 }, g.op(U));
   [].concat(op.series || []).forEach((x, k) => { if (x && x.type==='bar' && x.animationDelay==null) x.animationDelay = i => i*12; });
+  // barras con su dato en vertical: más aire arriba para que quepa
+  if ([].concat(op.series || []).some(x => x && x.type==='bar' && x.label && x.label.show && x.label.rotate===90) && op.grid) op.grid.top = Math.max(op.grid.top || 0, U*4.4);
   return window.IANAMI_CUAD ? window.IANAMI_CUAD(op) : op; }
 function dibujar(){ const V0 = VISOR; V0.ch.forEach(c => c.dispose()); V0.ch = []; V0.gr = [];
   V0.o.laminas.forEach((l, i) => (l.graf || []).forEach(g => { const el = V0.el.querySelector('.inf-sl[data-i="'+i+'"] #'+g.id); if (!el) return;
@@ -135,26 +137,31 @@ function eventosVisor(el){
   st.addEventListener('pointerup', e => { if (x0==null) return; const dx = e.clientX-x0, dy = e.clientY-y0; x0 = null; if (Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)*1.3) ir(VISOR.i + (dx<0 ? 1 : -1)); });
   st.addEventListener('pointercancel', () => { x0 = null; });
 }
-function aviso(t, accion){ const m = $('inf-msg'); if (!m) return; m.innerHTML = '<span>'+t+'</span>'+(accion || ''); m.classList.add('on'); clearTimeout(aviso.t); aviso.t = setTimeout(() => m.classList.remove('on'), accion ? 15000 : 3600); }
+function aviso(t, accion){ const m = $('inf-msg'); if (!m) return; m.innerHTML = '<span>'+t+'</span>'+(accion || ''); m.classList.add('on'); clearTimeout(aviso.t); aviso.t = setTimeout(() => m.classList.remove('on'), accion ? 15000 : /…$/.test(t) ? 60000 : 4200); }
 // PDF: una lámina por página, del tamaño de la lámina, con sus gráficas
-async function hacerPDF(){ const V0 = VISOR; if (!window.html2canvas || !window.jspdf) await window.IANAMI_LIBS_PDF();
-  const st = $('inf-st'), w = st.offsetWidth, h = st.offsetHeight, { jsPDF } = window.jspdf, doc = new jsPDF({ orientation:'landscape', unit:'px', format:[1600, 900], hotfixes:['px_scaling'] }), i0 = V0.i;
+// PDF: una lámina por página. Solo se copia el visor (no toda la página) y sin animaciones: así es rápido y sale completo.
+let OCUPADO = false;
+async function hacerPDF(avance){ const V0 = VISOR; if (!window.html2canvas || !window.jspdf) await window.IANAMI_LIBS_PDF();
+  const st = $('inf-st'), w = st.offsetWidth, h = st.offsetHeight, { jsPDF } = window.jspdf, doc = new jsPDF({ orientation:'landscape', unit:'px', format:[1600, 900], hotfixes:['px_scaling'] }), i0 = V0.i, n = V0.o.laminas.length;
+  const fuera = x => { if (!x.closest || /^(HTML|HEAD|BODY|STYLE|LINK|META|TITLE)$/.test(x.tagName)) return false; if (x.closest('.inf')) return x.classList.contains('inf-nb') || x.classList.contains('inf-hz') || x.classList.contains('inf-ex') || x.classList.contains('inf-ctl') || x.classList.contains('inf-msg'); return !x.contains(V0.el); };
   V0.el.classList.add('imprimiendo');
-  try { for (let i=0;i<V0.o.laminas.length;i++){ ir(i, true); await new Promise(r => setTimeout(r, 140)); const sl = V0.el.querySelector('.inf-sl[data-i="'+i+'"]');
-      const cv = await html2canvas(sl, { scale:1600/w*1.5, backgroundColor:'#FCFBF7', useCORS:true, width:w, height:h, ignoreElements:x => x.classList && (x.classList.contains('inf-nb') || x.classList.contains('inf-hz') || x.classList.contains('inf-ex')) });
-      if (i) doc.addPage([1600, 900], 'landscape'); doc.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 1600, 900); } }
+  try { for (let i=0;i<n;i++){ if (avance) avance(i+1, n); ir(i, true); await new Promise(r => setTimeout(r, 60)); const sl = V0.el.querySelector('.inf-sl[data-i="'+i+'"]');
+      const cv = await html2canvas(sl, { scale:1600/w, backgroundColor:'#FBFAF6', useCORS:true, logging:false, width:w, height:h, ignoreElements:fuera,
+        onclone:d => { const e = d.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; d.head.appendChild(e); if (window.IANAMI_COLORFIJO) window.IANAMI_COLORFIJO(d); } });
+      if (i) doc.addPage([1600, 900], 'landscape'); doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 1600, 900); } }
   finally { V0.el.classList.remove('imprimiendo'); ir(i0, true); }
   return doc; }
 const nombrePDF = () => (VISOR.o.archivo || 'informe').replace(/[\\/:*?"<>|]/g, '')+'.pdf';
-async function bajarPDF(){ if (!VISOR) return; aviso('Preparando el PDF…'); try { (await hacerPDF()).save(nombrePDF()); aviso('PDF descargado.'); } catch(e){ aviso('No se pudo generar el PDF. Inténtalo de nuevo.'); } }
-// WhatsApp: en el teléfono o la tableta se manda el PDF con el menú de compartir; en computadora se abre WhatsApp Web con el resumen y la liga
+const avancePDF = pre => (k, n) => aviso(pre+' · lámina '+k+' de '+n+'…');
+async function bajarPDF(){ if (!VISOR || OCUPADO) return; OCUPADO = true; try { (await hacerPDF(avancePDF('Preparando el PDF'))).save(nombrePDF()); aviso('PDF descargado.'); } catch(e){ aviso('No se pudo generar el PDF. Inténtalo de nuevo.'); } finally { OCUPADO = false; } }
+// WhatsApp: en celular o tableta se manda el PDF con el menú de compartir; en computadora se abre WhatsApp Web con el resumen y se descarga el PDF para adjuntarlo
 const textoWA = () => ('*'+VISOR.o.titulo+'*\n'+(VISOR.o.sub || '')).trim()+(VISOR.o.resumen ? '\n\n'+VISOR.o.resumen : '')+(VISOR.o.liga ? '\n\nVer en IA-NAMI: '+VISOR.o.liga : '');
 let PDF_LISTO = null;
-async function whatsapp(){ if (!VISOR) return; const movil = navigator.canShare && navigator.canShare({ files:[new File([''], 'a.pdf', { type:'application/pdf' })] });
-  if (!movil){ window.open('https://wa.me/?text='+encodeURIComponent(textoWA()), '_blank', 'noopener'); aviso('Se abrió WhatsApp con el resumen'+(VISOR.o.liga ? ' y la liga' : '')+'. Para adjuntar el PDF, descárgalo con el botón PDF.'); return; }
-  aviso('Preparando el PDF para WhatsApp…');
-  try { const doc = await hacerPDF(); PDF_LISTO = new File([doc.output('blob')], nombrePDF(), { type:'application/pdf' });
-    aviso('El PDF está listo.', '<button data-infenvia>Enviar por WhatsApp</button>'); } catch(e){ aviso('No se pudo generar el PDF. Inténtalo de nuevo.'); } }
+async function whatsapp(){ if (!VISOR || OCUPADO) return; const tactil = matchMedia('(pointer:coarse)').matches, archivos = tactil && navigator.canShare && navigator.canShare({ files:[new File(['x'], 'a.pdf', { type:'application/pdf' })] });
+  if (!archivos){ window.open('https://wa.me/?text='+encodeURIComponent(textoWA()), '_blank', 'noopener');
+    OCUPADO = true; try { (await hacerPDF(avancePDF('Se abrió WhatsApp con el resumen; preparando el PDF para adjuntarlo'))).save(nombrePDF()); aviso('PDF descargado: adjúntalo en el chat de WhatsApp que se abrió.'); } catch(e){ aviso('Se abrió WhatsApp con el resumen; el PDF no se pudo generar.'); } finally { OCUPADO = false; } return; }
+  OCUPADO = true; try { const doc = await hacerPDF(avancePDF('Preparando el PDF para WhatsApp')); PDF_LISTO = new File([doc.output('blob')], nombrePDF(), { type:'application/pdf' });
+    aviso('El PDF está listo.', '<button data-infenvia>Enviar por WhatsApp</button>'); } catch(e){ aviso('No se pudo generar el PDF. Inténtalo de nuevo.'); } finally { OCUPADO = false; } }
 async function enviarPDF(){ if (!PDF_LISTO) return; try { await navigator.share({ files:[PDF_LISTO], title:VISOR.o.titulo, text:textoWA() }); $('inf-msg').classList.remove('on'); }
   catch(e){ if (!e || e.name!=='AbortError') aviso('No se pudo abrir el menú de compartir. Descarga el PDF y envíalo desde WhatsApp.'); } }
 
@@ -186,8 +193,9 @@ const punteada = (u, col) => ({ lineStyle:{ width:u*0.12, color:col, type:[u*0.3
 function marcas(data, u, col){ let mx = -1, j = -1; data.forEach((v,i) => { if (v!=null && v>mx){ mx = v; j = i; } }); const ult = data.length-1;
   return data.map((v,i) => (i===ult || i===j) && v!=null ? { value:v, label:{ show:true, position:'top', distance:u*0.35, fontSize:u*0.62, fontWeight:700, color:col, formatter:p => miles(p.value) }, labelLayout:{ hideOverlap:false } } : v); }
 const etiq = c => c.g==='m' ? c.l.map(x => MESC[f0(x.a).getMonth()]+' '+String(f0(x.a).getFullYear()).slice(2)) : c.l.map(x => fx(x.a));
-const etqBarra = (u, n, col) => ({ show:true, position:n>16 ? 'insideBottom' : 'top', rotate:n>16 ? 90 : 0, align:n>16 ? 'left' : 'center', verticalAlign:'middle', distance:u*0.3, fontSize:u*0.52, color:col || C.ink2, formatter:p => p.value ? miles(p.value) : '' });
-const barra = (u, nom, data, col, o) => Object.assign({ name:nom, type:'bar', data:data, itemStyle:{ color:col, borderRadius:[u*0.18,u*0.18,0,0] }, barMaxWidth:u*1.8, label:etqBarra(u, data.length), emphasis:{ focus:'series', label:{ fontWeight:700 } } }, o || {});
+// dato de cada barra arriba de ella; con muchas barras, en vertical hacia arriba para que no choque con la de al lado ni con las líneas de abajo
+const etqBarra = (u, n, col) => ({ show:true, position:'top', rotate:n>16 ? 90 : 0, align:n>16 ? 'left' : 'center', verticalAlign:'middle', distance:u*0.25, fontSize:u*0.5, color:col || '#8A857A', formatter:p => p.value ? miles(p.value) : '' });
+const barra = (u, nom, data, col, o) => Object.assign({ name:nom, type:'bar', data:data, itemStyle:{ color:col, borderRadius:[u*0.18,u*0.18,0,0] }, barMaxWidth:u*1.8, label:etqBarra(u, data.length), labelLayout:{ hideOverlap:true }, emphasis:{ focus:'series', label:{ fontWeight:700 } } }, o || {});
 // Narrativa: frases que cuentan qué pasó, con las cifras en negritas
 const cuanto = d => { const a = Math.abs(d); return a<1.5 ? 'prácticamente igual que' : (d>0 ? 'subió ' : 'bajó ')+'<b>'+a.toFixed(a<10 ? 1 : 0)+'%</b> contra'; };
 const deCada = p => { const c = [[50,'la mitad'],[25,'1 de cada 4'],[75,'3 de cada 4'],[33.3,'1 de cada 3'],[66.7,'2 de cada 3'],[20,'1 de cada 5'],[80,'4 de cada 5'],[10,'1 de cada 10'],[90,'9 de cada 10']].find(x => Math.abs(x[0]-p)<=1.8);
@@ -257,10 +265,11 @@ function laminaSectores(X){
   return { tit:IDX[1], fte:'Fuente: CBP · sectores de la Patrulla Fronteriza y puertos de entrada, de mayor a menor · «Semana»: '+X.fch, hz:hz,
     html:enc('Encuentros por sector', esc(X.etR)+' · '+X.fchR, 'Informe migratorio · lámina 2')+
       '<div class="inf-sec"><div class="inf-sec-k">'+kk('Mexicanos', miles(MX), pc(MX, T)+' del total', 'v')+kk('Extranjeros', miles(T-MX), pc(T-MX, T)+' del total', 'r')+kk('Total', miles(T), miles(T/X.dR)+' por día')+'</div>'+
-      '<div class="inf-c inf-sec-m"><button class="inf-ex flota" data-infex title="Ampliar" aria-label="Ampliar o regresar">'+ICO.amp+'</button><div id="g-sec" class="inf-gr"></div></div><div class="inf-c inf-sec-t">'+tabla+'</div></div>',
+      '<div class="inf-c inf-sec-m inf-mapa"><button class="inf-ex flota" data-infex title="Ampliar" aria-label="Ampliar o regresar">'+ICO.amp+'</button><div id="g-sec" class="inf-gr"></div>'+
+        '<div class="inf-mapa-d solo-ex"><span class="inf-ey">Encuentros por sector · '+esc(X.etR)+'</span><ol>'+fil.map(f => '<li><b>'+f.r+'. '+esc(f.n)+'</b><span><em style="color:'+C.verde+'">'+pc(f.mx, f.v)+' mex.</em> · <em style="color:'+C.vino+'">'+pc(f.ex, f.v)+' ext.</em> · semana '+miles(f.s)+'</span><i>'+miles(f.v)+'</i></li>').join('')+'</ol></div></div><div class="inf-c inf-sec-t">'+tabla+'</div></div>',
     graf:[{ id:'g-sec', op:u => { if (!mapaRegion()) return {}; const mv = Math.max(1, ...fil.map(f => f.v));
-      return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, boundingCoords:[[-118.6,33.6],[-96.4,25.0]], aspectScale:0.86, layoutCenter:['50%','50%'], layoutSize:'100%',
-          itemStyle:{ areaColor:'#F6F4EE', borderColor:'#D3CEC0', borderWidth:0.6 }, regions:window.IANAMI_GEO.features.filter(f => f.properties.t==='m').map(f => ({ name:f.properties.key, itemStyle:{ areaColor:'#FDFCF9', borderColor:'#C6C0B1' } })) },
+      return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, emphasis:{ disabled:true }, select:{ disabled:true }, tooltip:{ show:false }, boundingCoords:[[-118.6,33.6],[-96.4,25.0]], aspectScale:0.86, layoutCenter:['50%','50%'], layoutSize:'100%',
+          itemStyle:{ areaColor:'#F6F4EE', borderColor:'#D3CEC0', borderWidth:0.6 }, regions:window.IANAMI_GEO.features.filter(f => f.properties.t==='m').map(f => ({ name:f.properties.key, itemStyle:{ areaColor:'#FDFCF9', borderColor:'#C6C0B1' }, emphasis:{ disabled:true } })) },
         tooltip:{ confine:true, textStyle:{ fontSize:Math.max(12, u*0.78) }, formatter:p => '<b>'+esc(p.data.n)+'</b><br>'+miles(p.data.v)+' encuentros · '+pc(p.data.mx, p.data.v)+' mexicanos' },
         series:[{ type:'scatter', coordinateSystem:'geo', data:fil.filter(f => SECTOR[f.n]).map(f => ({ n:f.n, v:f.v, mx:f.mx, value:SECTOR[f.n][0].concat(f.v) })),
           symbolSize:d => u*0.7 + Math.sqrt(d[2]/mv)*u*4, itemStyle:{ color:'rgba(126,48,43,.62)', borderColor:'#fff', borderWidth:1.2 },
@@ -289,7 +298,7 @@ function laminaRecibidos(X){
       cifra({ eti:X.etR, fechas:X.fchR, n:T, uni:'recibidos', prom:T/X.dR, rp:[{ nom:'Mexicanos', v:MX, c:C.verde }, { nom:'Extranjeros', v:EX, c:C.vino }], tono:'b' })+'</div>'+
       '<div class="inf-g12"><div class="inf-col">'+cajaAer+cajaTer+cajaGH+'</div>'+caja('Personas devueltas por EE. UU., por semana', f0(X.b).getFullYear(), '<div id="g-rec" class="inf-gr"></div>')+'</div>',
     graf:[{ id:'g-rec', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Mexicanos','Extranjeros']), tooltip:tip(u), xAxis:ejeX(u, lw), yAxis:ejeY(u),
-      series:[barra(u, 'Total', st, C.arena, { barMaxWidth:u*1.3 }), linea(u, 'Mexicanos', marcas(smx.v, u, C.verde), C.verde), linea(u, 'Extranjeros', sex.v, C.vino)] }) }] };
+      series:[barra(u, 'Total', st, C.arena, { barMaxWidth:u*1.3, label:{ show:false } }), linea(u, 'Mexicanos', marcas(smx.v, u, C.verde), C.verde), linea(u, 'Extranjeros', sex.v, C.vino)] }) }] };
 }
 // Lámina 4: repatriados por tipo de retorno (garitas y puentes contra vuelos PRIM), por semana y por año
 function laminaRetorno(X){
@@ -330,6 +339,10 @@ function laminaRescates(X){
       series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2 }), linea(u, 'Primera vez', spv.v, C.verde), linea(u, 'Reincidencia', sre.v, C.vino)] }) }] };
 }
 // Lámina 6: caravanas (registro de caravanas: nombre, salida y personas estimadas)
+// recorrido por la carretera costera de Chiapas y Oaxaca (la 200), de Tapachula hacia el norte: la línea va por tierra hasta donde se disolvió
+const CARRETERA = [[-92.263,14.905],[-92.46,15.14],[-92.66,15.32],[-92.9,15.43],[-93.21,15.69],[-93.53,15.93],[-93.75,16.09],[-93.9,16.24],[-94.1,16.38],[-94.35,16.48],[-94.62,16.5],[-94.95,16.55],[-95.1,16.45],[-95.22,16.33]];
+function ruta(a, b){ if (Math.abs(a[0]-CARRETERA[0][0])>0.2 || Math.abs(a[1]-CARRETERA[0][1])>0.2) return [a, b];
+  const l = CARRETERA.filter(p => p[0] >= b[0]-0.05); return l.concat([b]); }
 function laminaCaravanas(X){
   const L = ((window.IANAMI_DATOS || {}).caravanas || []).filter(c => c.f && c.f<=X.b).sort((a,b) => a.f<b.f ? -1 : 1); if (!L.length) return null;
   const desde = L[0].f, enR = L.filter(c => c.f>=X.r0), u0 = L[L.length-1], enS = L.filter(c => c.f>=X.a && c.f<=X.b), mxp = Math.max(1, ...L.map(c => c.p || 0));
@@ -341,26 +354,21 @@ function laminaCaravanas(X){
     html:enc('Caravanas', 'migrantes', 'Informe migratorio · lámina 6')+
       '<div class="inf-cv"><div class="inf-cv-k">'+kk('Desde '+fxa(desde), String(L.length), 'caravanas registradas')+kk(esc(X.etR), String(enR.length), 'caravanas', 'r')+
         '<div class="inf-c inf-cv-u"><span class="inf-ey">La más reciente</span><b>«'+esc(u0.n)+'»</b><span>Salió el <b>'+fxa(u0.f)+'</b><br>de '+esc(u0.s)+'</span><span class="num">'+miles(u0.p || 0)+'<small>personas estimadas</small></span></div></div>'+
-      caja('¿De dónde salen y hasta dónde llegan?', 'línea: de la salida al lugar donde se disolvió (cuando se registró)', '<div id="g-carm" class="inf-gr"></div>', 'inf-cv-g')+
-      caja('Cada caravana, por fecha de salida', 'altura y tamaño: personas estimadas · en vino, las del '+esc(enPer(X)), '<div id="g-car" class="inf-gr"></div>', 'inf-cv-g')+'</div>',
+      '<div class="inf-c inf-cv-g inf-mapa"><h3>¿De dónde salen y hasta dónde llegan?<small>línea: de la salida al lugar donde se disolvió, cuando se registró · en vino, las del '+esc(enPer(X))+'</small><button class="inf-ex" data-infex title="Ampliar" aria-label="Ampliar o regresar">'+ICO.amp+'</button></h3>'+
+        '<div class="inf-mapa-w"><div id="g-carm" class="inf-gr"></div><div class="inf-mapa-d"><span class="inf-ey">Caravanas recientes</span><ol>'+L.slice(-8).reverse().map(c => '<li class="'+(c.f>=X.r0 ? 'r' : '')+'"><b>«'+esc(c.n)+'»</b><span>'+fxa(c.f)+' · '+esc(String(c.s).split(',').slice(-2)[0].trim())+(c.d ? ' → '+esc(String(c.d).split(',')[0]) : '')+'</span><i>'+miles(c.p || 0)+'</i></li>').join('')+'</ol></div></div></div></div>',
     graf:[{ id:'g-carm', op:u => { if (!mapaRegion()) return {}; const sal = new Map(); L.forEach(c => { if (!c.sx) return; const k = c.sx.join(','); if (!sal.has(k)) sal.set(k, { c:c.sx, s:c.s, n:0, p:0 }); const x = sal.get(k); x.n++; x.p += c.p || 0; });
         const nomL = s => String(s).split(',').slice(-2)[0].trim(), mxS = Math.max(1, ...[...sal.values()].map(x => x.n)), rut = L.filter(c => c.sx && c.dx);
-        return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, boundingCoords:[[-97.2,18.0],[-85.6,13.0]], aspectScale:0.96, layoutCenter:['50%','50%'], layoutSize:'100%',
-            itemStyle:{ areaColor:'#F6F4EE', borderColor:'#D3CEC0', borderWidth:0.6 }, regions:window.IANAMI_GEO.features.filter(f => f.properties.t==='m').map(f => ({ name:f.properties.key, itemStyle:{ areaColor:'#FDFCF9', borderColor:'#C6C0B1' } })) },
+        return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, emphasis:{ disabled:true }, select:{ disabled:true }, tooltip:{ show:false }, boundingCoords:[[-98.6,18.2],[-86.0,13.2]], aspectScale:0.96, layoutCenter:['50%','50%'], layoutSize:'100%',
+            itemStyle:{ areaColor:'#F6F4EE', borderColor:'#D3CEC0', borderWidth:0.6 }, regions:window.IANAMI_GEO.features.filter(f => f.properties.t==='m').map(f => ({ name:f.properties.key, itemStyle:{ areaColor:'#FDFCF9', borderColor:'#C6C0B1' }, emphasis:{ disabled:true } })) },
           tooltip:{ confine:true, textStyle:{ fontSize:Math.max(12, u*0.78) } },
-          series:[{ type:'lines', coordinateSystem:'geo', zlevel:1, data:rut.map(c => ({ n:c.n, coords:[c.sx, c.dx], lineStyle:{ color:c.f>=X.r0 ? '#7E302B' : '#9A958A', width:u*0.08+Math.sqrt((c.p||0)/mxp)*u*0.3, opacity:0.55, curveness:0.25 } })),
+          series:[{ type:'lines', coordinateSystem:'geo', zlevel:1, polyline:true, data:rut.map(c => ({ n:c.n, coords:ruta(c.sx, c.dx), lineStyle:{ color:c.f>=X.r0 ? '#7E302B' : '#9A958A', width:u*0.08+Math.sqrt((c.p||0)/mxp)*u*0.3, opacity:0.65 } })),
               effect:{ show:true, period:5, trailLength:0.25, symbol:'circle', symbolSize:u*0.35, color:'#C4605A' }, tooltip:{ formatter:p => '<b>«'+esc(p.data.n)+'»</b>' } },
             { type:'effectScatter', coordinateSystem:'geo', zlevel:2, rippleEffect:{ scale:2.6, brushType:'stroke' }, data:[...sal.values()].map(x => ({ value:x.c, n:x.n, s:x.s, p:x.p })),
               symbolSize:d => u*0.9+Math.sqrt(1)*u*0.4, itemStyle:{ color:'#7E302B', shadowBlur:u*0.4, shadowColor:'rgba(43,41,38,.3)' },
               label:{ show:true, position:'right', fontSize:u*0.72, color:C.ink, formatter:p => nomL(p.data.s)+'  {v|'+p.data.n+' '+(p.data.n===1 ? 'caravana' : 'caravanas')+'}', rich:{ v:{ fontSize:u*0.66, color:C.ink3 } } },
               tooltip:{ formatter:p => '<b>'+esc(p.data.s)+'</b><br>'+p.data.n+' caravanas · '+miles(p.data.p)+' personas estimadas' } },
             { type:'scatter', coordinateSystem:'geo', zlevel:2, symbolSize:u*0.45, itemStyle:{ color:'#fff', borderColor:'#7E302B', borderWidth:1.2 }, data:rut.map(c => ({ value:c.dx, n:c.n, d:c.d })),
-              tooltip:{ formatter:p => '«'+esc(p.data.n)+'» se disolvió en '+esc(p.data.d) } }] }; } },
-      { id:'g-car', op:u => ({ grid:{ left:u*5.5, right:u*5, top:u*2, bottom:u*2 }, tooltip:{ confine:true, textStyle:{ fontSize:Math.max(12, u*0.78) }, formatter:p => '<b>«'+esc(p.data.n)+'»</b><br>'+fxa(p.data.f)+' · '+esc(p.data.s)+'<br>'+miles(p.data.p)+' personas estimadas' },
-      xAxis:{ type:'time', axisLabel:{ fontSize:u*0.66, color:C.ink3, formatter:v => { const f = new Date(v); return MESC[f.getMonth()]+' '+String(f.getFullYear()).slice(2); } }, splitLine:{ show:false }, axisLine:{ lineStyle:{ color:'#D6D1C2' } } },
-      yAxis:ejeY(u), series:[{ type:'scatter', data:L.map(c => ({ n:c.n, f:c.f, s:c.s, p:c.p || 0, value:[c.f, c.p || 0] })), symbolSize:d => u*0.6 + Math.sqrt(d[1]/mxp)*u*3.2,
-        itemStyle:{ color:p => p.data.f>=X.r0 ? 'rgba(126,48,43,.7)' : 'rgba(154,149,138,.45)', borderColor:'#fff', borderWidth:1 },
-        label:{ show:true, position:'top', distance:u*0.3, fontSize:u*0.66, color:C.ink2, formatter:p => ETQ.has(p.data.n) ? (p.data.n.length>24 ? p.data.n.slice(0, 22)+'…' : p.data.n) : '' }, labelLayout:{ hideOverlap:true } }] }) }] };
+              tooltip:{ formatter:p => '«'+esc(p.data.n)+'» se disolvió en '+esc(p.data.d) } }] }; } } ] };
 }
 function laminaNarrativa(L, X){ const g = L.filter(l => l.hz && l.hz.length);
   return { tit:'Narrativa de la semana', cls:'inf-sl-nar', fte:'Cifras calculadas con las bases del tablero; cada frase solo aparece si hay datos.', html:enc('Narrativa', X.sem ? 'de la semana · '+X.fch : X.fch, 'Informe migratorio · cierre')+
