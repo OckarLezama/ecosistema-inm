@@ -57,7 +57,7 @@ const ICONO = {
   cbp:'M3 21V9l9-6 9 6v12M3 13h18M8 21v-4h8v4M12 3v4'
 };
 // Secciones del menú (las que aún no existen muestran qué llevarán)
-const SECCIONES = [['pulso','Pulso'],['dir','Procesos'],['analizar','Analizar'],['prosp','Prospectiva'],['contexto','Contexto'],['bases','Bases']];
+const SECCIONES = [['pulso','Pulso'],['dir','Procesos'],['inf','Informes'],['prosp','Prospectiva'],['contexto','Contexto'],['bases','Bases']];
 // Procesos del INM y las direcciones que los alimentan
 const DIRS = [
   {k:'control',    s:'Control migratorio',     n:'DGCVM y DGCOR', ind:['ing','rech','pres','can','ret','resc','recib']},
@@ -1449,9 +1449,10 @@ function marcarFiltro(){
 const VERSION = ((document.querySelector('script[src*="js/app.js"]') || {}).src || '').split('?')[1] || '';
 const MODULOS = { control:['datos/control.js','js/control.js'], regulacion:['datos/regulacion.js','datos/plazos.js','js/regulacion.js'], proteccion:['datos/proteccion.js','js/proteccion.js'],
   consulta:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js'],
-  analizar:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/analizar.js'] };
-const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI', analizar:'Analizar' };
-const LISTO_MOD = { control:'IANAMI_CONTROL', regulacion:'IANAMI_REGULACION', proteccion:'IANAMI_PROTECCION', consulta:'IANAMI_CONSULTA', analizar:'IANAMI_ANALIZAR' };
+  analizar:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/analizar.js'],
+  arma:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/informes.js'] };
+const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI', analizar:'Informe migratorio', arma:'Arma tu informe' };
+const LISTO_MOD = { control:'IANAMI_CONTROL', regulacion:'IANAMI_REGULACION', proteccion:'IANAMI_PROTECCION', consulta:'IANAMI_CONSULTA', analizar:'IANAMI_ANALIZAR', arma:'IANAMI_ARMA' };
 const BAJADOS = {};
 const modListo = k => !!window[LISTO_MOD[k]];
 function bajarJS(src){ return BAJADOS[src] || (BAJADOS[src] = new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src+(VERSION ? '?'+VERSION : '');
@@ -1498,6 +1499,7 @@ function elegir(i){ const x = hallados[i]; if (!x) return; $('buscar').value = '
   if (x.sel.t==='g') S.agr = x.sel.a; fijarSel(x.sel, true); }
 function pintarNav(){ $('nav').innerHTML = SECCIONES.map(s => s[0]==='dir'
   ? '<button data-menu-dir aria-haspopup="true" aria-expanded="false" class="'+(S.vista==='dir'?'on':'')+'">Procesos ▾</button>'
+  : s[0]==='inf' ? '<button data-menu-inf aria-haspopup="true" aria-expanded="false" class="'+(S.vista==='arma' || S.vista==='analizar' ?'on':'')+'">Informes ▾</button>'
   : '<button data-vista="'+s[0]+'" class="'+(S.vista===s[0]?'on':'')+'"'+(S.vista===s[0]?' aria-current="page"':'')+'>'+s[1]+'</button>').join(''); }
 // Con mouse, el menú de Procesos se abre al pasar el cursor; en pantallas táctiles, con un toque
 const CON_HOVER = matchMedia('(hover:hover) and (pointer:fine)').matches; let tMenu = null;
@@ -1505,7 +1507,20 @@ if (CON_HOVER) document.addEventListener('mouseover', e => {
   const m = $('menu-dir'); if (!m) return; const boton = e.target.closest('[data-menu-dir]');
   if (boton || e.target.closest('#menu-dir')){ clearTimeout(tMenu); if (boton && m.hidden) menuDir(true); }
   else if (!m.hidden){ clearTimeout(tMenu); tMenu = setTimeout(() => menuDir(false), 220); }
+  const mi = $('menu-inf'); if (!mi) return; const bi = e.target.closest('[data-menu-inf]');
+  if (bi || e.target.closest('#menu-inf')){ clearTimeout(tMenuI); if (bi && mi.hidden) menuInf(true); }
+  else if (!mi.hidden){ clearTimeout(tMenuI); tMenuI = setTimeout(() => menuInf(false), 220); }
 });
+// Menú de Informes: Arma tu informe y el Informe migratorio de la semana
+let tMenuI = null;
+function menuInf(abrir){
+  const m = $('menu-inf'), b = document.querySelector('[data-menu-inf]'); if (!m || !b) return;
+  m.hidden = !abrir; b.setAttribute('aria-expanded', abrir);
+  if (abrir){ const r = b.getBoundingClientRect(), top = document.querySelector('.top').getBoundingClientRect(), z = E || 1;
+    m.innerHTML = '<button data-inf="arma" class="'+(S.vista==='arma'?'on':'')+'"><b>Arma tu informe</b><span>Busca, compara y junta láminas en tu informe</span></button>'+
+      '<button data-inf="analizar" class="'+(S.vista==='analizar'?'on':'')+'"><b>Informe migratorio</b><span>El informe de la semana, listo para presentar</span></button>';
+    m.style.left = Math.max(8, Math.min((r.left-top.left)/z, top.width/z-m.offsetWidth-8))+'px'; m.style.top = ((r.bottom-top.top)/z+2)+'px'; }
+}
 function menuDir(abrir){
   const m = $('menu-dir'), b = document.querySelector('[data-menu-dir]'); if (!m || !b) return;
   m.hidden = !abrir; b.setAttribute('aria-expanded', abrir);
@@ -1548,6 +1563,9 @@ function irA(v){
   if (S.play) detener();
   if (v==='dir'){ const k = DIRS[S.dir || 0].k; if (MODULOS[k] && !modListo(k)){ $('vista-otra').innerHTML = '<div class="esq" role="status" aria-label="Cargando '+esc(NOM_MOD[k])+'"><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
     cargarModulo(k).then(() => { if (S.vista==='dir' && DIRS[S.dir || 0].k===k) irA('dir'); }, () => {}); return; } }
+  if (v==='arma'){ if (!modListo('arma')){ $('vista-otra').innerHTML = '<div class="esq" role="status" aria-label="Cargando Arma tu informe"><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
+      cargarModulo('arma').then(() => { if (S.vista==='arma') irA('arma'); }, () => {}); return; }
+    window.IANAMI_ARMA.pintar($('vista-otra')); return; }
   if (v==='analizar'){ if (!modListo('analizar')){ $('vista-otra').innerHTML = '<div class="esq" role="status" aria-label="Cargando Analizar"><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
       cargarModulo('analizar').then(() => { if (S.vista==='analizar') irA('analizar'); }, () => {}); return; }
     window.IANAMI_ANALIZAR.pintar($('vista-otra')); return; }
@@ -2281,7 +2299,8 @@ function iniciar(){
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && SALA.on) cerrarSala(); });
   // «?completa» en la dirección (pantallas táctiles de sala): el navegador no deja entrar solo a pantalla completa,
   // así que el primer toque, clic o tecla la activa; si alguien sale, el siguiente toque vuelve a entrar
-  if (/[?&]informe=/.test(location.search)) setTimeout(() => irA('analizar'), 0);   // liga compartida de un informe: abre Analizar y el informe
+  if (/[?&]informe=/.test(location.search)) setTimeout(() => irA('analizar'), 0);
+  if (/[?&]arma=/.test(location.search)) setTimeout(() => irA('arma'), 0);   // liga compartida de «Arma tu informe»   // liga compartida de un informe: abre Analizar y el informe
   if (/[?&#]completa\b/i.test(location.search+location.hash)){ const ir = () => { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); };
     addEventListener('pointerdown', ir, true); addEventListener('keydown', ir, true); }
   $('tgraf').addEventListener('pointermove', tipTiempo); $('tgraf').addEventListener('pointerleave', () => tipTiempo(null)); $('tgraf').addEventListener('pointerup', e => { if (e.pointerType==='touch') setTimeout(() => tipTiempo(null), 1800); });
@@ -2294,6 +2313,9 @@ function iniciar(){
   document.addEventListener('click', e => {
     const T = q => e.target.closest(q);
     if (T('[data-menu-dir]')){ menuDir(CON_HOVER ? true : $('menu-dir').hidden); return; }
+    if (T('[data-menu-inf]')){ menuInf(CON_HOVER ? true : $('menu-inf').hidden); return; }
+    const inf = T('[data-inf]'); if (inf){ menuInf(false); irA(inf.dataset.inf); return; }
+    if (!T('#menu-inf')) menuInf(false);
     const di = T('[data-dir]'); if (di){ S.dir = +di.dataset.dir; menuDir(false); irA('dir'); return; }
     if (!T('#menu-dir')) menuDir(false);
     const vi = T('[data-vista]'); if (vi){ irA(vi.dataset.vista); return; }

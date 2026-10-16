@@ -1,7 +1,7 @@
 // Prueba automática de IA-NAMI. Ejecutar desde la carpeta pruebas: node analizar_informe.js
 // Analizar: el informe semanal arma sus láminas sin errores y sus cifras cuadran con las bases (CBP, rescates, repatriados, recibidos);
 // se cambia de lámina con flechas, puntos, teclado y deslizando; los hallazgos se abren; la liga compartida abre el mismo informe;
-// el análisis por texto y el armador (conceptos, nacionalidades, periodos) generan láminas. En escritorio, tableta y celular.
+// se entra desde el menú Informes › Informe migratorio. En escritorio, tableta y celular.
 const { chromium } = require('playwright'); const path = require('path'); const dir = path.resolve(__dirname, '..');
 global.window = {}; global.document = { getElementById(){ return null; } };
 for (const f of ['datos.js','control.js','proteccion.js','regulacion.js','vocabulario.js']) require(dir+'/datos/'+f);
@@ -13,7 +13,7 @@ const miles = n => Math.round(n).toLocaleString('en-US');
     const p = await (await b.newContext({ viewport:{ width:w, height:h } })).newPage(); p.on('pageerror', e => errs.push(w+': '+e.message));
     await p.route('**/*', r => r.request().url().startsWith('file://') ? r.continue() : r.abort());
     await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500);
-    await p.evaluate(() => { const x = [...document.querySelectorAll('button, a')].find(e => e.textContent.trim()==='Analizar'); if (x) x.click(); });
+    await p.click('[data-menu-inf]'); await p.waitForTimeout(300); await p.click('[data-inf="analizar"]');
     await p.waitForSelector('[data-angen]', { timeout:90000 });
     const [a, z] = (await p.$eval('#an-sem', s => s.value)).split('_');
     ok(new Date(a+'T00:00:00').getDay()===1 && new Date(z+'T00:00:00').getDay()===0, w+' la semana va de lunes a domingo ('+a+' – '+z+')');
@@ -31,14 +31,6 @@ const miles = n => Math.round(n).toLocaleString('en-US');
     await p.click('.inf-pt [data-infir="7"]'); await p.waitForTimeout(700); ok(await p.$eval('.inf-sl.activa', e => e.dataset.i)==='7', w+' los puntos llevan a una lámina');
     ok(await p.evaluate(() => { const s = document.getElementById('inf-st'); return s.offsetWidth/s.offsetHeight>1.76 && s.offsetWidth/s.offsetHeight<1.79 && s.offsetWidth<=innerWidth; }), w+' lámina 16:9 dentro de la pantalla');
 await p.click('[data-infx]'); await p.waitForTimeout(400);
-    // análisis por texto y armador
-    await p.fill('#an-txt', 'rescatados de Venezuela y Cuba 2026 contra 2025'); await p.click('.an-q button'); await p.waitForSelector('.inf-sl', { timeout:30000 }); await p.waitForTimeout(600);
-    const k = await p.$$eval('.inf-an-k', l => l.length); ok(k===4, w+' 2 nacionalidades × 2 años = 4 tarjetas ('+k+')');
-    await p.click('[data-infx]'); await p.waitForTimeout(300);
-    await p.evaluate(() => { const s = document.getElementById('an-c'); s.value = 'rep'; s.dispatchEvent(new Event('change', { bubbles:true })); });
-    await p.click('[data-anper="trump"]'); await p.click('[data-ancmp="no"]'); await p.click('[data-anver]'); await p.waitForSelector('.inf-sl', { timeout:30000 }); await p.waitForTimeout(600);
-    ok(await p.$$eval('.inf-an-k', l => l.length)>=1 && await p.evaluate(() => !!echarts.getInstanceByDom(document.getElementById('g-an-t'))), w+' el armador genera el análisis con su gráfica');
-    await p.click('[data-infx]');
     await p.screenshot({ path:path.join(__dirname,'capturas','analizar-'+w+'.png') });
   }
   // liga compartida: abre el mismo informe
