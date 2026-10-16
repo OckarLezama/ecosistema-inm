@@ -212,11 +212,11 @@ const IDX = ['Encuentros con extranjeros por la CBP','Encuentros por sector de l
 function portadaCifras(X){ const l = [['Encuentros CBP','cbp'],['Repatriados','rep'],['Rescatados por el INM','resc']].map(([n,k]) => { const a = V(k, null, X.a, X.b), b = V(k, null, X.pa, X.pb); return { n, a, b }; });
   return '<div class="inf-port-k">'+l.map(x => '<div><span>'+x.n+'</span><b class="num">'+miles(x.a)+'</b>'+(x.b ? '<em class="'+(Math.abs(pct(x.a, x.b)-100)<1 ? 'n' : x.a>=x.b ? 'u' : 'd')+'">'+flecha(pct(x.a, x.b)-100)+'</em>' : '')+'</div>').join('')+'</div>'; }
 function laminaPortada(X){
-  return { tit:'Portada', fte:'', cls:'inf-sl-port', html:'<div class="inf-port pt"><div class="pt-ilu"><img src="assets/portada/ilustracion.webp" alt=""></div><div class="pt-c"><img class="pt-logos" src="assets/portada/logos.webp" alt="Gobernación · Instituto Nacional de Migración"><div class="inf-port-a"><span class="inf-ey">IA-NAMI · Inteligencia migratoria</span>'+
+  return { tit:'Portada', fte:'', cls:'inf-sl-port', html:'<div class="inf-port pt pt-b"><div class="pt-ilu"><img src="assets/portada/ilustracion.webp" alt=""></div><div class="pt-c"><img class="pt-logos" src="assets/portada/logos.webp" alt="Gobernación · Instituto Nacional de Migración"><div class="inf-port-a">'+
     '<h1><b>Informe</b> migratorio</h1><i class="inf-port-r"></i><p class="inf-port-f">'+(X.sem ? 'Semana del <b>'+fx(X.a)+'</b> al <b>'+fxa(X.b)+'</b>' : 'Periodo personalizado · <b>'+rango(X.a, X.b)+'</b>')+'</p>'+
     '<p class="inf-port-p">Comparado con el '+esc(enPer(X))+' · '+X.fchR+'</p>'+portadaCifras(X)+'</div>'+
     '<ol class="inf-port-i">'+IDX.map((t,i) => '<li data-infir="'+(i+1)+'"><b>'+String(i+1).padStart(2,'0')+'</b><span>'+t+'</span><i>'+ICO.de+'</i></li>').join('')+'</ol>'+
-    '<p class="inf-port-c">Datos de las bases del INM y de la CBP · generado el '+fxa(iso(new Date()))+'</p></div></div>' };
+    '</div></div>' };
 }
 // Lámina 1: encuentros de la CBP (en EE. UU.), semana y periodo, por semana en el año y por mes desde el inicio del periodo
 function laminaCBP(X){

@@ -158,7 +158,9 @@ function render(host, s, inter){
     return kc(D_.ic, esc(sel)+' en el total', (p<0.01 ? (p*100).toFixed(2) : Math.round(p*100))+'%', '<span class="ar-dvs">de todo el '+(c.u==='entradas' ? 'flujo' : 'total')+'</span>', R>=0 ? 'lugar <b>'+(R+1)+'</b> de '+o.length+' · '+esc(P.lab) : '', ring(p, '#7E302B')); };
   if (da) K.push(share(mA, mA2, s.fa, DA, 'A', cn ? cm.fa : null));
   if (db && !(c.V && db===c.V)) K.push(share(mB, mB2, s.fb, DB, 'B'));
+  let vTxt = '';
   if (c.V && db!==c.V && (s.fb==null || db!=='p')){ const Fv = Object.assign({}, F), mV = porNom(k, c.V, a, b, Fv), mV2 = cm ? (cn ? porNom(k, c.V, a, b, filtros(s, cm.fa)) : porNom(k, c.V, ca, cb, Fv)) : null, tv = sm(mV), tv2 = mV2 ? sm(mV2) : 0, ov = ord(mV);
+    if (tv) vTxt = 'Por vía de internación: '+ov.map(([n, v]) => { const p = v/tv*100, p2 = mV2 && tv2 ? (mV2.get(n) || 0)/tv2*100 : null; return esc(n.replace(/ \(.*\)/, '')).toLowerCase()+' <b>'+(p<10 ? p.toFixed(1) : Math.round(p))+'%</b>'+(p2!=null && Math.abs(p-p2)>=0.5 ? ' ('+(p>p2 ? '▲' : '▼')+' '+Math.abs(p-p2).toFixed(1)+' pts)' : ''); }).join(', ')+(mV2 ? ' frente a '+esc(ref) : '')+'.';
     if (tv) K.push(kc('via', '¿Por qué vía de internación?', esc(ov[0][0].replace(' (cruceros)',''))+' '+Math.round(ov[0][1]/tv*100)+'%', '<div class="ar-vrow">'+[...mV.keys()].map(n => { const p = mV.get(n)/tv*100, p2 = mV2 && tv2 ? (mV2.get(n) || 0)/tv2*100 : null;
       return '<span class="ar-vi" title="'+esc(n)+': '+p.toFixed(1)+'% de las entradas'+(p2!=null ? '; en '+esc(ref)+' era '+p2.toFixed(1)+'%' : '')+'"><svg width="16" height="16" viewBox="0 0 24 24">'+(IVIA[n] || AV)+'</svg><i>'+esc(n.replace(/ \(.*\)/, ''))+'</i><b>'+(p<10 ? p.toFixed(1) : Math.round(p))+'%</b>'+(p2!=null ? pts(p-p2, 1) : '')+'</span>'; }).join('')+'</div>', '', '', 'wide')); }
   const show = id => !H.includes(id), x = id => inter ? '<button class="ar-qz" data-hide="'+id+'" title="Quitar de la lámina">✕</button>' : '';
@@ -213,26 +215,44 @@ function render(host, s, inter){
   const mt = m => m ? ' · mayor cambio: '+(m[1]<0 ? '▼ ' : '▲ ')+m[0]+' '+(m[1]<0 ? '' : '+')+Math.round(m[1]*100)+'%' : '';
   if (aw){ bars(host.querySelector('.g2'), mA, cn ? null : mA2, cn ? null : s.fa, 'fa'); host.querySelector('.s2').textContent = (porDia ? 'por día · ' : '')+(s.fb!=null ? s.fb : DB ? DB.all : '')+mt(mvA); }
   if (bw){ bars(host.querySelector('.g3'), mB, mB2, s.fb, 'fb'); host.querySelector('.s3').textContent = (porDia ? 'por día · ' : '')+(DB.sub || '')+(s.fa!=null ? ' · '+s.fa : '')+mt(mvB); }
-  const hz = [], g_ = { d:'día', s:'semana', m:'mes' }[C1.g], mI = y1.reduce((m, v, i) => v!=null && (m<0 || v>y1[m]) ? i : m, -1), dc = (m, t) => Math.round(t[1]/sm(m)*100);
-  if (cn) hz.push('Suman <b>'+f(V)+'</b> '+c.u+'; '+esc(lab2)+' suma <b>'+f(W)+'</b>.');
-  else if (cm && W) hz.push('Suman <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+': '+(Math.abs(r)<0.01 ? 'prácticamente igual que' : '<b>'+pc(r)+'% '+(r<0 ? 'menos' : 'más')+'</b>'+(porDia ? ' por día' : '')+' que')+' '+esc(lab2)+' ('+f(W)+').');
-  else hz.push('Suman <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+', <b>'+f(V/dias)+'</b> por día.');
-  if (tA && s.fa==null) hz.push('Por '+DA.tipo+', <b>'+esc(tA[0])+'</b> va primero: <b>'+dc(mA, tA)+' de cada 100</b>.');
-  if (tB && s.fb==null && !(c.V && db===c.V)) hz.push('Por '+DB.tipo+', <b>'+esc(tB[0])+'</b> concentra <b>'+dc(mB, tB)+' de cada 100</b>.');
-  [[mvA, DA], [mvB, DB]].forEach(([m, D]) => { if (m) hz.push('El mayor cambio por '+D.tipo+' es <b>'+esc(m[0])+'</b>: <b>'+(m[1]<0 ? '▼ ' : '▲ ')+pc(m[1])+'%</b>.'); });
-  if (mI>=0 && C1.l.length>2) hz.push('El '+g_+' más alto fue <b>'+esc(C1.l[mI].lab)+'</b>, con <b>'+f(y1[mI])+'</b>.');
+  // Narrativa: frases con cifras (como el informe migratorio); cada una solo aparece si hay datos
+  const hz = [], g_ = { d:'día', s:'semana', m:'mes' }[C1.g], gP = { d:'días', s:'semanas', m:'meses' }[C1.g], dc = (m, t) => Math.round(t[1]/sm(m)*100), cuan = d => (d<0 ? '−' : '+')+f(Math.abs(d));
+  const pctT = x => (Math.abs(x)<0.01 ? (x*100).toFixed(1) : Math.round(x*100));
+  if (cn) hz.push(esc(s.fa)+' suma <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+'; '+esc(lab2)+', <b>'+f(W)+'</b>: '+(V>=W ? '<b>'+(V/W).toFixed(1)+' veces</b> más' : 'equivale al <b>'+pctT(V/W)+'%</b>')+'.');
+  else if (cm && W) hz.push('Suman <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+': '+(Math.abs(r)<0.01 ? 'prácticamente igual que' : '<b>'+pc(r)+'% '+(r<0 ? 'menos' : 'más')+'</b>'+(porDia ? ' por día' : '')+' que')+' '+esc(lab2)+' ('+f(W)+'; '+cuan(V-W)+').');
+  else hz.push('Suman <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+'.');
+  hz.push('En promedio son <b>'+f(V/dias)+'</b> por día'+(cm && W ? '; '+esc(ref)+' tuvo <b>'+f(W/cd)+'</b>' : '')+'.');
+  // tendencia: el último periodo completo contra el promedio de los tres anteriores
+  const iv = C1.l.map((q, i) => i).filter(i => y1[i]!=null && !C1.l[i].inc);
+  if (iv.length>=4){ const l = iv[iv.length-1], pv = iv.slice(-4, -1).map(i => y1[i]), pr = pv.reduce((x, y) => x+y, 0)/pv.length, d = pr ? y1[l]/pr-1 : 0;
+    hz.push('En <b>'+esc(C1.l[l].lab)+'</b> fueron <b>'+f(y1[l])+'</b>: '+(Math.abs(d)<0.02 ? 'en línea con el' : '<b>'+pc(d)+'% '+(d<0 ? 'por debajo' : 'por encima')+'</b> del')+' promedio de los tres '+gP+' previos ('+f(pr)+').'); }
+  const vs = iv.length ? iv : C1.l.map((q, i) => i).filter(i => y1[i]!=null);
+  if (vs.length>=3){ const mx = vs.reduce((m, i) => y1[i]>y1[m] ? i : m, vs[0]), mn = vs.reduce((m, i) => y1[i]<y1[m] ? i : m, vs[0]);
+    hz.push('El '+g_+' más alto fue <b>'+esc(C1.l[mx].lab)+'</b> ('+f(y1[mx])+') y el más bajo, <b>'+esc(C1.l[mn].lab)+'</b> ('+f(y1[mn])+').'); }
+  const conc = (m, D, sel) => { if (!m || sel!=null) return; const o = ord(m).filter(x => x[0]!=='Otros'), t = sm(m); if (!o.length || !t) return;
+    const t3 = o.slice(0, 3), p3 = Math.round(t3.reduce((x, y) => x+y[1], 0)/t*100);
+    hz.push('Por '+D.tipo+', <b>'+esc(o[0][0])+'</b> va primero con <b>'+dc(m, o[0])+' de cada 100</b>'+(o.length>3 ? '; los tres primeros ('+t3.map(x => esc(x[0])).join(', ')+') suman <b>'+p3+' de cada 100</b>' : '')+'.'); };
+  const movs = (m1, m2, D, sel) => { if (!m1 || !m2 || sel!=null || cn) return; const k1 = d1 => porDia ? d1 : 1; let up = null, dn = null;
+    const s1_ = sm(m1), s2_ = sm(m2); new Set([...m1.keys(), ...m2.keys()]).forEach(n => { if (n==='Otros' || ((m1.get(n) || 0)<s1_*0.01 && (m2.get(n) || 0)<s2_*0.01)) return; const v = (m1.get(n) || 0)/(porDia ? dias : 1), o = (m2.get(n) || 0)/(porDia ? cd : 1), d = v-o;
+      if (d>0 && (!up || d>up[1])) up = [n, d, o]; if (d<0 && (!dn || d<dn[1])) dn = [n, d, o]; });
+    const tx = x => '<b>'+esc(x[0])+'</b> ('+cuan(x[1])+(x[2] ? ', '+(x[1]<0 ? '' : '+')+Math.round(x[1]/x[2]*100)+'%' : '')+')';
+    if (up || dn) hz.push('Por '+D.tipo+', '+(up ? 'lo que más creció fue '+tx(up) : '')+(up && dn ? ' y ' : '')+(dn ? 'lo que más cayó, '+tx(dn) : '')+(porDia ? ' por día' : '')+'.'); };
+  if (cn && da && s.fa!=null && mA){ const tA_ = sm(mA), pa = (mA.get(s.fa) || 0)/tA_, pb = (mA.get(cm.fa) || 0)/tA_, o = ord(mA), ra = o.findIndex(x => x[0]===s.fa)+1, rb = o.findIndex(x => x[0]===cm.fa)+1;
+    hz.push('Del total, '+esc(s.fa)+' representa <b>'+(pa*100).toFixed(pa<0.01 ? 2 : 1)+'%</b>'+(ra ? ' (lugar '+ra+')' : '')+' y '+esc(cm.fa)+' <b>'+(pb*100).toFixed(pb<0.01 ? 2 : 1)+'%</b>'+(rb ? ' (lugar '+rb+')' : '')+'.'); }
+  conc(mA, DA, s.fa); movs(mA, mA2, DA, s.fa); if (vTxt) hz.push(vTxt);
+  if (!(c.V && db===c.V)){ conc(mB, DB, s.fb); movs(mB, mB2, DB, s.fb); }
   host._fra = fra; host._hz = hz; host._k = { n:c.t, v:V, r:cm && W && !cn ? V/W-1 : null, ref:cm && !cn ? ref : '', per:P.lab };
 }
 function portada(host, s){ const it = s.items || [], ks = (s.ks || []).slice(0, 3), t = esc(s.titulo || 'Informe').split(' ');
-  host.innerHTML = '<div class="ar-cv ar-cvp"><div class="inf-port pt"><div class="pt-ilu"><img src="assets/portada/ilustracion.webp" alt=""></div><div class="pt-c"><img class="pt-logos" src="assets/portada/logos.webp" alt="Gobernación · Instituto Nacional de Migración">'+
-    '<div class="inf-port-a"><span class="inf-ey">IA-NAMI · Inteligencia migratoria</span><h1><b>'+t[0]+'</b> '+t.slice(1).join(' ')+'</h1><i class="inf-port-r"></i><p class="inf-port-f">'+esc(s.fecha || '')+'</p><p class="inf-port-p">'+esc(s.datos || '')+'</p>'+
+  host.innerHTML = '<div class="ar-cv ar-cvp"><div class="inf-port pt pt-b"><div class="pt-ilu"><img src="assets/portada/ilustracion.webp" alt=""></div><div class="pt-c"><img class="pt-logos" src="assets/portada/logos.webp" alt="Gobernación · Instituto Nacional de Migración">'+
+    '<div class="inf-port-a"><h1><b>'+t[0]+'</b> '+t.slice(1).join(' ')+'</h1><i class="inf-port-r"></i><p class="inf-port-f">'+esc(s.fecha || '')+'</p><p class="inf-port-p">'+esc(s.datos || '')+'</p>'+
     (ks.length ? '<div class="inf-port-k">'+ks.map(x => '<div><span>'+esc(x.n)+'</span><b class="num">'+f(x.v)+'</b>'+(x.r!=null ? '<em class="'+(Math.abs(x.r)<0.01 ? 'n' : x.r>0 ? 'u' : 'd')+'">'+(Math.abs(x.r)<0.01 ? '≈' : x.r<0 ? '▼' : '▲')+' '+pc(x.r)+'% · que '+esc(x.ref)+'</em>' : '')+'</div>').join('')+'</div>' : '')+'</div>'+
     '<ol class="inf-port-i">'+it.map((x, i) => '<li data-arir="'+(i+1)+'"><b>'+String(i+1).padStart(2, '0')+'</b><span>'+esc(x[0])+'<small>'+esc(x[1] || '')+'</small></span><i>›</i></li>').join('')+
       '<li data-arir="'+(it.length+1)+'"><b>'+String(it.length+1).padStart(2, '0')+'</b><span>Narrativa</span><i>›</i></li></ol>'+
-    '<p class="inf-port-c">Datos de las bases del INM y de la CBP</p></div></div></div>'; }
-function narrativa(host, s){ const n = s.items.length;
+    '</div></div></div>'; }
+function narrativa(host, s){ const n = s.items.length, cap = n>=3 ? 4 : n===2 ? 8 : 9;
   host.innerHTML = '<div class="ar-cv ar-cvn"><header class="inf-h"><span class="inf-ey">'+esc(s.titulo || 'Informe')+' · cierre</span><h2><b>Narrativa</b> <span>'+esc(s.fecha || '')+'</span></h2></header>'+
-    '<div class="inf-hzt'+(n===1 ? ' uno' : '')+'" style="grid-template-columns:repeat('+Math.min(n, 3)+',1fr)">'+s.items.map(x => '<div class="inf-c"><span class="inf-ey">'+esc(x[0])+'</span><ul>'+(x[2] && x[2].length ? x[2] : [esc(x[1])]).map(h => '<li>'+h+'</li>').join('')+'</ul></div>').join('')+'</div>'+
+    '<div class="inf-hzt ar-nz n'+Math.min(n, 3)+'">'+s.items.map(x => '<div class="inf-c"><span class="inf-ey">'+esc(x[0])+'</span><p class="ar-nlead">'+esc(x[1])+'</p><ul>'+(x[2] || []).slice(0, cap).map(h => '<li>'+h+'</li>').join('')+'</ul></div>').join('')+'</div>'+
     '<div class="ar-pie"><span>Cifras calculadas con las bases del tablero; cada frase solo aparece si hay datos.</span><span>IA-NAMI</span></div></div>'; }
 
 /* ==== [5] PALABRAS DE COLOR ======================================= */
@@ -344,9 +364,10 @@ function vshow(){ const fr = $('ar-fr'); fr.innerHTML = '<div class="ar-lam"></d
   fit(); }
 function vnar(){ const a = $('ar-fr').querySelector('.ar-hz'), nb = $('ar-vnb'); if (!a) return; a.hidden = !a.hidden; nb.classList.toggle('on', !a.hidden); }
 function fit(){ const fr = $('ar-fr'), st = fr.parentNode.getBoundingClientRect(); fr.style.transform = 'translate(-50%,-50%)'; const z = fr.getBoundingClientRect().width/1600 || 1;
-  const sc = Math.min((st.width-(innerWidth<700 ? 16 : 96)*z)/(1600*z), (st.height-8*z)/(900*z)); fr.style.transform = 'translate(-50%,-50%) scale('+sc+')'; }
-function abrirV(l, t){ VL = l; VI = 0; $('ar-vh').textContent = t || TIT; $('ar-vis').classList.add('on'); document.body.style.overflow = 'hidden'; vshow(); }
-function cerrarV(){ $('ar-vis').classList.remove('on'); document.body.style.overflow = ''; }
+  const sc = Math.min((innerWidth-16)/(1600*z), (innerHeight-104)/(900*z)); fr.style.transform = 'translate(-50%,-50%) scale('+sc+')'; }
+function abrirV(l, t){ VL = l; VI = 0; $('ar-vh').textContent = t || TIT; $('ar-vis').classList.add('on'); document.body.style.overflow = 'hidden'; vshow();
+  const de = document.documentElement; if (de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen().then(() => setTimeout(fit, 120)).catch(() => {}); }
+function cerrarV(){ $('ar-vis').classList.remove('on'); document.body.style.overflow = ''; if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }
 
 /* ==== [8] PDF, WHATSAPP Y LIGA ==================================== */
 let OCUPADO = false;
@@ -388,7 +409,7 @@ function pintar(host){ HOST = host; HZ = hallazgos();
       CONC.filter(c => c.area===ar).map(c => { const y = finK(c.k).slice(0,4); return '<button class="ar-cb" data-ark="'+c.k+'"><span class="ic" style="background:'+COLA[ar][1]+';color:'+COLA[ar][0]+'"><svg width="18" height="18" viewBox="0 0 20 20">'+ICON[ar]+'</svg></span><span class="tx"><b>'+esc(c.t)+'</b></span><span class="n">'+f(y26(c.k))+'<small>'+esc(c.u)+' en '+y+'</small></span></button>'; }).join('')+'</div>').join('')+'</div></div>'+
     '<div class="ar-sec" id="ar-lsec"><div class="ar-lam" id="ar-lam"></div><div class="ar-acts"><button class="ar-btn bv" id="ar-add" hidden>＋ Agregar a mi informe</button><button class="ar-btn bo" id="ar-full" hidden>⤢ Ver como se presenta</button></div></div>'+
     '<div class="ar-tray"><div class="ar-tt"><input id="ar-tit" value="'+esc(TIT)+'" aria-label="Título de tu informe" title="Título de la portada"><div id="ar-tc">vacío</div></div><div class="ar-tl" id="ar-tl"></div>'+
-      '<div class="ar-tb"><button class="ar-btn bk" id="ar-liga">Liga</button><button class="ar-btn bk" id="ar-pdf">PDF</button><button class="ar-btn bw" id="ar-wa">WhatsApp</button><button class="ar-btn bp" id="ar-pres">▶ Presentar</button></div></div>'+
+      '<div class="ar-tb"><button class="ar-btn bk" id="ar-liga"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Liga</span></button><button class="ar-btn bk" id="ar-pdf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>PDF</span></button><button class="ar-btn bw" id="ar-wa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2a8.7 8.7 0 0 0-7.5 13.1L3.3 20.8l4.6-1.2A8.7 8.7 0 1 0 12 3.2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 8.3c.2-.4.5-.4.7-.4h.5c.2 0 .4.1.5.4l.6 1.5c.1.2 0 .4-.1.6l-.5.6c-.1.1-.1.3 0 .5.6 1 1.4 1.8 2.5 2.4.2.1.4.1.5-.1l.6-.7c.1-.2.4-.2.6-.1l1.4.7c.2.1.4.3.3.6-.1.9-.9 1.7-1.9 1.7-2.8 0-5.9-3-5.9-5.8 0-.7.1-1.3.2-1.9z" fill="currentColor"/></svg><span>WhatsApp</span></button><button class="ar-btn bp" id="ar-pres">▶ Presentar</button></div></div>'+
     '<div class="ar-vis" id="ar-vis"><div class="ar-vbar"><div><b id="ar-vh"></b><br><small id="ar-vt"></small></div><span class="sp"></span><button class="inf-nb ar-vnb" id="ar-vnb" hidden title="Ver la narrativa de esta lámina"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Narrativa</span><b></b></button><button class="ar-btn bk" id="ar-vx">✕ Cerrar</button></div>'+
       '<button class="ar-va" style="left:16px" id="ar-vp">‹</button><button class="ar-va" style="right:16px" id="ar-vn">›</button><div class="ar-stage"><div class="ar-fr" id="ar-fr"></div></div></div>'+
     '<div class="ar-toast" id="ar-toast"></div></div>';

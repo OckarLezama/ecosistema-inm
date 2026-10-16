@@ -1825,3 +1825,39 @@ body.en-inf{overflow:hidden}
 .ar-vnb{position:static;height:34px;padding:0 6px 0 12px;font-size:13px;gap:7px;margin-right:10px;--u:16px}.ar-vnb svg{width:16px;height:16px}.ar-vnb b{min-width:22px;height:22px;font-size:11px}.ar-vnb[hidden]{display:none}
 .ar-hz{--u:16px;top:84px;right:30px;bottom:40px}
 .pt-ilu img{left:auto;right:-3%;transform:none}
+.ar-stage{top:0;bottom:0}.ar-vbar{position:relative;z-index:2}
+/* Narrativa de cierre de Arma tu informe */
+.ar-nz{display:grid;gap:calc(var(--u)*1);align-content:stretch}.ar-nz.n1{grid-template-columns:1fr}.ar-nz.n2{grid-template-columns:1fr 1fr}.ar-nz.n3{grid-template-columns:repeat(3,1fr);grid-auto-rows:minmax(0,1fr)}
+.ar-cvn .ar-nz .inf-c{padding:calc(var(--u)*1.3) calc(var(--u)*1.5)}
+.ar-nlead{margin:calc(var(--u)*.45) 0 0;padding-bottom:calc(var(--u)*.7);border-bottom:1px solid #EEEAE0;font:500 calc(var(--u)*1.25)/1.25 'Barlow Condensed',sans-serif;color:var(--ink,#2B2926)}
+.ar-cvn .ar-nz li{font-size:calc(var(--u)*.9);line-height:1.5}.ar-cvn .ar-nz.n1 li,.ar-cvn .ar-nz.n2 li{font-size:calc(var(--u)*1.02)}
+.ar-cvn .ar-nz.n1 ul{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*1) calc(var(--u)*3)}
+.ar-cvn .ar-nz.n3 .ar-nlead{font-size:calc(var(--u)*1.05)}
+.ar-vbar{padding:6px 12px;min-height:40px;box-sizing:border-box}.ar-vbar b{font-size:13px}.ar-vbar small{font-size:11px}.ar-vbar .ar-btn{height:30px;padding:0 12px;font-size:13px}.ar-vnb{height:30px}
+.ar-cvn .ar-nz.n1 li,.ar-cvn .ar-nz.n2 li{font-size:calc(var(--u)*1.12)}.ar-cvn .ar-nz.n1 ul,.ar-cvn .ar-nz.n2 ul{gap:calc(var(--u)*1.05)}
+.ar-cvn .ar-nz.n1 .ar-nlead,.ar-cvn .ar-nz.n2 .ar-nlead{font-size:calc(var(--u)*1.4);margin-bottom:calc(var(--u)*.4)}
+/* Portada: opciones de acomodo (pt-a, pt-b, pt-c) */
+.inf-port.pt{position:relative;background:transparent}
+.pt .pt-ilu{background:transparent;border:0}.pt .pt-ilu::after{display:none}
+.pt .pt-logos{height:calc(var(--u)*2.4)}
+
+.pt-a{grid-template-columns:1fr 36%}.pt-a .pt-ilu{order:2}.pt-a .pt-ilu img{height:80%;right:6%;left:auto;bottom:0}
+.pt-b{grid-template-columns:36% 1fr}.pt-b .pt-ilu img{height:80%;left:8%;right:auto;bottom:0}.pt-b .pt-logos{position:absolute;left:calc(var(--u)*4.4);top:calc(var(--u)*2.8)}.pt-b .pt-c{padding-top:calc(var(--u)*6)}
+.pt-c2{grid-template-columns:1fr 42%}.pt-c2 .pt-ilu{order:2}.pt-c2 .pt-ilu img{height:128%;right:-4%;left:auto;bottom:-32%}
+.pt-b .pt-ilu img{height:auto;width:90%;left:5%}
+.pt-c2 .pt-ilu{overflow:visible}.pt-c2 .pt-c{position:relative;z-index:1}.pt-c2 .pt-ilu img{height:116%;right:-5%;bottom:-24%}
+.inf-port.pt{overflow:hidden}
+#ar-pdf,#ar-wa{display:inline-flex;align-items:center;gap:6px}#ar-pdf svg,#ar-wa svg{width:16px;height:16px;flex:none}
+.pt .inf-port-a{margin-top:0}
+.inf-port.pt.pt-c2{grid-template-columns:1fr 44%}
+.inf-sl-port .inf-pie{display:none}
+.inf-port.pt.pt-c2{grid-template-columns:42% 1fr}
+.pt-c2 .pt-ilu img{height:110%;right:-3%;bottom:-18%}
+.pt .inf-port-a h1{font-size:calc(var(--u)*4.2)}
+.inf-sl-port .pt .inf-port-i{grid-template-columns:1fr}.inf-sl-port .pt .inf-port-i li{border-bottom:0}.inf-sl-port .pt .inf-port-i li:last-child{border-bottom:1px solid #E4E0D4}
+/* Botones de Mi informe con el mismo formato que el informe migratorio (ícono + texto) */
+.ar-tb .ar-btn{height:36px;padding:0 14px!important;font:500 13px Barlow,sans-serif!important;gap:7px}.ar-tb .ar-btn svg{width:17px;height:17px;flex:none}
+.ar-tb .ar-btn.bk{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.12)!important;color:#EDE9DF!important}
+.ar-tb .ar-btn.bw{background:#1F7A4D!important;border-color:#1F7A4D!important}
+.inf-sl-port .pt-b .inf-port-i{grid-template-columns:1fr 1fr}.inf-sl-port .pt-b .inf-port-i li{border-bottom:0}.inf-sl-port .pt-b .inf-port-i li:nth-last-child(-n+2){border-bottom:1px solid #E4E0D4}
+.pt-b .pt-c{justify-content:center;padding-top:calc(var(--u)*5);padding-bottom:calc(var(--u)*3)}.pt-b .pt-logos{margin:0}
