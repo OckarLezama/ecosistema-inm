@@ -36,9 +36,9 @@ const fin = k => M.finBase(M.BASES[M.INDK[k].b]);
     await p.keyboard.press('Enter'); await p.waitForTimeout(800); ok(/Cuba/.test(await p.$eval('#ar-lam h2', e => e.innerText)), w+' la frase arma su lámina');
     // presentar: portada, láminas y narrativa
     await p.click('#ar-pres'); await p.waitForTimeout(800); ok(/Lámina 1 de 4/.test(await p.$eval('#ar-vt', e => e.textContent)), w+' portada + 2 láminas + narrativa');
-    ok(await p.evaluate(() => !!document.querySelector('#ar-fr .ar-cov')), w+' la primera lámina es la portada');
+    ok(await p.evaluate(() => !!document.querySelector('#ar-fr .ar-cvp')), w+' la primera lámina es la portada');
     await p.keyboard.press('End'); for (let i=0;i<3;i++){ await p.keyboard.press('ArrowRight'); await p.waitForTimeout(250); }
-    ok(await p.evaluate(() => !!document.querySelector('#ar-fr .ar-nl')), w+' cierra con la narrativa');
+    ok(await p.evaluate(() => document.querySelectorAll('#ar-fr .ar-cvn li b').length>=4), w+' cierra con la narrativa (frases con cifras)');
     ok(await p.evaluate(() => { const f = document.getElementById('ar-fr'), r = f.getBoundingClientRect(); return r.left>=0 && r.right<=innerWidth+1 && r.top>=0 && r.bottom<=innerHeight+1; }), w+' la lámina presentada cabe completa en la pantalla');
     await p.click('#ar-vx');
     if (w===1600) liga = await p.evaluate(() => { const PR = window.IANAMI_ARMA._prueba.PR; return '?arma='+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify({ t:'Prueba', l:PR }))))); });

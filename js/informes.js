@@ -38,21 +38,21 @@ let tToast; function toast(m){ const t = $('ar-toast'); if (!t) return; t.textCo
 const CONC = [
   ['ing','Control','Internaciones','entradas',['n'],['p','e'],'via'], ['ingmx','Control','Mexicanos que ingresaron','entradas',['p','e'],['via']],
   ['seg','Control','Segunda revisión','casos',['n'],['p','e']], ['rech','Control','Rechazos','rechazos',['n'],['p','e']],
+  ['tram','Regulación','Trámites','trámites',['n'],['tipo','doc','e']], ['va','Regulación','Validación de actas','solicitudes',['n'],['tr','e']],
   ['resc','Protección','Rescatados','rescatados',['n'],['e']], ['rep','Protección','Repatriados','repatriados',['p','e'],['mod']],
   ['nna','Protección','NNA canalizados','niñas, niños y adolescentes',['n'],['e']], ['pres','Protección','Presentados','presentados',['n'],['e','est']],
-  ['ret','Protección','Retornados','retornados',['n'],['e']], ['tram','Regulación','Trámites','trámites',['n'],['tipo','doc','e']],
-  ['va','Regulación','Validación de actas','solicitudes',['n'],['tr','e']], ['cbp','Frontera norte','Encuentros CBP','encuentros',['n'],['sec']],
+  ['ret','Protección','Retornados','retornados',['n'],['e']], ['cbp','Frontera norte','Encuentros CBP','encuentros',['n'],['sec']],
   ['rec','Frontera norte','Recibidos de EE. UU.','recibidos',['n'],['e']]
 ].filter(c => INDK[c[0]] && BASES[INDK[c[0]].b]).map(c => ({ k:c[0], area:c[1], t:c[2], u:c[3], A:c[4].filter(d => BASES[INDK[c[0]].b].dims[d]), B:c[5].filter(d => BASES[INDK[c[0]].b].dims[d]), V:c[6] && BASES[INDK[c[0]].b].dims[c[6]] ? c[6] : null }));
 const CK = Object.fromEntries(CONC.map(c => [c.k, c]));
-const COLA = { Control:['#2F6657','#E3EEE9'], Protección:['#7E302B','#F5E4E1'], Regulación:['#8F7F2E','#F3EEDB'], 'Frontera norte':['#3E5C7A','#E4EBF2'] };
+const COLA = { Control:['#2F6657','#E3EEE9'], Protección:['#7E302B','#F5E4E1'], Regulación:['#8F7F2E','#F3EEDB'], 'Frontera norte':['#4A463F','#ECE9E2'] };
 const base = k => BASES[INDK[k].b], finK = k => finBase(base(k)), iniK = k => base(k).inicio;
 const esOR = (k, d) => d==='e' && /O\.R\./.test(base(k).dims.e.nom);
 function DIM(k, d){ const rep = k==='rep' || k==='ingmx';
   return ({ n:{ w:'de', all:'todas las nacionalidades', tit:'¿De dónde son?', tipo:'país', ic:'glo' },
     p:{ w:'por', all:'todos los puntos', tit:rep ? '¿Por dónde '+(k==='rep' ? 'regresan' : 'entran')+'?' : '¿Por dónde entran?', tipo:'punto', ic:'pin', sub:'aeropuertos agrupados' },
     e:esOR(k, d) ? { w:'en', all:'todas las O.R. (estados)', tit:'¿En qué O.R. (estado)?', tipo:'O.R.', ic:'pin' } : { w:'en', all:'todos los estados', tit:'¿A qué estado?', tipo:'estado', ic:'pin' },
-    via:{ w:'vía', all:'todas las vías', tit:'¿Por qué vía?', tipo:'vía', ic:'via' }, mod:{ w:'vía', all:'todas las vías', tit:'¿Cómo regresan?', tipo:'vía', ic:'via' },
+    via:{ w:'vía', all:'todas las vías', tit:'¿Por qué vía de internación?', tipo:'vía', ic:'via' }, mod:{ w:'vía', all:'todas las vías', tit:'¿Cómo regresan?', tipo:'vía', ic:'via' },
     sec:{ w:'en', all:'todos los sectores', tit:'¿En qué sector?', tipo:'sector', ic:'pin' }, est:{ w:'en', all:'todas las estaciones', tit:'¿En qué estación?', tipo:'estación', ic:'pin' },
     tipo:{ w:'de', all:'todos los trámites', tit:'¿Qué trámite?', tipo:'trámite', ic:'doc' }, doc:{ w:'de', all:'todos los documentos', tit:'¿Qué documento?', tipo:'documento', ic:'doc' },
     tr:{ w:'de', all:'todos los trámites', tit:'¿Qué trámite?', tipo:'trámite', ic:'doc' } })[d] || { w:'por', all:'todos', tit:base(k).dims[d].nom, tipo:base(k).dims[d].nom.toLowerCase(), ic:'pin' }; }
@@ -156,8 +156,8 @@ function render(host, s, inter){
   if (da) K.push(share(mA, mA2, cn ? null : s.fa, DA, 'A'));
   if (db && !(c.V && db===c.V)) K.push(share(mB, cn ? null : mB2, s.fb, DB, 'B'));
   if (c.V && db!==c.V && (s.fb==null || db!=='p')){ const Fv = Object.assign({}, F), mV = porNom(k, c.V, a, b, Fv), mV2 = cm && !cn ? porNom(k, c.V, ca, cb, Fv) : null, tv = sm(mV), tv2 = mV2 ? sm(mV2) : 0, ov = ord(mV);
-    if (tv) K.push(kc('via', '¿Por qué vía?', esc(ov[0][0].replace(' (cruceros)',''))+' '+Math.round(ov[0][1]/tv*100)+'%', '<div class="ar-vrow">'+[...mV.keys()].map(n => { const p = mV.get(n)/tv*100, p2 = mV2 && tv2 ? (mV2.get(n) || 0)/tv2*100 : null;
-      return '<span class="ar-vi" title="'+esc(n)+': '+p.toFixed(1)+'% de las entradas'+(p2!=null ? '; en '+esc(ref)+' era '+p2.toFixed(1)+'%' : '')+'"><svg width="15" height="15" viewBox="0 0 20 20">'+(IVIA[n] || IK.via)+'</svg><b>'+(p<10 ? p.toFixed(1) : Math.round(p))+'%</b>'+(p2!=null ? pts(p-p2, 1) : '')+'</span>'; }).join('')+'</div>', '', '', 'wide')); }
+    if (tv) K.push(kc('via', '¿Por qué vía de internación?', esc(ov[0][0].replace(' (cruceros)',''))+' '+Math.round(ov[0][1]/tv*100)+'%', '<div class="ar-vrow">'+[...mV.keys()].map(n => { const p = mV.get(n)/tv*100, p2 = mV2 && tv2 ? (mV2.get(n) || 0)/tv2*100 : null;
+      return '<span class="ar-vi" title="'+esc(n)+': '+p.toFixed(1)+'% de las entradas'+(p2!=null ? '; en '+esc(ref)+' era '+p2.toFixed(1)+'%' : '')+'"><svg width="15" height="15" viewBox="0 0 20 20">'+(IVIA[n] || IK.via)+'</svg><i>'+esc(n.replace(/ \(.*\)/, ''))+'</i><b>'+(p<10 ? p.toFixed(1) : Math.round(p))+'%</b>'+(p2!=null ? pts(p-p2, 1) : '')+'</span>'; }).join('')+'</div>', '', '', 'wide')); }
   const show = id => !H.includes(id), x = id => inter ? '<button class="ar-qz" data-hide="'+id+'" title="Quitar de la lámina">✕</button>' : '';
   const tw = show('t'), aw = da && show('a'), bw = db && show('b');
   const segA = inter && c.A.length>1 ? '<span class="ar-sg2">'+c.A.map((d, i) => '<button data-o="iA" data-v="'+i+'" class="'+((s.iA || 0)===i ? 'on' : '')+'">'+DIM(k, d).tipo+'</button>').join('')+'</span>' : '';
@@ -210,14 +210,27 @@ function render(host, s, inter){
   const mt = m => m ? ' · mayor cambio: '+(m[1]<0 ? '▼ ' : '▲ ')+m[0]+' '+(m[1]<0 ? '' : '+')+Math.round(m[1]*100)+'%' : '';
   if (aw){ bars(host.querySelector('.g2'), mA, cn ? null : mA2, cn ? null : s.fa, 'fa'); host.querySelector('.s2').textContent = (porDia ? 'por día · ' : '')+(s.fb!=null ? s.fb : DB ? DB.all : '')+mt(mvA); }
   if (bw){ bars(host.querySelector('.g3'), mB, mB2, s.fb, 'fb'); host.querySelector('.s3').textContent = (porDia ? 'por día · ' : '')+(DB.sub || '')+(s.fa!=null ? ' · '+s.fa : '')+mt(mvB); }
-  host._fra = fra;
+  const hz = [], g_ = { d:'día', s:'semana', m:'mes' }[C1.g], mI = y1.reduce((m, v, i) => v!=null && (m<0 || v>y1[m]) ? i : m, -1), dc = (m, t) => Math.round(t[1]/sm(m)*100);
+  if (cn) hz.push('Suman <b>'+f(V)+'</b> '+c.u+'; '+esc(lab2)+' suma <b>'+f(W)+'</b>.');
+  else if (cm && W) hz.push('Suman <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+': '+(Math.abs(r)<0.01 ? 'prácticamente igual que' : '<b>'+pc(r)+'% '+(r<0 ? 'menos' : 'más')+'</b>'+(porDia ? ' por día' : '')+' que')+' '+esc(lab2)+' ('+f(W)+').');
+  else hz.push('Suman <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+', <b>'+f(V/dias)+'</b> por día.');
+  if (tA && s.fa==null) hz.push('Por '+DA.tipo+', <b>'+esc(tA[0])+'</b> va primero: <b>'+dc(mA, tA)+' de cada 100</b>.');
+  if (tB && s.fb==null && !(c.V && db===c.V)) hz.push('Por '+DB.tipo+', <b>'+esc(tB[0])+'</b> concentra <b>'+dc(mB, tB)+' de cada 100</b>.');
+  [[mvA, DA], [mvB, DB]].forEach(([m, D]) => { if (m) hz.push('El mayor cambio por '+D.tipo+' es <b>'+esc(m[0])+'</b>: <b>'+(m[1]<0 ? '▼ ' : '▲ ')+pc(m[1])+'%</b>.'); });
+  if (mI>=0 && C1.l.length>2) hz.push('El '+g_+' más alto fue <b>'+esc(C1.l[mI].lab)+'</b>, con <b>'+f(y1[mI])+'</b>.');
+  host._fra = fra; host._hz = hz; host._k = { n:c.t, v:V, r:cm && W && !cn ? V/W-1 : null, ref:cm && !cn ? ref : '', per:P.lab };
 }
-function portada(host, s){ const items = s.items || [];
-  host.innerHTML = '<div class="ar-cv"><div class="ar-cov"><div class="ar-ey">IA-NAMI · Instituto Nacional de Migración</div><h2>'+esc(s.titulo || 'Informe')+'</h2><p>'+esc(s.fecha || '')+'</p>'+
-    '<ol>'+items.map(t => '<li>'+esc(t)+'</li>').join('')+'</ol></div></div>'; }
-function narrativa(host, s){ host.innerHTML = '<div class="ar-cv"><div class="ar-lt"><div class="ar-lt1"><div class="ar-ey">Cierre</div><h2>Narrativa</h2><div class="ar-bar"></div></div></div>'+
-  '<div class="ar-nl">'+s.items.map((x, i) => '<div class="ar-ni"><span>'+(i+1)+'</span><div><b>'+esc(x[0])+'</b><p>'+esc(x[1])+'</p></div></div>').join('')+'</div>'+
-  '<div class="ar-pie"><span>Se arma sola con la frase-conclusión de cada lámina.</span><span>IA-NAMI</span></div></div>'; }
+function portada(host, s){ const it = s.items || [], ks = (s.ks || []).slice(0, 3), t = esc(s.titulo || 'Informe').split(' ');
+  host.innerHTML = '<div class="ar-cv ar-cvp"><div class="inf-port"><div class="inf-port-a"><span class="inf-ey">IA-NAMI · Inteligencia migratoria</span>'+
+    '<h1><b>'+t[0]+'</b> '+t.slice(1).join(' ')+'</h1><i class="inf-port-r"></i><p class="inf-port-f">'+esc(s.fecha || '')+'</p><p class="inf-port-p">'+esc(s.datos || '')+'</p>'+
+    (ks.length ? '<div class="inf-port-k">'+ks.map(x => '<div><span>'+esc(x.n)+'</span><b class="num">'+f(x.v)+'</b>'+(x.r!=null ? '<em class="'+(Math.abs(x.r)<0.01 ? 'n' : x.r>0 ? 'u' : 'd')+'">'+(Math.abs(x.r)<0.01 ? '≈' : x.r<0 ? '▼' : '▲')+' '+pc(x.r)+'% · que '+esc(x.ref)+'</em>' : '')+'</div>').join('')+'</div>' : '')+
+    '<p class="inf-port-c">Datos de las bases del INM y de la CBP</p></div>'+
+    '<ol class="inf-port-i">'+it.map((x, i) => '<li><b>'+String(i+1).padStart(2, '0')+'</b><span>'+esc(x[0])+'<small>'+esc(x[1] || '')+'</small></span><i></i></li>').join('')+
+      '<li><b>'+String(it.length+1).padStart(2, '0')+'</b><span>Narrativa</span><i></i></li></ol></div></div>'; }
+function narrativa(host, s){ const n = s.items.length;
+  host.innerHTML = '<div class="ar-cv ar-cvn"><header class="inf-h"><span class="inf-ey">'+esc(s.titulo || 'Informe')+' · cierre</span><h2><b>Narrativa</b> <span>'+esc(s.fecha || '')+'</span></h2></header>'+
+    '<div class="inf-hzt'+(n===1 ? ' uno' : '')+'" style="grid-template-columns:repeat('+Math.min(n, 3)+',1fr)">'+s.items.map(x => '<div class="inf-c"><span class="inf-ey">'+esc(x[0])+'</span><ul>'+(x[2] && x[2].length ? x[2] : [esc(x[1])]).map(h => '<li>'+h+'</li>').join('')+'</ul></div>').join('')+'</div>'+
+    '<div class="ar-pie"><span>Cifras calculadas con las bases del tablero; cada frase solo aparece si hay datos.</span><span>IA-NAMI</span></div></div>'; }
 
 /* ==== [5] PALABRAS DE COLOR ======================================= */
 let S = null, MYR = null, HOST = null;
@@ -317,12 +330,14 @@ function tray(nv){ const tl = $('ar-tl'); if (!tl) return; $('ar-tc').textConten
     x.addEventListener('drop', e => { e.preventDefault(); const a = +e.dataTransfer.getData('i'), b = +x.dataset.i; const [m] = PR.splice(a, 1); PR.splice(b, 0, m); tray(); }); });
   tl.scrollLeft = tl.scrollWidth; }
 function frases(){ const d = document.createElement('div'); d.style.cssText = 'position:absolute;left:-99999px;top:0;width:1600px'; document.body.appendChild(d);
-  const out = PR.map(x => { d.innerHTML = '<div class="ar-lam"></div>'; render(d.firstChild, x, false); const r = [tit(x), d.firstChild._fra || ''];
+  const out = PR.map(x => { d.innerHTML = '<div class="ar-lam"></div>'; render(d.firstChild, x, false); const r = [tit(x), d.firstChild._fra || '', d.firstChild._hz || [], d.firstChild._k];
     d.querySelectorAll('.ar-gr').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.dispose(); }); return r; }); d.remove(); return out; }
 function completo(){ const it = frases(), hoy = new Date();
-  return [{ tipo:'port', titulo:TIT, fecha:hoy.getDate()+' de '+ML[hoy.getMonth()]+' de '+hoy.getFullYear()+' · datos al '+fd(finK('resc')), items:PR.map(tit) }].concat(PR, it.length ? [{ tipo:'nar', items:it }] : []); }
+  const fe = hoy.getDate()+' de '+ML[hoy.getMonth()]+' de '+hoy.getFullYear();
+  return [{ tipo:'port', titulo:TIT, fecha:fe, datos:'Datos al '+fd(finK('resc')), items:it.map(x => [x[0], x[3] ? x[3].per+(x[3].ref ? ' · contra '+x[3].ref : '') : '']), ks:it.map(x => x[3]).filter(Boolean) }].concat(PR, it.length ? [{ tipo:'nar', titulo:TIT, fecha:fe, items:it.map(x => [x[0], x[1], x[2]]) }] : []); }
 function vshow(){ const fr = $('ar-fr'); fr.innerHTML = '<div class="ar-lam"></div>'; render(fr.firstChild, VL[VI], false); $('ar-vt').textContent = 'Lámina '+(VI+1)+' de '+VL.length+' · ← → o desliza'; fit(); }
-function fit(){ const fr = $('ar-fr'); fr.style.transform = 'translate(-50%,-50%)'; const sc = Math.min((innerWidth-130)/1600, (innerHeight-100)/fr.offsetHeight); fr.style.transform = 'translate(-50%,-50%) scale('+sc+')'; }
+function fit(){ const fr = $('ar-fr'), st = fr.parentNode.getBoundingClientRect(); fr.style.transform = 'translate(-50%,-50%)'; const z = fr.getBoundingClientRect().width/1600 || 1;
+  const sc = Math.min((st.width-120)/(1600*z), (st.height-24)/(fr.offsetHeight*z)); fr.style.transform = 'translate(-50%,-50%) scale('+sc+')'; }
 function abrirV(l, t){ VL = l; VI = 0; $('ar-vh').textContent = t || TIT; $('ar-vis').classList.add('on'); document.body.style.overflow = 'hidden'; vshow(); }
 function cerrarV(){ $('ar-vis').classList.remove('on'); document.body.style.overflow = ''; }
 
@@ -335,7 +350,7 @@ async function pdf(){ if (OCUPADO) return null; if (!PR.length){ toast('Agrega a
     for (let i=0;i<L.length;i++){ toast('Preparando el PDF · lámina '+(i+1)+' de '+L.length+'…'); d.innerHTML = '<div class="ar-lam ar-print"></div>'; render(d.firstChild, L[i], false);
       d.querySelectorAll('.ar-gr').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.setOption({ animation:false }); });
       await new Promise(r => setTimeout(r, 60));
-      const cv = await window.html2canvas(d.firstChild, { scale:1, backgroundColor:'#FBFAF6', logging:false, onclone:dd => { window.IANAMI_COLORFIJO && window.IANAMI_COLORFIJO(dd); } });
+      const cv = await window.html2canvas(d.firstChild, { scale:1, backgroundColor:'#FBFAF6', logging:false, onclone:dd => { const e = dd.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}'; dd.head.appendChild(e); dd.querySelectorAll('[_echarts_instance_] > div:nth-child(n+2)').forEach(x => { x.style.display = 'none'; }); window.IANAMI_COLORFIJO && window.IANAMI_COLORFIJO(dd); } });
       if (i) doc.addPage([1600, 900], 'landscape'); const h = Math.min(900, cv.height*1600/cv.width); doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, (900-h)/2, 1600, h);
       d.querySelectorAll('.ar-gr').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.dispose(); }); }
     d.remove(); return doc; } finally { OCUPADO = false; } }
