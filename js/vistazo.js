@@ -622,6 +622,7 @@ function abrir(op){ op = op || {};
     R = HOST.attachShadow({ mode:'open' }); R.innerHTML = '<style>'+CSS+'</style>'+BODY; R.addEventListener('click', e => { if (!API && e.target.closest('[data-salir]')) salir(true); }); }
   HOST.style.display = 'block'; ACTIVA = true; document.documentElement.classList.add('vz-on');
   if (op.compartido){ HOST.dataset.modo = 'compartido'; document.title = 'Resumen INAMI'; }
+  document.documentElement.classList.remove('vz-arranque');   // la pantalla verde de arranque ya la cubre el Vistazo
   pideFS(); if (!pideFS.listo){ pideFS.listo = true; R.addEventListener('pointerdown', pideFS, true); }
   if (API) return API.sigue();
   const cv = $('cargav'); cv.hidden = false;

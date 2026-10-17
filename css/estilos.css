@@ -1879,3 +1879,6 @@ html.vz-on,html.vz-on body{overflow:hidden}
 .sl-pop select option{background:#FCFBF7;color:#2B2926}
 /* globo de ayuda de los botones de la barra */
 .ayuda-b{z-index:400;max-width:260px}.ayuda-b[hidden]{display:none}
+/* liga del Vistazo: pantalla verde desde el primer instante, hasta que el Vistazo está listo (no se ve el tablero de atrás) */
+html.vz-arranque,html.vz-arranque body{overflow:hidden}
+html.vz-arranque body::after{content:"Preparando la vista…";position:fixed;inset:0;z-index:105;display:grid;place-items:center;background:radial-gradient(120% 90% at 70% 30%,#24443B 0%,#16231F 60%,#101815 100%);color:#CFE2DA;font:600 15px Barlow,system-ui,sans-serif;letter-spacing:.04em}
