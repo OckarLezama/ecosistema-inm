@@ -326,7 +326,7 @@ window.IANAMI_LIBS_PDF = () => Promise.all(LIBS_PDF.map(u => cargarJS(u)));   //
 const RESPALDO = { 'lib/html2canvas.min.js':'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'lib/jspdf.umd.min.js':'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js' };
 const cargarJS = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok;
   s.onerror = () => { s.remove(); if (!RESPALDO[u]) return mal(); const r = document.createElement('script'); r.src = RESPALDO[u]; r.onload = ok; r.onerror = mal; document.head.appendChild(r); }; document.head.appendChild(s); });
-function tituloVista(){ if (S.vista==='pulso') return 'Pulso'+(nombreFiltro() ? ' · '+nombreFiltro() : '');
+function tituloVista(){ if (SALA.on) return 'Infografía'+(nombreFiltro() ? ' · '+nombreFiltro() : ''); if (S.vista==='pulso') return 'Pulso'+(nombreFiltro() ? ' · '+nombreFiltro() : '');
   const h = document.querySelector('#vista-otra h1'), t = document.querySelector('.rg-vistas .on'); return (h ? h.textContent.replace('Pantalla completa','').replace('Infografía','').trim() : 'IA-NAMI')+(t ? ' · '+t.textContent : ''); }
 // html2canvas no entiende colores modernos (color-mix, color(srgb …)): en la copia que se dibuja se cambian por rgb
 const COLOR_PROPS = ['color','backgroundColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor','outlineColor','textDecorationColor','fill','stroke','boxShadow','backgroundImage'];
@@ -340,7 +340,7 @@ function colorFijo(doc){ const win = doc.defaultView || window;
 window.IANAMI_COLORFIJO = colorFijo;
 async function hacerPDF(){
   await Promise.all(LIBS_PDF.map(cargarJS));
-  const zona = S.vista==='pulso' ? $('vista-pulso') : $('vista-otra'), tit = 'IA-NAMI · '+tituloVista()+' · '+(S.vista==='pulso' ? $('rango').textContent : ((document.querySelector('#vista-otra .rango b') || {}).textContent || ''));
+  const zona = SALA.on ? $('mapa') : S.vista==='pulso' ? $('vista-pulso') : $('vista-otra'), tit = 'IA-NAMI · '+tituloVista()+' · '+(S.vista==='pulso' ? $('rango').textContent : ((document.querySelector('#vista-otra .rango b') || {}).textContent || ''));
   const lienzo = await html2canvas(zona, { scale:1.6, backgroundColor:'#F4F2EA', useCORS:true, ignoreElements:el => el.id==='rg-pop' || el.id==='kpi-tip' || (el.classList && el.classList.contains('res')),
     onclone:doc => { const st = doc.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; doc.head.appendChild(st); colorFijo(doc); } });
   const { jsPDF } = window.jspdf, pdf = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' }), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), m = 22;
@@ -382,9 +382,10 @@ function ligaVista(){ const p = new URLSearchParams(), v = S.vista;
     p.set('per', S.per); if (S.per==='anio'){ p.set('a', S.anio); if (S.mes) p.set('m', S.mes); } if (S.per==='pers'){ p.set('de', S.desde); p.set('a', S.hasta); }
     if (!cmpFijo()) p.set('cmp', S.cmp); if (S.ind) p.set('i', S.ind); if (S.sel && (S.sel.t==='n' || S.sel.t==='e')) p.set('l', S.sel.t+S.sel.i); if (S.region) p.set('r', S.region); }
   return location.origin+location.pathname+'?'+p.toString(); }
-function copiarLiga(){ menuComp(false); const u = ligaVista(), ok = () => avisoBreve('Liga copiada: abre esta misma vista'), mal = () => window.prompt('Copia la liga de esta vista:', u);
+function copiarLiga(){ menuComp(false); const u = ligaVista(), ok = () => avisoBreve(SALA.on ? 'Liga copiada: abre esta misma infografía' : 'Liga copiada: abre esta misma vista'), mal = () => window.prompt('Copia la liga de esta vista:', u);
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(ok, mal); else mal(); }
-function avisoBreve(t){ let e = $('aviso-breve'); if (!e){ e = document.createElement('div'); e.id = 'aviso-breve'; e.className = 'aviso-breve'; document.body.appendChild(e); }
+function avisoBreve(t){ let e = $('aviso-breve'); if (!e){ e = document.createElement('div'); e.id = 'aviso-breve'; e.className = 'aviso-breve'; }
+  const cont = SALA.on ? $('mapa') : document.body; if (e.parentNode!==cont) cont.appendChild(e);   // en la infografía (pantalla completa) el aviso va dentro de ella para que se vea
   e.textContent = t; e.classList.add('on'); clearTimeout(avisoBreve.t); avisoBreve.t = setTimeout(() => e.classList.remove('on'), 2400); }
 // Al abrir una liga de vista: se restaura lo mismo que veía quien la compartió
 function abrirLigaVista(){ const p = new URLSearchParams(location.search), v = p.get('ver'); if (!v && !p.get('per')) return false; if (v && !/^(proceso|infografia|pulso|bases|arma|analizar)$/.test(v)) return false;
@@ -393,7 +394,9 @@ function abrirLigaVista(){ const p = new URLSearchParams(location.search), v = p
   const per = p.get('per'); if (per && /^(shein|trump|anio|pers)$/.test(per)){ S.per = per; if (per==='anio'){ S.anio = +p.get('a') || S.anio; S.mes = +p.get('m') || 0; } if (per==='pers' && p.get('de') && p.get('a')){ S.desde = p.get('de'); S.hasta = p.get('a'); } }
   const c = p.get('cmp'); if (c) S.cmp = c==='sem' ? 'sem' : +c; const i = p.get('i'); S.ind = i && IND[i] ? i : null; if (p.get('r')) S.region = p.get('r');
   irA('pulso'); cambiarPeriodo(); const l = p.get('l'); if (l && /^[ne]\d+$/.test(l)) fijarSel({ t:l[0], i:+l.slice(1) }, true);
-  if (v==='infografia') setTimeout(() => { abrirSala(); const b = i && document.querySelector('#sl-im [data-ind="'+i+'"]'); if (b) b.click(); }, 300);   // la infografía entra limpia: se elige su indicador
+  if (v==='infografia') setTimeout(() => { abrirSala(); const b = i && document.querySelector('#sl-im [data-ind="'+i+'"]'); if (b) b.click();
+    setTimeout(() => document.documentElement.classList.remove('vz-arranque'), 250);
+    const fs = () => { if (SALA.on && !document.fullscreenElement && $('mapa').requestFullscreen) $('mapa').requestFullscreen().catch(() => {}); }; addEventListener('click', fs, true); }, 300);   // la infografía entra limpia: se elige su indicador
   return true; }
 function menuComp(abrir){ const m = $('menu-comp'); if (!abrir){ m.hidden = true; return; }
   m.innerHTML = '<button data-comp="liga"><b>Copiar liga</b><span>abre esta misma vista: periodo, indicador y lugar</span></button><button data-comp="pdf"><b>Descargar PDF</b><span>de lo que estás viendo</span></button><button data-comp="wa"><b>Enviar por WhatsApp</b><span>'+(TACTIL_COMP() ? 'se prepara el PDF y eliges el chat' : 'se abre WhatsApp Web y se descarga el PDF')+'</span></button>';
@@ -569,7 +572,7 @@ function pintarKpis(){
       const sem = D.ends.map((e,i)=>suma(d, i?D.ends[i-1]:0, e)), mx = Math.max.apply(null,sem) || 1;
       const delta = S.dia<ND ? '<span class="kc-d">al '+fechaDia(S.dia-1)+'</span>' : (va.ok ? '<span class="kc-d'+(fuerte?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[S.cmp]+': '+(va.a>=1e6 ? (va.a/1e6).toFixed(2)+' M' : va.a>=1e4 ? (va.a/1e3).toFixed(1)+' k' : va.a>0 && va.a<5 ? 'menos de 5' : miles(va.a))+'</span> ')+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%'+(cmpFijo() ? '<span class="kc-l"> vs. '+refFija().txt+'</span>' : '')+'</span>' : '<span class="kc-d">sin comparación</span>');
       const on = S.ind===m.k;
-      return '<button class="kc'+(on?' on':'')+'" data-k="'+m.k+'" aria-pressed="'+on+'" title="Clic para verlo en el mapa; otro clic lo quita">'+
+      return '<button class="kc'+(on?' on':'')+'" data-k="'+m.k+'" aria-pressed="'+on+'">'+
         '<span class="kc-top">'+ic+(FUENTE[m.k] ? '<span class="kc-nf">' : '')+'<span class="kc-n">'+m.n+(conAviso[m.k]?'<u title="Tiene un aviso de cambio"></u>':'')+'</span>'+(FUENTE[m.k] ? '<span class="kc-f">'+FUENTE[m.k][0]+'</span></span>' : '')+'</span>'+
         '<span class="kc-v num" data-v="'+v+'">'+corto(v)+'</span>'+
         '<span class="kc-pie">'+delta+'<span class="kc-b" aria-hidden="true">'+sem.map((x,i)=>'<i class="'+(i===semAct?'h':i<semAct?'p':'')+'" style="height:'+Math.max(8,x/mx*100).toFixed(0)+'%"></i>').join('')+'</span></span></button>';
@@ -1748,6 +1751,7 @@ function cmpInicial(){
   if (hayTrump()) return [[idxBase('2024-10-01'), idxBase('2025-01-20')], [idxBase('2025-01-20'), D0.dias]];
   const m = mesesBase(); return m.length>=2 ? [m[m.length-2], m[m.length-1]] : null;
 }
+function menuSlc(){ const m = $('sl-cm'); if (m) m.innerHTML = '<button type="button" data-slc="liga"><b>Copiar liga</b><span>abre esta misma infografía</span></button><button type="button" data-slc="pdf"><b>Descargar PDF</b><span>de lo que estás viendo</span></button><button type="button" data-slc="wa"><b>Enviar por WhatsApp</b><span>manda la liga de esta infografía</span></button>'; }
 function abrirSala(pf){
   if (SALA.on) return; if (S.play) detener();
   SALA.perfil = PERFILES[pf] ? pf : 'pulso';
@@ -1768,6 +1772,7 @@ function abrirSala(pf){
       '<div class="sl-per"><small>Periodo</small><div class="sl-seg" id="sl-seg"></div></div>'+
       '<div class="sl-cmpb" id="sl-cmpb"></div>'+
       '<div class="sl-corte" id="sl-corte"></div>'+
+      '<div class="sl-cm" id="sl-cm" hidden></div>'+
       '<button type="button" class="sl-x sl-liga" id="sl-liga" aria-label="Copiar liga de esta infografía" data-ayuda="<b>Compartir</b><br>Copia la liga de esta infografía, con el mismo periodo e indicador."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/></svg></button>'+
       '<button type="button" class="sl-x" id="sl-x" aria-label="Salir de pantalla completa" title="Salir (Esc)"><svg width="14" height="14" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>'+
     '</header>'+
@@ -1786,7 +1791,7 @@ function abrirSala(pf){
   $('sl-im').innerHTML = IS.map((x,i) => (i===0 || IS[i-1][1]!==x[1] ? '<span class="sl-ig">'+x[1]+'</span>' : '')+
     '<button type="button" role="option" data-ind="'+x[0]+'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(x[0] ? ICONO[x[0]] : ICONO_PAN)+'"/></svg><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span></button>').join('');
   document.addEventListener('pointerdown', cerrarIndSala, true);
-  L.addEventListener('click', clicSala); L.addEventListener('change', cambioSala);
+  menuSlc(); L.addEventListener('click', clicSala); L.addEventListener('change', cambioSala);
   $('sl-q').addEventListener('input', buscarSala); $('sl-q').addEventListener('keydown', e => { if (e.key==='Enter'){ elegirSala(0); e.preventDefault(); } if (e.key==='Escape'){ if (!$('sl-res').hidden){ $('sl-res').hidden = true; e.stopPropagation(); } else e.target.blur(); } });
   const tg = $('sl-tg'); tg.addEventListener('pointerdown', e => { if (SALA.extra==='va') return; if (S.play) detener(); fijarDia(diaSala(e)); tg.setPointerCapture(e.pointerId); });
   tg.addEventListener('pointermove', e => { if (e.buttons && SALA.extra!=='va') fijarDia(diaSala(e)); });
@@ -1808,9 +1813,14 @@ function cerrarSala(){
 }
 // ---- controles
 function clicSala(e){
+  const cm = $('sl-cm'); if (cm && !cm.hidden && !e.target.closest('#sl-cm, #sl-liga')) cm.hidden = true;   // el menú de compartir se cierra al tocar fuera
   const b = e.target.closest('button'); if (!b) return;
   if (b.id==='sl-x'){ cerrarSala(); return; }
-  if (b.id==='sl-liga'){ copiarLiga(); return; }
+  if (b.id==='sl-liga'){ const m = $('sl-cm'); m.hidden = !m.hidden; return; }
+  if (b.dataset.slc==='liga'){ $('sl-cm').hidden = true; copiarLiga(); return; }
+  if (b.dataset.slc==='wa'){ $('sl-cm').hidden = true; window.open('https://wa.me/?text='+encodeURIComponent('Infografía IA-NAMI: '+ligaVista()), '_blank', 'noopener'); return; }
+  if (b.dataset.slc==='pdf'){ const m = $('sl-cm'); m.innerHTML = '<p class="sl-nota" style="margin:6px 8px">Generando PDF…</p>';
+    hacerPDF().then(r => { r.pdf.save(r.nombre); m.hidden = true; menuSlc(); avisoBreve('PDF descargado'); }, () => { m.hidden = true; menuSlc(); avisoBreve('No se pudo generar el PDF. Intenta de nuevo.'); }); return; }
   if (b.id==='sl-indb'){ const m = $('sl-im'), ab = m.hidden; m.hidden = !ab; b.setAttribute('aria-expanded', ab); if (ab){ const on = m.querySelector('.on') || m.querySelector('button'); on.focus(); } return; }
   if (b.dataset.ind!=null){ $('sl-im').hidden = true; $('sl-indb').setAttribute('aria-expanded', false); const v = b.dataset.ind || null; SALA.extra = v==='co' || v==='va' ? v : null; S.ind = SALA.extra ? 'tram' : v; if (SALA.extra==='va' && S.play) detener(); if (S.ind==='rep' && S.sel && S.sel.t==='n') S.sel = null; if (S.ind && sinEdo(S.ind) && S.sel && S.sel.t!=='n') S.sel = null; pintarTodo(); return; }
   if (b.dataset.por){ SALA.por[salaInd() || 'resc'] = b.dataset.por; pintarSala(false); return; }
@@ -1865,9 +1875,7 @@ function buscarSala(){
 }
 function elegirSala(i){
   const x = hallSala[i]; if (!x) return; $('sl-res').hidden = true; $('sl-q').value = x.n; $('sl-qx').hidden = false;
-  if (x.sel.t==='n'){                                         // el indicador principal pasa al que más registros tiene ese país
-    const F = { ss:null, n:x.sel.i, nd:x.sel.i }, mejor = perfilSala().orden.filter(k => IND[k].nat).map(k => [k, sumaSem(k,0,NW-1,null,x.sel.i)]).sort((a,b) => b[1]-a[1])[0];
-    if (mejor && mejor[1]>0) S.ind = mejor[0]; S.region = null; }
+  if (x.sel.t==='n') S.region = null;                          // un país se ve en el mismo modo en que estaba: en Panorama, lo general de ese país; con un indicador, ese indicador
   fijarSel(x.sel, true);
 }
 const diaSala = e => { const r = $('sl-tg').getBoundingClientRect(); return (e.clientX-r.left)/r.width*ND + 0.5; };
@@ -2057,8 +2065,10 @@ PERFILES.regulacion = { nom:'Regulación migratoria', ctx:'Panorama: trámites d
     return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' se concluyeron <b>'+v('tram')+' trámites</b>'+(T ? ': '+Math.round(dt.tar/T*100)+'% salió con tarjeta y '+Math.round(dt.co/T*100)+'% con constancia u oficio' : (r[0]+r[1] ? ', '+Math.round(r[0]/(r[0]+r[1]+r[2])*100)+'% con resolución positiva' : ''))+(ti && ti[0] ? '; el que más se hace es <b>'+esc(CORTO_TRAM(ti[1]).toLowerCase())+'</b>' : '')+
       '.'+(dv ? ' Al último corte, <b>'+cortoK(dv)+' extranjeros</b> tienen documento migratorio vigente.' : ''); } };
 const perfilSala = () => PERFILES[SALA.perfil] || PERFILES.pulso;
-function frasePanorama(F){
-  const ent = S.sel ? (S.sel.t==='n' ? ' de '+nombreSel() : ' en '+nombreSel()) : S.region ? ' de '+nombreRegion() : '';
+// Con un país, la frase empieza por el país («Venezuela: en el periodo entraron…»), que se lee mejor que «en el periodo de Venezuela»
+function frasePanorama(F){ const r = frasePanorama0(F); return S.sel && S.sel.t==='n' && !SALA.cmp ? '<b>'+esc(nombreSel())+'</b>: '+r.charAt(0).toLowerCase()+r.slice(1) : r; }
+function frasePanorama0(F){
+  const ent = S.sel ? (S.sel.t==='n' ? (SALA.cmp ? ' de '+nombreSel() : '') : ' en '+nombreSel()) : S.region ? ' de '+nombreRegion() : '';
   const P = perfilSala(), l = P.pan.filter(x => !x[5] && (F.nd==null || IND[x[0]].nat));
   if (SALA.cmp){ const A = nomRango(SALA.A[0], SALA.A[1]), B = nomRango(SALA.B[0], SALA.B[1]);
     return 'Por día, en '+B+ent+': '+l.map(x => { const n = nFde(x[0], F), a = valRango(x[0], SALA.A[0], SALA.A[1], F.ss, n)/(SALA.A[1]-SALA.A[0]), b = valRango(x[0], SALA.B[0], SALA.B[1], F.ss, n)/(SALA.B[1]-SALA.B[0]);

@@ -1885,3 +1885,7 @@ html.vz-arranque body::after{content:"Preparando la vista…";position:fixed;ins
 .av-vs{color:var(--ink3);font-size:.92em;white-space:nowrap}
 .aviso-breve{position:fixed;left:50%;bottom:28px;transform:translate(-50%,16px);opacity:0;z-index:400;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13.5px;transition:all .3s;pointer-events:none}.aviso-breve.on{opacity:1;transform:translate(-50%,0)}
 .sl-x.sl-liga{margin-left:auto;margin-right:8px}.sl-liga+.sl-x{margin-left:0}
+.sl-cm{position:absolute;top:calc(max(44px,var(--u)*4) + 8px);right:calc(var(--u)*6);z-index:30;width:min(290px,calc(100vw - 32px));padding:6px;border-radius:14px;background:var(--s-bar);border:1px solid var(--s-grid);box-shadow:0 18px 40px rgba(0,0,0,.3);backdrop-filter:blur(12px);pointer-events:auto}
+.sl-cm[hidden]{display:none}.sl-cm button{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:10px;color:var(--s-ink)}.sl-cm button:hover{background:var(--s-btn)}.sl-cm b{display:block;font-size:14px}.sl-cm span{display:block;font-size:12px;color:var(--s-ink2)}
+html.vz-arranque.arr-info body::after{background:#F4F2EA;color:#5C5952}
+#mapa > .aviso-breve{display:block!important}

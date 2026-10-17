@@ -250,6 +250,12 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-a
 .pm.cm{width:min(280px,calc(100vw - 32px))}
 /* liga compartida «Resumen INAMI»: solo esta vista; sin salidas a la plataforma */
 :host([data-modo="compartido"]) [data-inf],:host([data-modo="compartido"]) [data-pulso],:host([data-modo="compartido"]) [data-salir]{display:none!important}
+
+/* documento vigente: conteo al corte, aparte de las 10 tarjetas */
+.dvg{float:right;margin-left:16px;color:#A9C4BA}.dvg b{color:#fff;font-weight:600}
+@media (max-width:699px){ .dvg{float:none;display:block;margin:3px 0 0} }
+.fdv{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:12px;padding:9px 12px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);font-size:13px;color:#A9C4BA}
+.fdv b{font:600 20px/1 'Barlow Condensed',sans-serif;color:#fff}.fdv em{font-style:normal;font-size:12px}
 `;
 const BODY = `<div class="cargav" id="cargav"><span><i></i>Preparando la vista…</span></div>
 
@@ -446,7 +452,7 @@ function hl(i, dir){ HI = (i+ORD.length) % ORD.length; const x = DATA[ORD[HI]], 
   clearTimeout(HT); HT = setTimeout(() => { MAN = false; hl(HI+1, 1); }, MAN ? 15000 : 8000); }
 function fila(){ $('row').innerHTML = DATA.map((x, i) => { const [a, b] = cc(V(x).T), rr = r(x);
   return '<button class="ch" data-i="'+i+'" style="--c:'+GC[x.g][0]+';--cs:'+GC[x.g][1]+';animation-delay:'+(0.1+i*0.04)+'s"><span class="n"><i></i>'+x.n+'</span><span class="v num" data-cu="'+V(x).T+'">'+a+(b ? '<small>'+b+'</small>' : '')+'</span>'+(ALR.includes(i) ? '<span class="bad" title="Fuera de lo normal"></span>' : '')+'<span class="d">'+(rr==null ? f(V(x).T/dias())+' por día' : chip(rr)+' '+vsCorto())+'</span></button>'; }).join(''); R.querySelectorAll('.ch .v[data-cu]').forEach(n => { const N = +n.dataset.cu, html = n.innerHTML, t0 = performance.now(); if (N<5) return; const step = t => { const k = Math.min(1, (t-t0)/900), e = 1-Math.pow(1-k, 3), [a, b] = cc(N*e); n.innerHTML = k<1 ? a+(b ? '<small>'+b+'</small>' : '') : html; if (k<1) requestAnimationFrame(step); }; requestAnimationFrame(step); }); }
-function setPer(p, abierto){ PER = p; if (TP(p)==='y' || TP(p)==='m') AY = p.slice(1, 5); menuPer(); if (!abierto) $('pm').classList.remove('on');
+function setPer(p, abierto){ PER = p; if (TP(p)==='y' || TP(p)==='m') AY = p.slice(1, 5); menuPer(); $('ley').insertAdjacentHTML('beforeend', docVig()); if (!abierto) $('pm').classList.remove('on');
   $('corte').innerHTML = '<i></i><span class="rg">'+(PER==='sem' ? 'Semana '+dd(PD().a).replace(/ \d+$/, '')+' – '+dd(PD().b) : dd(PD().a)+' – '+dd(PD().b))+' · </span>datos al '+dd(D.fin);
   orden(); alerta(); fila(); if (FICHA) ficha(FICHA[0], FICHA[1]); else if (CUR>=0) abrir(CUR); else hl(0); }
 
@@ -522,6 +528,12 @@ $('bqin').addEventListener('keydown', e => { if (e.key==='Enter' && BQL[BQSEL]) 
 // cuadro del estado en el mapa
 const BBE = {}; GEO.features.filter(g => g.properties.t==='m').forEach(g => { let b = [180, 90, -180, -90]; const w = c => typeof c[0]==='number' ? (b = [Math.min(b[0], c[0]), Math.min(b[1], c[1]), Math.max(b[2], c[0]), Math.max(b[3], c[1])]) : c.forEach(w); w(g.geometry.coordinates); BBE[g.properties.name] = b; });
 let FICHA = null;
+// Extranjeros con documento vigente: es un conteo al corte (no un flujo del periodo); total, por país o por estado
+function docVig(t, nom){ const d = (window.IANAMI_DATOS || {}).docs, DN = window.IANAMI_DATOS || {}; if (!d) return ''; let v = null;
+  if (!t) v = [d.total, d.h, d.m]; else if (t==='n'){ const i = (DN.nats || []).findIndex(x => x[0]===nom); v = i>=0 && d.nat[i] ? d.nat[i] : null; } else { const i = (DN.ests || []).indexOf(nom); v = i>=0 && d.est[i] != null ? [].concat(d.est[i]) : null; }
+  if (!v || !v[0]) return t ? '<div class="fdv">Sin extranjeros con documento vigente registrados al '+dd(d.corte)+'.</div>' : '';
+  const m = v[2]!=null && v[0]>=5 ? ' · '+Math.round(v[2]/v[0]*100)+'% mujeres' : '';
+  return t ? '<div class="fdv"><span>Con documento vigente</span><b class="num">'+fp(v[0])+'</b><em>al '+dd(d.corte)+m+'</em></div>' : '<span class="dvg">Con documento vigente: <b>'+fp(v[0])+'</b> al '+dd(d.corte)+'</span>'; }
 // ficha de un país o estado: agrupada como las tarjetas, con el lugar que ocupa en cada indicador y una frase de dónde pesa más.
 // Cada indicador se despliega con sus 5 principales: del país, los estados (o sectores) por donde aparece; del estado, las nacionalidades.
 const FXC = {};
@@ -559,7 +571,7 @@ function ficha(t, nom){ limpia(); FICHA = [t, nom]; CUR = -1; FXA = -1; clearTim
     l.map(o => '<div class="fgi" data-fx="'+o.i+'"><button class="fgb" data-fx="'+o.i+'" aria-expanded="false"><span class="fn">'+o.x.n+'<small>lugar '+o.k+' de '+o.de+'</small></span><b class="num">'+fp(o.a)+(o.rr!=null ? chip(o.rr) : '')+'</b><svg class="cv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="fgd" style="height:0px"></div></div>').join('')+'</div>' : ''; }).join('');
   sh.style.cssText = '--c:#5FB79B;--cs:rgba(95,183,155,.2)';
   sh.innerHTML = '<div class="grab"></div><div class="shh"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><div class="t"><b>'+nom+'</b><small>'+(t==='n' ? 'País' : 'Estado / O.R.')+' · '+PNOM(PER)+'</small></div><button class="rb pb" data-pulso title="Ver en Pulso" aria-label="Ver en Pulso"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg><span>Pulso</span></button><button class="rb" data-x aria-label="Cerrar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+
-    '<div class="vp"><div class="tb fic" style="flex:none;height:100%"><div class="fr">'+res+'</div><div class="fley">'+(PD().ca ? '▲▼ '+vsCorto() : PD().nc ? cap(PD().nc) : 'Total acumulado · '+dd(PD().a)+' – '+dd(PD().b))+' · toca un indicador para ver sus 5 principales</div>'+grupos+
+    '<div class="vp"><div class="tb fic" style="flex:none;height:100%"><div class="fr">'+res+'</div><div class="fley">'+(PD().ca ? '▲▼ '+vsCorto() : PD().nc ? cap(PD().nc) : 'Total acumulado · '+dd(PD().a)+' – '+dd(PD().b))+' · toca un indicador para ver sus 5 principales</div>'+docVig(t, nom)+grupos+
     (sin.length ? '<div class="f0"><b>Sin registros en:</b> '+sin.map(o => o.x.n).join(', ')+'</div>' : '')+'</div></div>';
   $('app').classList.add('sel'); fichaMapa(t, nom); }
 /* ---------- gestos ---------- */
