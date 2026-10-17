@@ -82,7 +82,7 @@ const cmpFijoHtml = () => '<span class="rg-sel rg-fijo">'+(nomFijo() ? 'Comparad
 function ventanas(){ if (cmpFijo()) return ventanaFija(); if (['sem',30,90].indexOf(Q.cmp)<0) Q.cmp = 30; const N = Q.cmp;
   if (N==='sem'){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); return b-7 >= Q.d0 ? [[b, b+7], [b-7, b]] : null; }
   return N==='aa' || 2*N > Q.d1-Q.d0 ? null : [[Q.d1-N, Q.d1], [Q.d1-2*N, Q.d1-N]]; }
-const etqCmp = () => { const w = ventanas(); if (!w) return ''; return fecha(w[0][0])+' – '+fecha(w[0][1]-1)+' contra '+fecha(w[1][0])+' – '+fecha(w[1][1]-1); };
+const etqCmp = () => { const w = ventanas(); if (!w) return ''; return fecha(w[0][0])+' – '+fecha(w[0][1]-1)+' vs. '+fecha(w[1][0])+' – '+fecha(w[1][1]-1); };
 const iso = d => { const f = fDia(d); return f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0')+'-'+String(f.getDate()).padStart(2,'0'); };
 // Grupo de tarjetas que se abre y cierra con un botón, igual que «Constancias y oficios» en Regulación migratoria
 const masG = (tit, val, eti, col, cartas) => '<button class="rg-tog'+(Q.mas[Q.vista]?' on':'')+'" data-cmas aria-expanded="'+!!Q.mas[Q.vista]+'"><span>'+tit+'</span><b class="num">'+val+'</b><i>'+(Q.mas[Q.vista]?'‹':'›')+'</i></button>'+
@@ -212,9 +212,9 @@ const alternar = (arr, k) => { const j = arr.indexOf(k); if (j>=0) arr.splice(j,
 const ABR = {'Aguascalientes':'Ags','Baja California':'BC','Baja California Sur':'BCS','Campeche':'Camp','Chiapas':'Chis','Chihuahua':'Chih','Ciudad de México':'CDMX','Coahuila':'Coah','Colima':'Col','Durango':'Dgo','Estado de México':'Edomex','Guanajuato':'Gto','Guerrero':'Gro','Hidalgo':'Hgo','Jalisco':'Jal','Michoacán':'Mich','Morelos':'Mor','Nayarit':'Nay','Nuevo León':'NL','Oaxaca':'Oax','Puebla':'Pue','Querétaro':'Qro','Quintana Roo':'QRoo','San Luis Potosí':'SLP','Sinaloa':'Sin','Sonora':'Son','Tabasco':'Tab','Tamaulipas':'Tamps','Tlaxcala':'Tlax','Veracruz':'Ver','Yucatán':'Yuc','Zacatecas':'Zac'};
 const abr = e => ABR[e] || e, PAL5 = ['#2F6657','#C4605A','#8F7F2E','#7E302B','#778E88'];
 const diaDe = s => Math.round((new Date(s+'T00:00:00') - INI)/864e5);
+// Del catálogo único de fechas (js/temporadas.js)
 function temporadaEn(a, b){
-  const T = window.IANAMI_TEMPORADAS || {}, n = {invierno:'Vacaciones de invierno', semana_santa:'Semana Santa', verano:'Vacaciones de verano'};
-  for (const k of Object.keys(n)) for (const x of (T[k] || [])){ if (!x.inicio) continue; const i = diaDe(x.inicio), f = x.fin ? diaDe(x.fin) : i; if (i<=b && f>=a) return n[k]; }
+  for (const x of (window.IANAMI_FECHAS ? window.IANAMI_FECHAS(false) : [])){ const i = diaDe(x[0]), f = diaDe(x[1]); if (i<=b && f>=a) return x[2]; }
   return '';
 }
 // Cubetas de tiempo: día, semana (lunes a domingo) o mes; «Auto» elige según el largo del periodo

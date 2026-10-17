@@ -1882,3 +1882,6 @@ html.vz-on,html.vz-on body{overflow:hidden}
 /* liga del Vistazo: pantalla verde desde el primer instante, hasta que el Vistazo está listo (no se ve el tablero de atrás) */
 html.vz-arranque,html.vz-arranque body{overflow:hidden}
 html.vz-arranque body::after{content:"Preparando la vista…";position:fixed;inset:0;z-index:105;display:grid;place-items:center;background:radial-gradient(120% 90% at 70% 30%,#24443B 0%,#16231F 60%,#101815 100%);color:#CFE2DA;font:600 15px Barlow,system-ui,sans-serif;letter-spacing:.04em}
+.av-vs{color:var(--ink3);font-size:.92em;white-space:nowrap}
+.aviso-breve{position:fixed;left:50%;bottom:28px;transform:translate(-50%,16px);opacity:0;z-index:400;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13.5px;transition:all .3s;pointer-events:none}.aviso-breve.on{opacity:1;transform:translate(-50%,0)}
+.sl-x.sl-liga{margin-left:auto;margin-right:8px}.sl-liga+.sl-x{margin-left:0}

@@ -98,9 +98,9 @@ const etqCmp = () => { const w = ventanas(); if (!w) return ''; if (cmpFijo()) r
 const chipD = (a,b) => { if (!b) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' k' : a>0 && a<5 ? 'menos de 5' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
 const mov = m => '<span class="mv '+(m>0?'u':m<0?'d':'e')+'">'+(m>0?'▲'+m:m<0?'▼'+(-m):'=')+'</span>';
 function lugares(key, nk, r, o){ const x = agg(key, nk, Object.assign({}, o, {d0:r[0], d1:r[1]})), l = Array.from(x).map((v,i)=>[i,v]).sort((a,b)=>b[1]-a[1]), p = {}; l.forEach((y,j) => p[y[0]] = j+1); return p; }
+// Del catálogo único de fechas (js/temporadas.js)
 function temporadaEn(a, b){
-  const T = window.IANAMI_TEMPORADAS || {}, n = {invierno:'las vacaciones de invierno', semana_santa:'Semana Santa', verano:'las vacaciones de verano'};
-  for (const k of Object.keys(n)) for (const x of (T[k] || [])){ if (!x.inicio) continue; const i = diaDe(x.inicio), f = x.fin ? diaDe(x.fin) : i; if (i<=b && f>=a) return n[k]; }
+  for (const x of (window.IANAMI_FECHAS ? window.IANAMI_FECHAS(false) : [])){ const i = diaDe(x[0]), f = diaDe(x[1]); if (i<=b && f>=a) return x[2].replace(/^Vacaciones/, 'las vacaciones'); }
   return '';
 }
 
@@ -141,7 +141,7 @@ function htmlCtl(){
     '<div class="rango"><b>'+fechaA(Q.d0)+' – '+fechaA(Q.d1-1)+'</b><span>'+(Q.d1-Q.d0)+' días</span></div>'+
     (cmpFijo() ? cmpFijoHtml() : '<label class="rg-sel">Comparar con <select id="rg-cmp">'+OPC_CMP.map(x => { const ap = x[0]==='sem' ? (() => { const q = Q.cmp; Q.cmp = 'sem'; const w = ventanas(); Q.cmp = q; return !!w; })() : ok(x[0]);
       return '<option value="'+x[0]+'"'+(String(Q.cmp)===String(x[0])?' selected':'')+(ap?'':' disabled')+'>'+x[1]+'</option>'; }).join('')+'</select></label>')+
-    ((Q.cmp==='sem' || cmpFijo()) && ventanas() ? '<span class="rg-cmp-n">'+rangoTxt(ventanas()[0])+' contra '+rangoTxt(ventanas()[1])+'</span>' : '')+
+    (ventanas() ? '<span class="rg-cmp-n">'+rangoTxt(ventanas()[0])+' vs. '+rangoTxt(ventanas()[1])+'</span>' : '')+
     cajaBusca('rg-bus', 'Buscar nacionalidad, estado u oficina')+'<span class="rg-chips">'+Q.nats.map((n,j) => '<span class="tag-f" style="background:'+COLN[j]+'">'+esc(DIC.n[n])+' <button data-rquita="n'+n+'" aria-label="Quitar">×</button></span>').join('')+
       Q.ests.map((e,j) => '<span class="tag-f" style="background:'+(Q.ests.length>1 ? ['#2F6657','#C4605A','#8F7F2E'][j] : '#8F7F2E')+'">'+esc(DIC.e[e])+' <button data-rquita="e'+e+'" aria-label="Quitar">×</button></span>').join('')+
       (Q.ofiF>=0 ? '<span class="tag-f" style="background:#2F6657">'+esc(nomO(DIC.o[Q.ofiF]))+' <button data-rquita="o" aria-label="Quitar">×</button></span>' : '')+'</span>';

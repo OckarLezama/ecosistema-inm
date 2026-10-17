@@ -374,8 +374,29 @@ function enviarPDF(){ const x = PDF_LISTO; $('menu-comp').hidden = true; if (!x)
   if (!navigator.canShare({ files:[x.f] })){ const u = URL.createObjectURL(x.f), a = document.createElement('a'); a.href = u; a.download = x.f.name; a.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); return; }
   navigator.share({ files:[x.f], title:x.tit }).catch(e => { if (!e || e.name!=='AbortError') alertaComp('No se pudo abrir el menú de compartir.'); }); }
 function alertaComp(m){ const a = $('menu-comp'); a.innerHTML = '<p class="mini" style="padding:8px 10px;margin:0">'+esc(m)+'</p>'; a.hidden = false; setTimeout(() => { a.hidden = true; menuComp(false); }, 3500); }
+// Liga de la vista actual: sección, periodo, comparación, indicador, lugar, región e infografía. Corta y legible.
+function ligaVista(){ const p = new URLSearchParams(), v = S.vista;
+  if (v==='dir'){ p.set('ver', 'proceso'); p.set('n', S.dir || 0); }
+  else if (v!=='pulso') p.set('ver', v);
+  else { if (SALA.on) p.set('ver', 'infografia');
+    p.set('per', S.per); if (S.per==='anio'){ p.set('a', S.anio); if (S.mes) p.set('m', S.mes); } if (S.per==='pers'){ p.set('de', S.desde); p.set('a', S.hasta); }
+    if (!cmpFijo()) p.set('cmp', S.cmp); if (S.ind) p.set('i', S.ind); if (S.sel && (S.sel.t==='n' || S.sel.t==='e')) p.set('l', S.sel.t+S.sel.i); if (S.region) p.set('r', S.region); }
+  return location.origin+location.pathname+'?'+p.toString(); }
+function copiarLiga(){ menuComp(false); const u = ligaVista(), ok = () => avisoBreve('Liga copiada: abre esta misma vista'), mal = () => window.prompt('Copia la liga de esta vista:', u);
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(ok, mal); else mal(); }
+function avisoBreve(t){ let e = $('aviso-breve'); if (!e){ e = document.createElement('div'); e.id = 'aviso-breve'; e.className = 'aviso-breve'; document.body.appendChild(e); }
+  e.textContent = t; e.classList.add('on'); clearTimeout(avisoBreve.t); avisoBreve.t = setTimeout(() => e.classList.remove('on'), 2400); }
+// Al abrir una liga de vista: se restaura lo mismo que veía quien la compartió
+function abrirLigaVista(){ const p = new URLSearchParams(location.search), v = p.get('ver'); if (!v && !p.get('per')) return false; if (v && !/^(proceso|infografia|pulso|bases|arma|analizar)$/.test(v)) return false;
+  if (v==='proceso'){ S.dir = Math.max(0, Math.min(DIRS.length-1, +p.get('n') || 0)); irA('dir'); return true; }
+  if (v && v!=='infografia' && v!=='pulso'){ irA(v); return true; }
+  const per = p.get('per'); if (per && /^(shein|trump|anio|pers)$/.test(per)){ S.per = per; if (per==='anio'){ S.anio = +p.get('a') || S.anio; S.mes = +p.get('m') || 0; } if (per==='pers' && p.get('de') && p.get('a')){ S.desde = p.get('de'); S.hasta = p.get('a'); } }
+  const c = p.get('cmp'); if (c) S.cmp = c==='sem' ? 'sem' : +c; const i = p.get('i'); S.ind = i && IND[i] ? i : null; if (p.get('r')) S.region = p.get('r');
+  irA('pulso'); cambiarPeriodo(); const l = p.get('l'); if (l && /^[ne]\d+$/.test(l)) fijarSel({ t:l[0], i:+l.slice(1) }, true);
+  if (v==='infografia') setTimeout(() => { abrirSala(); const b = i && document.querySelector('#sl-im [data-ind="'+i+'"]'); if (b) b.click(); }, 300);   // la infografía entra limpia: se elige su indicador
+  return true; }
 function menuComp(abrir){ const m = $('menu-comp'); if (!abrir){ m.hidden = true; return; }
-  m.innerHTML = '<button data-comp="pdf"><b>Descargar PDF</b><span>de lo que estás viendo</span></button><button data-comp="wa"><b>Enviar por WhatsApp</b><span>'+(TACTIL_COMP() ? 'se prepara el PDF y eliges el chat' : 'se abre WhatsApp Web y se descarga el PDF')+'</span></button>';
+  m.innerHTML = '<button data-comp="liga"><b>Copiar liga</b><span>abre esta misma vista: periodo, indicador y lugar</span></button><button data-comp="pdf"><b>Descargar PDF</b><span>de lo que estás viendo</span></button><button data-comp="wa"><b>Enviar por WhatsApp</b><span>'+(TACTIL_COMP() ? 'se prepara el PDF y eliges el chat' : 'se abre WhatsApp Web y se descarga el PDF')+'</span></button>';
   m.hidden = false; }
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const colG = g => cssv(g==='reg'?'--reg':g==='irr'?'--irr':'--usa');
@@ -439,9 +460,9 @@ const cmpN = () => cmpFijo() ? 30 : S.cmp==='sem' ? 7 : S.cmp;               // 
 const etiquetaN = n => n==='sem' ? '7 días' : n===90 ? '3 meses' : n+' días';
 // Semana anterior: la última semana completa (lunes a domingo) con datos contra la previa
 function semanasCmp(U){ let b = U; while (b>0 && (diaDe(b-1).getDay()!==0)) b--; return b-14>=0 ? [b-7, b, b-14, b-7] : null; }
-function textoCmp(){ if (cmpFijo()){ const r = refFija(); return r ? 'el periodo contra '+r.txt : 'el periodo (sin periodo anterior con datos para comparar)'; }
-  if (S.cmp==='sem'){ const w = semanasCmp(ND); return w ? 'semana del '+fechaDia(w[0])+' al '+fechaDia(w[1]-1)+' contra la anterior' : 'semana anterior'; }
-  return S.cmp==='aa' ? 'el periodo contra el mismo periodo del año anterior' : 'últimos '+etiquetaN(S.cmp)+' contra '+(S.cmp===90 ? 'los 3 meses' : 'los '+S.cmp+' días')+' anteriores'; }
+function textoCmp(){ if (cmpFijo()){ const r = refFija(); return r ? 'el periodo vs. '+r.txt : 'el periodo (sin periodo anterior con datos para comparar)'; }
+  if (S.cmp==='sem'){ const w = semanasCmp(ND); return w ? 'semana del '+fechaDia(w[0])+' al '+fechaDia(w[1]-1)+' vs. la anterior' : 'semana anterior'; }
+  return S.cmp==='aa' ? 'el periodo vs. el mismo periodo del año anterior' : 'últimos '+etiquetaN(S.cmp)+' vs. '+(S.cmp===90 ? 'los 3 meses' : 'los '+S.cmp+' días')+' anteriores'; }
 function variacion(d){
   const U = d.k ? finDatos(d.k) : ND;            // los días pendientes no entran a la comparación
   if (cmpFijo()){ const r = refFija(); if (!r || !d.k) return {a:0, b:0, dl:0, ok:false}; const q0 = r.t==='prev' ? P0-U : r.q0, b = q0>=0 ? sumaCompleta(d.k, d.F, q0, q0+U) : null, a = suma(d,0,U);
@@ -505,14 +526,17 @@ function analizar(F){
   return out.sort((x,y)=>y.imp-x.imp);
 }
 // Cada aviso se redacta como hallazgo: qué cambió, cuánto y contra qué
-function cuanto(a, b){ const r = a/Math.max(b,1e-9);
-  return r>=2 ? 'se multiplicaron por '+r.toFixed(1) : r>=1 ? 'subieron '+((r-1)*100).toFixed(0)+'%' : 'bajaron '+((1-r)*100).toFixed(0)+'%'; }
+// Regla de redacción: siempre «pasó de X a Y» con su %, en palabras cuando el cambio es muy grande, y contra qué periodo se compara
+function cuanto(a, b, fmt){ fmt = fmt || corto; const r = a/Math.max(b,1e-9), p = Math.round((r-1)*100);
+  const pal = r>=2 ? (r<3 ? 'más del doble' : r<4 ? 'más del triple' : 'más de '+Math.floor(r)+' veces') : r<=0.25 ? 'menos de la cuarta parte' : r<=0.5 ? 'menos de la mitad' : '';
+  return (r>=1 ? 'subieron' : 'bajaron')+' de '+fmt(b)+' a '+fmt(a)+' ('+(p>=0 ? '+' : '−')+Math.abs(p)+'%'+(pal ? ', '+pal : '')+')'; }
+const ventanaTxt = () => cmpFijo() ? 'el periodo vs. '+(refFija() ? refFija().txt : 'el periodo anterior') : S.cmp==='sem' ? 'última semana vs. la anterior' : 'últimos '+etiquetaN(cmpN())+' vs. los '+etiquetaN(cmpN())+' previos';
 function textoAviso(a){
-  const N = a.k ? IND[a.k].n : '', prev = cmpFijo() ? (refFija() ? refFija().txt : 'el periodo anterior') : 'los '+etiquetaN(cmpN())+' previos';
-  if (a.t==='cambio') return '<b>'+N+'</b> '+cuanto(a.a,a.b)+': '+corto(a.a)+' frente a '+corto(a.b)+' en '+prev+'.';
-  if (a.t==='pico')   return '<b>'+N+'</b>: pico de '+miles(a.v)+' el '+fechaDia(a.i)+', cuando lo habitual es '+miles(a.med)+' al día.';
-  if (a.t==='nac')    return '<b>'+esc(D.nats[a.n][0])+'</b>: '+N.toLowerCase()+' por día '+cuanto(a.a,a.b)+' ('+miles(a.b)+' → '+miles(a.a)+').';
-  if (a.t==='est')    return '<b>'+esc(EST[a.s])+'</b>: '+N.toLowerCase()+' '+cuanto(a.a,a.b)+' ('+miles(a.b)+' → '+miles(a.a)+').';
+  const N = a.k ? IND[a.k].n : '', vt = '';   // contra qué periodo ya lo dice el encabezado del recuadro
+  if (a.t==='cambio') return '<b>'+N+'</b> '+cuanto(a.a, a.b)+'.'+vt;
+  if (a.t==='pico')   return '<b>'+N+'</b>: '+miles(a.v)+' el '+fechaDia(a.i)+', cuando lo habitual es '+miles(a.med)+' al día ('+(a.v/Math.max(a.med,1)>=2 ? 'más de '+Math.floor(a.v/Math.max(a.med,1))+' veces lo habitual' : '+'+Math.round((a.v/Math.max(a.med,1)-1)*100)+'%')+').';
+  if (a.t==='nac')    return '<b>'+esc(D.nats[a.n][0])+'</b>: '+N.toLowerCase()+' al día '+cuanto(a.a, a.b, miles)+'.'+vt;
+  if (a.t==='est')    return '<b>'+esc(EST[a.s])+'</b>: '+N.toLowerCase()+' '+cuanto(a.a, a.b, miles)+'.'+vt;
   if (a.t==='car'){ const c = D.caravanas[a.c];
     return '<b>'+esc(nombreCar(c))+'</b>: salió el '+fechaISO(c.f).replace(/ \d{4}$/,'')+' de '+esc(lugarCorto(c.s))+' con unas '+miles(c.p)+' personas'+(c.d ? '; se disolvió en '+esc(lugarCorto(c.d)) : '')+'.'; }
   return '<b>'+esc(D.nats[a.n][0])+'</b> concentra '+pct(a.a,a.b)+'% de los <b>rechazos</b>.';
@@ -522,7 +546,7 @@ function filaAviso(a, i){
   const eti = a.t==='car' ? 'Caravana' : IND[a.k].n+(a.t==='pico' ? ' · pico' : a.t==='nac' ? ' · por país' : a.t==='est' ? ' · por estado' : a.t==='conc' ? ' · concentración' : '');
   if (a.t==='car'){ ic = '<svg width="12" height="12" viewBox="0 0 16 16">'+GLIFO_CAR+'</svg>'; ci = '≈'+corto(D.caravanas[a.c].p); }
   else if (a.t==='conc'){ const p = pct(a.a,a.b); ic = '<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="'+c+'" stroke-width="3" stroke-dasharray="'+(p*0.283).toFixed(1)+' 28.3" transform="rotate(-90 6 6)"/></svg>'; ci = p+'%'; }
-  else if (a.t==='pico'){ ic = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 10l3-3 2 2 5-7" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; ci = '×'+(a.v/Math.max(a.med,1)).toFixed(1); }
+  else if (a.t==='pico'){ ic = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 10l3-3 2 2 5-7" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; ci = '▲ '+Math.round((a.v/Math.max(a.med,1)-1)*100)+'%'; }
   else { ic = tri(a.dl>=0, c); ci = Math.abs(a.dl).toFixed(0)+'%'; }
   return '<button class="av" data-av="'+i+'" style="--c:'+c+'"><span class="av-t"><span class="av-k">'+eti+'</span><span class="av-v">'+ic+ci+'</span></span><span class="tx">'+textoAviso(a)+'</span></button>';
 }
@@ -1151,15 +1175,9 @@ function temporadasEnPeriodo(){ const vistos = {}, l = [];
   return l; }
 function leyendaTemporadas(){ return temporadasEnPeriodo().map(x => '<span style="display:inline-block;width:14px;height:4px;border-radius:2px;background:'+COLOR_TEMP[x[1]]+';margin-right:4px;vertical-align:middle"></span>'+esc(x[0])+' · ').join(''); }
 // Temporadas que tocan el periodo: vacaciones SEP (invierno, Semana Santa, verano), Navidad y Acción de Gracias (EE. UU.)
-function temporadas(){
-  const T = window.IANAMI_TEMPORADAS || {}, o = [], n = {invierno:'Vacaciones de invierno (SEP)', semana_santa:'Semana Santa (SEP)', verano:'Vacaciones de verano (SEP)'};
-  Object.keys(n).forEach(k => (T[k] || []).forEach(x => { if (x.inicio) o.push([x.inicio, x.fin || x.inicio, n[k]+' · ciclo '+x.ciclo, 'sep', n[k].replace(' (SEP)','')]); }));
-  for (let y=INICIO.getFullYear(); y<=diaDe(ND-1).getFullYear(); y++){
-    const nov = new Date(y,10,1), jueves = 1 + ((4 - nov.getDay() + 7) % 7) + 21;     // cuarto jueves de noviembre
-    o.push([isoDe(new Date(y,10,jueves)), isoDe(new Date(y,10,jueves)), 'Acción de Gracias (EE. UU.)', 'eu', 'Acción de Gracias (EE. UU.)']);
-  }
-  return o;
-}
+// Del catálogo único (js/temporadas.js): las fechas de EE. UU. solo con un indicador «Desde EE. UU.»
+function temporadas(){ const eu = !!(S.ind && IND[S.ind] && IND[S.ind].g==='usa');
+  return (window.IANAMI_FECHAS ? window.IANAMI_FECHAS(eu) : []).map(x => [x[0], x[1], x[2]+(x[4] ? ' · ciclo '+x[4] : ''), x[3]==='eu' ? 'eu' : 'sep', x[2]]); }
 function moverCursor(d){ const c = document.getElementById('cursor'); if (c) c.setAttribute('transform','translate('+Math.min(Wt-1, d*Wt/ND).toFixed(2)+',0)');
   const sc = document.getElementById('sl-cur'); if (sc){ const w = $('sl-tg').viewBox.baseVal.width || 1; sc.setAttribute('transform','translate('+Math.min(w-1, d*w/ND).toFixed(2)+',0)'); } }
 function fijarDia(d){ d = Math.max(1, Math.min(ND, Math.round(d))); if (d===S.dia) return; S.dia = d; S.t = d; pintarTodo(true); }
@@ -1410,10 +1428,11 @@ function pintarCtl(){
   $('rango').textContent = f0.getDate()+' '+MES12[f0.getMonth()]+(f0.getFullYear()!==f1.getFullYear() ? ' '+f0.getFullYear() : '')+' – '+fechaLarga(S.dia-1);
   $('rango-nota').textContent = S.dia>=ND ? ND+' días' : S.dia+' de '+ND+' días';
   const fx = cmpFijo(), rf = fx ? refFija() : null, rgo = (a, b) => fechaDia(a)+' – '+fechaDia(b-1); $('cmp').closest('.varia').classList.toggle('fijo', fx);
-  $('cmp').innerHTML = fx ? '<span class="cmp-fx">'+(rf ? 'Comparado con <b>'+rf.txt+'</b>' : 'Sin periodo anterior con datos para comparar')+'</span>'+(rf ? '<span class="cmp-n">'+(i0 => fechaIdx(P0)+' – '+fechaIdx(P0+ND-1)+' contra '+fechaIdx(i0)+' – '+fechaIdx(i0+ND-1))(rf.t==='prev' ? P0-ND : rf.q0)+'</span>' : '') :
+  $('cmp').innerHTML = fx ? '<span class="cmp-fx">'+(rf ? 'Comparado con <b>'+rf.txt+'</b>' : 'Sin periodo anterior con datos para comparar')+'</span>'+(rf ? '<span class="cmp-n">'+(i0 => fechaIdx(P0)+' – '+fechaIdx(P0+ND-1)+' vs. '+fechaIdx(i0)+' – '+fechaIdx(i0+ND-1))(rf.t==='prev' ? P0-ND : rf.q0)+'</span>' : '') :
     '<select id="cmp-sel" aria-label="Comparar con">'+[['sem','Semana anterior'],[30,'Últimos 30 días'],[90,'Últimos 3 meses']].map(o => { const ok = cmpDisponible(o[0]);
     return '<option value="'+o[0]+'"'+(String(S.cmp)===String(o[0])?' selected':'')+(ok?'':' disabled')+'>'+o[1]+'</option>'; }).join('')+'</select>'+
-    (S.cmp==='sem' && semanasCmp(ND) ? (w => '<span class="cmp-n">'+fechaDia(w[0])+' – '+fechaDia(w[1]-1)+' contra '+fechaDia(w[2])+' – '+fechaDia(w[3]-1)+'</span>')(semanasCmp(ND)) : '');
+    (S.cmp==='sem' ? (semanasCmp(ND) ? (w => '<span class="cmp-n">'+fechaDia(w[0])+' – '+fechaDia(w[1]-1)+' vs. '+fechaDia(w[2])+' – '+fechaDia(w[3]-1)+'</span>')(semanasCmp(ND)) : '')
+      : 2*S.cmp<=ND ? '<span class="cmp-n">'+fechaDia(ND-S.cmp)+' – '+fechaDia(ND-1)+' vs. '+fechaDia(ND-2*S.cmp)+' – '+fechaDia(ND-S.cmp-1)+'</span>' : '');   // las fechas exactas que se comparan, en todas las opciones
   // Periodos: Sheinbaum, Trump, Año (con mes) y Personalizado
   $('per').innerHTML = [['shein','Sheinbaum'],['trump','Trump'],['anio','Año'],['pers','Personalizado']].map(o => { const ok = !!rangoPeriodo(o[0]==='anio' || o[0]==='pers' ? 'shein' : o[0]) && (o[0]!=='trump' || idxBase('2025-01-20') < D0.dias), on = S.per===o[0];
     return '<button data-per="'+o[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'"'+(ok ? '' : ' disabled title="Sin datos para este periodo"')+'>'+o[1]+'</button>'; }).join('');
@@ -1490,7 +1509,7 @@ function iniciarConsulta(){
     if (fs && !(document.fullscreenElement || document.webkitFullscreenElement)){ try { const p = fs.call(d); if (p && p.catch) p.catch(() => {}); } catch(e){} } vistazo(); });
   if (/[?&]vista=tablet\b/.test(location.search)) vistazo();
   if (/[?&]resumen-inami\b/.test(location.search)){ document.title = 'Resumen INAMI'; vistazo({ compartido:true }); }   // liga compartida: solo el Vistazo
-  $('menu-comp').addEventListener('click', e => { e.stopPropagation(); const b = e.target.closest('[data-comp]'); if (!b) return; if (b.dataset.comp==='enviar') enviarPDF(); else compartir(b.dataset.comp); });
+  $('menu-comp').addEventListener('click', e => { e.stopPropagation(); const b = e.target.closest('[data-comp]'); if (!b) return; if (b.dataset.comp==='enviar') enviarPDF(); else if (b.dataset.comp==='liga') copiarLiga(); else compartir(b.dataset.comp); });
   document.addEventListener('click', e => { if (!e.target.closest('#menu-comp, #b-comp')) menuComp(false); });
 }
 // Abre un proceso con filtros (los usa «Profundizar en el tablero» de Pregunta a INAMI)
@@ -1749,6 +1768,7 @@ function abrirSala(pf){
       '<div class="sl-per"><small>Periodo</small><div class="sl-seg" id="sl-seg"></div></div>'+
       '<div class="sl-cmpb" id="sl-cmpb"></div>'+
       '<div class="sl-corte" id="sl-corte"></div>'+
+      '<button type="button" class="sl-x sl-liga" id="sl-liga" aria-label="Copiar liga de esta infografía" data-ayuda="<b>Compartir</b><br>Copia la liga de esta infografía, con el mismo periodo e indicador."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/></svg></button>'+
       '<button type="button" class="sl-x" id="sl-x" aria-label="Salir de pantalla completa" title="Salir (Esc)"><svg width="14" height="14" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>'+
     '</header>'+
     '<div class="sl-pop" id="sl-pop" hidden></div>'+
@@ -1790,6 +1810,7 @@ function cerrarSala(){
 function clicSala(e){
   const b = e.target.closest('button'); if (!b) return;
   if (b.id==='sl-x'){ cerrarSala(); return; }
+  if (b.id==='sl-liga'){ copiarLiga(); return; }
   if (b.id==='sl-indb'){ const m = $('sl-im'), ab = m.hidden; m.hidden = !ab; b.setAttribute('aria-expanded', ab); if (ab){ const on = m.querySelector('.on') || m.querySelector('button'); on.focus(); } return; }
   if (b.dataset.ind!=null){ $('sl-im').hidden = true; $('sl-indb').setAttribute('aria-expanded', false); const v = b.dataset.ind || null; SALA.extra = v==='co' || v==='va' ? v : null; S.ind = SALA.extra ? 'tram' : v; if (SALA.extra==='va' && S.play) detener(); if (S.ind==='rep' && S.sel && S.sel.t==='n') S.sel = null; if (S.ind && sinEdo(S.ind) && S.sel && S.sel.t!=='n') S.sel = null; pintarTodo(); return; }
   if (b.dataset.por){ SALA.por[salaInd() || 'resc'] = b.dataset.por; pintarSala(false); return; }
@@ -1820,7 +1841,7 @@ function opcionesCmp(sel, id){ const M = mesesBase(), y0 = sel ? fechaBase(sel[0
   return '<span class="sl-ym"><select id="'+id+'-y" aria-label="Año">'+ys.map(y => '<option'+(y===y0 ? ' selected' : '')+'>'+y+'</option>').join('')+'</select><select id="'+id+'" aria-label="Mes">'+mesesDe(y0, sel)+'</select></span>'; }
 function abrirComparar(){
   const c = SALA.cmp ? [SALA.A, SALA.B] : cmpInicial(), p = $('sl-pop'); if (!c){ return; }
-  const trumpTxt = hayTrump() ? '<button type="button" data-cpre="1" class="sl-pre">Antes de Trump contra con Trump</button>' : '<p class="sl-nota">«Antes de Trump contra con Trump» se activa cuando las bases lleguen a 2025 (hoy terminan el '+fechaISO(D.corte)+').</p>';
+  const trumpTxt = hayTrump() ? '<button type="button" data-cpre="1" class="sl-pre">Antes de Trump vs. con Trump</button>' : '<p class="sl-nota">«Antes de Trump vs. con Trump» se activa cuando las bases lleguen a 2025 (hoy terminan el '+fechaISO(D.corte)+').</p>';
   p.innerHTML = '<b>Comparar dos periodos</b><p class="sl-nota">Las cifras se comparan por día, así los periodos pueden durar distinto.</p>'+trumpTxt+
     '<label>Referencia'+opcionesCmp(c[0], 'sl-ca')+'</label><label>Contra'+opcionesCmp(c[1], 'sl-cb')+'</label>'+
     '<span class="sl-cmsg" id="sl-cmsg"></span><div class="sl-pb"><button type="button" id="sl-cmpno">Cancelar</button><button type="button" id="sl-cmpok" class="pri">Comparar</button></div>';
@@ -1869,7 +1890,7 @@ function pintarSala(soloTiempo){
     $('sl-cmpb').innerHTML = SALA.cmp ? '<button type="button" id="sl-cmpe" class="sl-dd sl-cb"><small>Comparación</small><span>'+nomCortoR(SALA.A)+' <em>→</em> '+nomCortoR(SALA.B)+' <i>▾</i></span></button>' : '';
     const ah = new Date();
     $('sl-corte').innerHTML = '<span>Datos al <b>'+fechaISO(D.corte)+'</b></span><span>consultado '+ah.getDate()+' '+MES12[ah.getMonth()]+' '+ah.getFullYear()+', '+String(ah.getHours()).padStart(2,'0')+':'+String(ah.getMinutes()).padStart(2,'0')+'</span>';
-    $('sl-ctx').innerHTML = '<span class="k">Estás viendo</span><b>'+(k ? cap1(PALABRA[k]) : perfilSala().ctx)+'</b><i>·</i>'+esc(ent)+'<i>·</i>'+(SALA.cmp ? esc(nomRango(SALA.B[0], SALA.B[1]))+' contra '+esc(nomRango(SALA.A[0], SALA.A[1]))+', por día' : esc(per));
+    $('sl-ctx').innerHTML = '<span class="k">Estás viendo</span><b>'+(k ? cap1(PALABRA[k]) : perfilSala().ctx)+'</b><i>·</i>'+esc(ent)+'<i>·</i>'+(SALA.cmp ? esc(nomRango(SALA.B[0], SALA.B[1]))+' vs. '+esc(nomRango(SALA.A[0], SALA.A[1]))+', por día' : esc(per));
     $('sl-fte').textContent = 'Fuente'+(perfilSala().orden.length>1 ? 's' : '')+': '+fuentesSala(k || perfilSala().mapa || 'ing')+' · el mapa muestra '+(SALA.cmp ? nomRango(SALA.B[0], SALA.B[1]) : 'el periodo')+(fin ? '' : ' hasta el '+fechaLarga(S.dia-1));
   }
   if (k==='va'){ pintarVa(F, t); tapasSala(); return; }            // periodo propio: nada de lo de abajo aplica
@@ -1880,7 +1901,7 @@ function pintarSala(soloTiempo){
   else if (SALA.cmp){ pa = valRango(k, SALA.A[0], SALA.A[1], F.ss, nF)/(SALA.A[1]-SALA.A[0]); pb = valRango(k, SALA.B[0], SALA.B[1], F.ss, nF)/(SALA.B[1]-SALA.B[0]);
     mover($('sl-big'), pb, cifraG, dur);
     $('sl-cap').innerHTML = cap1(PALABRA[k])+' <u>por día</u> en '+esc(nomRango(SALA.B[0], SALA.B[1]));
-    $('sl-dl').innerHTML = pa>0 ? flecha(pa, pb)+' contra '+esc(nomRango(SALA.A[0], SALA.A[1]))+', que tuvo '+cortoK(pa)+' por día' : 'sin registros en '+esc(nomRango(SALA.A[0], SALA.A[1]));
+    $('sl-dl').innerHTML = pa>0 ? flecha(pa, pb)+' vs. '+esc(nomRango(SALA.A[0], SALA.A[1]))+', que tuvo '+cortoK(pa)+' por día' : 'sin registros en '+esc(nomRango(SALA.A[0], SALA.A[1]));
   } else {
     const v = valAcum(k, F.ss, nF), dias = Math.max(1, Math.min(S.dia, finDatos(k)));
     mover($('sl-big'), v, cifraG, dur);
@@ -1899,7 +1920,7 @@ function pintarSala(soloTiempo){
 const cap1 = s => s.charAt(0).toUpperCase()+s.slice(1);
 // Solo cambios con peso: un país que pasa de 20 a 1 al día no le dice nada a quien decide
 const relevante = a => a.k && a.t!=='car' && (a.t==='cambio' || a.t==='pico' || Math.max(a.a||0, a.b||0)*cmpN() >= 300);
-const ventanaCmp = () => textoCmp().replace(' contra la anterior','');
+const ventanaCmp = () => textoCmp().replace(' vs. la anterior','');
 function flecha(a, b){ const x = (b/a-1)*100; if (Math.abs(x)<0.5) return '<span class="ig">= sin cambio</span>'; return '<span class="'+(x<0?'baja':'sube')+'">'+(x<0?'▼ ':'▲ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%</span>'; }
 function fuentesSala(k){ const f = { co:'DGRAM', va:'DGRAM', ing:'DGCVM', rech:'DGCVM', tram:'DGRAM', resc:'DGCOR', pres:'DGCVM', can:'SIRENNA', ret:'DGCOR', recib:'DGCOR', rep:'DGPMV', cbp:'CBP' };
   const l = [...new Set([k].concat(perfilSala().orden).map(x => f[x]))]; return l.length>1 ? l.slice(0,-1).join(', ')+' y '+l[l.length-1] : l[0]; }
@@ -2041,7 +2062,7 @@ function frasePanorama(F){
   const P = perfilSala(), l = P.pan.filter(x => !x[5] && (F.nd==null || IND[x[0]].nat));
   if (SALA.cmp){ const A = nomRango(SALA.A[0], SALA.A[1]), B = nomRango(SALA.B[0], SALA.B[1]);
     return 'Por día, en '+B+ent+': '+l.map(x => { const n = nFde(x[0], F), a = valRango(x[0], SALA.A[0], SALA.A[1], F.ss, n)/(SALA.A[1]-SALA.A[0]), b = valRango(x[0], SALA.B[0], SALA.B[1], F.ss, n)/(SALA.B[1]-SALA.B[0]);
-      return '<b>'+cortoK(b)+' '+x[3]+'</b>'+(a>0 ? ' ('+((b/a-1)*100<0 ? '−' : '+')+Math.abs((b/a-1)*100).toFixed(0)+'%)' : ''); }).join(', ').replace(/, ([^,]*)$/, ' y $1')+' contra '+A+'.'; }
+      return '<b>'+cortoK(b)+' '+x[3]+'</b>'+(a>0 ? ' ('+((b/a-1)*100<0 ? '−' : '+')+Math.abs((b/a-1)*100).toFixed(0)+'%)' : ''); }).join(', ').replace(/, ([^,]*)$/, ' y $1')+' vs. '+A+'.'; }
   const v = x => cortoK(valAcum(x, F.ss, nFde(x, F)));
   if (P.frase) return P.frase(F, ent, v);
   return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' entraron <b>'+v('ing')+' extranjeros</b>, se concluyeron <b>'+v('tram')+' trámites</b>, hubo <b>'+v('resc')+' rescates</b>'+
@@ -2054,7 +2075,7 @@ function cambiosSala(F, t){
   if (SALA.cmp){ const dA = SALA.A[1]-SALA.A[0], dB = SALA.B[1]-SALA.B[0];
     l = perfilSala().cam.filter(x => F.nd==null || IND[x].nat).map(x => { const n = nFde(x, F), a = valRango(x, SALA.A[0], SALA.A[1], F.ss, n), b = valRango(x, SALA.B[0], SALA.B[1], F.ss, n);
       return a>=100 ? { k:x, x:(b/dB)/(a/dA)*100-100, txt:'<b>'+IND[x].n+'</b>: '+cortoK(a/dA)+' → '+cortoK(b/dB)+' por día' } : null; }).filter(Boolean).sort((a,b) => Math.abs(b.x)-Math.abs(a.x)).slice(0,3);
-    $('sl-qt').textContent = 'Lo que más cambió'; $('sl-qs').textContent = 'por día, '+nomRango(SALA.B[0], SALA.B[1])+' contra '+nomRango(SALA.A[0], SALA.A[1]);
+    $('sl-qt').textContent = 'Lo que más cambió'; $('sl-qs').textContent = 'por día, '+nomRango(SALA.B[0], SALA.B[1])+' vs. '+nomRango(SALA.A[0], SALA.A[1]);
   } else {
     l = AVISOS.filter(a => relevante(a) && perfilSala().cam.indexOf(a.k)>=0).slice(0,3).map(a => ({ k:a.k, x:a.t==='pico' ? null : (a.a!=null && a.b ? (a.a/a.b-1)*100 : null), pico:a.t==='pico' ? a.v/Math.max(1,a.med) : null, txt:textoAviso(a) }));
     $('sl-qt').textContent = 'Lo que cambió'; $('sl-qs').textContent = textoCmp();
@@ -2127,7 +2148,7 @@ function pintarBarrasSala(k, F, nF){
   if (por==='s'){ const nom = D.cbp.sectores.map(P => P.n);
     if (cmp){ const dA = SALA.A[1]-SALA.A[0], dB = SALA.B[1]-SALA.B[0], A = cbpSec(SALA.A[0], SALA.A[1], nF), B = cbpSec(SALA.B[0], SALA.B[1], nF), mx = Math.max(1, ...A.map(x => x.v));
       datos = nom.map((n,i) => [n, A[i].v/dA, B[i].v/dB, A[i].v]).filter(x => x[3]>=Math.max(60, mx*0.01)).map(x => [x[0], x[1], x[2], (x[2]/x[1]-1)*100]).sort((a,b) => b[3]-a[3]);
-      tit = 'Cambio por sector'; sub = PALABRA[k]+' por día, '+nomRango(SALA.B[0], SALA.B[1])+' contra '+nomRango(SALA.A[0], SALA.A[1]); }
+      tit = 'Cambio por sector'; sub = PALABRA[k]+' por día, '+nomRango(SALA.B[0], SALA.B[1])+' vs. '+nomRango(SALA.A[0], SALA.A[1]); }
     else { const X = cbpAhora(F), r = nom.map((n,i) => [n, X[i].v]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]), tot = r.reduce((s,x) => s+x[1], 0);
       datos = r.slice(0,9).map(x => [x[0], x[1], tot]); tit = 'Por sector de la frontera'; sub = PALABRA[k]+' · '+datos.length+' sectores'+(S.dia<ND ? ' hasta el '+fechaDia(S.dia-1) : ''); } }
   else if (k==='va'){ const V = vaFilas(F), DV = window.IANAMI_REG.va_dic, c = {}; V.forEach(r => { const x = porEst ? DV.ofr[r[2]] : DV.n[r[4]]; c[x] = (c[x]||0) + 1; });
@@ -2137,7 +2158,7 @@ function pintarBarrasSala(k, F, nF){
       const ss = x[1]!=null ? [x[1]] : ssF, n = x[2]!=null ? x[2] : nF, a = valRango(k, SALA.A[0], SALA.A[1], ss, n), b = valRango(k, SALA.B[0], SALA.B[1], ss, n); return [x[0], a/dA, b/dB, a]; });
     const mx = Math.max(...r.map(x => x[3]), 1);
     datos = r.filter(x => x[3]>=Math.max(60, mx*0.01)).sort((a,b) => b[2]-a[2]).slice(0,8).map(x => [x[0], x[1], x[2], (x[2]/x[1]-1)*100]).sort((a,b) => b[3]-a[3]);
-    tit = 'Cambio por '+(porPto ? (k==='rep' ? 'punto de repatriación' : 'punto de internación') : porEst ? 'O.R.' : 'nacionalidad'); sub = PALABRA[k]+' por día, '+nomRango(SALA.B[0], SALA.B[1])+' contra '+nomRango(SALA.A[0], SALA.A[1])+' · solo los que tuvieron al menos 60 registros antes';
+    tit = 'Cambio por '+(porPto ? (k==='rep' ? 'punto de repatriación' : 'punto de internación') : porEst ? 'O.R.' : 'nacionalidad'); sub = PALABRA[k]+' por día, '+nomRango(SALA.B[0], SALA.B[1])+' vs. '+nomRango(SALA.A[0], SALA.A[1])+' · solo los que tuvieron al menos 60 registros antes';
   } else {
     const nna = k==='can';                                     // canalizados: sobre el total de NNA
     const val = x => x[3] ? suma(x[3].wk, 0, semDe(S.dia)+1)*sinMxPunto(x[3]) : nna ? suma(comp('can_nna', porEst ? [x[1]] : ssF, porEst ? nF : x[2]), 0, 12) : porEst ? valAcum(k, [x[1]], nF) : valAcum(k, ssF, x[2]);
@@ -2346,6 +2367,7 @@ function iniciar(){
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && SALA.on) cerrarSala(); });
   // «?completa» en la dirección (pantallas táctiles de sala): el navegador no deja entrar solo a pantalla completa,
   // así que el primer toque, clic o tecla la activa; si alguien sale, el siguiente toque vuelve a entrar
+  if (/[?&](ver|per)=/.test(location.search)) setTimeout(abrirLigaVista, 0);   // liga de «Copiar liga»: la misma vista
   if (/[?&]informe=/.test(location.search)) setTimeout(() => irA('analizar'), 0);
   if (/[?&]arma=/.test(location.search)) setTimeout(() => irA('arma'), 0);   // liga compartida de «Arma tu informe»   // liga compartida de un informe: abre Analizar y el informe
   if (/[?&#]completa\b/i.test(location.search+location.hash)){ const ir = () => { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); };

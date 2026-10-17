@@ -3,7 +3,8 @@
    Para marcar temporadas en la barra de tiempo y alinear comparaciones
    (Semana Santa cambia de fecha cada año). Fechas = días sin clases, inclusivos.
    Verificado con fuentes públicas el 8 oct 2026; "conf": false = por confirmar.
-   Navidad, Año Nuevo y Acción de Gracias (EE. UU.) se calculan en js/app.js.
+   Catálogo único: todas las gráficas leen IANAMI_FECHAS (abajo), con los mismos nombres.
+   Las fechas de México van en todas; las de EE. UU. (Acción de Gracias) solo en los indicadores «Desde EE. UU.».
    ================================================================== */
 window.IANAMI_TEMPORADAS = {
  "invierno": [
@@ -283,3 +284,10 @@ window.IANAMI_TEMPORADAS = {
   }
  ]
 };
+
+// Catálogo único de fechas para todas las gráficas: [inicio, fin, nombre, tipo ('mx' o 'eu')]
+window.IANAMI_FECHAS = function(conEU){ const T = window.IANAMI_TEMPORADAS || {}, n = { invierno:'Vacaciones de invierno', semana_santa:'Semana Santa', verano:'Vacaciones de verano' }, o = [];
+  Object.keys(n).forEach(k => (T[k] || []).forEach(x => { if (x.inicio) o.push([x.inicio, x.fin || x.inicio, n[k], 'mx', x.ciclo]); }));
+  if (conEU) for (let y=2017; y<=2032; y++){ const nov = new Date(y, 10, 1), d = 1 + ((4 - nov.getDay() + 7) % 7) + 21;   // cuarto jueves de noviembre
+    o.push([y+'-11-'+String(d).padStart(2, '0'), y+'-11-'+String(d).padStart(2, '0'), 'Acción de Gracias (EE. UU.)', 'eu', '']); }
+  return o.sort((a, b) => a[0]<b[0] ? -1 : 1); };
