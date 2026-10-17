@@ -365,26 +365,40 @@ function vshow(){ const fr = $('ar-fr'); fr.innerHTML = '<div class="ar-lam"></d
 function vnar(){ const a = $('ar-fr').querySelector('.ar-hz'), nb = $('ar-vnb'); if (!a) return; a.hidden = !a.hidden; nb.classList.toggle('on', !a.hidden); }
 function fit(){ const fr = $('ar-fr'), st = fr.parentNode.getBoundingClientRect(); fr.style.transform = 'translate(-50%,-50%)'; const z = fr.getBoundingClientRect().width/1600 || 1;
   const sc = Math.min((innerWidth-16)/(1600*z), (innerHeight-104)/(900*z)); fr.style.transform = 'translate(-50%,-50%) scale('+sc+')'; }
-function abrirV(l, t){ VL = l; VI = 0; $('ar-vh').textContent = t || TIT; $('ar-vis').classList.add('on'); document.body.style.overflow = 'hidden'; vshow();
+function abrirV(l, t){ VL = l; VI = 0; $('ar-vh').textContent = (t || TIT)+' · '+fd(hoyISO()); $('ar-vis').classList.add('on'); document.body.style.overflow = 'hidden'; vshow();
   const de = document.documentElement; if (de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen().then(() => setTimeout(fit, 120)).catch(() => {}); }
-function cerrarV(){ $('ar-vis').classList.remove('on'); document.body.style.overflow = ''; if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }
+let LIGA = false;
+function cerrarV(){ if (LIGA){ if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); location.href = location.pathname; return; } $('ar-vis').classList.remove('on'); document.body.style.overflow = ''; if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }
 
 /* ==== [8] PDF, WHATSAPP Y LIGA ==================================== */
 let OCUPADO = false;
 async function pdf(){ if (OCUPADO) return null; if (!PR.length){ toast('Agrega al menos una lámina'); return null; } OCUPADO = true;
-  try { if (!window.html2canvas || !window.jspdf) await window.IANAMI_LIBS_PDF();
+  window.IANAMI_FUENTES = window.IANAMI_FUENTES || (d => Promise.all(['400','500','600'].map(w => w+' 16px Barlow').concat(['500','600','700'].map(w => w+' 16px "Barlow Condensed"')).map(f => d.fonts.load(f).catch(() => {}))).then(() => d.fonts.ready));
+  try { if (!window.html2canvas || !window.jspdf) await window.IANAMI_LIBS_PDF(); await window.IANAMI_FUENTES(document);
     const L = completo(), doc = new window.jspdf.jsPDF({ orientation:'landscape', unit:'px', format:[1600, 900], hotfixes:['px_scaling'] });
-    const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:0;top:0;width:1600px;z-index:-1;opacity:0;pointer-events:none'; document.body.appendChild(d);
+    const d = document.createElement('div'); d.className = 'ar'; d.style.cssText = 'position:fixed;left:0;top:0;width:1600px;max-width:none;padding:0;margin:0;z-index:-1;opacity:0;pointer-events:none'; document.body.appendChild(d);
     for (let i=0;i<L.length;i++){ toast('Preparando el PDF · lámina '+(i+1)+' de '+L.length+'…'); d.innerHTML = '<div class="ar-lam ar-print"></div>'; render(d.firstChild, L[i], false);
       d.querySelectorAll('.ar-gr').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.setOption({ animation:false }); });
       await new Promise(r => setTimeout(r, 60));
-      const cv = await window.html2canvas(d.firstChild, { scale:1, backgroundColor:'#FBFAF6', logging:false, onclone:dd => { const e = dd.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}.ar-cvp{background:#FBFAF6!important}'; dd.head.appendChild(e); dd.querySelectorAll('[_echarts_instance_] > div:nth-child(n+2)').forEach(x => { x.style.display = 'none'; }); window.IANAMI_COLORFIJO && window.IANAMI_COLORFIJO(dd); } });
+      const cv = await window.html2canvas(d.firstChild, { scale:1, backgroundColor:'#FBFAF6', logging:false, onclone:dd => { const e = dd.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}.ar-cvp{background:#FBFAF6!important}'; dd.head.appendChild(e); dd.querySelectorAll('[_echarts_instance_] > div:nth-child(n+2)').forEach(x => { x.style.display = 'none'; }); window.IANAMI_COLORFIJO && window.IANAMI_COLORFIJO(dd); return window.IANAMI_FUENTES(dd); } });
       if (i) doc.addPage([1600, 900], 'landscape'); const h = Math.min(900, cv.height*1600/cv.width); doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, (900-h)/2, 1600, h);
       d.querySelectorAll('.ar-gr').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.dispose(); }); }
     d.remove(); return doc; } finally { OCUPADO = false; } }
 const nombre = () => TIT.replace(/[^\wÁÉÍÓÚÑáéíóúñ -]+/g, '').slice(0, 60)+' - descargado '+(() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })()+'.pdf';
 async function bajar(){ const doc = await pdf(); if (doc){ doc.save(nombre()); toast('PDF listo'); } }
-function liga(){ try { const u = location.origin+location.pathname+'?arma='+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify({ t:TIT, l:PR }))))); return u; } catch(e){ return location.href; } }
+const hoyISO = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const b64u = t => btoa(unescape(encodeURIComponent(t))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), ub64 = t => decodeURIComponent(escape(atob(t.replace(/-/g, '+').replace(/_/g, '/'))));
+// cada lámina se guarda solo con lo que cambia respecto a la lámina nueva de ese concepto
+function compacta(x){ if (x.p==='cu') return x; const d = nuevo(x.k, { p:x.p }), L = CMP(x.k, x.p, x), ci = x.cmp==null ? -1 : L.findIndex(c => JSON.stringify(c)===JSON.stringify(x.cmp));
+  const a = [x.k, x.p===d.p ? 0 : x.p, x.fa, x.fb, x.iA || 0, x.iB || 0, (x.hide || []).join(''), ci>=0 ? ci : ci===-1 && x.cmp==null ? -1 : x.cmp, x.fra || 0];
+  while (a.length>1 && [0, null, '', undefined].includes(a[a.length-1])) a.pop(); return a.length===1 ? a[0] : a; }
+function expande(a){ if (typeof a==='string') a = [a]; if (!Array.isArray(a)) return a; const [k, p, fa, fb, iA, iB, h, c, fra] = a; if (!CK[k]) return null;
+  const s = nuevo(k, Object.assign({ fa:fa || null, fb:fb || null, iA:iA || 0, iB:iB || 0, hide:h ? h.split('') : [] }, p ? { p } : {}, { cmp:undefined }));
+  if (p){ const L = CMP(k, s.p, s); s.cmp = L.length ? L[0] : null; }
+  if (typeof c==='number') s.cmp = c<0 ? null : (CMP(k, s.p, s)[c] || s.cmp); else if (c && typeof c==='object') s.cmp = c;
+  if (fra) s.fra = fra; return s; }
+const slug = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
+function liga(){ try { return location.origin+location.pathname+'?arma='+slug(TIT)+'-'+hoyISO()+'~'+b64u(JSON.stringify([TIT, PR.map(compacta)])); } catch(e){ return location.href; } }
 async function whatsapp(){ const txt = '*'+TIT+'*\n'+frases().map((x, i) => (i+1)+'. '+x[1]).join('\n')+'\n'+liga();
   const tactil = matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.canShare({ files:[new File(['x'], 'a.pdf', { type:'application/pdf' })] });
   if (!tactil){ window.open('https://wa.me/?text='+encodeURIComponent(txt), '_blank'); const doc = await pdf(); if (doc){ doc.save(nombre()); toast('Se abrió WhatsApp; adjunta el PDF que se descargó'); } return; }
@@ -439,7 +453,10 @@ function pintar(host){ HOST = host; HZ = hallazgos();
   $('ar-fr').addEventListener('click', e => { const li = e.target.closest('[data-arir]'); if (li){ VI = +li.dataset.arir; vshow(); } });
   const vis = $('ar-vis'); let sx = null; vis.addEventListener('pointerdown', e => sx = e.clientX); vis.addEventListener('pointerup', e => { if (sx==null) return; const d = e.clientX-sx; if (Math.abs(d)>50) $(d<0 ? 'ar-vn' : 'ar-vp').click(); sx = null; });
   // Liga compartida
-  const m = location.search.match(/[?&]arma=([^&]+)/); if (m){ try { const o = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1]))))); TIT = o.t || TIT; PR = (o.l || []).filter(x => x && CK[x.k]); $('ar-tit').value = TIT; } catch(e){} }
+  const m = location.search.match(/[?&]arma=([^&]+)/); if (m){ try { const v = decodeURIComponent(m[1]);
+      if (v.includes('~')){ const o = JSON.parse(ub64(v.slice(v.lastIndexOf('~')+1))); TIT = o[0] || TIT; PR = (o[1] || []).map(expande).filter(x => x && CK[x.k]); }
+      else { const o = JSON.parse(decodeURIComponent(escape(atob(v)))); TIT = o.t || TIT; PR = (o.l || []).filter(x => x && CK[x.k]); }
+      $('ar-tit').value = TIT; LIGA = true; } catch(e){} }
   tray(); render(lam, S, true); marca(); if (m && PR.length) setTimeout(() => abrirV(completo()), 250); }
 addEventListener('keydown', e => { const v = $('ar-vis'); if (!v || !v.classList.contains('on')) return; if (e.key==='ArrowRight') $('ar-vn').click(); if (e.key==='ArrowLeft') $('ar-vp').click(); if (e.key==='Escape') cerrarV(); });
 addEventListener('resize', () => { document.querySelectorAll('.ar-gr').forEach(g => { const c = window.echarts && echarts.getInstanceByDom(g); c && c.resize(); }); const v = $('ar-vis'); if (v && v.classList.contains('on')) fit(); });

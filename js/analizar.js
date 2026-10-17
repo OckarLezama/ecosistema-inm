@@ -141,13 +141,15 @@ function aviso(t, accion){ const m = $('inf-msg'); if (!m) return; m.innerHTML =
 // PDF: una lámina por página, del tamaño de la lámina, con sus gráficas
 // PDF: una lámina por página. Solo se copia el visor (no toda la página) y sin animaciones: así es rápido y sale completo.
 let OCUPADO = false;
-async function hacerPDF(avance){ const V0 = VISOR; if (!window.html2canvas || !window.jspdf) await window.IANAMI_LIBS_PDF();
+// Las tipografías se cargan antes de copiar la lámina (en la página y en la copia), para que el PDF salga con la misma letra
+window.IANAMI_FUENTES = window.IANAMI_FUENTES || (d => Promise.all(['400','500','600'].map(w => w+' 16px Barlow').concat(['500','600','700'].map(w => w+' 16px "Barlow Condensed"')).map(f => d.fonts.load(f).catch(() => {}))).then(() => d.fonts.ready));
+async function hacerPDF(avance){ const V0 = VISOR; if (!window.html2canvas || !window.jspdf) await window.IANAMI_LIBS_PDF(); await window.IANAMI_FUENTES(document);
   const st = $('inf-st'), w = st.offsetWidth, h = st.offsetHeight, { jsPDF } = window.jspdf, doc = new jsPDF({ orientation:'landscape', unit:'px', format:[1600, 900], hotfixes:['px_scaling'] }), i0 = V0.i, n = V0.o.laminas.length;
   const fuera = x => { if (!x.closest || /^(HTML|HEAD|BODY|STYLE|LINK|META|TITLE)$/.test(x.tagName)) return false; if (x.closest('.inf')) return x.classList.contains('inf-nb') || x.classList.contains('inf-hz') || x.classList.contains('inf-ex') || x.classList.contains('inf-ctl') || x.classList.contains('inf-msg'); return !x.contains(V0.el); };
   V0.el.classList.add('imprimiendo');
   try { for (let i=0;i<n;i++){ if (avance) avance(i+1, n); ir(i, true); V0.el.querySelectorAll('[_echarts_instance_]').forEach(g => { const c = echarts.getInstanceByDom(g); c && c.dispatchAction({ type:'hideTip' }); }); await new Promise(r => setTimeout(r, 60)); const sl = V0.el.querySelector('.inf-sl[data-i="'+i+'"]');
       const cv = await html2canvas(sl, { scale:1600/w, backgroundColor:'#FBFAF6', useCORS:true, logging:false, width:w, height:h, ignoreElements:fuera,
-        onclone:d => { const e = d.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}.inf-sl,.inf-sl-port,.inf-st{background:#FBFAF6!important}'; d.head.appendChild(e); d.querySelectorAll('[_echarts_instance_] > div:nth-child(n+2)').forEach(e => { e.style.display = 'none'; }); if (window.IANAMI_COLORFIJO) window.IANAMI_COLORFIJO(d); } });
+        onclone:d => { const e = d.createElement('style'); e.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}.inf-sl,.inf-sl-port,.inf-st{background:#FBFAF6!important}'; d.head.appendChild(e); d.querySelectorAll('[_echarts_instance_] > div:nth-child(n+2)').forEach(e => { e.style.display = 'none'; }); if (window.IANAMI_COLORFIJO) window.IANAMI_COLORFIJO(d); return window.IANAMI_FUENTES(d); } });
       if (i) doc.addPage([1600, 900], 'landscape'); doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 1600, 900); } }
   finally { V0.el.classList.remove('imprimiendo'); ir(i0, true); }
   return doc; }
