@@ -1874,3 +1874,8 @@ html.vz-on,html.vz-on body{overflow:hidden}
 .varia.fijo .cmp-n{margin-left:8px}
 /* Compartir: solo el ícono */
 #b-comp.b-ico{width:28px;padding:0;justify-content:center}
+/* Infografía · comparar: año y mes lado a lado; la lista se lee también en modo oscuro */
+.sl-ym{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px}
+.sl-pop select option{background:#FCFBF7;color:#2B2926}
+/* globo de ayuda de los botones de la barra */
+.ayuda-b{z-index:400;max-width:260px}.ayuda-b[hidden]{display:none}

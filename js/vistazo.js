@@ -232,15 +232,15 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-a
 
 /* ficha: cada indicador se despliega con sus 5 principales */
 .fgi{border-radius:12px;background:rgba(255,255,255,.06);border-left:3px solid var(--c);overflow:hidden;transition:background .25s}
-.fgi.on{background:rgba(255,255,255,.1)}
+.fgi.on{background:rgba(255,255,255,.08)}
 .fgb{display:grid;grid-template-columns:minmax(0,1fr) auto 16px;align-items:center;gap:10px;width:100%;min-height:46px;padding:6px 10px 6px 12px}
 .fgb .fn{font-size:15px;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;column-gap:8px}.fgb .fn small{font-size:11.5px;color:#A9C4BA}
 .fgb b{font:600 21px/1 'Barlow Condensed',sans-serif;display:flex;align-items:center;gap:8px;justify-content:flex-end}.fgb b .dch{font:700 11.5px Barlow,sans-serif}
 .fgb .cv{color:#A9C4BA;transition:transform .3s var(--ease)}.fgi.on .cv{transform:rotate(180deg);color:#fff}
 .fgd{overflow:hidden;transition:height .38s var(--ease)}
-.fgdi{padding:0 12px 12px}.fgdi .it{grid-template-columns:20px 1fr auto;column-gap:8px;margin-top:9px}.fgdi .it .nm{font-size:14.5px}.fgdi .it .pc{font-size:18px}
-.fgt2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#A9C4BA;margin-top:2px}
-.fgv{margin-top:12px;min-height:40px;padding:0 14px;border-radius:99px;background:rgba(255,255,255,.1);font-size:13px;font-weight:600;color:#fff;display:inline-flex;align-items:center}
+.fgdi{padding:0 12px 10px 14px}.fgdi .it{grid-template-columns:16px 1fr auto;column-gap:8px;row-gap:3px;margin-top:6px}.fgdi .it .k{font-size:11.5px;color:#7F9E93}.fgdi .it .nm{font-size:13.5px;color:#CFE2DA}.fgdi .it .pc{font:600 15px/1 'Barlow Condensed',sans-serif;color:#E3EEE9}.fgdi .it .pc small{font-size:10.5px}.fgdi .it .bb{height:3px;opacity:.7}
+.fgt2{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#7F9E93;margin-top:0}
+.fgv{margin-top:8px;min-height:32px;padding:0 2px;font-size:12.5px;font-weight:600;color:var(--c);display:inline-flex;align-items:center;gap:4px;background:none;opacity:.9}.fgv:hover{opacity:1;text-decoration:underline}
 .fic .fr{font-size:19px}
 .tb{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent;padding-bottom:22px}
 .tb::-webkit-scrollbar{width:6px}.tb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);border-radius:3px}
@@ -269,8 +269,8 @@ const sum = (s, n) => { const d = new Date(s+'T00:00:00Z'); d.setUTCDate(d.getUT
 const anio = (s, dy) => { const d = new Date(s+'T00:00:00Z'); d.setUTCFullYear(d.getUTCFullYear()+dy); return d.toISOString().slice(0, 10); };
 const ultDia = (y, m) => new Date(Date.UTC(y, m+1, 0)).toISOString().slice(0, 10);
 function armaDatos(){ const M = window.IANAMI_MOTOR;
-  // fin común: el menor de los cortes, para que los 10 indicadores hablen del mismo periodo
-  const FIN = L.map(([k]) => M.finBase(M.BASES[M.INDK[k].b])).sort()[0];
+  // fin: el mismo corte que muestra el tablero («Datos al …»); si una base llega un día antes, se compara con el mismo número de días
+  const FIN = (window.IANAMI_DATOS || {}).corte || L.map(([k]) => M.finBase(M.BASES[M.INDK[k].b])).sort().pop();
   let e = FIN; while (new Date(e+'T00:00:00Z').getUTCDay()!==0) e = sum(e, -1);   // última semana completa (lunes a domingo)
   const P = { sem:{ a:sum(e, -6), b:e, ca:sum(e, -13), cb:sum(e, -7), lab:'Última semana', cl:'la semana anterior' },
     shein:{ a:INI, b:FIN, lab:'Periodo Sheinbaum', cl:'' }, trump:{ a:'2025-01-20', b:FIN, lab:'Periodo Trump', cl:'' } };
@@ -287,7 +287,10 @@ function armaDatos(){ const M = window.IANAMI_MOTOR;
   return { fin:FIN, finSem:e, per:P, ind:L.map(([k, n, g]) => ({ k, n, g, p:{} })) };
 }
 // un indicador en un periodo: total, comparación, listas de países y estados (completas, para el lugar que ocupa cada uno) y la serie de la gráfica
-function calcula(D, x, pk){ const M = window.IANAMI_MOTOR, I = M.INDK[x.k], B = M.BASES[I.b], p = D.per[pk], o = (a, b) => ({ ind:I, d0:a, d1:b, filtros:{} });
+function calcula(D, x, pk){ const M = window.IANAMI_MOTOR, I = M.INDK[x.k], B = M.BASES[I.b], o = (a, b) => ({ ind:I, d0:a, d1:b, filtros:{} });
+  // si esta base llega antes del corte, el periodo y su comparación se recortan los mismos días (así no se compara un día de menos contra uno completo)
+  const p0 = D.per[pk], fb = M.finBase(B), lag = p0.b>fb ? Math.round((new Date(p0.b+'T00:00:00Z')-new Date(fb+'T00:00:00Z'))/864e5) : 0;
+  const p = lag ? Object.assign({}, p0, { b:fb, cb:p0.cb ? sum(p0.cb, -lag) : null }) : p0;
   const dimE = x.k==='cbp' ? 'sec' : 'e', lista = (d, a, b) => B.dims[d] ? M.porDim(o(a, b), d).filter(z => z[1]>0).sort((u, v) => v[1]-u[1]).map(([i, v]) => [B.dims[d].vals[i], v]) : [];
   const r = { T:M.total(o(p.a, p.b)), W:p.ca ? M.total(o(p.ca, p.cb)) : null };
   const N = x.k==='rep' ? [] : lista('n', p.a, p.b), E = lista(dimE, p.a, p.b);
@@ -295,7 +298,7 @@ function calcula(D, x, pk){ const M = window.IANAMI_MOTOR, I = M.INDK[x.k], B = 
   if (x.k!=='rep'){ r.na = Object.fromEntries(N); if (p.ca) r.naW = Object.fromEntries(lista('n', p.ca, p.cb)); }
   if (x.k!=='cbp' && B.dims.e){ r.eaM = Object.fromEntries(E); if (p.ca) r.eaW = Object.fromEntries(lista('e', p.ca, p.cb)); }
   // serie: semana → 12 semanas; mes → 13 meses; año → sus meses (y los del año pasado); periodos → meses
-  let sa, sb, g2 = 'm'; if (pk==='sem'){ sa = sum(D.finSem, -83); sb = D.finSem; g2 = 's'; } else if (pk[0]==='m'){ sa = anio(p.a, -1)<INI ? INI : anio(p.a, -1); sb = p.b; } else { sa = p.a; sb = p.b; }
+  let sa, sb, g2 = 'm'; if (pk==='sem'){ sa = sum(D.finSem, -83); sb = D.finSem; g2 = 's'; } else if (pk[0]==='m'){ sa = anio(p.a, -1)<INI ? INI : anio(p.a, -1); sb = p.b; } else { sa = p.a; sb = p.b; }   // p.b ya viene recortado
   const C = M.cubetas(sa, sb, g2), s = M.serie(o(sa, sb), C); r.s = C.l.map((q, i) => [q.a, s[i], !!q.inc]);
   if (pk[0]==='y' && p.ca){ const C2 = M.cubetas(p.ca, p.cb, 'm'); r.s2 = M.serie(o(p.ca, p.cb), C2); }
   return r; }
@@ -537,7 +540,7 @@ function abreFx(i){ const t = FICHA[0], nom = FICHA[1], it = R.querySelector('.f
   const d = it.querySelector('.fgd'); if (it.classList.contains('on')){ it.classList.remove('on'); d.style.height = '0px'; FXA = -1; fichaMapa(t, nom); return; }
   const x = DATA[i], g = desglose(x, t, nom), a = (t==='n' ? V(x).na : V(x).eaM)[nom] || 0;
   d.innerHTML = '<div class="fgdi">'+(g && g.l.length ? '<div class="fgt2">'+g.tit+'</div>'+g.l.slice(0, 5).map((z, j) => '<div class="it" style="animation-delay:'+(j*0.05)+'s"><span class="k">'+(j+1)+'</span><span class="nm">'+z[0]+'</span><span class="pc">'+(z[1]<5 ? '<small style="margin:0">menos de 5</small>' : fp(z[1])+'<small>'+Math.round(z[1]/a*100)+'%</small>')+'</span><span class="bb"><i style="width:'+(z[1]/g.l[0][1]*100).toFixed(0)+'%;animation-delay:'+(.08+j*0.05)+'s"></i></span></div>').join('')
-    : '<div class="fgt2">Esta base no trae el desglose para '+nom+'.</div>')+'<button class="fgv" data-i="'+i+'">Ver '+x.n.toLowerCase()+' completo ›</button></div>';
+    : '<div class="fgt2">Esta base no trae el desglose para '+nom+'.</div>')+'<button class="fgv" data-i="'+i+'">Ver detalle de '+x.n.toLowerCase()+' ›</button></div>';
   it.classList.add('on'); d.style.height = d.scrollHeight+'px'; FXA = i; fichaMapa(t, nom, x, g ? g.l : []);
   setTimeout(() => it.scrollIntoView({ block:'nearest', behavior:RM ? 'auto' : 'smooth' }), 380); }
 function ficha(t, nom){ limpia(); FICHA = [t, nom]; CUR = -1; FXA = -1; clearTimeout(HT); const sh = $('sh');

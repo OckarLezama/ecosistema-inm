@@ -327,7 +327,7 @@ const RESPALDO = { 'lib/html2canvas.min.js':'https://cdnjs.cloudflare.com/ajax/l
 const cargarJS = u => new Promise((ok, mal) => { if (document.querySelector('script[src="'+u+'"]')) return ok(); const s = document.createElement('script'); s.src = u; s.onload = ok;
   s.onerror = () => { s.remove(); if (!RESPALDO[u]) return mal(); const r = document.createElement('script'); r.src = RESPALDO[u]; r.onload = ok; r.onerror = mal; document.head.appendChild(r); }; document.head.appendChild(s); });
 function tituloVista(){ if (S.vista==='pulso') return 'Pulso'+(nombreFiltro() ? ' · '+nombreFiltro() : '');
-  const h = document.querySelector('#vista-otra h1'), t = document.querySelector('.rg-vistas .on'); return (h ? h.textContent.replace('Pantalla completa','').trim() : 'IA-NAMI')+(t ? ' · '+t.textContent : ''); }
+  const h = document.querySelector('#vista-otra h1'), t = document.querySelector('.rg-vistas .on'); return (h ? h.textContent.replace('Pantalla completa','').replace('Infografía','').trim() : 'IA-NAMI')+(t ? ' · '+t.textContent : ''); }
 // html2canvas no entiende colores modernos (color-mix, color(srgb …)): en la copia que se dibuja se cambian por rgb
 const COLOR_PROPS = ['color','backgroundColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor','outlineColor','textDecorationColor','fill','stroke','boxShadow','backgroundImage'];
 let cvColor = null;
@@ -1535,6 +1535,12 @@ if (CON_HOVER) document.addEventListener('mouseover', e => {
 if (CON_HOVER) document.addEventListener('mouseout', e => { if (e.relatedTarget) return;   // el cursor salió de la ventana
   clearTimeout(tMenu); tMenu = setTimeout(() => menuDir(false), 220); clearTimeout(tMenuI); tMenuI = setTimeout(() => menuInf(false), 220); });
 window.addEventListener('blur', () => { menuDir(false); menuInf(false); });
+// Ayuda al pasar el cursor por los botones de la barra, con el mismo globo del tablero (no el genérico del navegador)
+if (CON_HOVER){ let glb = null, tg = null; document.addEventListener('mouseover', e => { const b = e.target.closest && e.target.closest('[data-ayuda]'); clearTimeout(tg);
+  if (!b){ if (glb) glb.hidden = true; return; }
+  tg = setTimeout(() => { if (!glb){ glb = document.createElement('div'); glb.className = 'rg-pop ayuda-b'; document.body.appendChild(glb); }
+    glb.innerHTML = b.dataset.ayuda; glb.hidden = false; const r = b.getBoundingClientRect(), w = glb.offsetWidth; glb.style.left = Math.max(8, Math.min(r.left+r.width/2-w/2, innerWidth-w-8))+'px'; glb.style.top = (r.bottom+8)+'px'; }, 250); });
+  document.addEventListener('pointerdown', () => { clearTimeout(tg); if (glb) glb.hidden = true; }, true); }
 document.addEventListener('pointerdown', e => { const t = e.target; if (!t.closest) return;   // el mapa se queda con el clic; el toque se ve antes
   if (!t.closest('#menu-dir,[data-menu-dir]')) menuDir(false); if (!t.closest('#menu-inf,[data-menu-inf]')) menuInf(false); }, true);
 addEventListener('scroll', () => { menuDir(false); menuInf(false); }, { passive:true });
@@ -1802,15 +1808,20 @@ function clicSala(e){
 }
 function cambioSala(e){
   const id = e.target.id;
+  if (id==='sl-ca-y' || id==='sl-cb-y'){ const s = $(id.slice(0, -2)), mes = s.selectedOptions[0] ? s.selectedOptions[0].textContent : ''; s.innerHTML = mesesDe(+e.target.value); const o = [...s.options].find(x => x.textContent===mes); if (o) o.selected = true; return; }
   if (id==='sl-reg'){ S.region = e.target.value || null; if (S.sel && S.sel.t==='n') S.sel = null; prepararVuelo(); pintarTodo(); if (S.region) volarConMexico(REGIONES[S.region][1]); else { S.modoVista = 'mundo'; volarSala(); } }
 
 }
-function opcionesCmp(sel){ return mesesBase().map(m => '<option value="'+m[0]+','+m[1]+'"'+(sel && sel[0]===m[0] && sel[1]===m[1] ? ' selected' : '')+'>'+nomRango(m[0], m[1])+'</option>').join(''); }
+// Comparar dos periodos: primero el año y luego el mes, para que la lista no crezca sin fin con los años
+const anioDe = m => fechaBase(m[0]).getFullYear();
+function mesesDe(y, sel){ return mesesBase().filter(m => anioDe(m)===y).map(m => '<option value="'+m[0]+','+m[1]+'"'+(sel && sel[0]===m[0] && sel[1]===m[1] ? ' selected' : '')+'>'+['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][fechaBase(m[0]).getMonth()]+'</option>').join(''); }
+function opcionesCmp(sel, id){ const M = mesesBase(), y0 = sel ? fechaBase(sel[0]).getFullYear() : anioDe(M[M.length-1]), ys = [...new Set(M.map(anioDe))];
+  return '<span class="sl-ym"><select id="'+id+'-y" aria-label="Año">'+ys.map(y => '<option'+(y===y0 ? ' selected' : '')+'>'+y+'</option>').join('')+'</select><select id="'+id+'" aria-label="Mes">'+mesesDe(y0, sel)+'</select></span>'; }
 function abrirComparar(){
   const c = SALA.cmp ? [SALA.A, SALA.B] : cmpInicial(), p = $('sl-pop'); if (!c){ return; }
   const trumpTxt = hayTrump() ? '<button type="button" data-cpre="1" class="sl-pre">Antes de Trump contra con Trump</button>' : '<p class="sl-nota">«Antes de Trump contra con Trump» se activa cuando las bases lleguen a 2025 (hoy terminan el '+fechaISO(D.corte)+').</p>';
   p.innerHTML = '<b>Comparar dos periodos</b><p class="sl-nota">Las cifras se comparan por día, así los periodos pueden durar distinto.</p>'+trumpTxt+
-    '<label>Referencia<select id="sl-ca">'+opcionesCmp(c[0])+'</select></label><label>Contra<select id="sl-cb">'+opcionesCmp(c[1])+'</select></label>'+
+    '<label>Referencia'+opcionesCmp(c[0], 'sl-ca')+'</label><label>Contra'+opcionesCmp(c[1], 'sl-cb')+'</label>'+
     '<span class="sl-cmsg" id="sl-cmsg"></span><div class="sl-pb"><button type="button" id="sl-cmpno">Cancelar</button><button type="button" id="sl-cmpok" class="pri">Comparar</button></div>';
   p.hidden = false;
 }
@@ -2045,7 +2056,7 @@ function cambiosSala(F, t){
     $('sl-qt').textContent = 'Lo que más cambió'; $('sl-qs').textContent = 'por día, '+nomRango(SALA.B[0], SALA.B[1])+' contra '+nomRango(SALA.A[0], SALA.A[1]);
   } else {
     l = AVISOS.filter(a => relevante(a) && perfilSala().cam.indexOf(a.k)>=0).slice(0,3).map(a => ({ k:a.k, x:a.t==='pico' ? null : (a.a!=null && a.b ? (a.a/a.b-1)*100 : null), pico:a.t==='pico' ? a.v/Math.max(1,a.med) : null, txt:textoAviso(a) }));
-    $('sl-qt').textContent = 'Lo que cambió'; $('sl-qs').textContent = ventanaCmp()+' contra la semana anterior';
+    $('sl-qt').textContent = 'Lo que cambió'; $('sl-qs').textContent = textoCmp();
   }
   el.innerHTML = l.length ? '<div class="sl-cam">'+l.map(c => { const col = t[IND[c.k].g], sube = c.pico ? true : c.x>=0;
     return '<div class="sl-ci" style="--c:'+col+'"><span class="k">'+IND[c.k].n+'</span><span class="x '+(c.pico ? 'pico' : sube ? 'sube' : 'baja')+'">'+(c.pico ? '×'+c.pico.toFixed(1) : (sube ? '▲ ' : '▼ ')+Math.abs(c.x).toFixed(Math.abs(c.x)<10 ? 1 : 0)+'%')+'</span><p>'+c.txt+'</p></div>'; }).join('')+'</div>'
