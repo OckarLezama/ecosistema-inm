@@ -32,21 +32,23 @@ const CAP = process.argv[2];
     await vz('[data-bq]').click(); await p.waitForTimeout(300); await vz('#bqin').fill('venez'); await p.waitForTimeout(200); await vz('#bqin').press('Enter'); await p.waitForTimeout(1500);
     const fi = await vz('#sh').innerText(); ok(/Venezuela/.test(fi) && /lugar \d+ de \d+/.test(fi) && /pesa más/.test(fi), w+' ficha de Venezuela con lugar y frase');
     ok(await vz('.fg').count()>=2, w+' ficha agrupada');
+    // un indicador se despliega con sus 5 principales (Rescatados de Venezuela: los estados)
+    await vz('.fgb[data-fx="3"]').click(); await p.waitForTimeout(700);
+    ok(await vz('.fgi.on .fgdi .it').count()>=3 && /estados/i.test(await vz('.fgi.on .fgt2').innerText()), w+' rescatados de Venezuela se despliegan por estado');
     if (CAP) await p.screenshot({ path:CAP+'/vz_'+w+'_ficha.png' });
     // un mes con comparación: chips en la ficha
     await vz('[data-pm]').click(); await p.waitForTimeout(300); await vz('[data-ay="2025"]').click(); await p.waitForTimeout(400); await vz('[data-per="m2025-03"]').click(); await p.waitForTimeout(1500);
     ok(await vz('.fg .dch').count()>0, w+' ficha con cambio contra el periodo de comparación');
     await vz('[data-x]').first().click(); await p.waitForTimeout(400);
-    // texto que no es lugar → Pregunta a INAMI
-    await vz('[data-bq]').click(); await vz('#bqin').fill('rescatados de honduras en chiapas'); await p.waitForTimeout(200); await vz('[data-bqi]').last().click(); await p.waitForTimeout(1500);
-    ok(await p.$eval('#cq', e => !e.hidden).catch(() => false), w+' Pregunta a INAMI abierta desde la búsqueda');
-    await p.keyboard.press('Escape'); await p.waitForTimeout(300); await p.evaluate(() => { if (window.IANAMI_CONSULTA) window.IANAMI_CONSULTA.cerrar(); }); await p.waitForTimeout(300);
+    // la búsqueda es solo de lugares: un texto que no es lugar no abre nada
+    await vz('[data-bq]').click(); await vz('#bqin').fill('rescatados de honduras en chiapas'); await p.waitForTimeout(200);
+    ok(await vz('[data-bqi]').count()===0, w+' la búsqueda no ofrece preguntas'); await vz('#bqin').press('Escape'); await p.waitForTimeout(300);
     // informe migratorio encima; al cerrarlo, regresa a la vista
     await vz('[data-inf]').click(); await p.waitForSelector('.inf', { timeout:60000 }); await p.waitForTimeout(1200);
     if (CAP) await p.screenshot({ path:CAP+'/vz_'+w+'_informe.png' });
     await p.click('[data-infx]'); await p.waitForTimeout(500);
     ok(!(await p.$('.inf')) && await p.$eval('#vistazo', e => e.style.display)==='block', w+' al cerrar el informe se regresa a la vista');
-    await vz('[data-salir]').click(); await p.waitForTimeout(300); ok(await p.$eval('#vistazo', e => e.style.display)==='none', w+' Salir');
+    await vz('[data-salir]').click(); await p.waitForTimeout(300); ok(await p.$eval('#vistazo', e => e.style.display)==='none' && await p.$eval('#vista-pulso', e => !e.hidden), w+' Salir lleva al Pulso');
     if (w===1600){   // menús con cursor: se cierran si el cursor sale de la ventana
       await p.hover('[data-menu-inf]'); await p.waitForTimeout(250); ok(await p.$eval('#menu-inf', e => !e.hidden), 'menú Informes se abre con el cursor');
       await p.hover('#menu-inf'); await p.evaluate(() => document.body.dispatchEvent(new MouseEvent('mouseout', { bubbles:true, relatedTarget:null }))); await p.waitForTimeout(400);

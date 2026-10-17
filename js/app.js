@@ -543,7 +543,7 @@ function pintarKpis(){
       if (F.nd!=null && !m.nat) return '<button class="kc" disabled><span class="kc-top">'+ic+'<span class="kc-n">'+m.n+'</span></span><span class="kc-v num">—</span><span class="kc-pie"><span class="kc-d">solo mexicanos</span></span></button>';
       const d = diario(m.k,F), v = suma(d,0,S.dia), va = variacion(d), fuerte = va.ok && Math.abs(va.dl)>=20;
       const sem = D.ends.map((e,i)=>suma(d, i?D.ends[i-1]:0, e)), mx = Math.max.apply(null,sem) || 1;
-      const delta = S.dia<ND ? '<span class="kc-d">al '+fechaDia(S.dia-1)+'</span>' : (va.ok ? '<span class="kc-d'+(fuerte?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[S.cmp]+': '+(va.a>=1e6 ? (va.a/1e6).toFixed(2)+' M' : va.a>=1e4 ? (va.a/1e3).toFixed(1)+' k' : miles(va.a))+'</span> ')+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%'+(cmpFijo() ? '<span class="kc-l"> vs. '+refFija().txt+'</span>' : '')+'</span>' : '<span class="kc-d">sin comparación</span>');
+      const delta = S.dia<ND ? '<span class="kc-d">al '+fechaDia(S.dia-1)+'</span>' : (va.ok ? '<span class="kc-d'+(fuerte?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[S.cmp]+': '+(va.a>=1e6 ? (va.a/1e6).toFixed(2)+' M' : va.a>=1e4 ? (va.a/1e3).toFixed(1)+' k' : va.a>0 && va.a<5 ? 'menos de 5' : miles(va.a))+'</span> ')+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%'+(cmpFijo() ? '<span class="kc-l"> vs. '+refFija().txt+'</span>' : '')+'</span>' : '<span class="kc-d">sin comparación</span>');
       const on = S.ind===m.k;
       return '<button class="kc'+(on?' on':'')+'" data-k="'+m.k+'" aria-pressed="'+on+'" title="Clic para verlo en el mapa; otro clic lo quita">'+
         '<span class="kc-top">'+ic+(FUENTE[m.k] ? '<span class="kc-nf">' : '')+'<span class="kc-n">'+m.n+(conAviso[m.k]?'<u title="Tiene un aviso de cambio"></u>':'')+'</span>'+(FUENTE[m.k] ? '<span class="kc-f">'+FUENTE[m.k][0]+'</span></span>' : '')+'</span>'+
@@ -1467,7 +1467,7 @@ const MODULOS = { control:['datos/control.js','js/control.js'], regulacion:['dat
   analizar:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/analizar.js'],
   arma:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/informes.js'],
   vistazo:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/vistazo.js'] };
-const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI', analizar:'Informe migratorio', arma:'Arma tu informe', vistazo:'la vista tablet' };
+const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI', analizar:'Informe migratorio', arma:'Arma tu informe', vistazo:'Vistazo' };
 const LISTO_MOD = { control:'IANAMI_CONTROL', regulacion:'IANAMI_REGULACION', proteccion:'IANAMI_PROTECCION', consulta:'IANAMI_CONSULTA', analizar:'IANAMI_ANALIZAR', arma:'IANAMI_ARMA', vistazo:'IANAMI_VISTAZO' };
 const BAJADOS = {};
 const modListo = k => !!window[LISTO_MOD[k]];
@@ -1583,6 +1583,7 @@ window.IANAMI_PULSO = {
   verCapa(a){ if (a!=='car') return false; S.ind = null; irA('pulso'); if (!S.car){ S.car = true; const b = document.querySelector('#m-her [data-a="car"]'); if (b){ b.classList.add('on'); b.setAttribute('aria-pressed', true); } }
     S.carSel = null; pintarTodo(); volarCaravanas(); window.scrollTo(0,0); return true; },
   verNat(nom, ind){ const i = natPorNombre(nom); if (i<0) return false; S.ind = ind || 'ing'; irA('pulso'); fijarSel({t:'n', i:i}, true); window.scrollTo(0,0); return true; },
+  ir(){ irA('pulso'); window.scrollTo(0,0); },   // «Salir» de la vista tablet
   // desde la vista tablet: el mismo periodo y el indicador (o el país o estado) que se estaba viendo
   desdeVistazo(o){ S.per = o.per; if (o.per==='anio'){ S.anio = o.anio; S.mes = o.mes || 0; } if (o.per==='pers'){ S.desde = o.desde; S.hasta = o.hasta; }
     S.ind = o.ind && IND[o.ind] ? o.ind : null; S.sel = null; irA('pulso'); cambiarPeriodo();

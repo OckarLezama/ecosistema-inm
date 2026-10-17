@@ -203,7 +203,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-a
 @media (hover:hover) and (pointer:fine){
   .ch:hover{transform:translateY(-5px);background:rgba(255,255,255,.16);border-color:var(--c);box-shadow:0 14px 34px -12px var(--c),0 0 0 1px var(--cs) inset}
   .ch.on:hover{background:rgba(255,255,255,.24)}
-  .fi button:hover,.fg button:hover{background:rgba(255,255,255,.1)}
+  .fi button:hover,.fgb:hover{background:rgba(255,255,255,.1)}
   .q button:hover,.rb:hover,.ib:hover,.pc0:hover{background:rgba(255,255,255,.18)}
 }
 .rb:active,.ib:active,.pc0:active,.fg button:active,.seg button:active{transform:scale(.94)}
@@ -217,11 +217,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-a
 .hl .tx{transition:opacity .35s,transform .45s var(--ease)}
 /* ficha de país o estado */
 .fley{font-size:12.5px;color:#A9C4BA;margin-top:6px}
-.fg{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-top:12px}
 .fgt{display:flex;align-items:center;gap:7px;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#BFD8CF;font-weight:600;margin-bottom:2px}.fgt i{width:8px;height:8px;border-radius:50%;background:var(--c)}
-.fg button{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-height:52px;padding:7px 12px;border-radius:12px;background:rgba(255,255,255,.06);border-left:3px solid var(--c)}
-.fg .fn{font-size:15.5px;min-width:0}.fg .fn small{display:block;font-size:12px;color:#A9C4BA;margin-top:2px}
-.fg b{font:600 22px/1 'Barlow Condensed',sans-serif;display:flex;align-items:center;gap:8px;justify-content:flex-end}.fg b .dch{font:700 11.5px Barlow,sans-serif}
 .f0{margin-top:16px;font-size:13px;line-height:1.4;color:#A9C4BA;padding:10px 12px;border-radius:12px;border:1px dashed rgba(255,255,255,.16)}.f0 b{color:#E3EEE9;font-weight:600}
 .fr{line-height:1.25}
 /* movimiento reducido: sin animaciones */
@@ -232,6 +229,21 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-a
   .pc0{order:5;flex:0 0 auto;max-width:100%;margin-right:auto;padding:0 14px}.pc0 svg{display:inline}
   .pm{top:calc(max(14px,env(safe-area-inset-top)) + 106px);left:max(16px,env(safe-area-inset-left));right:auto}
 }
+
+/* ficha: cada indicador se despliega con sus 5 principales */
+.fgi{border-radius:12px;background:rgba(255,255,255,.06);border-left:3px solid var(--c);overflow:hidden;transition:background .25s}
+.fgi.on{background:rgba(255,255,255,.1)}
+.fgb{display:grid;grid-template-columns:minmax(0,1fr) auto 16px;align-items:center;gap:10px;width:100%;min-height:46px;padding:6px 10px 6px 12px}
+.fgb .fn{font-size:15px;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;column-gap:8px}.fgb .fn small{font-size:11.5px;color:#A9C4BA}
+.fgb b{font:600 21px/1 'Barlow Condensed',sans-serif;display:flex;align-items:center;gap:8px;justify-content:flex-end}.fgb b .dch{font:700 11.5px Barlow,sans-serif}
+.fgb .cv{color:#A9C4BA;transition:transform .3s var(--ease)}.fgi.on .cv{transform:rotate(180deg);color:#fff}
+.fgd{overflow:hidden;transition:height .38s var(--ease)}
+.fgdi{padding:0 12px 12px}.fgdi .it{grid-template-columns:20px 1fr auto;column-gap:8px;margin-top:9px}.fgdi .it .nm{font-size:14.5px}.fgdi .it .pc{font-size:18px}
+.fgt2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#A9C4BA;margin-top:2px}
+.fgv{margin-top:12px;min-height:40px;padding:0 14px;border-radius:99px;background:rgba(255,255,255,.1);font-size:13px;font-weight:600;color:#fff;display:inline-flex;align-items:center}
+.fic .fr{font-size:19px}
+.tb{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent;padding-bottom:22px}
+.tb::-webkit-scrollbar{width:6px}.tb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);border-radius:3px}
 `;
 const BODY = `<div class="cargav" id="cargav"><span><i></i>Preparando la vista…</span></div>
 
@@ -239,14 +251,14 @@ const BODY = `<div class="cargav" id="cargav"><span><i></i>Preparando la vista�
   <div id="map"></div><div class="shade"></div>
   <div class="top"><div class="br"><b>IA-NAMI</b><span class="corte" id="corte"><i></i></span></div><button class="pc0 glass" data-pm id="pc0"></button><div class="pm" id="pm"></div>
     <button class="ib glass" data-inf title="Informe migratorio de la última semana"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5"/></svg><span id="inft">Informe</span></button>
-    <button class="ib glass" data-bq title="Busca un país, estado u O.R., o pregunta"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Buscar</span></button>
+    <button class="ib glass" data-bq title="Busca un país, estado u O.R."><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Buscar</span></button>
     <button class="ib glass" data-salir title="Salir de esta vista" aria-label="Salir de esta vista"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg><span>Salir</span></button></div>
   <div class="hl" id="hl"><div id="vis"></div><div id="alerta"></div><div class="tx" id="hlt"></div><div class="nav"><div class="hd" id="hd"></div><button class="ver" data-ver>Ver más</button></div></div>
   <div class="bot"><div class="ley" id="ley"></div><div class="row" id="row"></div></div>
   <section class="sh" id="sh"></section><div class="pop" id="pop"></div>
 </section></div>
 <div class="toast" id="toast"></div>
-<div class="bq" id="bq"><div class="bqc"><div class="bqi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5FB79B" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="bqin" placeholder="Un país, estado u O.R., o una pregunta" autocomplete="off"><button class="rb" data-bqx aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="bqr" id="bqr"></div></div></div>
+<div class="bq" id="bq"><div class="bqc"><div class="bqi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5FB79B" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="bqin" placeholder="Un país, estado u O.R." autocomplete="off"><button class="rb" data-bqx aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="bqr" id="bqr"></div></div></div>
 `;
 let HOST = null, R = null, API = null, ACTIVA = false;
 const $ = id => R.getElementById(id);
@@ -488,39 +500,58 @@ let BQSEL = 0, BQL = [];
 function bqPinta(){ const t = nrm($('bqin').value), r_ = $('bqr');
   const m = l => l.filter(n => !t || nrm(n).includes(t)).sort((a, b) => (nrm(a).startsWith(t) ? 0 : 1)-(nrm(b).startsWith(t) ? 0 : 1)).slice(0, t ? 6 : 0);
   const P = m(PAISES).map(n => ['n', n]), E = m(ESTADOS).map(n => ['e', n]);
-  BQL = E.concat(P).concat(t && t.length>2 ? [['q', $('bqin').value.trim()]] : []); BQSEL = 0;
+  BQL = E.concat(P); BQSEL = 0;
   r_.innerHTML = !t ? '<div class="hd2">Prueba con</div>'+[['n', 'Venezuela'], ['e', 'Chiapas'], ['n', 'India'], ['e', 'Baja California']].map((z, j) => '<button data-bqi="'+j+'"><b>'+z[1]+'</b><span class="tg">'+(z[0]==='n' ? 'país' : 'estado')+'</span></button>').join('')
-    : BQL.map((z, j) => '<button data-bqi="'+j+'" class="'+(j===0 ? 'on' : '')+'">'+(z[0]==='q' ? 'Preguntar a INAMI: <b>«'+z[1]+'»</b>' : '<b>'+z[1]+'</b><span class="tg">'+(z[0]==='n' ? 'país' : 'estado / O.R.')+'</span>')+'</button>').join('') || '<div class="hd2">Sin coincidencias</div>';
+    : BQL.map((z, j) => '<button data-bqi="'+j+'" class="'+(j===0 ? 'on' : '')+'">'+(z[0]==='q' ? 'Preguntar a INAMI: <b>«'+z[1]+'»</b>' : '<b>'+z[1]+'</b><span class="tg">'+(z[0]==='n' ? 'país' : 'estado / O.R.')+'</span>')+'</button>').join('') || '<div class="hd2">Sin coincidencias · escribe un país, un estado o una O.R.</div>';
   if (!t) BQL = [['n', 'Venezuela'], ['e', 'Chiapas'], ['n', 'India'], ['e', 'Baja California']]; }
 function bqAbre(){ $('bq').classList.add('on'); const i = $('bqin'); i.value = ''; bqPinta(); setTimeout(() => i.focus(), 60); }
 function bqCierra(){ $('bq').classList.remove('on'); }
-function bqElige(z){ bqCierra(); if (z[0]==='q') return pregunta(z[1]); ficha(z[0], z[1]); }
+function bqElige(z){ bqCierra();  ficha(z[0], z[1]); }
 $('bqin').addEventListener('input', bqPinta);
 $('bqin').addEventListener('keydown', e => { if (e.key==='Enter' && BQL[BQSEL]) bqElige(BQL[BQSEL]); if (e.key==='Escape') bqCierra(); });
 // cuadro del estado en el mapa
 const BBE = {}; GEO.features.filter(g => g.properties.t==='m').forEach(g => { let b = [180, 90, -180, -90]; const w = c => typeof c[0]==='number' ? (b = [Math.min(b[0], c[0]), Math.min(b[1], c[1]), Math.max(b[2], c[0]), Math.max(b[3], c[1])]) : c.forEach(w); w(g.geometry.coordinates); BBE[g.properties.name] = b; });
 let FICHA = null;
-// ficha de un país o estado: agrupada como las tarjetas, con el lugar que ocupa en cada indicador y una frase de dónde pesa más
-function ficha(t, nom){ limpia(); FICHA = [t, nom]; CUR = -1; clearTimeout(HT); const sh = $('sh');
+// ficha de un país o estado: agrupada como las tarjetas, con el lugar que ocupa en cada indicador y una frase de dónde pesa más.
+// Cada indicador se despliega con sus 5 principales: del país, los estados (o sectores) por donde aparece; del estado, las nacionalidades.
+const FXC = {};
+function desglose(x, t, nom){ const key = x.k+'|'+t+'|'+nom+'|'+PER; if (FXC[key]!==undefined) return FXC[key];
+  const M = window.IANAMI_MOTOR, I = M.INDK[x.k], B = M.BASES[I.b], p = PD(), fd = t==='n' ? 'n' : 'e'; let r = null;
+  if (B.dims[fd]){ const i = B.dims[fd].vals.indexOf(nom), dd = t==='n' ? (x.k==='cbp' ? 'sec' : 'e') : (B.dims.n ? 'n' : B.dims.p ? 'p' : null);
+    if (i>=0 && dd && B.dims[dd]){ const l = M.porDim({ ind:I, d0:p.a, d1:p.b, filtros:{ [fd]:[i] } }, dd).filter(z => z[1]>0).sort((a, b) => b[1]-a[1]).map(([j, v]) => [B.dims[dd].vals[j], v]).filter(z => z[0]!=='Otras' && z[0]!=='México' || dd!=='n');
+      r = { dd, l, tit:dd==='n' ? 'Principales nacionalidades' : dd==='sec' ? 'Principales sectores' : dd==='p' ? 'Principales puntos' : 'Principales estados / O.R.' }; } }
+  return FXC[key] = r; }
+let FXA = -1;
+function fichaMapa(t, nom, x, l){ const col = x ? GC[x.g][0] : '#5FB79B', S5 = (l || []).filter(z => t==='n' ? CEN[z[0]] : pos(z[0])).slice(0, 5), mx = Math.max(1, ...S5.map(z => z[1]));
+  const regs = GEO.features.filter(g => g.properties.t!=='p').map(g => ({ name:g.properties.name, itemStyle:g.properties.t==='u' ? USS : g.properties.name===nom ? { areaColor:col+'8C', borderColor:col, borderWidth:1.5 } : MXS }));
+  const lin = S5.length ? S5.map(z => ({ coords:t==='n' ? [pos(nom), CEN[z[0]]] : [pos(z[0]), CEN[nom]], lineStyle:LEJOS(t==='n' ? pos(nom) : pos(z[0])) ? { width:2.6, opacity:.9 } : undefined }))
+    : t==='n' && pos(nom) ? [{ coords:[pos(nom), MX], lineStyle:LEJOS(pos(nom)) ? { width:2.6, opacity:.9 } : undefined }] : [];
+  const pts = (pos(nom) ? [{ name:nom, value:pos(nom).concat(mx), label:{ show:true, formatter:nomP(nom) } }] : []).concat(S5.map(z => ({ name:z[0], value:(t==='n' ? CEN[z[0]] : pos(z[0])).concat(z[1]) })));
+  MAP.setOption({ geo:{ regions:regs }, series:[{ id:'fl', type:'lines', coordinateSystem:'geo', zlevel:1, effect:{ show:true, period:2.8, trailLength:.5, symbol:'circle', symbolSize:5, color:'#fff' }, lineStyle:{ color:col, width:1.8, opacity:.62, curveness:.28 }, data:[] },
+    { type:'effectScatter', coordinateSystem:'geo', rippleEffect:{ scale:3.2, brushType:'stroke' }, symbolSize:p => p[2]===mx && !S5.length ? 16 : 6+Math.sqrt(p[2]/mx)*14, itemStyle:{ color:col, shadowBlur:14, shadowColor:col },
+      label:{ show:true, position:'right', color:'#fff', fontSize:12.5*ZM(), fontWeight:600, fontFamily:'Barlow', textBorderColor:'rgba(16,24,21,.9)', textBorderWidth:3, formatter:p => p.name===nom ? p.name : p.name+'  '+cc(p.value[2]).join(' ') }, labelLayout:{ hideOverlap:true }, data:pts }] }, { replaceMerge:['series'] });
+  const P = pts.map(p => p.value.slice(0, 2)), dur = mover(t==='e' && BBE[nom] && !S5.length ? [BBE[nom][0]-1.5, BBE[nom][1]-1.5, BBE[nom][2]+1.5, BBE[nom][3]+1.5] : P.length>1 ? bbDe(P.concat(t==='n' ? [] : [[-104, 28], [-90, 16]])) : P.length ? bbDe([P[0], [-104, 28], [-90, 16]]) : BB_MX);
+  clearTimeout(capas.t); if (lin.length) capas.t = setTimeout(() => { if (MAPOK() && FICHA) MAP.setOption({ series:[{ id:'fl', data:lin }] }); }, dur ? dur+120 : 350); }
+function abreFx(i){ const t = FICHA[0], nom = FICHA[1], it = R.querySelector('.fgi[data-fx="'+i+'"]'); if (!it) return;
+  R.querySelectorAll('.fgi.on').forEach(e => { if (e!==it){ e.classList.remove('on'); e.querySelector('.fgd').style.height = '0px'; } });
+  const d = it.querySelector('.fgd'); if (it.classList.contains('on')){ it.classList.remove('on'); d.style.height = '0px'; FXA = -1; fichaMapa(t, nom); return; }
+  const x = DATA[i], g = desglose(x, t, nom), a = (t==='n' ? V(x).na : V(x).eaM)[nom] || 0;
+  d.innerHTML = '<div class="fgdi">'+(g && g.l.length ? '<div class="fgt2">'+g.tit+'</div>'+g.l.slice(0, 5).map((z, j) => '<div class="it" style="animation-delay:'+(j*0.05)+'s"><span class="k">'+(j+1)+'</span><span class="nm">'+z[0]+'</span><span class="pc">'+(z[1]<5 ? '<small style="margin:0">menos de 5</small>' : fp(z[1])+'<small>'+Math.round(z[1]/a*100)+'%</small>')+'</span><span class="bb"><i style="width:'+(z[1]/g.l[0][1]*100).toFixed(0)+'%;animation-delay:'+(.08+j*0.05)+'s"></i></span></div>').join('')
+    : '<div class="fgt2">Esta base no trae el desglose para '+nom+'.</div>')+'<button class="fgv" data-i="'+i+'">Ver '+x.n.toLowerCase()+' completo ›</button></div>';
+  it.classList.add('on'); d.style.height = d.scrollHeight+'px'; FXA = i; fichaMapa(t, nom, x, g ? g.l : []);
+  setTimeout(() => it.scrollIntoView({ block:'nearest', behavior:RM ? 'auto' : 'smooth' }), 380); }
+function ficha(t, nom){ limpia(); FICHA = [t, nom]; CUR = -1; FXA = -1; clearTimeout(HT); const sh = $('sh');
   const fil = DATA.map((x, i) => { const v = V(x), m = t==='n' ? v.na : v.eaM, w = t==='n' ? v.naW : v.eaW, l = (t==='n' ? v.nl : v.el) || []; if (!m) return null;
     const a = m[nom] || 0, b = w ? (w[nom] || 0) : null, k = l.findIndex(z => z[0]===nom); return { x, i, a, rr:b ? a/b-1 : null, k:k+1, de:l.length, sh:v.T ? a/v.T : 0 }; }).filter(Boolean);
   const con = fil.filter(o => o.a>0), sin = fil.filter(o => !o.a), top = con.slice().sort((p, q) => p.k-q.k || q.sh-p.sh)[0];
   const res = top ? '<b>'+nom+'</b> pesa más en <b>'+top.x.n.toLowerCase()+'</b>: lugar '+top.k+' de '+top.de+(top.a>=5 && top.sh>=0.01 ? ', con '+Math.round(top.sh*100)+' de cada 100' : '')+'.' : 'Sin registros de <b>'+nom+'</b> en '+PD().lab+'.';
   const grupos = Object.keys(GC).map(g => { const l = con.filter(o => o.x.g===g); return l.length ? '<div class="fg" style="--c:'+GC[g][0]+'"><div class="fgt"><i></i>'+g+'</div>'+
-    l.map(o => '<button data-i="'+o.i+'"><span class="fn">'+o.x.n+'<small>lugar '+o.k+' de '+o.de+'</small></span><b class="num">'+fp(o.a)+(o.rr!=null ? chip(o.rr) : '')+'</b></button>').join('')+'</div>' : ''; }).join('');
-  const col = '#5FB79B';
-  sh.style.cssText = '--c:'+col+';--cs:rgba(95,183,155,.2)';
+    l.map(o => '<div class="fgi" data-fx="'+o.i+'"><button class="fgb" data-fx="'+o.i+'" aria-expanded="false"><span class="fn">'+o.x.n+'<small>lugar '+o.k+' de '+o.de+'</small></span><b class="num">'+fp(o.a)+(o.rr!=null ? chip(o.rr) : '')+'</b><svg class="cv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="fgd" style="height:0px"></div></div>').join('')+'</div>' : ''; }).join('');
+  sh.style.cssText = '--c:#5FB79B;--cs:rgba(95,183,155,.2)';
   sh.innerHTML = '<div class="grab"></div><div class="shh"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><div class="t"><b>'+nom+'</b><small>'+(t==='n' ? 'País' : 'Estado / O.R.')+' · '+PNOM(PER)+'</small></div><button class="rb pb" data-pulso title="Ver en Pulso" aria-label="Ver en Pulso"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg><span>Pulso</span></button><button class="rb" data-x aria-label="Cerrar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+
-    '<div class="vp"><div class="tb" style="flex:none;height:100%"><div class="fr">'+res+'</div><div class="fley">'+(PD().ca ? '▲▼ '+vsCorto() : PD().nc ? cap(PD().nc) : 'Total acumulado · '+dd(PD().a)+' – '+dd(PD().b))+' · el lugar es entre '+(t==='n' ? 'países' : 'estados')+'</div>'+grupos+
+    '<div class="vp"><div class="tb fic" style="flex:none;height:100%"><div class="fr">'+res+'</div><div class="fley">'+(PD().ca ? '▲▼ '+vsCorto() : PD().nc ? cap(PD().nc) : 'Total acumulado · '+dd(PD().a)+' – '+dd(PD().b))+' · toca un indicador para ver sus 5 principales</div>'+grupos+
     (sin.length ? '<div class="f0"><b>Sin registros en:</b> '+sin.map(o => o.x.n).join(', ')+'</div>' : '')+'</div></div>';
-  $('app').classList.add('sel');
-  // mapa: el lugar resaltado
-  const regs = GEO.features.filter(g => g.properties.t!=='p').map(g => ({ name:g.properties.name, itemStyle:g.properties.t==='u' ? USS : g.properties.name===nom ? { areaColor:'rgba(95,183,155,.55)', borderColor:'#5FB79B', borderWidth:1.5 } : MXS }));
-  const lin = t==='n' && pos(nom) ? [{ coords:[pos(nom), MX], lineStyle:LEJOS(pos(nom)) ? { width:2.6, opacity:.9 } : undefined }] : [];
-  MAP.setOption({ geo:{ regions:regs }, series:[{ id:'fl', type:'lines', coordinateSystem:'geo', zlevel:1, effect:{ show:true, period:2.8, trailLength:.5, symbol:'circle', symbolSize:5, color:'#fff' }, lineStyle:{ color:col, width:1.8, opacity:.62, curveness:.28 }, data:[] },
-    { type:'effectScatter', coordinateSystem:'geo', rippleEffect:{ scale:3.4, brushType:'stroke' }, symbolSize:16, itemStyle:{ color:col, shadowBlur:14, shadowColor:col }, label:{ show:true, position:'right', color:'#fff', fontSize:14*ZM(), fontWeight:600, fontFamily:'Barlow', textBorderColor:'rgba(16,24,21,.9)', textBorderWidth:3, formatter:nomP(nom) }, data:pos(nom) ? [{ name:nom, value:pos(nom) }] : [] }] }, { replaceMerge:['series'] });
-  const dur = mover(t==='e' && BBE[nom] ? [BBE[nom][0]-1.5, BBE[nom][1]-1.5, BBE[nom][2]+1.5, BBE[nom][3]+1.5] : pos(nom) ? bbDe([pos(nom), [-104, 28], [-90, 16]]) : BB_MX);
-  clearTimeout(capas.t); if (lin.length) capas.t = setTimeout(() => { if (MAPOK() && FICHA) MAP.setOption({ series:[{ id:'fl', data:lin }] }); }, dur ? dur+120 : 350); }
+  $('app').classList.add('sel'); fichaMapa(t, nom); }
 /* ---------- gestos ---------- */
 function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 2200); }
 R.addEventListener('click', e => { const T = s => e.target.closest(s);
@@ -530,7 +561,7 @@ R.addEventListener('click', e => { const T = s => e.target.closest(s);
   const bi = T('[data-bqi]'); if (bi) return bqElige(BQL[+bi.dataset.bqi]);
   if (T('[data-pulso]')) return irPulso();
   if (T('[data-inf]')) return informe();
-  if (T('[data-salir]')) return salir();
+  if (T('[data-salir]')) return salir(true);
   const ay = T('[data-ay]'); if (ay){ AY = ay.dataset.ay; setPer('y'+AY, true); return; }
   if (T('[data-sala]')){ $('app').classList.toggle('sala'); $('pm').classList.remove('on'); MAN = false; hl(HI); return; }
   const al = T('[data-al]'); if (al) return abrir(+al.dataset.al);
@@ -538,7 +569,8 @@ R.addEventListener('click', e => { const T = s => e.target.closest(s);
   if (T('[data-hp]')){ MAN = true; return hl(HI-1, -1); } if (T('[data-hn]')){ MAN = true; return hl(HI+1, 1); }
   const h = T('[data-h]'); if (h){ MAN = true; const j = +h.dataset.h; return hl(j, j>HI ? 1 : -1); }
   if (T('[data-ver]')) return abrir(ORD[HI]);
-  const c = T('.ch, .fi button'); if (c){ FICHA = null; return abrir(+c.dataset.i); }
+  const fx = T('.fgb[data-fx]'); if (fx) return abreFx(+fx.dataset.fx);
+  const c = T('.ch, .fi button, .fgv'); if (c){ FICHA = null; return abrir(+c.dataset.i); }
   const tb = T('[data-tab]'); if (tb) return tab(+tb.dataset.tab);
   if (T('[data-x]')) return cerrar(); if (T('[data-in]')) return abrir((CUR+1) % DATA.length); if (T('[data-ip]')) return abrir((CUR-1+DATA.length) % DATA.length); });
 function swipe(el, fx, fy){ let x0 = null, y0 = null; el.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive:true });
@@ -562,8 +594,6 @@ function irPulso(){ const p = PD(), o = {}; if (PER==='shein' || PER==='trump') 
   salir(); if (window.IANAMI_PULSO && window.IANAMI_PULSO.desdeVistazo) window.IANAMI_PULSO.desdeVistazo(o); }
 function informe(){ const va = () => window.IANAMI_ANALIZAR.informe(INF.a, INF.b, 'trump');   // al cerrarlo se regresa aquí
   if (window.IANAMI_ANALIZAR) return va(); toast('Abriendo el informe…'); (window.IANAMI_CARGAR ? window.IANAMI_CARGAR('analizar') : Promise.reject()).then(va, () => toast('No se pudo abrir el informe. Revisa tu conexión.')); }
-function pregunta(t){ const va = () => { window.IANAMI_CONSULTA.abrir(); setTimeout(() => { const i = document.getElementById('cq-q'), fo = document.getElementById('cq-f'); if (!i || !fo || !t) return; i.value = t; if (fo.requestSubmit) fo.requestSubmit(); else fo.dispatchEvent(new Event('submit', { cancelable:true })); }, 80); };
-  if (window.IANAMI_CONSULTA) return va(); (window.IANAMI_CARGAR ? window.IANAMI_CARGAR('consulta') : Promise.reject()).then(va, () => toast('No se pudo abrir Pregunta a INAMI.')); }
 setPer('shein');
 return { pausa(){ clearTimeout(HT); clearTimeout(capas.t); $('pm').classList.remove('on'); bqCierra(); },
   sigue(){ fijaZ(); MAPEL.style.width = ''; MAPEL.style.height = ''; if (conTam(MAPEL)) MAP.resize(); VIEW = null; if (FICHA) ficha(FICHA[0], FICHA[1]); else if (CUR>=0) tab(TAB); else hl(HI); } };
@@ -571,15 +601,17 @@ return { pausa(){ clearTimeout(HT); clearTimeout(capas.t); $('pm').classList.rem
 }
 function abrir(){
   if (!HOST){ HOST = document.createElement('div'); HOST.id = 'vistazo'; HOST.setAttribute('role', 'dialog'); HOST.setAttribute('aria-label', 'De un vistazo'); document.body.appendChild(HOST);
-    R = HOST.attachShadow({ mode:'open' }); R.innerHTML = '<style>'+CSS+'</style>'+BODY; R.addEventListener('click', e => { if (!API && e.target.closest('[data-salir]')) salir(); }); }
+    R = HOST.attachShadow({ mode:'open' }); R.innerHTML = '<style>'+CSS+'</style>'+BODY; R.addEventListener('click', e => { if (!API && e.target.closest('[data-salir]')) salir(true); }); }
   HOST.style.display = 'block'; ACTIVA = true; document.documentElement.classList.add('vz-on');
   if (API) return API.sigue();
   const cv = $('cargav'); cv.hidden = false;
   setTimeout(() => { try { const D = armaDatos(), GEO = armaGeo(); API = montar(D, GEO, armaCen(GEO)); }
     catch(e){ console.error(e); cv.innerHTML = '<span>No se pudo preparar la vista.<button data-salir>Volver</button></span>'; return; }
     cv.classList.add('fuera'); setTimeout(() => { cv.hidden = true; }, 500); }, 60); }
-function salir(){ if (!HOST || !ACTIVA) return; ACTIVA = false; if (API) API.pausa(); HOST.style.display = 'none'; document.documentElement.classList.remove('vz-on');
+// «Salir» siempre lleva al Pulso; desde «Ver en Pulso» se cierra y Pulso se abre ya filtrado
+function salir(alPulso){ if (!HOST || !ACTIVA) return; ACTIVA = false; if (API) API.pausa(); HOST.style.display = 'none'; document.documentElement.classList.remove('vz-on');
   const fe = document.fullscreenElement || document.webkitFullscreenElement, sal = document.exitFullscreen || document.webkitExitFullscreen;
-  if (fe && sal){ try { const p = sal.call(document); if (p && p.catch) p.catch(() => {}); } catch(e){} } }
+  if (fe && sal){ try { const p = sal.call(document); if (p && p.catch) p.catch(() => {}); } catch(e){} }
+  if (alPulso === true && window.IANAMI_PULSO && window.IANAMI_PULSO.ir) window.IANAMI_PULSO.ir(); }
 window.IANAMI_VISTAZO = { abrir:abrir, cerrar:salir, activa:() => ACTIVA };
 })();

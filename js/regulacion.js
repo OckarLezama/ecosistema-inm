@@ -95,7 +95,7 @@ function ventanas(){ if (cmpFijo()) return ventanaFija(); if (['sem',30,90].inde
   if (N==='sem'){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); return b-7 >= Q.d0 ? [[b, b+7], [b-7, b]] : null; }
   return N==='aa' || 2*N > Q.d1-Q.d0 ? null : [[Q.d1-N,Q.d1],[Q.d1-2*N,Q.d1-N]]; }
 const etqCmp = () => { const w = ventanas(); if (!w) return ''; if (cmpFijo()) return 'el periodo '+txtCmp(); return Q.cmp==='sem' ? 'la semana del '+fecha(w[0][0])+' al '+fecha(w[0][1]-1)+' (contra la anterior)' : Q.cmp===7 ? 'los últimos 7 días' : Q.cmp===90 ? 'los últimos 3 meses' : 'los últimos '+Q.cmp+' días'; };
-const chipD = (a,b) => { if (!b) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' k' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
+const chipD = (a,b) => { if (!b) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' k' : a>0 && a<5 ? 'menos de 5' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
 const mov = m => '<span class="mv '+(m>0?'u':m<0?'d':'e')+'">'+(m>0?'▲'+m:m<0?'▼'+(-m):'=')+'</span>';
 function lugares(key, nk, r, o){ const x = agg(key, nk, Object.assign({}, o, {d0:r[0], d1:r[1]})), l = Array.from(x).map((v,i)=>[i,v]).sort((a,b)=>b[1]-a[1]), p = {}; l.forEach((y,j) => p[y[0]] = j+1); return p; }
 function temporadaEn(a, b){
@@ -135,7 +135,7 @@ function selAnio(){ const y0 = fDia(0).getFullYear(), y1 = fDia(RG.dias-1).getFu
       return '<option value="'+(i+1)+'"'+((Q.mes || 0)===i+1 ? ' selected' : '')+(ok ? '' : ' disabled')+'>'+m+'</option>'; }).join('')+'</select></span>'; }
 function htmlCtl(){
   const ok = n => n!=='aa' && n!=='sem' && 2*n <= Q.d1-Q.d0;
-  return '<div class="pil">'+[['todo','Sheinbaum'],['trump','Trump'],['anio','Año'],['pers','Personalizado']].map(x => '<button data-rper="'+x[0]+'" class="'+(Q.per===x[0]?'on':'')+'"'+(x[0]==='trump'?' disabled title="Sin datos en ese periodo"':'')+'>'+x[1]+'</button>').join('')+'</div>'+
+  return '<div class="pil">'+[['todo','Sheinbaum'],['trump','Trump'],['anio','Año'],['pers','Personalizado']].map(x => '<button data-rper="'+x[0]+'" class="'+(Q.per===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div>'+
     (Q.per==='anio' ? selAnio() : '')+
     (Q.per==='pers' ? '<span class="per-extra"><input type="date" id="rg-d0" value="'+iso(Q.d0)+'" min="'+iso(0)+'" max="'+iso(RG.dias-1)+'"> – <input type="date" id="rg-d1" value="'+iso(Q.d1-1)+'" min="'+iso(0)+'" max="'+iso(RG.dias-1)+'"></span>' : '')+
     '<div class="rango"><b>'+fechaA(Q.d0)+' – '+fechaA(Q.d1-1)+'</b><span>'+(Q.d1-Q.d0)+' días</span></div>'+
@@ -1072,7 +1072,7 @@ function eventos(cont){
     if ((b = T('[data-rdoc]'))){ const c = +b.dataset.rdoc; Q.doc = Q.doc===c ? -1 : c; tramites(); return; }
     if (T('[data-rmas]')){ Q.mas = !Q.mas; abrirMas(true); return; }
     if (T('[data-rplegar]')){ Q.compacto = !Q.compacto; montar(cont); return; }
-    if ((b = T('[data-rper]'))){ Q.per = b.dataset.rper; if (Q.per==='todo'){ Q.d0 = 0; Q.d1 = RG.dias; } else if (Q.per==='anio'){ Q.anio = fDia(RG.dias-1).getFullYear(); Q.mes = 0; fijarAnio(); } tramites(); return; }
+    if ((b = T('[data-rper]'))){ Q.per = b.dataset.rper; if (Q.per==='todo'){ Q.d0 = 0; Q.d1 = RG.dias; } else if (Q.per==='trump'){ Q.d0 = Math.max(0, diaDe('2025-01-20')); Q.d1 = RG.dias; } else if (Q.per==='anio'){ Q.anio = fDia(RG.dias-1).getFullYear(); Q.mes = 0; fijarAnio(); } tramites(); return; }
     if ((b = T('[data-rcmp]'))){ Q.cmp = b.dataset.rcmp==='aa' ? 'aa' : +b.dataset.rcmp; tramites(); return; }
     if ((b = T('[data-rgran]'))){ Q.gran = b.dataset.rgran; pintarPrincipal(); return; }
     if ((b = T('[data-rofi]'))){ const o = +b.dataset.rofi; Q.ofi = Q.ofi===o ? -1 : o; pintarOficinas(); return; }
