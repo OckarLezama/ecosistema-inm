@@ -80,6 +80,7 @@ function abrirVisor(o){
   eventosVisor(el);
 }
 function cerrarVisor(){ if (!VISOR) return; VISOR.ch.forEach(c => c.dispose()); VISOR.el.remove(); document.body.classList.remove('en-inf'); window.removeEventListener('resize', alCambiar); document.removeEventListener('keydown', teclas); VISOR = null;
+  if (window.IANAMI_VISTAZO && window.IANAMI_VISTAZO.activa()) return;   // abierto desde la vista tablet: se regresa a ella, en pantalla completa
   if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }
 // La lámina más grande que cabe en la pantalla, siempre 16:9, con aire arriba y abajo para los controles
 function medir(){ if (!VISOR) return; const w = innerWidth, h = innerHeight, W = Math.min(w-16, (h-104)*16/9), st = $('inf-st');

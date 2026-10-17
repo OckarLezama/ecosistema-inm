@@ -1450,9 +1450,10 @@ const VERSION = ((document.querySelector('script[src*="js/app.js"]') || {}).src 
 const MODULOS = { control:['datos/control.js','js/control.js'], regulacion:['datos/regulacion.js','datos/plazos.js','js/regulacion.js'], proteccion:['datos/proteccion.js','js/proteccion.js'],
   consulta:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js'],
   analizar:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/analizar.js'],
-  arma:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/informes.js'] };
-const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI', analizar:'Informe migratorio', arma:'Arma tu informe' };
-const LISTO_MOD = { control:'IANAMI_CONTROL', regulacion:'IANAMI_REGULACION', proteccion:'IANAMI_PROTECCION', consulta:'IANAMI_CONSULTA', analizar:'IANAMI_ANALIZAR', arma:'IANAMI_ARMA' };
+  arma:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/informes.js'],
+  vistazo:['datos/control.js','datos/proteccion.js','datos/regulacion.js','datos/vocabulario.js','js/consulta.js','js/vistazo.js'] };
+const NOM_MOD = { control:'Control migratorio', regulacion:'Regulación migratoria', proteccion:'Protección al migrante', consulta:'Pregunta a INAMI', analizar:'Informe migratorio', arma:'Arma tu informe', vistazo:'la vista tablet' };
+const LISTO_MOD = { control:'IANAMI_CONTROL', regulacion:'IANAMI_REGULACION', proteccion:'IANAMI_PROTECCION', consulta:'IANAMI_CONSULTA', analizar:'IANAMI_ANALIZAR', arma:'IANAMI_ARMA', vistazo:'IANAMI_VISTAZO' };
 const BAJADOS = {};
 const modListo = k => !!window[LISTO_MOD[k]];
 function bajarJS(src){ return BAJADOS[src] || (BAJADOS[src] = new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src+(VERSION ? '?'+VERSION : '');
@@ -1468,6 +1469,11 @@ window.IANAMI_CARGAR = cargarModulo;
 function iniciarConsulta(){
   $('b-consulta').addEventListener('click', () => { cargarModulo('consulta').then(() => { if (window.IANAMI_CONSULTA) window.IANAMI_CONSULTA.abrir(); }, () => {}); });
   $('b-comp').addEventListener('click', e => { e.stopPropagation(); menuComp($('menu-comp').hidden); });
+  // Vista tablet («De un vistazo», js/vistazo.js): se abre en pantalla completa; la petición va en el mismo toque para que el navegador la acepte
+  const vistazo = () => cargarModulo('vistazo').then(() => window.IANAMI_VISTAZO.abrir(), () => {});
+  $('b-vz').addEventListener('click', () => { const d = document.documentElement, fs = d.requestFullscreen || d.webkitRequestFullscreen;
+    if (fs && !(document.fullscreenElement || document.webkitFullscreenElement)){ try { const p = fs.call(d); if (p && p.catch) p.catch(() => {}); } catch(e){} } vistazo(); });
+  if (/[?&]vista=tablet\b/.test(location.search)) vistazo();
   $('menu-comp').addEventListener('click', e => { e.stopPropagation(); const b = e.target.closest('[data-comp]'); if (!b) return; if (b.dataset.comp==='enviar') enviarPDF(); else compartir(b.dataset.comp); });
   document.addEventListener('click', e => { if (!e.target.closest('#menu-comp, #b-comp')) menuComp(false); });
 }
@@ -1511,6 +1517,9 @@ if (CON_HOVER) document.addEventListener('mouseover', e => {
   if (bi || e.target.closest('#menu-inf')){ clearTimeout(tMenuI); if (bi && mi.hidden) menuInf(true); }
   else if (!mi.hidden){ clearTimeout(tMenuI); tMenuI = setTimeout(() => menuInf(false), 220); }
 });
+if (CON_HOVER) document.addEventListener('mouseout', e => { if (e.relatedTarget) return;   // el cursor salió de la ventana
+  clearTimeout(tMenu); tMenu = setTimeout(() => menuDir(false), 220); clearTimeout(tMenuI); tMenuI = setTimeout(() => menuInf(false), 220); });
+window.addEventListener('blur', () => { menuDir(false); menuInf(false); });
 // Menú de Informes: Arma tu informe y el Informe migratorio de la semana
 let tMenuI = null;
 function menuInf(abrir){
@@ -1555,9 +1564,16 @@ window.IANAMI_PULSO = {
     if (i>=0) fijarSel({t:'n', i:i}, true); else { pintarTodo(); acercarSiMundo(); } window.scrollTo(0,0); return true; },
   verCapa(a){ if (a!=='car') return false; S.ind = null; irA('pulso'); if (!S.car){ S.car = true; const b = document.querySelector('#m-her [data-a="car"]'); if (b){ b.classList.add('on'); b.setAttribute('aria-pressed', true); } }
     S.carSel = null; pintarTodo(); volarCaravanas(); window.scrollTo(0,0); return true; },
-  verNat(nom, ind){ const i = natPorNombre(nom); if (i<0) return false; S.ind = ind || 'ing'; irA('pulso'); fijarSel({t:'n', i:i}, true); window.scrollTo(0,0); return true; }
+  verNat(nom, ind){ const i = natPorNombre(nom); if (i<0) return false; S.ind = ind || 'ing'; irA('pulso'); fijarSel({t:'n', i:i}, true); window.scrollTo(0,0); return true; },
+  // desde la vista tablet: el mismo periodo y el indicador (o el país o estado) que se estaba viendo
+  desdeVistazo(o){ S.per = o.per; if (o.per==='anio'){ S.anio = o.anio; S.mes = o.mes || 0; } if (o.per==='pers'){ S.desde = o.desde; S.hasta = o.hasta; }
+    S.ind = o.ind && IND[o.ind] ? o.ind : null; S.sel = null; irA('pulso'); cambiarPeriodo();
+    if (o.nom){ const i = o.dim==='n' ? natPorNombre(o.nom) : EST.findIndex(e => sinAcento(e)===sinAcento(o.nom)); if (i>=0) fijarSel({t:o.dim==='n' ? 'n' : 'e', i:i}, true); }
+    else if (S.ind) acercarSiMundo();
+    window.scrollTo(0,0); return true; }
 };
 function irA(v){
+  if (window.IANAMI_VISTAZO && window.IANAMI_VISTAZO.activa()) window.IANAMI_VISTAZO.cerrar();   // ir a otra sección cierra la vista tablet
   S.vista = v; pintarNav(); const pulso = v==='pulso'; $('vista-pulso').hidden = !pulso; $('vista-otra').hidden = pulso;
   if (pulso){ ajustarAlto(); reencuadrar(); ajustarLienzo(); pintarTodo(); return; }
   if (S.play) detener();

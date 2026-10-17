@@ -451,7 +451,11 @@ function pintar(host){ HOST = host; HZ = hallazgos();
   $('ar-vx').addEventListener('click', cerrarV); $('ar-vn').addEventListener('click', () => { if (VI<VL.length-1){ VI++; vshow(); } }); $('ar-vp').addEventListener('click', () => { if (VI>0){ VI--; vshow(); } });
   $('ar-vnb').addEventListener('click', vnar);
   $('ar-fr').addEventListener('click', e => { const li = e.target.closest('[data-arir]'); if (li){ VI = +li.dataset.arir; vshow(); } });
-  const vis = $('ar-vis'); let sx = null; vis.addEventListener('pointerdown', e => sx = e.clientX); vis.addEventListener('pointerup', e => { if (sx==null) return; const d = e.clientX-sx; if (Math.abs(d)>50) $(d<0 ? 'ar-vn' : 'ar-vp').click(); sx = null; });
+  const vis = $('ar-vis'); let sx = null, sy = null; const ini = (x, y) => { sx = x; sy = y; }, fin = (x, y) => { if (sx==null) return; const d = x-sx, dy = y-sy; sx = null; if (Math.abs(d)>50 && Math.abs(d)>Math.abs(dy)) $(d<0 ? 'ar-vn' : 'ar-vp').click(); };
+  // con mouse, arrastrar; con el dedo, deslizar (los eventos táctiles no se pierden aunque la gráfica capture el toque)
+  vis.addEventListener('pointerdown', e => { if (e.pointerType!=='touch') ini(e.clientX, e.clientY); }); vis.addEventListener('pointerup', e => { if (e.pointerType!=='touch') fin(e.clientX, e.clientY); });
+  vis.addEventListener('touchstart', e => { if (e.touches.length===1) ini(e.touches[0].clientX, e.touches[0].clientY); else sx = null; }, { passive:true });
+  vis.addEventListener('touchend', e => fin(e.changedTouches[0].clientX, e.changedTouches[0].clientY), { passive:true });
   // Liga compartida
   const m = location.search.match(/[?&]arma=([^&]+)/); if (m){ try { const v = decodeURIComponent(m[1]);
       if (v.includes('~')){ const o = JSON.parse(ub64(v.slice(v.lastIndexOf('~')+1))); TIT = o[0] || TIT; PR = (o[1] || []).map(expande).filter(x => x && CK[x.k]); }

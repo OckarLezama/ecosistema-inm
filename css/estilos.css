@@ -1861,3 +1861,9 @@ body.en-inf{overflow:hidden}
 .ar-tb .ar-btn.bw{background:#1F7A4D!important;border-color:#1F7A4D!important}
 .inf-sl-port .pt-b .inf-port-i{grid-template-columns:1fr 1fr}.inf-sl-port .pt-b .inf-port-i li{border-bottom:0}.inf-sl-port .pt-b .inf-port-i li:nth-last-child(-n+2){border-bottom:1px solid #E4E0D4}
 .pt-b .pt-c{justify-content:center;padding-top:calc(var(--u)*5);padding-bottom:calc(var(--u)*3)}.pt-b .pt-logos{margin:0}
+
+/* Vista tablet (js/vistazo.js): mientras está abierta no se desplaza la página de atrás; en el ícono de la barra solo queda el dibujo en pantallas angostas */
+html.vz-on,html.vz-on body{overflow:hidden}
+@media (max-width:760px){ .b-vz span{display:none} .b-vz{padding:0 9px} }
+/* Arma tu informe: deslizar con el dedo entre láminas (sin que el navegador se quede con el gesto) */
+.ar-vis{touch-action:pan-y}
