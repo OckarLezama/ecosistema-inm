@@ -244,6 +244,12 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-a
 .fic .fr{font-size:19px}
 .tb{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent;padding-bottom:22px}
 .tb::-webkit-scrollbar{width:6px}.tb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);border-radius:3px}
+
+/* compartir (solo ícono) y su menú */
+.ib.ico{width:44px;padding:0;justify-content:center}
+.pm.cm{width:min(280px,calc(100vw - 32px))}
+/* liga compartida «Resumen INAMI»: solo esta vista; sin salidas a la plataforma */
+:host([data-modo="compartido"]) [data-inf],:host([data-modo="compartido"]) [data-pulso],:host([data-modo="compartido"]) [data-salir]{display:none!important}
 `;
 const BODY = `<div class="cargav" id="cargav"><span><i></i>Preparando la vista…</span></div>
 
@@ -252,6 +258,7 @@ const BODY = `<div class="cargav" id="cargav"><span><i></i>Preparando la vista�
   <div class="top"><div class="br"><b>IA-NAMI</b><span class="corte" id="corte"><i></i></span></div><button class="pc0 glass" data-pm id="pc0"></button><div class="pm" id="pm"></div>
     <button class="ib glass" data-inf title="Informe migratorio de la última semana"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5"/></svg><span id="inft">Informe</span></button>
     <button class="ib glass" data-bq title="Busca un país, estado u O.R."><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Buscar</span></button>
+    <button class="ib glass ico" data-compartir aria-label="Compartir este resumen"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/></svg></button><div class="pm cm" id="cm"><div class="pmt">Compartir · Resumen INAMI</div><button data-cmw><div><b>WhatsApp</b><span>manda la liga del resumen</span></div></button><button data-cmc><div><b>Copiar liga</b><span>para pegarla en un correo o mensaje</span></div></button></div>
     <button class="ib glass" data-salir title="Salir de esta vista" aria-label="Salir de esta vista"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg><span>Salir</span></button></div>
   <div class="hl" id="hl"><div id="vis"></div><div id="alerta"></div><div class="tx" id="hlt"></div><div class="nav"><div class="hd" id="hd"></div><button class="ver" data-ver>Ver más</button></div></div>
   <div class="bot"><div class="ley" id="ley"></div><div class="row" id="row"></div></div>
@@ -565,6 +572,9 @@ R.addEventListener('click', e => { const T = s => e.target.closest(s);
   if (T('[data-pulso]')) return irPulso();
   if (T('[data-inf]')) return informe();
   if (T('[data-salir]')) return salir(true);
+  if (T('[data-compartir]')){ $('cm').classList.toggle('on'); return; }
+  if (T('[data-cmw]')) return comparte('wa'); if (T('[data-cmc]')) return comparte('copia');
+  if (!T('#cm')) $('cm').classList.remove('on');
   const ay = T('[data-ay]'); if (ay){ AY = ay.dataset.ay; setPer('y'+AY, true); return; }
   if (T('[data-sala]')){ $('app').classList.toggle('sala'); $('pm').classList.remove('on'); MAN = false; hl(HI); return; }
   const al = T('[data-al]'); if (al) return abrir(+al.dataset.al);
@@ -597,15 +607,22 @@ function irPulso(){ const p = PD(), o = {}; if (PER==='shein' || PER==='trump') 
   salir(); if (window.IANAMI_PULSO && window.IANAMI_PULSO.desdeVistazo) window.IANAMI_PULSO.desdeVistazo(o); }
 function informe(){ const va = () => window.IANAMI_ANALIZAR.informe(INF.a, INF.b, 'trump');   // al cerrarlo se regresa aquí
   if (window.IANAMI_ANALIZAR) return va(); toast('Abriendo el informe…'); (window.IANAMI_CARGAR ? window.IANAMI_CARGAR('analizar') : Promise.reject()).then(va, () => toast('No se pudo abrir el informe. Revisa tu conexión.')); }
+// Liga corta del resumen: abre solo esta vista (sin Informe, Pulso ni Salir); muestra los datos vigentes al abrirla
+function comparte(como){ $('cm').classList.remove('on'); const u = location.origin+location.pathname+'?resumen-inami', txt = 'Resumen INAMI';
+  if (como==='wa'){ window.open('https://wa.me/?text='+encodeURIComponent(txt+': '+u), '_blank', 'noopener'); return; }
+  const ok = () => toast('Liga copiada: Resumen INAMI'), mal = () => { window.prompt('Copia la liga del Resumen INAMI:', u); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(ok, mal); else mal(); }
 setPer('shein');
 return { pausa(){ clearTimeout(HT); clearTimeout(capas.t); $('pm').classList.remove('on'); bqCierra(); },
   sigue(){ fijaZ(); MAPEL.style.width = ''; MAPEL.style.height = ''; if (conTam(MAPEL)) MAP.resize(); VIEW = null; if (FICHA) ficha(FICHA[0], FICHA[1]); else if (CUR>=0) tab(TAB); else hl(HI); } };
 
 }
-function abrir(){
+function abrir(op){ op = op || {};
   if (!HOST){ HOST = document.createElement('div'); HOST.id = 'vistazo'; HOST.setAttribute('role', 'dialog'); HOST.setAttribute('aria-label', 'De un vistazo'); document.body.appendChild(HOST);
     R = HOST.attachShadow({ mode:'open' }); R.innerHTML = '<style>'+CSS+'</style>'+BODY; R.addEventListener('click', e => { if (!API && e.target.closest('[data-salir]')) salir(true); }); }
   HOST.style.display = 'block'; ACTIVA = true; document.documentElement.classList.add('vz-on');
+  if (op.compartido){ HOST.dataset.modo = 'compartido'; document.title = 'Resumen INAMI'; }
+  pideFS(); if (!pideFS.listo){ pideFS.listo = true; R.addEventListener('pointerdown', pideFS, true); }
   if (API) return API.sigue();
   const cv = $('cargav'); cv.hidden = false;
   setTimeout(() => { try { const D = armaDatos(), GEO = armaGeo(); API = montar(D, GEO, armaCen(GEO)); }
@@ -616,5 +633,8 @@ function salir(alPulso){ if (!HOST || !ACTIVA) return; ACTIVA = false; if (API) 
   const fe = document.fullscreenElement || document.webkitFullscreenElement, sal = document.exitFullscreen || document.webkitExitFullscreen;
   if (fe && sal){ try { const p = sal.call(document); if (p && p.catch) p.catch(() => {}); } catch(e){} }
   if (alPulso === true && window.IANAMI_PULSO && window.IANAMI_PULSO.ir) window.IANAMI_PULSO.ir(); }
+// El Vistazo va siempre en pantalla completa: se pide al abrir y, si el navegador no la dio (al abrir una liga hace falta un toque), al primer toque
+function pideFS(){ if (!ACTIVA || document.body.classList.contains('en-inf')) return; const d = document.documentElement, fs = d.requestFullscreen || d.webkitRequestFullscreen;
+  if (fs && !(document.fullscreenElement || document.webkitFullscreenElement)){ try { const p = fs.call(d); if (p && p.catch) p.catch(() => {}); } catch(e){} } }
 window.IANAMI_VISTAZO = { abrir:abrir, cerrar:salir, activa:() => ACTIVA };
 })();

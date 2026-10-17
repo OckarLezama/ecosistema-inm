@@ -49,7 +49,12 @@ const CAP = process.argv[2];
     await p.click('[data-infx]'); await p.waitForTimeout(500);
     ok(!(await p.$('.inf')) && await p.$eval('#vistazo', e => e.style.display)==='block', w+' al cerrar el informe se regresa a la vista');
     await vz('[data-salir]').click(); await p.waitForTimeout(300); ok(await p.$eval('#vistazo', e => e.style.display)==='none' && await p.$eval('#vista-pulso', e => !e.hidden), w+' Salir lleva al Pulso');
+    // liga compartida «Resumen INAMI»: solo el Vistazo, sin Informe, Pulso ni Salir
+    await p.goto('file://'+dir+'/index.html?resumen-inami'); await vz('.ch').first().waitFor({ timeout:60000 }); await p.waitForTimeout(800);
+    ok(await vz('.top [data-inf]').isHidden() && await vz('[data-salir]').isHidden() && await vz('[data-compartir]').isVisible(), w+' liga compartida sin Informe ni Salir, con compartir');
+    ok(await p.title()==='Resumen INAMI', w+' la liga se llama Resumen INAMI');
     if (w===1600){   // menús con cursor: se cierran si el cursor sale de la ventana
+      await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500);
       await p.hover('[data-menu-inf]'); await p.waitForTimeout(250); ok(await p.$eval('#menu-inf', e => !e.hidden), 'menú Informes se abre con el cursor');
       await p.hover('#menu-inf'); await p.evaluate(() => document.body.dispatchEvent(new MouseEvent('mouseout', { bubbles:true, relatedTarget:null }))); await p.waitForTimeout(400);
       ok(await p.$eval('#menu-inf', e => e.hidden), 'menú Informes se cierra al salir de la ventana');
