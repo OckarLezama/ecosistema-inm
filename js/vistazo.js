@@ -252,13 +252,16 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-a
 :host([data-modo="compartido"]) [data-inf],:host([data-modo="compartido"]) [data-pulso],:host([data-modo="compartido"]) [data-salir]{display:none!important}
 
 /* documento vigente: conteo al corte, aparte de las 10 tarjetas */
-.dvh{display:flex;align-items:baseline;gap:6px;margin-top:6px;font-size:13px;color:#CFE2DA}.dvh b{font:600 19px/1 'Barlow Condensed',sans-serif;color:#fff}.dvh em{font-style:normal;font-size:11.5px;color:#A9C4BA}
+.dvh{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px;margin-top:8px;font-size:15px;color:#E3EEE9}.dvh b{font:600 26px/1 'Barlow Condensed',sans-serif;color:#fff}.dvh em{font-style:normal;font-size:12.5px;color:#A9C4BA}
+/* con la hoja abierta, el dato de documentos vigentes de arriba se oculta para no encimarse con ella */
+.top .dvh{transition:opacity .3s}.app.sel .top .dvh{opacity:0;pointer-events:none}
 .fdv{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:12px;padding:9px 12px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);font-size:13px;color:#A9C4BA}
 .fdv b{font:600 20px/1 'Barlow Condensed',sans-serif;color:#fff}.fdv em{font-style:normal;font-size:12px}
 
 /* documento vigente: en computadora y tablet, bajo la fecha; en teléfono, sobre las tarjetas (arriba no cabe) */
 .dvm{display:none}
 @media (max-width:699px) and (min-height:521px){ .top .dvh{display:none} .dvm{display:flex;margin-top:4px} }
+.top .br .dvh b{display:inline;font:600 26px/1 'Barlow Condensed',sans-serif;letter-spacing:0;color:#fff}
 `;
 const BODY = `<div class="cargav" id="cargav"><span><i></i>Preparando la vista…</span></div>
 
@@ -627,6 +630,12 @@ function comparte(como){ $('cm').classList.remove('on'); const u = location.orig
   if (como==='wa'){ window.open('https://wa.me/?text='+encodeURIComponent(txt+': '+u), '_blank', 'noopener'); return; }
   const ok = () => toast('Liga copiada: Resumen INAMI'), mal = () => { window.prompt('Copia la liga del Resumen INAMI:', u); };
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(ok, mal); else mal(); }
+// ECharts y el zoom: la hoja y la portada se agrandan con CSS zoom (pantallas grandes) y el mapa «respira» con una escala;
+// ECharts toma el mouse sin esa escala y el globo salía lejos de la línea. Aquí se le da la posición ya corregida (zrX, zrY).
+['mousemove','mousedown','mouseup','click','dblclick','mouseover','mouseout','pointermove','pointerdown','pointerup','wheel','mousewheel','contextmenu'].forEach(t => R.addEventListener(t, e => {
+  if (e.zrX!=null || e.clientX==null) return; let x = e.target; while (x && x.getAttribute && !x.getAttribute('_echarts_instance_')) x = x.parentNode;
+  if (!x || !x.getAttribute) return; const r = x.firstElementChild || x; if (!r.offsetWidth) return; const b = r.getBoundingClientRect(), k = b.width/r.offsetWidth; if (Math.abs(k-1)<0.01) return;
+  e.zrX = (e.clientX-b.left)/k; e.zrY = (e.clientY-b.top)/k; }, { capture:true, passive:true }));
 setPer('shein');
 return { pausa(){ clearTimeout(HT); clearTimeout(capas.t); $('pm').classList.remove('on'); bqCierra(); },
   sigue(){ fijaZ(); MAPEL.style.width = ''; MAPEL.style.height = ''; if (conTam(MAPEL)) MAP.resize(); VIEW = null; if (FICHA) ficha(FICHA[0], FICHA[1]); else if (CUR>=0) tab(TAB); else hl(HI); } };
