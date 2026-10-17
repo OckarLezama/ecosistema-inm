@@ -623,7 +623,7 @@ function abrir(op){ op = op || {};
   HOST.style.display = 'block'; ACTIVA = true; document.documentElement.classList.add('vz-on');
   if (op.compartido){ HOST.dataset.modo = 'compartido'; document.title = 'Resumen INAMI'; }
   document.documentElement.classList.remove('vz-arranque');   // la pantalla verde de arranque ya la cubre el Vistazo
-  pideFS(); if (!pideFS.listo){ pideFS.listo = true; R.addEventListener('pointerdown', pideFS, true); }
+  pideFS(); if (!pideFS.listo){ pideFS.listo = true; R.addEventListener('click', pideFS, true); /* en el clic y no al apoyar el dedo: si la pantalla cambia de tamaño a medio toque, el navegador cancela el clic */ }
   if (API) return API.sigue();
   const cv = $('cargav'); cv.hidden = false;
   setTimeout(() => { try { const D = armaDatos(), GEO = armaGeo(); API = montar(D, GEO, armaCen(GEO)); }
@@ -634,7 +634,7 @@ function salir(alPulso){ if (!HOST || !ACTIVA) return; ACTIVA = false; if (API) 
   const fe = document.fullscreenElement || document.webkitFullscreenElement, sal = document.exitFullscreen || document.webkitExitFullscreen;
   if (fe && sal){ try { const p = sal.call(document); if (p && p.catch) p.catch(() => {}); } catch(e){} }
   if (alPulso === true && window.IANAMI_PULSO && window.IANAMI_PULSO.ir) window.IANAMI_PULSO.ir(); }
-// El Vistazo va siempre en pantalla completa: se pide al abrir y, si el navegador no la dio (al abrir una liga hace falta un toque), al primer toque
+// El Vistazo va siempre en pantalla completa: se pide al abrir y, si el navegador no la dio (al abrir una liga hace falta un toque), con el siguiente clic o toque
 function pideFS(){ if (!ACTIVA || document.body.classList.contains('en-inf')) return; const d = document.documentElement, fs = d.requestFullscreen || d.webkitRequestFullscreen;
   if (fs && !(document.fullscreenElement || document.webkitFullscreenElement)){ try { const p = fs.call(d); if (p && p.catch) p.catch(() => {}); } catch(e){} } }
 window.IANAMI_VISTAZO = { abrir:abrir, cerrar:salir, activa:() => ACTIVA };
