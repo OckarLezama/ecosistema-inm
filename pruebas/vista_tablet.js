@@ -16,7 +16,7 @@ const CAP = process.argv[2];
     await p.route('**/*', r => r.request().url().startsWith('file://') ? r.continue() : r.abort());
     await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1200);
     const vz = s => p.locator('#vistazo').locator(s);   // Playwright entra al Shadow DOM con locator
-    await p.click('#b-vz'); await vz('.ch').first().waitFor({ timeout:60000 }); await p.waitForTimeout(2200);
+    await p.dblclick('#b-vz'); await vz('.ch').first().waitFor({ timeout:60000 }); await p.waitForTimeout(2200);   // doble clic: la vista se arma una sola vez
     ok(await vz('.ch').count()===10, w+' diez tarjetas'); ok(await vz('#cargav').isHidden(), w+' sin pantalla de carga');
     if (CAP) await p.screenshot({ path:CAP+'/vz_'+w+'_inicio.png' });
     // hoja de Rescatados: la cifra del periodo Sheinbaum cuadra con la base

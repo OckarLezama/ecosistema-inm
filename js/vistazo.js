@@ -649,9 +649,10 @@ function abrir(op){ op = op || {};
   document.documentElement.classList.remove('vz-arranque');   // la pantalla verde de arranque ya la cubre el Vistazo
   pideFS(); if (!pideFS.listo){ pideFS.listo = true; R.addEventListener('click', pideFS, true); /* en el clic y no al apoyar el dedo: si la pantalla cambia de tamaño a medio toque, el navegador cancela el clic */ }
   if (API) return API.sigue();
+  if (abrir.armando) return; abrir.armando = true;   // un doble clic en «Vistazo» armaba la vista dos veces y cada toque se aplicaba doble (el desglose se abría y cerraba)
   const cv = $('cargav'); cv.hidden = false;
   setTimeout(() => { try { const D = armaDatos(), GEO = armaGeo(); API = montar(D, GEO, armaCen(GEO)); }
-    catch(e){ console.error(e); cv.innerHTML = '<span>No se pudo preparar la vista.<button data-salir>Volver</button></span>'; return; }
+    catch(e){ abrir.armando = false; console.error(e); cv.innerHTML = '<span>No se pudo preparar la vista.<button data-salir>Volver</button></span>'; return; }
     cv.classList.add('fuera'); setTimeout(() => { cv.hidden = true; }, 500); }, 60); }
 // «Salir» siempre lleva al Pulso; desde «Ver en Pulso» se cierra y Pulso se abre ya filtrado
 function salir(alPulso){ if (!HOST || !ACTIVA) return; ACTIVA = false; if (API) API.pausa(); HOST.style.display = 'none'; document.documentElement.classList.remove('vz-on');
