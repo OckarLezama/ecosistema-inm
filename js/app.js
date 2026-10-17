@@ -342,7 +342,7 @@ async function hacerPDF(){
   await Promise.all(LIBS_PDF.map(cargarJS));
   const zona = SALA.on ? $('mapa') : S.vista==='pulso' ? $('vista-pulso') : $('vista-otra'), tit = 'IA-NAMI · '+tituloVista()+' · '+(S.vista==='pulso' ? $('rango').textContent : ((document.querySelector('#vista-otra .rango b') || {}).textContent || ''));
   const lienzo = await html2canvas(zona, { scale:1.6, backgroundColor:'#F4F2EA', useCORS:true, ignoreElements:el => el.id==='rg-pop' || el.id==='kpi-tip' || (el.classList && el.classList.contains('res')),
-    onclone:doc => { const st = doc.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; doc.head.appendChild(st); colorFijo(doc); } });
+    onclone:doc => { const st = doc.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important} .sl-e{opacity:1!important;transform:none!important} #sl-cm,#aviso-breve{display:none!important}'; doc.head.appendChild(st); colorFijo(doc); } });
   const { jsPDF } = window.jspdf, pdf = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' }), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), m = 22;
   const esc2 = (W-2*m)/lienzo.width, alto = Math.floor((H-2*m-14)/esc2);
   for (let y=0, p=0; y<lienzo.height; y+=alto, p++){
@@ -394,7 +394,7 @@ function abrirLigaVista(){ const p = new URLSearchParams(location.search), v = p
   const per = p.get('per'); if (per && /^(shein|trump|anio|pers)$/.test(per)){ S.per = per; if (per==='anio'){ S.anio = +p.get('a') || S.anio; S.mes = +p.get('m') || 0; } if (per==='pers' && p.get('de') && p.get('a')){ S.desde = p.get('de'); S.hasta = p.get('a'); } }
   const c = p.get('cmp'); if (c) S.cmp = c==='sem' ? 'sem' : +c; const i = p.get('i'); S.ind = i && IND[i] ? i : null; if (p.get('r')) S.region = p.get('r');
   irA('pulso'); cambiarPeriodo(); const l = p.get('l'); if (l && /^[ne]\d+$/.test(l)) fijarSel({ t:l[0], i:+l.slice(1) }, true);
-  if (v==='infografia') setTimeout(() => { abrirSala(); const b = i && document.querySelector('#sl-im [data-ind="'+i+'"]'); if (b) b.click();
+  if (v==='infografia') setTimeout(() => { SALA.compartida = true; document.body.classList.add('sala-compartida'); abrirSala(); const b = i && document.querySelector('#sl-im [data-ind="'+i+'"]'); if (b) b.click();
     setTimeout(() => document.documentElement.classList.remove('vz-arranque'), 250);
     const fs = () => { if (SALA.on && !document.fullscreenElement && $('mapa').requestFullscreen) $('mapa').requestFullscreen().catch(() => {}); }; addEventListener('click', fs, true); }, 300);   // la infografía entra limpia: se elige su indicador
   return true; }
@@ -1815,7 +1815,7 @@ function cerrarSala(){
 function clicSala(e){
   const cm = $('sl-cm'); if (cm && !cm.hidden && !e.target.closest('#sl-cm, #sl-liga')) cm.hidden = true;   // el menú de compartir se cierra al tocar fuera
   const b = e.target.closest('button'); if (!b) return;
-  if (b.id==='sl-x'){ cerrarSala(); return; }
+  if (b.id==='sl-x'){ if (!SALA.compartida) cerrarSala(); return; }
   if (b.id==='sl-liga'){ const m = $('sl-cm'); m.hidden = !m.hidden; return; }
   if (b.dataset.slc==='liga'){ $('sl-cm').hidden = true; copiarLiga(); return; }
   if (b.dataset.slc==='wa'){ $('sl-cm').hidden = true; window.open('https://wa.me/?text='+encodeURIComponent('Infografía IA-NAMI: '+ligaVista()), '_blank', 'noopener'); return; }
@@ -2373,8 +2373,8 @@ function iniciar(){
   $('play').addEventListener('click', reproducir);
   $('vertodo').addEventListener('click', verTodo);
   ayudaHerramientas();
-  document.addEventListener('keydown', e => { if (e.key==='Escape' && SALA.on && !(window.IANAMI_CONSULTA && document.getElementById('cq') && !document.getElementById('cq').hidden)){ const p = $('sl-pop'); if (p && !p.hidden) p.hidden = true; else cerrarSala(); } });
-  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && SALA.on) cerrarSala(); });
+  document.addEventListener('keydown', e => { if (e.key==='Escape' && SALA.on && !SALA.compartida && !(window.IANAMI_CONSULTA && document.getElementById('cq') && !document.getElementById('cq').hidden)){ const p = $('sl-pop'); if (p && !p.hidden) p.hidden = true; else cerrarSala(); } });
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && SALA.on && !SALA.compartida) cerrarSala(); });   // la liga compartida no se cierra al salir de pantalla completa
   // «?completa» en la dirección (pantallas táctiles de sala): el navegador no deja entrar solo a pantalla completa,
   // así que el primer toque, clic o tecla la activa; si alguien sale, el siguiente toque vuelve a entrar
   if (/[?&](ver|per)=/.test(location.search)) setTimeout(abrirLigaVista, 0);   // liga de «Copiar liga»: la misma vista

@@ -1889,3 +1889,5 @@ html.vz-arranque body::after{content:"Preparando la vista…";position:fixed;ins
 .sl-cm[hidden]{display:none}.sl-cm button{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:10px;color:var(--s-ink)}.sl-cm button:hover{background:var(--s-btn)}.sl-cm b{display:block;font-size:14px}.sl-cm span{display:block;font-size:12px;color:var(--s-ink2)}
 html.vz-arranque.arr-info body::after{background:#F4F2EA;color:#5C5952}
 #mapa > .aviso-breve{display:block!important}
+body.sala-compartida #sl-x{display:none!important}
+body.sala-compartida .sl-liga{margin-right:0}

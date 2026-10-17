@@ -237,7 +237,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-a
 .fgb .fn{font-size:15px;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;column-gap:8px}.fgb .fn small{font-size:11.5px;color:#A9C4BA}
 .fgb b{font:600 21px/1 'Barlow Condensed',sans-serif;display:flex;align-items:center;gap:8px;justify-content:flex-end}.fgb b .dch{font:700 11.5px Barlow,sans-serif}
 .fgb .cv{color:#A9C4BA;transition:transform .3s var(--ease)}.fgi.on .cv{transform:rotate(180deg);color:#fff}
-.fgd{overflow:hidden;transition:height .38s var(--ease)}
+.fgd{display:grid;grid-template-rows:0fr;transition:grid-template-rows .38s var(--ease)}.fgi.on .fgd{grid-template-rows:1fr}.fgdw{overflow:hidden;min-height:0}
 .fgdi{padding:0 12px 10px 14px}.fgdi .it{grid-template-columns:16px 1fr auto;column-gap:8px;row-gap:3px;margin-top:6px}.fgdi .it .k{font-size:11.5px;color:#7F9E93}.fgdi .it .nm{font-size:13.5px;color:#CFE2DA}.fgdi .it .pc{font:600 15px/1 'Barlow Condensed',sans-serif;color:#E3EEE9}.fgdi .it .pc small{font-size:10.5px}.fgdi .it .bb{height:3px;opacity:.7}
 .fgt2{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#7F9E93;margin-top:0}
 .fgv{margin-top:8px;min-height:32px;padding:0 2px;font-size:12.5px;font-weight:600;color:var(--c);display:inline-flex;align-items:center;gap:4px;background:none;opacity:.9}.fgv:hover{opacity:1;text-decoration:underline}
@@ -252,16 +252,19 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-a
 :host([data-modo="compartido"]) [data-inf],:host([data-modo="compartido"]) [data-pulso],:host([data-modo="compartido"]) [data-salir]{display:none!important}
 
 /* documento vigente: conteo al corte, aparte de las 10 tarjetas */
-.dvg{float:right;margin-left:16px;color:#A9C4BA}.dvg b{color:#fff;font-weight:600}
-@media (max-width:699px){ .dvg{float:none;display:block;margin:3px 0 0} }
+.dvh{display:flex;align-items:baseline;gap:6px;margin-top:6px;font-size:13px;color:#CFE2DA}.dvh b{font:600 19px/1 'Barlow Condensed',sans-serif;color:#fff}.dvh em{font-style:normal;font-size:11.5px;color:#A9C4BA}
 .fdv{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:12px;padding:9px 12px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);font-size:13px;color:#A9C4BA}
 .fdv b{font:600 20px/1 'Barlow Condensed',sans-serif;color:#fff}.fdv em{font-style:normal;font-size:12px}
+
+/* documento vigente: en computadora y tablet, bajo la fecha; en teléfono, sobre las tarjetas (arriba no cabe) */
+.dvm{display:none}
+@media (max-width:699px) and (min-height:521px){ .top .dvh{display:none} .dvm{display:flex;margin-top:4px} }
 `;
 const BODY = `<div class="cargav" id="cargav"><span><i></i>Preparando la vista…</span></div>
 
 <div class="app" id="app"><section class="home" id="home">
   <div id="map"></div><div class="shade"></div>
-  <div class="top"><div class="br"><b>IA-NAMI</b><span class="corte" id="corte"><i></i></span></div><button class="pc0 glass" data-pm id="pc0"></button><div class="pm" id="pm"></div>
+  <div class="top"><div class="br"><b>IA-NAMI</b><span class="corte" id="corte"><i></i></span><div class="dvh" id="dvh"></div></div><button class="pc0 glass" data-pm id="pc0"></button><div class="pm" id="pm"></div>
     <button class="ib glass" data-inf title="Informe migratorio de la última semana"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5"/></svg><span id="inft">Informe</span></button>
     <button class="ib glass" data-bq title="Busca un país, estado u O.R."><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Buscar</span></button>
     <button class="ib glass ico" data-compartir aria-label="Compartir este resumen"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/></svg></button><div class="pm cm" id="cm"><div class="pmt">Compartir · Resumen INAMI</div><button data-cmw><div><b>WhatsApp</b><span>manda la liga del resumen</span></div></button><button data-cmc><div><b>Copiar liga</b><span>para pegarla en un correo o mensaje</span></div></button></div>
@@ -452,7 +455,7 @@ function hl(i, dir){ HI = (i+ORD.length) % ORD.length; const x = DATA[ORD[HI]], 
   clearTimeout(HT); HT = setTimeout(() => { MAN = false; hl(HI+1, 1); }, MAN ? 15000 : 8000); }
 function fila(){ $('row').innerHTML = DATA.map((x, i) => { const [a, b] = cc(V(x).T), rr = r(x);
   return '<button class="ch" data-i="'+i+'" style="--c:'+GC[x.g][0]+';--cs:'+GC[x.g][1]+';animation-delay:'+(0.1+i*0.04)+'s"><span class="n"><i></i>'+x.n+'</span><span class="v num" data-cu="'+V(x).T+'">'+a+(b ? '<small>'+b+'</small>' : '')+'</span>'+(ALR.includes(i) ? '<span class="bad" title="Fuera de lo normal"></span>' : '')+'<span class="d">'+(rr==null ? f(V(x).T/dias())+' por día' : chip(rr)+' '+vsCorto())+'</span></button>'; }).join(''); R.querySelectorAll('.ch .v[data-cu]').forEach(n => { const N = +n.dataset.cu, html = n.innerHTML, t0 = performance.now(); if (N<5) return; const step = t => { const k = Math.min(1, (t-t0)/900), e = 1-Math.pow(1-k, 3), [a, b] = cc(N*e); n.innerHTML = k<1 ? a+(b ? '<small>'+b+'</small>' : '') : html; if (k<1) requestAnimationFrame(step); }; requestAnimationFrame(step); }); }
-function setPer(p, abierto){ PER = p; if (TP(p)==='y' || TP(p)==='m') AY = p.slice(1, 5); menuPer(); $('ley').insertAdjacentHTML('beforeend', docVig()); if (!abierto) $('pm').classList.remove('on');
+function setPer(p, abierto){ PER = p; if (TP(p)==='y' || TP(p)==='m') AY = p.slice(1, 5); menuPer(); $('dvh').innerHTML = docVig(); $('ley').insertAdjacentHTML('beforeend', '<span class="dvh dvm">'+docVig()+'</span>'); if (!abierto) $('pm').classList.remove('on');
   $('corte').innerHTML = '<i></i><span class="rg">'+(PER==='sem' ? 'Semana '+dd(PD().a).replace(/ \d+$/, '')+' – '+dd(PD().b) : dd(PD().a)+' – '+dd(PD().b))+' · </span>datos al '+dd(D.fin);
   orden(); alerta(); fila(); if (FICHA) ficha(FICHA[0], FICHA[1]); else if (CUR>=0) abrir(CUR); else hl(0); }
 
@@ -533,7 +536,7 @@ function docVig(t, nom){ const d = (window.IANAMI_DATOS || {}).docs, DN = window
   if (!t) v = [d.total, d.h, d.m]; else if (t==='n'){ const i = (DN.nats || []).findIndex(x => x[0]===nom); v = i>=0 && d.nat[i] ? d.nat[i] : null; } else { const i = (DN.ests || []).indexOf(nom); v = i>=0 && d.est[i] != null ? [].concat(d.est[i]) : null; }
   if (!v || !v[0]) return t ? '<div class="fdv">Sin extranjeros con documento vigente registrados al '+dd(d.corte)+'.</div>' : '';
   const m = v[2]!=null && v[0]>=5 ? ' · '+Math.round(v[2]/v[0]*100)+'% mujeres' : '';
-  return t ? '<div class="fdv"><span>Con documento vigente</span><b class="num">'+fp(v[0])+'</b><em>al '+dd(d.corte)+m+'</em></div>' : '<span class="dvg">Con documento vigente: <b>'+fp(v[0])+'</b> al '+dd(d.corte)+'</span>'; }
+  return t ? '<div class="fdv"><span>Con documento vigente</span><b class="num">'+fp(v[0])+'</b><em>al '+dd(d.corte)+m+'</em></div>' : '<b class="num">'+fp(v[0])+'</b><span>con documento vigente</span><em>al '+dd(d.corte)+'</em>'; }
 // ficha de un país o estado: agrupada como las tarjetas, con el lugar que ocupa en cada indicador y una frase de dónde pesa más.
 // Cada indicador se despliega con sus 5 principales: del país, los estados (o sectores) por donde aparece; del estado, las nacionalidades.
 const FXC = {};
@@ -555,12 +558,12 @@ function fichaMapa(t, nom, x, l){ const col = x ? GC[x.g][0] : '#5FB79B', S5 = (
   const P = pts.map(p => p.value.slice(0, 2)), dur = mover(t==='e' && BBE[nom] && !S5.length ? [BBE[nom][0]-1.5, BBE[nom][1]-1.5, BBE[nom][2]+1.5, BBE[nom][3]+1.5] : P.length>1 ? bbDe(P.concat(t==='n' ? [] : [[-104, 28], [-90, 16]])) : P.length ? bbDe([P[0], [-104, 28], [-90, 16]]) : BB_MX);
   clearTimeout(capas.t); if (lin.length) capas.t = setTimeout(() => { if (MAPOK() && FICHA) MAP.setOption({ series:[{ id:'fl', data:lin }] }); }, dur ? dur+120 : 350); }
 function abreFx(i){ const t = FICHA[0], nom = FICHA[1], it = R.querySelector('.fgi[data-fx="'+i+'"]'); if (!it) return;
-  R.querySelectorAll('.fgi.on').forEach(e => { if (e!==it){ e.classList.remove('on'); e.querySelector('.fgd').style.height = '0px'; } });
-  const d = it.querySelector('.fgd'); if (it.classList.contains('on')){ it.classList.remove('on'); d.style.height = '0px'; FXA = -1; fichaMapa(t, nom); return; }
-  const x = DATA[i], g = desglose(x, t, nom), a = (t==='n' ? V(x).na : V(x).eaM)[nom] || 0;
-  d.innerHTML = '<div class="fgdi">'+(g && g.l.length ? '<div class="fgt2">'+g.tit+'</div>'+g.l.slice(0, 5).map((z, j) => '<div class="it" style="animation-delay:'+(j*0.05)+'s"><span class="k">'+(j+1)+'</span><span class="nm">'+z[0]+'</span><span class="pc">'+(z[1]<5 ? '<small style="margin:0">menos de 5</small>' : fp(z[1])+'<small>'+Math.round(z[1]/a*100)+'%</small>')+'</span><span class="bb"><i style="width:'+(z[1]/g.l[0][1]*100).toFixed(0)+'%;animation-delay:'+(.08+j*0.05)+'s"></i></span></div>').join('')
-    : '<div class="fgt2">Esta base no trae el desglose para '+nom+'.</div>')+'<button class="fgv" data-i="'+i+'">Ver detalle de '+x.n.toLowerCase()+' ›</button></div>';
-  it.classList.add('on'); d.style.height = d.scrollHeight+'px'; FXA = i; fichaMapa(t, nom, x, g ? g.l : []);
+  R.querySelectorAll('.fgi.on').forEach(e => { if (e!==it) e.classList.remove('on'); });
+  const d = it.querySelector('.fgd'); if (it.classList.contains('on')){ it.classList.remove('on'); FXA = -1; fichaMapa(t, nom); return; }
+  let g = null; const x = DATA[i], a = (t==='n' ? V(x).na : V(x).eaM)[nom] || 0; try { g = desglose(x, t, nom); } catch(e){ console.error(e); }
+  d.innerHTML = '<div class="fgdw"><div class="fgdi">'+(g && g.l.length ? '<div class="fgt2">'+g.tit+'</div>'+g.l.slice(0, 5).map((z, j) => '<div class="it" style="animation-delay:'+(j*0.05)+'s"><span class="k">'+(j+1)+'</span><span class="nm">'+z[0]+'</span><span class="pc">'+(z[1]<5 ? '<small style="margin:0">menos de 5</small>' : fp(z[1])+'<small>'+Math.round(z[1]/a*100)+'%</small>')+'</span><span class="bb"><i style="width:'+(z[1]/g.l[0][1]*100).toFixed(0)+'%;animation-delay:'+(.08+j*0.05)+'s"></i></span></div>').join('')
+    : '<div class="fgt2">Esta base no trae el desglose para '+nom+'.</div>')+'<button class="fgv" data-i="'+i+'">Ver detalle de '+x.n.toLowerCase()+' ›</button></div></div>';
+  it.classList.add('on'); FXA = i;   // se abre con CSS (sin medir alturas): funciona igual con zoom y en cualquier navegador fichaMapa(t, nom, x, g ? g.l : []);
   setTimeout(() => it.scrollIntoView({ block:'nearest', behavior:RM ? 'auto' : 'smooth' }), 380); }
 function ficha(t, nom){ limpia(); FICHA = [t, nom]; CUR = -1; FXA = -1; clearTimeout(HT); const sh = $('sh');
   const fil = DATA.map((x, i) => { const v = V(x), m = t==='n' ? v.na : v.eaM, w = t==='n' ? v.naW : v.eaW, l = (t==='n' ? v.nl : v.el) || []; if (!m) return null;
@@ -568,7 +571,7 @@ function ficha(t, nom){ limpia(); FICHA = [t, nom]; CUR = -1; FXA = -1; clearTim
   const con = fil.filter(o => o.a>0), sin = fil.filter(o => !o.a), top = con.slice().sort((p, q) => p.k-q.k || q.sh-p.sh)[0];
   const res = top ? '<b>'+nom+'</b> pesa más en <b>'+top.x.n.toLowerCase()+'</b>: lugar '+top.k+' de '+top.de+(top.a>=5 && top.sh>=0.01 ? ', con '+Math.round(top.sh*100)+' de cada 100' : '')+'.' : 'Sin registros de <b>'+nom+'</b> en '+PD().lab+'.';
   const grupos = Object.keys(GC).map(g => { const l = con.filter(o => o.x.g===g); return l.length ? '<div class="fg" style="--c:'+GC[g][0]+'"><div class="fgt"><i></i>'+g+'</div>'+
-    l.map(o => '<div class="fgi" data-fx="'+o.i+'"><button class="fgb" data-fx="'+o.i+'" aria-expanded="false"><span class="fn">'+o.x.n+'<small>lugar '+o.k+' de '+o.de+'</small></span><b class="num">'+fp(o.a)+(o.rr!=null ? chip(o.rr) : '')+'</b><svg class="cv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="fgd" style="height:0px"></div></div>').join('')+'</div>' : ''; }).join('');
+    l.map(o => '<div class="fgi" data-fx="'+o.i+'"><button class="fgb" data-fx="'+o.i+'" aria-expanded="false"><span class="fn">'+o.x.n+'<small>lugar '+o.k+' de '+o.de+'</small></span><b class="num">'+fp(o.a)+(o.rr!=null ? chip(o.rr) : '')+'</b><svg class="cv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="fgd"></div></div>').join('')+'</div>' : ''; }).join('');
   sh.style.cssText = '--c:#5FB79B;--cs:rgba(95,183,155,.2)';
   sh.innerHTML = '<div class="grab"></div><div class="shh"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><div class="t"><b>'+nom+'</b><small>'+(t==='n' ? 'País' : 'Estado / O.R.')+' · '+PNOM(PER)+'</small></div><button class="rb pb" data-pulso title="Ver en Pulso" aria-label="Ver en Pulso"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg><span>Pulso</span></button><button class="rb" data-x aria-label="Cerrar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+
     '<div class="vp"><div class="tb fic" style="flex:none;height:100%"><div class="fr">'+res+'</div><div class="fley">'+(PD().ca ? '▲▼ '+vsCorto() : PD().nc ? cap(PD().nc) : 'Total acumulado · '+dd(PD().a)+' – '+dd(PD().b))+' · toca un indicador para ver sus 5 principales</div>'+docVig(t, nom)+grupos+
