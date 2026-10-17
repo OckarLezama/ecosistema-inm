@@ -23,7 +23,7 @@ const INI = new Date(RG.inicio+'T00:00:00'), DS = (INI.getDay()+6)%7;
 const semDe = d => Math.floor((d+DS)/7), NSEM = semDe(RG.dias-1)+1, semIni = w => w*7-DS;
 const mesDe = d => { const f = new Date(INI.getFullYear(), INI.getMonth(), INI.getDate()+d); return (f.getFullYear()-INI.getFullYear())*12 + f.getMonth()-INI.getMonth(); };
 const EMP = 2;                                                     // sexo «Empleador»
-const Q = { vista:'tram', doc:-1, nats:[], ests:[], per:'todo', d0:0, d1:RG.dias, cmp:'sem', pv:'res', pof:-1, gran:'auto', ofi:-1, ofiF:-1, mz:null, tot:'c', desg:'tot', det:false, tipoG:'l', eti:false, dvTodo:false, dvT:'e', dvOrd:null, vaB:null, perfil:[], fil:'n', col:'c',
+const Q = { vista:'tram', doc:-1, nats:[], ests:[], per:'todo', d0:0, d1:RG.dias, cmp:30, pv:'res', pof:-1, gran:'auto', ofi:-1, ofiF:-1, mz:null, tot:'c', desg:'tot', det:false, tipoG:'l', eti:false, dvTodo:false, dvT:'e', dvOrd:null, vaB:null, perfil:[], fil:'n', col:'c',
             dvSel:null, vaF:null, mas:false, compacto:false };
 Object.defineProperty(Q, 'est', { get(){ return Q.ests.length===1 ? Q.ests[0] : -1; }, set(v){ Q.ests = v>=0 ? [v] : []; } });
 const estOk = e => !Q.ests.length || Q.ests.indexOf(e)>=0;
@@ -80,11 +80,22 @@ const cajaBusca = (id, ph) => '<div class="busca rg-busca"><svg width="14" heigh
 const filtros = () => Q.nats.map(n => DIC.n[n]).concat(Q.ests.map(e => DIC.e[e]), Q.ofiF>=0 ? [nomO(DIC.o[Q.ofiF])] : []);
 const filtrosTxt = () => filtros().map(x => '<b>'+esc(x)+'</b>').join(' · ');
 // «Comparar con»: semana anterior (lunes a domingo completas), o los últimos N días contra los N previos
-function ventanas(){ const N = Q.cmp;
+// Regla única (igual que el Pulso): año, mes y personalizado se comparan solos contra las mismas fechas del año anterior
+// (personalizado sin año anterior: contra el tramo de igual duración justo antes); Sheinbaum y Trump, semana anterior, últimos 30 días o 3 meses.
+const MESC = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const cmpFijo = () => Q.per==='anio' || Q.per==='pers';
+function ventanaFija(){ const n = Q.d1-Q.d0, f = fDia(Q.d0), b = Math.round((new Date(f.getFullYear()-1, f.getMonth(), f.getDate()) - INI)/864e5);
+  if (b>=0) return [[Q.d0, Q.d1], [b, b+n]]; if (Q.per==='pers' && Q.d0-n>=0) return [[Q.d0, Q.d1], [Q.d0-n, Q.d0]]; return null; }
+function nomFijo(){ const w = ventanaFija(); if (!w) return ''; if (w[1][1]===w[0][0]) return 'los '+(Q.d1-Q.d0)+' días previos';
+  return Q.per==='anio' ? (Q.mes ? MESC[Q.mes-1]+' '+(Q.anio-1) : String(Q.anio-1)) : 'mismas fechas de '+fDia(w[1][0]).getFullYear(); }
+const txtCmp = () => cmpFijo() ? (nomFijo() ? 'contra '+nomFijo() : '') : Q.cmp==='sem' ? 'en la semana' : Q.cmp===90 ? 'en los últimos 3 meses' : 'en los últimos 30 días';
+const OPC_CMP = [['sem','Semana anterior'],[30,'Últimos 30 días'],[90,'Últimos 3 meses']];
+const cmpFijoHtml = () => '<span class="rg-sel rg-fijo">'+(nomFijo() ? 'Comparado con <b>'+nomFijo()+'</b>' : 'Sin periodo anterior con datos para comparar')+'</span>';
+function ventanas(){ if (cmpFijo()) return ventanaFija(); if (['sem',30,90].indexOf(Q.cmp)<0) Q.cmp = 30; const N = Q.cmp;
   if (N==='sem'){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); return b-7 >= Q.d0 ? [[b, b+7], [b-7, b]] : null; }
   return N==='aa' || 2*N > Q.d1-Q.d0 ? null : [[Q.d1-N,Q.d1],[Q.d1-2*N,Q.d1-N]]; }
-const etqCmp = () => { const w = ventanas(); if (!w) return ''; return Q.cmp==='sem' ? 'la semana del '+fecha(w[0][0])+' al '+fecha(w[0][1]-1)+' (contra la anterior)' : Q.cmp===7 ? 'los últimos 7 días' : Q.cmp===90 ? 'los últimos 3 meses' : 'los últimos '+Q.cmp+' días'; };
-const chipD = (a,b) => { if (!b) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%</span>'; };
+const etqCmp = () => { const w = ventanas(); if (!w) return ''; if (cmpFijo()) return 'el periodo '+txtCmp(); return Q.cmp==='sem' ? 'la semana del '+fecha(w[0][0])+' al '+fecha(w[0][1]-1)+' (contra la anterior)' : Q.cmp===7 ? 'los últimos 7 días' : Q.cmp===90 ? 'los últimos 3 meses' : 'los últimos '+Q.cmp+' días'; };
+const chipD = (a,b) => { if (!b) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' k' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
 const mov = m => '<span class="mv '+(m>0?'u':m<0?'d':'e')+'">'+(m>0?'▲'+m:m<0?'▼'+(-m):'=')+'</span>';
 function lugares(key, nk, r, o){ const x = agg(key, nk, Object.assign({}, o, {d0:r[0], d1:r[1]})), l = Array.from(x).map((v,i)=>[i,v]).sort((a,b)=>b[1]-a[1]), p = {}; l.forEach((y,j) => p[y[0]] = j+1); return p; }
 function temporadaEn(a, b){
@@ -128,9 +139,9 @@ function htmlCtl(){
     (Q.per==='anio' ? selAnio() : '')+
     (Q.per==='pers' ? '<span class="per-extra"><input type="date" id="rg-d0" value="'+iso(Q.d0)+'" min="'+iso(0)+'" max="'+iso(RG.dias-1)+'"> – <input type="date" id="rg-d1" value="'+iso(Q.d1-1)+'" min="'+iso(0)+'" max="'+iso(RG.dias-1)+'"></span>' : '')+
     '<div class="rango"><b>'+fechaA(Q.d0)+' – '+fechaA(Q.d1-1)+'</b><span>'+(Q.d1-Q.d0)+' días</span></div>'+
-    '<label class="rg-sel">Comparar con <select id="rg-cmp">'+[['sem','Semana anterior'],[7,'7 días previos'],[30,'30 días previos'],[90,'3 meses previos'],['aa','Mismo periodo del año anterior']].map(x => { const ap = x[0]==='sem' ? (() => { const q = Q.cmp; Q.cmp = 'sem'; const w = ventanas(); Q.cmp = q; return !!w; })() : ok(x[0]);
-      return '<option value="'+x[0]+'"'+(String(Q.cmp)===String(x[0])?' selected':'')+(ap?'':' disabled')+'>'+x[1]+(x[0]==='aa' ? ' (sin datos aún)' : '')+'</option>'; }).join('')+'</select></label>'+
-    (Q.cmp==='sem' && ventanas() ? '<span class="rg-cmp-n">'+rangoTxt(ventanas()[0])+' contra '+rangoTxt(ventanas()[1])+'</span>' : '')+
+    (cmpFijo() ? cmpFijoHtml() : '<label class="rg-sel">Comparar con <select id="rg-cmp">'+OPC_CMP.map(x => { const ap = x[0]==='sem' ? (() => { const q = Q.cmp; Q.cmp = 'sem'; const w = ventanas(); Q.cmp = q; return !!w; })() : ok(x[0]);
+      return '<option value="'+x[0]+'"'+(String(Q.cmp)===String(x[0])?' selected':'')+(ap?'':' disabled')+'>'+x[1]+'</option>'; }).join('')+'</select></label>')+
+    ((Q.cmp==='sem' || cmpFijo()) && ventanas() ? '<span class="rg-cmp-n">'+rangoTxt(ventanas()[0])+' contra '+rangoTxt(ventanas()[1])+'</span>' : '')+
     cajaBusca('rg-bus', 'Buscar nacionalidad, estado u oficina')+'<span class="rg-chips">'+Q.nats.map((n,j) => '<span class="tag-f" style="background:'+COLN[j]+'">'+esc(DIC.n[n])+' <button data-rquita="n'+n+'" aria-label="Quitar">×</button></span>').join('')+
       Q.ests.map((e,j) => '<span class="tag-f" style="background:'+(Q.ests.length>1 ? ['#2F6657','#C4605A','#8F7F2E'][j] : '#8F7F2E')+'">'+esc(DIC.e[e])+' <button data-rquita="e'+e+'" aria-label="Quitar">×</button></span>').join('')+
       (Q.ofiF>=0 ? '<span class="tag-f" style="background:#2F6657">'+esc(nomO(DIC.o[Q.ofiF]))+' <button data-rquita="o" aria-label="Quitar">×</button></span>' : '')+'</span>';
@@ -247,7 +258,7 @@ function pintarTops(){
   const oo = {est:null, nats:Q.nats}, e = agg(K.e, NE, oo), TE = e.reduce((a,b)=>a+b,0), le = Array.from(e).map((x,i)=>[i,x]).filter(x => x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,10), me = le.length ? le[0][1] : 1;
   const ea = w ? lugares(K.e, NE, w[0], oo) : null, eb = w ? lugares(K.e, NE, w[1], oo) : null;
   $('rg-te').innerHTML = le.map((x,j) => filaRank(j, DIC.e[x[0]], x[1], TE, me, w ? eb[x[0]]-ea[x[0]] : null, '#8F7F2E', ' data-ror="'+x[0]+'"', Q.ests.indexOf(x[0])>=0)).join('')+'<span class="nota">Clic para filtrar por O.R.</span>';
-  const q = (Q.doc>=0 ? RG.condiciones[Q.doc] : 'Todos los trámites')+(w ? ' · ▲▼ lugares en '+Q.cmp+' días' : '');
+  const q = (Q.doc>=0 ? RG.condiciones[Q.doc] : 'Todos los trámites')+(w ? ' · ▲▼ lugares '+txtCmp() : '');
   const fe = [Q.ests.map(e => DIC.e[e]).join(' + '), Q.ofiF>=0 ? nomO(DIC.o[Q.ofiF]) : ''].filter(Boolean).map(x => '<b>'+esc(x)+'</b>').join(' · '), fn = Q.nats.map(n => '<b>'+esc(DIC.n[n])+'</b>').join(', ');
   $('rg-tn-q').innerHTML = esc(q)+(fe ? ' · '+fe : ''); $('rg-te-q').innerHTML = esc(q)+(fn ? ' · '+fn : '');
 }
@@ -256,7 +267,7 @@ function redactar(o, nom){
   const w = ventanas(), t = [], llenas = [];
   for (let k=semDe(Q.d0); k<=semDe(Q.d1-1); k++) if (semIni(k)>=Q.d0 && semIni(k)+6<Q.d1) llenas.push(k);
   let rA, rB, etq;
-  if (w){ rB = {d0:w[0][0], d1:w[0][1]}; rA = {d0:w[1][0], d1:w[1][1]}; etq = Q.cmp===7 ? 'en los últimos 7 días' : Q.cmp===90 ? 'en los últimos 3 meses' : 'en los últimos '+Q.cmp+' días'; }
+  if (w){ rB = {d0:w[0][0], d1:w[0][1]}; rA = {d0:w[1][0], d1:w[1][1]}; etq = txtCmp(); }
   else if (llenas.length>=2){ const u = llenas[llenas.length-1], p = llenas[llenas.length-2]; rB = {d0:semIni(u), d1:semIni(u)+7}; rA = {d0:semIni(p), d1:semIni(p)+7}; etq = 'en la última semana completa'; }
   else return ['El periodo es demasiado corto para comparar.'];
   const A = tot(Object.assign({}, o, rA)), B = tot(Object.assign({}, o, rB)), dl = A ? (B/A-1)*100 : 0, temp = temporadaEn(rB.d0, rB.d1-1);

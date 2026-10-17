@@ -395,7 +395,7 @@ function mezclaRGB(rampa, t){                  // color intermedio de una rampa,
 function tri(arriba, color){ return '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="'+(arriba?'M6 2l5 8H1z':'M6 10L1 2h10z')+'" fill="'+color+'"/></svg>'; }
 
 /* ==== [4] ESTADO Y FILTRO ========================================= */
-const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, circulos:true, puntos:false, cbp:false, car:false, carSel:null, modoVista:'mundo', centro:null, region:null, agr:'e', cmp:'sem', per:'shein', anio:fechaBase(D.dias-1).getFullYear(), mes:0, desde:D.inicio, hasta:D.corte, cruce:{ing:0, resc:0, pres:0}, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
+const S = { vista:'pulso', ind:null, sel:null, dia:ND, t:ND, play:false, tema:'claro', flujos:true, circulos:true, puntos:false, cbp:false, car:false, carSel:null, modoVista:'mundo', centro:null, region:null, agr:'e', cmp:30, per:'shein', anio:fechaBase(D.dias-1).getFullYear(), mes:0, desde:D.inicio, hasta:D.corte, cruce:{ing:0, resc:0, pres:0}, topModo:'resc', kpiModo:'tarjetas', zoom:1, estreno:true };
 let E = 1;                                      // escala para pantallas muy grandes
 // Filtro que produce la selección: una lista de estados (estado, cinturón o CECO) o una nacionalidad
 // ss: estados; n: una nacionalidad; r: nacionalidades de la región elegida; nd: lo que usan los cálculos (n o r)
@@ -426,14 +426,26 @@ function fijarSel(sel, volar){ S.sel = sel; if (S.ind==='rep' && sel && sel.t===
 /* ==== [5] ANÁLISIS AUTOMÁTICO ===================================== */
 // Compara los últimos N días con datos contra los N anteriores (N = 7 o 30) con el filtro activo.
 // Variación: últimos N días contra los N anteriores, o el periodo contra el mismo periodo del año anterior ('aa')
-const cmpN = () => S.cmp==='aa' ? 30 : S.cmp==='sem' ? 7 : S.cmp;               // ventana para los avisos
+// Regla única: año, mes y personalizado se comparan solos contra su periodo equivalente (mismas fechas del año anterior;
+// en personalizado sin año anterior, contra el tramo de igual duración justo antes). Sheinbaum y Trump muestran el total
+// y una tendencia reciente que se elige: semana anterior, últimos 30 días o últimos 3 meses; el % siempre dice de qué es.
+const cmpFijo = () => S.per==='anio' || S.per==='pers';
+function refFija(){ const q0 = idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate())));
+  if (q0>=0) return { t:'aa', q0:q0, txt:S.per==='anio' ? (S.mes ? MES12[S.mes-1]+' '+(S.anio-1) : String(S.anio-1)) : 'mismas fechas de '+(INICIO.getFullYear()-1) };
+  if (S.per==='pers' && P0-ND>=0) return { t:'prev', q0:P0-ND, txt:'los '+ND+' días previos' }; return null; }
+const NOM_CMP = { sem:'Última semana', 30:'Últimos 30 días', 90:'Últimos 3 meses' };
+const sufCmp = () => cmpFijo() ? (refFija() ? 'vs. '+refFija().txt : 'sin comparación') : S.cmp==='sem' ? 'en la última semana' : S.cmp===90 ? 'en los últimos 3 meses' : 'en los últimos 30 días';
+const cmpN = () => cmpFijo() ? 30 : S.cmp==='sem' ? 7 : S.cmp;               // ventana para los avisos
 const etiquetaN = n => n==='sem' ? '7 días' : n===90 ? '3 meses' : n+' días';
 // Semana anterior: la última semana completa (lunes a domingo) con datos contra la previa
 function semanasCmp(U){ let b = U; while (b>0 && (diaDe(b-1).getDay()!==0)) b--; return b-14>=0 ? [b-7, b, b-14, b-7] : null; }
-function textoCmp(){ if (S.cmp==='sem'){ const w = semanasCmp(ND); return w ? 'semana del '+fechaDia(w[0])+' al '+fechaDia(w[1]-1)+' contra la anterior' : 'semana anterior'; }
+function textoCmp(){ if (cmpFijo()){ const r = refFija(); return r ? 'el periodo contra '+r.txt : 'el periodo (sin periodo anterior con datos para comparar)'; }
+  if (S.cmp==='sem'){ const w = semanasCmp(ND); return w ? 'semana del '+fechaDia(w[0])+' al '+fechaDia(w[1]-1)+' contra la anterior' : 'semana anterior'; }
   return S.cmp==='aa' ? 'el periodo contra el mismo periodo del año anterior' : 'últimos '+etiquetaN(S.cmp)+' contra '+(S.cmp===90 ? 'los 3 meses' : 'los '+S.cmp+' días')+' anteriores'; }
 function variacion(d){
   const U = d.k ? finDatos(d.k) : ND;            // los días pendientes no entran a la comparación
+  if (cmpFijo()){ const r = refFija(); if (!r || !d.k) return {a:0, b:0, dl:0, ok:false}; const q0 = r.t==='prev' ? P0-U : r.q0, b = q0>=0 ? sumaCompleta(d.k, d.F, q0, q0+U) : null, a = suma(d,0,U);
+    return {a:a, b:b||0, dl: b ? (a/b-1)*100 : 0, ok: b!=null && b>=30}; }
   if (S.cmp==='aa'){ const q0 = idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))), b = q0>=0 && d.k ? sumaCompleta(d.k, d.F, q0, q0+U) : null, a = suma(d,0,U);
     return {a:a, b:b||0, dl: b ? (a/b-1)*100 : 0, ok: b!=null && b>=30}; }
   if (S.cmp==='sem'){ const w = semanasCmp(U); if (!w) return {a:0, b:0, dl:0, ok:false}; const a = suma(d,w[0],w[1]), b = suma(d,w[2],w[3]); return {a:a, b:b, dl: b ? (a/b-1)*100 : 0, ok: b>=10}; }
@@ -451,8 +463,9 @@ function sumaCompleta(k, F, q0, q1){
   }
   return t;
 }
+const fechaIdx = i => { const f = fechaBase(i); return f.getDate()+' '+MES12[f.getMonth()]+' '+String(f.getFullYear()).slice(2); };
 function cmpDisponible(o){ if (o==='sem') return !!semanasCmp(ND); return o==='aa' ? idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))) >= 0 : 2*o<=ND; }
-function validarCmp(){ if (!cmpDisponible(S.cmp)) S.cmp = ['sem',30,7].find(cmpDisponible) || 7; }
+function validarCmp(){ if (['sem',30,90].indexOf(S.cmp)<0 || !cmpDisponible(S.cmp)) S.cmp = [30,'sem',90].find(cmpDisponible) || 30; }
 function analizar(F){
   const out = [], N = cmpN(), umbral = N>=30 ? 15 : 25;
   INDS.forEach(m => {
@@ -495,7 +508,7 @@ function analizar(F){
 function cuanto(a, b){ const r = a/Math.max(b,1e-9);
   return r>=2 ? 'se multiplicaron por '+r.toFixed(1) : r>=1 ? 'subieron '+((r-1)*100).toFixed(0)+'%' : 'bajaron '+((1-r)*100).toFixed(0)+'%'; }
 function textoAviso(a){
-  const N = a.k ? IND[a.k].n : '', prev = S.cmp==='aa' ? 'el año anterior' : 'los '+etiquetaN(cmpN())+' previos';
+  const N = a.k ? IND[a.k].n : '', prev = cmpFijo() ? (refFija() ? refFija().txt : 'el periodo anterior') : 'los '+etiquetaN(cmpN())+' previos';
   if (a.t==='cambio') return '<b>'+N+'</b> '+cuanto(a.a,a.b)+': '+corto(a.a)+' frente a '+corto(a.b)+' en '+prev+'.';
   if (a.t==='pico')   return '<b>'+N+'</b>: pico de '+miles(a.v)+' el '+fechaDia(a.i)+', cuando lo habitual es '+miles(a.med)+' al día.';
   if (a.t==='nac')    return '<b>'+esc(D.nats[a.n][0])+'</b>: '+N.toLowerCase()+' por día '+cuanto(a.a,a.b)+' ('+miles(a.b)+' → '+miles(a.a)+').';
@@ -530,7 +543,7 @@ function pintarKpis(){
       if (F.nd!=null && !m.nat) return '<button class="kc" disabled><span class="kc-top">'+ic+'<span class="kc-n">'+m.n+'</span></span><span class="kc-v num">—</span><span class="kc-pie"><span class="kc-d">solo mexicanos</span></span></button>';
       const d = diario(m.k,F), v = suma(d,0,S.dia), va = variacion(d), fuerte = va.ok && Math.abs(va.dl)>=20;
       const sem = D.ends.map((e,i)=>suma(d, i?D.ends[i-1]:0, e)), mx = Math.max.apply(null,sem) || 1;
-      const delta = S.dia<ND ? '<span class="kc-d">al '+fechaDia(S.dia-1)+'</span>' : (va.ok ? '<span class="kc-d'+(fuerte?' f':'')+'">'+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%</span>' : '<span class="kc-d">sin comparación</span>');
+      const delta = S.dia<ND ? '<span class="kc-d">al '+fechaDia(S.dia-1)+'</span>' : (va.ok ? '<span class="kc-d'+(fuerte?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[S.cmp]+': '+(va.a>=1e6 ? (va.a/1e6).toFixed(2)+' M' : va.a>=1e4 ? (va.a/1e3).toFixed(1)+' k' : miles(va.a))+'</span> ')+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%'+(cmpFijo() ? '<span class="kc-l"> vs. '+refFija().txt+'</span>' : '')+'</span>' : '<span class="kc-d">sin comparación</span>');
       const on = S.ind===m.k;
       return '<button class="kc'+(on?' on':'')+'" data-k="'+m.k+'" aria-pressed="'+on+'" title="Clic para verlo en el mapa; otro clic lo quita">'+
         '<span class="kc-top">'+ic+(FUENTE[m.k] ? '<span class="kc-nf">' : '')+'<span class="kc-n">'+m.n+(conAviso[m.k]?'<u title="Tiene un aviso de cambio"></u>':'')+'</span>'+(FUENTE[m.k] ? '<span class="kc-f">'+FUENTE[m.k][0]+'</span></span>' : '')+'</span>'+
@@ -575,7 +588,7 @@ function tipKpi(el){
   const k = el.dataset.k, m = IND[k], F = filtro(), va = variacion(diario(k,F)), b = D.bases.find(x => x.k===BASE_IND[k]) || {};
   const tot = acum(k,F.ss,m.nat ? F.nd : null) || 1, tn = m.nat && F.n==null ? topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 3) : [];
   return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+(k==='ing' && F.n==null ? totalPais(acum('ing',F.ss,null), ingMx(F.ss)) : '')+(k==='cbp' && F.n==null ? cbpMx(acum('cbp',null,F.r ? F.nd : null), F.r ? 0 : acum('cbp',null,MX)) : '')+
-    (va.ok ? '<span>'+(S.cmp==='aa' ? 'Este periodo' : S.cmp==='sem' ? 'Última semana completa' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(S.cmp==='aa' ? 'año anterior' : S.cmp==='sem' ? 'semana previa' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
+    (va.ok ? '<span>'+(cmpFijo() ? 'Este periodo' : S.cmp==='sem' ? 'Última semana completa' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(cmpFijo() ? refFija().txt : S.cmp==='sem' ? 'semana previa' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
     (U => U>0 ? '<span>Promedio: <b>'+miles(suma(diario(k,F),0,U)/U)+'</b> al día · <b>'+miles(suma(diario(k,F),0,U)/U*7)+'</b> a la semana'+(U>=60 ? ' · <b>'+miles(suma(diario(k,F),0,U)/U*30.4)+'</b> al mes' : '')+'</span>' : '')(finDatos(k))+
     (k==='tram' && D.comp.tram_exp ? (e => { const p = comp('tram_plz',F.ss,F.nd), te = e[0]+e[1], tp = p[0]+p[1]; return te ? '<span>Expiden tarjetas: <b>'+miles(e[0])+'</b> · no expiden: <b>'+miles(e[1])+'</b>'+(tp && p[1] ? ' · <b>'+pct(p[0], tp)+'%</b> dentro del plazo normativo' : '')+'</span>' : ''; })(comp('tram_exp',F.ss,F.nd)) : '')+
     (k==='resc' ? (r => '<span>Eventos: <b>'+miles(r[0]+r[1])+'</b> · personas (1ra vez): <b>'+miles(r[0])+'</b> · reincidentes: '+miles(r[1])+'</span>')(comp('resc_rei',F.ss,F.nd)) : '')+
@@ -839,7 +852,7 @@ function perfil(ss, n, activo, tc, breve){
 }
 function soloKpi(k, ss, n, tc, sem, breve){      // tarjeta con un indicador elegido: solo ese dato
   const nota = notaPerfil(k, ss, n), d = (ss && n!=null) ? '' : variaTxt(diario(k,{ss:ss,n:n}));
-  return '<span class="v">'+miles(acum(k, ss, n))+'</span>'+((nota || d) ? '<span class="s">'+[nota, d ? d+' '+(S.cmp==='aa' ? 'vs. año anterior' : S.cmp==='sem' ? 'vs. semana anterior' : 'en '+etiquetaN(S.cmp)) : ''].filter(Boolean).join(' · ')+'</span>' : '')+
+  return '<span class="v">'+miles(acum(k, ss, n))+'</span>'+((nota || d) ? '<span class="s">'+[nota, d ? d+' '+sufCmp() : ''].filter(Boolean).join(' · ')+'</span>' : '')+
          (breve ? '' : chispa(semanal(k,ss,n),232,30,k==='rech'?tc.arena:tc[IND[k].g],sem));
 }
 const accion = (txt, may) => { const a = (TACTIL ? 'toca otra vez para ' : 'clic para ')+txt; return may ? a[0].toUpperCase()+a.slice(1) : a; };
@@ -1396,8 +1409,10 @@ function pintarCtl(){
   const f0 = diaDe(0), f1 = diaDe(S.dia-1);
   $('rango').textContent = f0.getDate()+' '+MES12[f0.getMonth()]+(f0.getFullYear()!==f1.getFullYear() ? ' '+f0.getFullYear() : '')+' – '+fechaLarga(S.dia-1);
   $('rango-nota').textContent = S.dia>=ND ? ND+' días' : S.dia+' de '+ND+' días';
-  $('cmp').innerHTML = '<select id="cmp-sel" aria-label="Comparar con">'+[['sem','Semana anterior'],[7,'7 días previos'],[30,'30 días previos'],[90,'3 meses previos'],['aa','Mismo periodo del año anterior']].map(o => { const ok = cmpDisponible(o[0]);
-    return '<option value="'+o[0]+'"'+(String(S.cmp)===String(o[0])?' selected':'')+(ok?'':' disabled')+'>'+o[1]+(!ok && o[0]==='aa' ? ' (sin datos)' : '')+'</option>'; }).join('')+'</select>'+
+  const fx = cmpFijo(), rf = fx ? refFija() : null, rgo = (a, b) => fechaDia(a)+' – '+fechaDia(b-1); $('cmp').closest('.varia').classList.toggle('fijo', fx);
+  $('cmp').innerHTML = fx ? '<span class="cmp-fx">'+(rf ? 'Comparado con <b>'+rf.txt+'</b>' : 'Sin periodo anterior con datos para comparar')+'</span>'+(rf ? '<span class="cmp-n">'+(i0 => fechaIdx(P0)+' – '+fechaIdx(P0+ND-1)+' contra '+fechaIdx(i0)+' – '+fechaIdx(i0+ND-1))(rf.t==='prev' ? P0-ND : rf.q0)+'</span>' : '') :
+    '<select id="cmp-sel" aria-label="Comparar con">'+[['sem','Semana anterior'],[30,'Últimos 30 días'],[90,'Últimos 3 meses']].map(o => { const ok = cmpDisponible(o[0]);
+    return '<option value="'+o[0]+'"'+(String(S.cmp)===String(o[0])?' selected':'')+(ok?'':' disabled')+'>'+o[1]+'</option>'; }).join('')+'</select>'+
     (S.cmp==='sem' && semanasCmp(ND) ? (w => '<span class="cmp-n">'+fechaDia(w[0])+' – '+fechaDia(w[1]-1)+' contra '+fechaDia(w[2])+' – '+fechaDia(w[3]-1)+'</span>')(semanasCmp(ND)) : '');
   // Periodos: Sheinbaum, Trump, Año (con mes) y Personalizado
   $('per').innerHTML = [['shein','Sheinbaum'],['trump','Trump'],['anio','Año'],['pers','Personalizado']].map(o => { const ok = !!rangoPeriodo(o[0]==='anio' || o[0]==='pers' ? 'shein' : o[0]) && (o[0]!=='trump' || idxBase('2025-01-20') < D0.dias), on = S.per===o[0];
@@ -1511,15 +1526,18 @@ function pintarNav(){ $('nav').innerHTML = SECCIONES.map(s => s[0]==='dir'
 const CON_HOVER = matchMedia('(hover:hover) and (pointer:fine)').matches; let tMenu = null;
 if (CON_HOVER) document.addEventListener('mouseover', e => {
   const m = $('menu-dir'); if (!m) return; const boton = e.target.closest('[data-menu-dir]');
-  if (boton || e.target.closest('#menu-dir')){ clearTimeout(tMenu); if (boton && m.hidden) menuDir(true); }
+  if (boton || e.target.closest('#menu-dir')){ clearTimeout(tMenu); if (boton && m.hidden){ clearTimeout(tMenuI); menuInf(false); menuDir(true); } }
   else if (!m.hidden){ clearTimeout(tMenu); tMenu = setTimeout(() => menuDir(false), 220); }
   const mi = $('menu-inf'); if (!mi) return; const bi = e.target.closest('[data-menu-inf]');
-  if (bi || e.target.closest('#menu-inf')){ clearTimeout(tMenuI); if (bi && mi.hidden) menuInf(true); }
+  if (bi || e.target.closest('#menu-inf')){ clearTimeout(tMenuI); if (bi && mi.hidden){ clearTimeout(tMenu); menuDir(false); menuInf(true); } }
   else if (!mi.hidden){ clearTimeout(tMenuI); tMenuI = setTimeout(() => menuInf(false), 220); }
 });
 if (CON_HOVER) document.addEventListener('mouseout', e => { if (e.relatedTarget) return;   // el cursor salió de la ventana
   clearTimeout(tMenu); tMenu = setTimeout(() => menuDir(false), 220); clearTimeout(tMenuI); tMenuI = setTimeout(() => menuInf(false), 220); });
 window.addEventListener('blur', () => { menuDir(false); menuInf(false); });
+document.addEventListener('pointerdown', e => { const t = e.target; if (!t.closest) return;   // el mapa se queda con el clic; el toque se ve antes
+  if (!t.closest('#menu-dir,[data-menu-dir]')) menuDir(false); if (!t.closest('#menu-inf,[data-menu-inf]')) menuInf(false); }, true);
+addEventListener('scroll', () => { menuDir(false); menuInf(false); }, { passive:true });
 // Menú de Informes: Arma tu informe y el Informe migratorio de la semana
 let tMenuI = null;
 function menuInf(abrir){
@@ -1543,7 +1561,7 @@ function htmlDireccion(d){
   const F0 = {ss:null, n:null, nd:null}, fila = (nom, v, mx, c) => '<div class="barra"><span>'+esc(nom)+'</span><span class="b"><i style="width:'+(v/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(v)+'</span></div>';
   const cajas = d.ind.map(k => { const m = IND[k], c = colG(m.g), dd = diario(k,F0), va = variacion(dd), tot = suma(dd,0,ND);
     const tn = m.nat ? topNats(n => sumaSem(k,0,NW-1,null,n), 5) : [], te = topEsts(s => sumaSem(k,0,NW-1,[s],null), 5);
-    return '<div class="caja"><h2><span>'+m.n+'</span><small>'+(va.ok ? (va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'% '+(S.cmp==='aa' ? 'vs. año anterior' : S.cmp==='sem' ? 'vs. semana anterior' : 'en '+etiquetaN(S.cmp)) : '')+'</small></h2>'+
+    return '<div class="caja"><h2><span>'+m.n+'</span><small>'+(va.ok ? (va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'% '+sufCmp() : '')+'</small></h2>'+
       '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span class="num" style="font-size:30px">'+miles(tot)+'</span>'+chispa(semanal(k,null,null),140,40,c)+'</div>'+
       (tn.length ? '<span class="mini"><b>Principales nacionalidades</b></span>'+tn.map(r => fila(D.nats[r[0]][0], r[1], tn[0][1], c)).join('') : '')+
       '<span class="mini"><b>Principales estados</b></span>'+te.map(r => fila(ESTC[r[0]], r[1], te[0][1], c)).join('')+'</div>'; });

@@ -1867,3 +1867,8 @@ html.vz-on,html.vz-on body{overflow:hidden}
 @media (max-width:760px){ .b-vz span{display:none} .b-vz{padding:0 9px} }
 /* Arma tu informe: deslizar con el dedo entre láminas (sin que el navegador se quede con el gesto) */
 .ar-vis{touch-action:pan-y}
+/* Comparación: en año, mes y personalizado no hay combo, solo el texto fijo de contra qué se compara; en Sheinbaum y Trump el % dice de qué es */
+.kc-l{font-weight:400;opacity:.8}
+.varia.fijo>span:first-child{display:none}
+.cmp-fx,.rg-fijo{display:inline-block;font-size:13px;color:var(--ink2);background:var(--panel2);padding:5px 10px;border-radius:8px;white-space:nowrap}.cmp-fx b,.rg-fijo b{color:var(--ink);font-weight:600}
+.varia.fijo .cmp-n{margin-left:8px}

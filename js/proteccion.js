@@ -20,7 +20,7 @@ const DIC = { e:CV.dic.e, p:CV.dic.p, n:[] }, NE = DIC.e.length, NP = DIC.p.leng
 const INI = new Date(CV.inicio+'T00:00:00'), DS = (INI.getDay()+6)%7;
 const semDe = d => Math.floor((d+DS)/7), semIni = w => w*7-DS;
 // em = medida que se analiza (columna): v total, ad adultos, ah hombres, am mujeres, me NNA, ac acompañados, na no acompañados
-const Q = { det:{}, cm:false, tira:false, vista:'rep', per:'todo', d0:0, d1:CV.dias, cmp:'sem', nats:[], ests:[], pto:-1, mod:-1, cls:-1, gran:'auto', eti:false, desg:'tot', sel:null, tot:'p', em:'v', mas:{}, compacto:false };
+const Q = { det:{}, cm:false, tira:false, vista:'rep', per:'todo', d0:0, d1:CV.dias, cmp:30, nats:[], ests:[], pto:-1, mod:-1, cls:-1, gran:'auto', eti:false, desg:'tot', sel:null, tot:'p', em:'v', mas:{}, compacto:false };
 // Suma de una tabla por una clave, con los filtros activos (periodo, O.R., punto y modalidad); o.v elige la columna
 function agg(T, key, nk, o){
   o = o || {}; const out = new Float64Array(nk), d0 = o.d0!=null ? o.d0 : Q.d0, d1 = o.d1!=null ? o.d1 : Q.d1, v = T[o.v || 'v'];
@@ -65,7 +65,18 @@ function semanas(){ const s0 = semDe(Q.d0), s1 = semDe(Q.d1-1), l = [];
   for (let w=s0; w<=s1; w++){ const a = Math.max(Q.d0, semIni(w)), b = Math.min(Q.d1, semIni(w)+7); l.push({ w:w, a:a, b:b, inc:b-a<7, lab:fecha(a) }); } return l; }
 const porSem = (T, o) => { const S = semanas(), s0 = S[0].w, x = agg(T, i => semDe(T.d[i])-s0, S.length, o); return S.map((s,k) => x[k]); };
 // «Comparar con»: la última semana completa contra la anterior, o los últimos N días contra los N previos
-function ventanas(){ const N = Q.cmp;
+// Regla única (igual que el Pulso): año, mes y personalizado se comparan solos contra las mismas fechas del año anterior
+// (personalizado sin año anterior: contra el tramo de igual duración justo antes); Sheinbaum y Trump, semana anterior, últimos 30 días o 3 meses.
+const MESC = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const cmpFijo = () => Q.per==='anio' || Q.per==='pers';
+function ventanaFija(){ const n = Q.d1-Q.d0, f = fDia(Q.d0), b = Math.round((new Date(f.getFullYear()-1, f.getMonth(), f.getDate()) - INI)/864e5);
+  if (b>=0) return [[Q.d0, Q.d1], [b, b+n]]; if (Q.per==='pers' && Q.d0-n>=0) return [[Q.d0, Q.d1], [Q.d0-n, Q.d0]]; return null; }
+function nomFijo(){ const w = ventanaFija(); if (!w) return ''; if (w[1][1]===w[0][0]) return 'los '+(Q.d1-Q.d0)+' días previos';
+  return Q.per==='anio' ? (Q.mes ? MESC[Q.mes-1]+' '+(Q.anio-1) : String(Q.anio-1)) : 'mismas fechas de '+fDia(w[1][0]).getFullYear(); }
+const txtCmp = () => cmpFijo() ? (nomFijo() ? 'contra '+nomFijo() : '') : Q.cmp==='sem' ? 'en la semana' : Q.cmp===90 ? 'en los últimos 3 meses' : 'en los últimos 30 días';
+const OPC_CMP = [['sem','Semana anterior'],[30,'Últimos 30 días'],[90,'Últimos 3 meses']];
+const cmpFijoHtml = () => '<span class="rg-sel rg-fijo">'+(nomFijo() ? 'Comparado con <b>'+nomFijo()+'</b>' : 'Sin periodo anterior con datos para comparar')+'</span>';
+function ventanas(){ if (cmpFijo()) return ventanaFija(); if (['sem',30,90].indexOf(Q.cmp)<0) Q.cmp = 30; const N = Q.cmp;
   if (N==='sem'){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); return b-7 >= Q.d0 ? [[b, b+7], [b-7, b]] : null; }
   return N==='aa' || 2*N > Q.d1-Q.d0 ? null : [[Q.d1-N, Q.d1], [Q.d1-2*N, Q.d1-N]]; }
 const etqCmp = () => { const w = ventanas(); if (!w) return ''; return fecha(w[0][0])+' – '+fecha(w[0][1]-1)+' contra '+fecha(w[1][0])+' – '+fecha(w[1][1]-1); };
@@ -79,7 +90,7 @@ function abrirMasC(){ const k = $('cv-kpis'), g = k && k.querySelector('.rg-mas'
 // «Ver detalle»: igual que en Regulación migratoria; arriba queda lo esencial y el resto se abre con un botón
 const detIni = () => { const on = !!Q.det[Q.vista]; return '<button class="rg-det-b cv-det-b'+(on?' on':'')+'" data-pdet aria-expanded="'+on+'">'+(on ? 'Ocultar detalle ▴' : 'Ver detalle: '+DET[Q.vista]+' ▾')+'</button><div class="cv-det"'+(on ? '' : ' hidden')+'>'; };
 const plegar = () => '<button class="plegar" data-pplegar aria-label="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'" title="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'"><svg width="12" height="12" viewBox="0 0 12 12"><path d="'+(Q.compacto?'M2 4l4 4 4-4':'M2 8l4-4 4 4')+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
-const chipD = (a,b) => { if (!b || a+b<40) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%</span>'; };
+const chipD = (a,b) => { if (!b || a+b<40) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' k' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
 const IC = { avion:'M2 16l20-6-20-6 3 6zM5 10h9', tierra:'M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6', barco:'M3 17l2 3h14l2-3zM12 3v11M6 14l6-7 6 7', lupa:'M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-4-4',
              no:'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM6 6l12 12', tot:'M4 7h16M4 12h16M4 17h10', est:'M4 20V8l8-5 8 5v12zM9 20v-6h6v6', ret:'M20 12H5M11 6l-6 6 6 6', nino:'M12 4a2 2 0 1 0 0 4a2 2 0 0 0 0-4zM8 21v-7l-2-3 6-2 6 2-2 3v7', adulto:'M12 3a3 3 0 1 0 0 6a3 3 0 0 0 0-6zM6 21v-6a6 6 0 0 1 12 0v6' };
 const svgI = d => '<span class="kc-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>';
@@ -141,7 +152,7 @@ function htmlCtl(){
     (Q.per==='anio' ? selAnio() : '')+
     (Q.per==='pers' ? '<span class="per-extra"><input type="date" id="pm-d0" value="'+iso(Q.d0)+'" min="'+iso(0)+'" max="'+iso(CV.dias-1)+'"> – <input type="date" id="pm-d1" value="'+iso(Q.d1-1)+'" min="'+iso(0)+'" max="'+iso(CV.dias-1)+'"></span>' : '')+
     '<div class="rango"><b>'+fechaA(Q.d0)+' – '+fechaA(Q.d1-1)+'</b><span>'+(Q.d1-Q.d0)+' días</span></div>'+
-    '<label class="rg-sel">Comparar con <select id="pm-cmp">'+[['sem','Semana anterior'],[7,'7 días previos'],[30,'30 días previos'],[90,'3 meses previos'],['aa','Mismo periodo del año anterior']].map(x => '<option value="'+x[0]+'"'+(String(Q.cmp)===String(x[0])?' selected':'')+(okN(x[0])?'':' disabled')+'>'+x[1]+(x[0]==='aa' ? ' (sin datos aún)' : '')+'</option>').join('')+'</select></label>'+
+    (cmpFijo() ? cmpFijoHtml() : '<label class="rg-sel">Comparar con <select id="pm-cmp">'+OPC_CMP.map(x => '<option value="'+x[0]+'"'+(String(Q.cmp)===String(x[0])?' selected':'')+(okN(x[0])?'':' disabled')+'>'+x[1]+'</option>').join('')+'</select></label>')+
     '<span class="rg-cmp-n">'+etqCmp()+'</span>'+
     '<div class="busca rg-busca"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="pm-bus" type="search" autocomplete="off" placeholder="Buscar O.R. o punto de repatriación" aria-label="Buscar O.R. o punto de repatriación"><div class="res" id="pm-bus-r" hidden></div></div>'+
     '<span class="rg-chips">'+Q.ests.map(e => '<span class="tag-f" style="background:'+OCRE+'">'+esc(nomE(e))+' <button data-pquita="e'+e+'" aria-label="Quitar">×</button></span>').join('')+
@@ -310,7 +321,7 @@ function pintarRep(){
   const hz = [];
   if (w){ const ta = tot(REP, vEm({d0:w[0][0], d1:w[0][1]})), tc = tot(REP, vEm({d0:w[1][0], d1:w[1][1]}));
     let m = -1, dm = 0; if (Q.pto<0){ const a = agg(REP, i => REP.p[i], NP, vEm({d0:w[0][0], d1:w[0][1]})), c = agg(REP, i => REP.p[i], NP, vEm({d0:w[1][0], d1:w[1][1]})); for (let k=0;k<NP;k++){ const dl = a[k]-c[k]; if (Math.abs(dl)>Math.abs(dm)){ dm = dl; m = k; } } }
-    if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:cap(M[0])+(ta>=tc ? ' suben ' : ' bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+(Q.cmp==='sem' ? 'en la semana' : 'en los últimos '+Q.cmp+' días'),
+    if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:cap(M[0])+(ta>=tc ? ' suben ' : ' bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+txtCmp(),
       t:miles(tc)+' → '+miles(ta)+(m>=0 && dm ? ' · lo que más cambió: '+esc(nomP(m))+' ('+(dm>0 ? '+' : '')+miles(dm)+') · filtrar ›' : ''), act:m>=0 && dm ? ' data-ppt="'+m+'"' : '' }); }
   const me = agg(REP, i => REP.p[i], NP, {pto:-1, v:'me'}), na = agg(REP, i => REP.p[i], NP, {pto:-1, v:'na'}), sMe = me.reduce((a,b)=>a+b,0), sNa = na.reduce((a,b)=>a+b,0);
   const pn = [...Array(NP).keys()].filter(k => me[k]>=100).sort((a,b) => na[b]/me[b]-na[a]/me[a])[0];

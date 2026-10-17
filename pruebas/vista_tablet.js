@@ -52,6 +52,9 @@ const CAP = process.argv[2];
       await p.hover('#menu-inf'); await p.evaluate(() => document.body.dispatchEvent(new MouseEvent('mouseout', { bubbles:true, relatedTarget:null }))); await p.waitForTimeout(400);
       ok(await p.$eval('#menu-inf', e => e.hidden), 'menú Informes se cierra al salir de la ventana');
       await p.hover('[data-menu-dir]'); await p.waitForTimeout(250); await p.evaluate(() => window.dispatchEvent(new Event('blur'))); await p.waitForTimeout(100);
-      ok(await p.$eval('#menu-dir', e => e.hidden), 'menú Procesos se cierra al perder el foco'); }
+      ok(await p.$eval('#menu-dir', e => e.hidden), 'menú Procesos se cierra al perder el foco');
+      await p.hover('[data-menu-dir]'); await p.waitForTimeout(250); await p.hover('[data-menu-inf]'); await p.waitForTimeout(60);
+      ok(await p.$eval('#menu-dir', e => e.hidden) && await p.$eval('#menu-inf', e => !e.hidden), 'al pasar de Procesos a Informes, Procesos se cierra al instante');
+      await p.mouse.click(700, 600); await p.waitForTimeout(100); ok(await p.$eval('#menu-inf', e => e.hidden), 'un clic sobre el mapa cierra el menú'); }
     await ctx.close(); }
-  await b.close(); errs.forEach(e => console.log('  ERROR: '+e)); console.log(mal || errs.length ? 'vista_tablet: '+(mal+errs.length)+' fallas' : 'vista_tablet: todo bien'); process.exit(mal || errs.length ? 1 : 0); })();
+  await b.close(); errs.forEach(e => console.log('  ERROR: '+e)); console.log(mal ? 'vista_tablet: '+mal+' fallas' : 'vista_tablet: todo bien'); console.log('errores '+JSON.stringify(errs)); process.exit(mal || errs.length ? 1 : 0); })();

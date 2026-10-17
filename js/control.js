@@ -22,7 +22,7 @@ ORR.sd = ORR.v.map((x,i) => Math.max(0, x-ORR.pre[i]-ORR.can[i]));             /
 const DIC = CV.dic, NE = DIC.e.length, NN = DIC.n.length, NP = DIC.p.length, NS = DIC.s.length, MX = DIC.n.indexOf('México');
 const INI = new Date(CV.inicio+'T00:00:00'), DS = (INI.getDay()+6)%7;
 const semDe = d => Math.floor((d+DS)/7), semIni = w => w*7-DS, NSEM = semDe(CV.dias-1)+1;
-const Q = { det:{}, vista:'int', per:'todo', d0:0, d1:CV.dias, cmp:'sem', nats:[], ests:[], pto:-1, via:-1, gran:'auto', eti:false, desgI:'tot', desgE:'tot', desgC:'tot', sel:null, tot:'n', sc:'n', rk:'r', em:'res', tote:'n', orTodo:false, reo:'n', mxm:'s', emo:'n', prm:'n', mas:{}, can:'nna', cls:-1, totc:'n', compacto:false };
+const Q = { det:{}, vista:'int', per:'todo', d0:0, d1:CV.dias, cmp:30, nats:[], ests:[], pto:-1, via:-1, gran:'auto', eti:false, desgI:'tot', desgE:'tot', desgC:'tot', sel:null, tot:'n', sc:'n', rk:'r', em:'res', tote:'n', orTodo:false, reo:'n', mxm:'s', emo:'n', prm:'n', mas:{}, can:'nna', cls:-1, totc:'n', compacto:false };
 // Vía de cada punto (la que más personas trae), para filtrar la segunda revisión por vía
 const PV = (() => { const c = new Float64Array(NP*3); for (let i=0;i<ING.N;i++) c[ING.p[i]*3+ING.vi[i]] += ING.v[i]; return [...Array(NP).keys()].map(p => { const x = [c[p*3], c[p*3+1], c[p*3+2]]; return x.indexOf(Math.max(...x)); }); })();
 
@@ -68,7 +68,18 @@ function semanas(){ const s0 = semDe(Q.d0), s1 = semDe(Q.d1-1), l = [];
   for (let w=s0; w<=s1; w++){ const a = Math.max(Q.d0, semIni(w)), b = Math.min(Q.d1, semIni(w)+7); l.push({ w:w, a:a, b:b, inc:b-a<7, lab:fecha(a) }); } return l; }
 const porSem = (T, o) => { const S = semanas(), s0 = S[0].w, x = agg(T, i => semDe(T.d[i])-s0, S.length, o); return S.map((s,k) => x[k]); };
 // «Comparar con»: la última semana completa contra la anterior, o los últimos N días contra los N previos
-function ventanas(){ const N = Q.cmp;
+// Regla única (igual que el Pulso): año, mes y personalizado se comparan solos contra las mismas fechas del año anterior
+// (personalizado sin año anterior: contra el tramo de igual duración justo antes); Sheinbaum y Trump, semana anterior, últimos 30 días o 3 meses.
+const MESC = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const cmpFijo = () => Q.per==='anio' || Q.per==='pers';
+function ventanaFija(){ const n = Q.d1-Q.d0, f = fDia(Q.d0), b = Math.round((new Date(f.getFullYear()-1, f.getMonth(), f.getDate()) - INI)/864e5);
+  if (b>=0) return [[Q.d0, Q.d1], [b, b+n]]; if (Q.per==='pers' && Q.d0-n>=0) return [[Q.d0, Q.d1], [Q.d0-n, Q.d0]]; return null; }
+function nomFijo(){ const w = ventanaFija(); if (!w) return ''; if (w[1][1]===w[0][0]) return 'los '+(Q.d1-Q.d0)+' días previos';
+  return Q.per==='anio' ? (Q.mes ? MESC[Q.mes-1]+' '+(Q.anio-1) : String(Q.anio-1)) : 'mismas fechas de '+fDia(w[1][0]).getFullYear(); }
+const txtCmp = () => cmpFijo() ? (nomFijo() ? 'contra '+nomFijo() : '') : Q.cmp==='sem' ? 'en la semana' : Q.cmp===90 ? 'en los últimos 3 meses' : 'en los últimos 30 días';
+const OPC_CMP = [['sem','Semana anterior'],[30,'Últimos 30 días'],[90,'Últimos 3 meses']];
+const cmpFijoHtml = () => '<span class="rg-sel rg-fijo">'+(nomFijo() ? 'Comparado con <b>'+nomFijo()+'</b>' : 'Sin periodo anterior con datos para comparar')+'</span>';
+function ventanas(){ if (cmpFijo()) return ventanaFija(); if (['sem',30,90].indexOf(Q.cmp)<0) Q.cmp = 30; const N = Q.cmp;
   if (N==='sem'){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); return b-7 >= Q.d0 ? [[b, b+7], [b-7, b]] : null; }
   return N==='aa' || 2*N > Q.d1-Q.d0 ? null : [[Q.d1-N, Q.d1], [Q.d1-2*N, Q.d1-N]]; }
 const etqCmp = () => { const w = ventanas(); if (!w) return ''; return fecha(w[0][0])+' – '+fecha(w[0][1]-1)+' contra '+fecha(w[1][0])+' – '+fecha(w[1][1]-1); };
@@ -83,7 +94,7 @@ function abrirMasC(){ const k = $('cv-kpis'), g = k && k.querySelector('.rg-mas'
 const DET = { int:'totales, semana a semana y rechazos por punto', est:'totales y dónde se presenta cada nacionalidad', can:'nacionalidad, O.R. que canaliza y recibidos de EE. UU.' };
 const detIni = () => { const on = !!Q.det[Q.vista]; return '<button class="rg-det-b cv-det-b'+(on?' on':'')+'" data-cdet aria-expanded="'+on+'">'+(on ? 'Ocultar detalle ▴' : 'Ver detalle: '+DET[Q.vista]+' ▾')+'</button><div class="cv-det"'+(on ? '' : ' hidden')+'>'; };
 const plegar = () => '<button class="plegar" data-cplegar aria-label="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'" title="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'"><svg width="12" height="12" viewBox="0 0 12 12"><path d="'+(Q.compacto?'M2 4l4 4 4-4':'M2 8l4-4 4 4')+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
-const chipD = (a,b) => { if (!b || a+b<40) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%</span>'; };
+const chipD = (a,b) => { if (!b || a+b<40) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' k' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
 const IC = { avion:'M2 16l20-6-20-6 3 6zM5 10h9', tierra:'M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6', barco:'M3 17l2 3h14l2-3zM12 3v11M6 14l6-7 6 7', lupa:'M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-4-4',
              no:'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM6 6l12 12', tot:'M4 7h16M4 12h16M4 17h10', est:'M4 20V8l8-5 8 5v12zM9 20v-6h6v6', ret:'M20 12H5M11 6l-6 6 6 6', nino:'M12 4a2 2 0 1 0 0 4a2 2 0 0 0 0-4zM8 21v-7l-2-3 6-2 6 2-2 3v7', adulto:'M12 3a3 3 0 1 0 0 6a3 3 0 0 0 0-6zM6 21v-6a6 6 0 0 1 12 0v6' };
 const svgI = d => '<span class="kc-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>';
@@ -143,7 +154,7 @@ function htmlCtl(){
     (Q.per==='anio' ? selAnio() : '')+
     (Q.per==='pers' ? '<span class="per-extra"><input type="date" id="cv-d0" value="'+iso(Q.d0)+'" min="'+iso(0)+'" max="'+iso(CV.dias-1)+'"> – <input type="date" id="cv-d1" value="'+iso(Q.d1-1)+'" min="'+iso(0)+'" max="'+iso(CV.dias-1)+'"></span>' : '')+
     '<div class="rango"><b>'+fechaA(Q.d0)+' – '+fechaA(Q.d1-1)+'</b><span>'+(Q.d1-Q.d0)+' días</span></div>'+
-    '<label class="rg-sel">Comparar con <select id="cv-cmp">'+[['sem','Semana anterior'],[7,'7 días previos'],[30,'30 días previos'],[90,'3 meses previos'],['aa','Mismo periodo del año anterior']].map(x => '<option value="'+x[0]+'"'+(String(Q.cmp)===String(x[0])?' selected':'')+(okN(x[0])?'':' disabled')+'>'+x[1]+(x[0]==='aa' ? ' (sin datos aún)' : '')+'</option>').join('')+'</select></label>'+
+    (cmpFijo() ? cmpFijoHtml() : '<label class="rg-sel">Comparar con <select id="cv-cmp">'+OPC_CMP.map(x => '<option value="'+x[0]+'"'+(String(Q.cmp)===String(x[0])?' selected':'')+(okN(x[0])?'':' disabled')+'>'+x[1]+'</option>').join('')+'</select></label>')+
     '<span class="rg-cmp-n">'+etqCmp()+'</span>'+
     '<div class="busca rg-busca"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="cv-bus" type="search" autocomplete="off" placeholder="Buscar nacionalidad, O.R. o punto" aria-label="Buscar nacionalidad, O.R. o punto de internación"><div class="res" id="cv-bus-r" hidden></div></div>'+
     '<span class="rg-chips">'+Q.nats.map((n,j) => '<span class="tag-f" style="background:'+COMP[j]+'">'+esc(nomN(n))+' <button data-cquita="n'+n+'" aria-label="Quitar">×</button></span>').join('')+
@@ -317,7 +328,7 @@ function pintarInt(){
   if (w){ const a = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), c0 = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]}), cuenta = k => k!==MX && (!Q.nats.length || Q.nats.indexOf(k)>=0);   // sin mexicanos, igual que las tarjetas; con nacionalidades elegidas, solo ellas
     let ta = 0, tc = 0; for (let k=0;k<NN;k++) if (cuenta(k)){ ta += a[k]; tc += c0[k]; }
     let m = -1, dm = 0; if (Q.nats.length<2) for (let k=0;k<NN;k++){ const dl = a[k]-c0[k]; if (k!==MX && !Q.nats.length && Math.abs(dl)>Math.abs(dm)){ dm = dl; m = k; } }
-    if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:'Internaciones '+(ta>=tc ? 'suben ' : 'bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+(Q.cmp==='sem' ? 'en la semana' : 'en los últimos '+Q.cmp+' días')+(Q.via>=0 ? ' por vía '+VIAS[Q.via].toLowerCase() : ''), t:corto(tc)+' → '+corto(ta)+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+corto(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' }); }
+    if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:'Internaciones '+(ta>=tc ? 'suben ' : 'bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+txtCmp()+(Q.via>=0 ? ' por vía '+VIAS[Q.via].toLowerCase() : ''), t:corto(tc)+' → '+corto(ta)+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+corto(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' }); }
   const pt = tp.filter(x => x.r>=100).sort((a,b) => b.t-a.t)[0]; if (pt && prom) hz.push({ cl:'al', ic:'!', h:esc(nomP(pt.k))+' rechaza a '+deCada(pt.t)+' que llegan', t:'el promedio nacional es '+deCada(prom)+' · '+miles(pt.r)+' rechazos · ver solo este punto ›', act:' data-cpt="'+pt.k+'"' });
   const nt = tn.slice().sort((a,b) => b.r-a.r)[0], Rn = tn.reduce((t,x) => t+x.r, 0); if (nt && Rn) hz.push({ cl:'d', ic:'%', h:esc(nomN(nt.k))+' concentra '+pct(nt.r, Rn)+'% de los rechazos', t:'se rechaza a '+deCada(nt.t)+' que llegan · '+miles(nt.r)+' de '+miles(Rn)+' · filtrar por ella ›', act:' data-cn="'+nt.k+'"' });
   $('cv-hz').innerHTML = hz.map(titular).join('')+info('hz');
@@ -452,8 +463,8 @@ function pintarEst(){
   const hz = [];
   if (w){ const a = tot(ORR, {d0:w[0][0], d1:w[0][1]}), c = tot(ORR, {d0:w[1][0], d1:w[1][1]}), xa = agg(ORR, i => ORR.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), xc = agg(ORR, i => ORR.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]});
     let m = -1, dm = 0; for (let k=0;k<NN;k++){ const d = xa[k]-xc[k]; if (Math.abs(d)>Math.abs(dm)){ dm = d; m = k; } }
-    if (c) hz.push({ cl:a>=c ? 'd' : 'u', ic:a>=c ? '▲' : '▼', h:'Rescates '+(a>=c ? 'suben ' : 'bajan ')+Math.abs((a/c-1)*100).toFixed(1)+'% '+(Q.cmp==='sem' ? 'en la semana' : 'en los últimos '+Q.cmp+' días'), t:miles(c)+' → '+miles(a)+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+miles(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' });
-    const pa = tot(PRE, {d0:w[0][0], d1:w[0][1]}), pc = tot(PRE, {d0:w[1][0], d1:w[1][1]}); if (pc) hz.push({ cl:pa>=pc ? 'd' : 'u', ic:pa>=pc ? '▲' : '▼', h:'Presentados (sistema) '+(pa>=pc ? 'suben ' : 'bajan ')+Math.abs((pa/pc-1)*100).toFixed(1)+'% '+(Q.cmp==='sem' ? 'en la semana' : 'en los últimos '+Q.cmp+' días'), t:miles(pc)+' → '+miles(pa)+' · ver la tendencia ›', act:' data-cem="pre"' }); }
+    if (c) hz.push({ cl:a>=c ? 'd' : 'u', ic:a>=c ? '▲' : '▼', h:'Rescates '+(a>=c ? 'suben ' : 'bajan ')+Math.abs((a/c-1)*100).toFixed(1)+'% '+txtCmp(), t:miles(c)+' → '+miles(a)+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+miles(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' });
+    const pa = tot(PRE, {d0:w[0][0], d1:w[0][1]}), pc = tot(PRE, {d0:w[1][0], d1:w[1][1]}); if (pc) hz.push({ cl:pa>=pc ? 'd' : 'u', ic:pa>=pc ? '▲' : '▼', h:'Presentados (sistema) '+(pa>=pc ? 'suben ' : 'bajan ')+Math.abs((pa/pc-1)*100).toFixed(1)+'% '+txtCmp(), t:miles(pc)+' → '+miles(pa)+' · ver la tendencia ›', act:' data-cem="pre"' }); }
   const rn = agg(ORR, i => ORR.n[i], NN, {nats:null, v:'rei'}), tn = agg(ORR, i => ORR.n[i], NN, {nats:null, ex:conRei}), cand = [...Array(NN).keys()].filter(k => rn[k]).sort((a,b) => rn[b]-rn[a])[0], alta = [...Array(NN).keys()].filter(k => tn[k]>=300).sort((a,b) => rn[b]/tn[b]-rn[a]/tn[a])[0];
   if (cand!=null && tn[cand]) hz.push({ cl:'al', ic:'↻', h:esc(nomN(cand))+': '+Math.round(rn[cand]/tn[cand]*100)+' de cada 100 rescatados ya lo habían sido ('+corto(rn[cand])+' personas)', t:(alta!=null && alta!==cand ? 'la proporción más alta es '+esc(nomN(alta))+' ('+Math.round(rn[alta]/tn[alta]*100)+' de cada 100, '+corto(rn[alta])+' personas) · ' : '')+'solo '+esc(reiTxt)+' registra reincidencia · filtrar ›', act:' data-cn="'+cand+'"' });
   $('cv-hz').innerHTML = hz.map(titular).join('')+info('hze');
@@ -589,7 +600,7 @@ function pintarCan(){
     '<div class="caja rg-ancho cv-ancho"><h2><span>Recibidos de EE. UU.</span>'+info('rec')+'</h2><span class="q" id="cv-re-q"></span><div class="cv-rec"><div id="cv-re-k"></div><div class="cv-scroll"><div id="cv-re" style="height:260px"></div></div></div></div>'+'</div>';
   // Titulares: qué pasó con los NNA en la comparación elegida
   const hz = [];
-  if (w){ const per = Q.cmp==='sem' ? 'en la semana' : 'en los últimos '+Q.cmp+' días', a = tot(T, {d0:w[0][0], d1:w[0][1]}), c = tot(T, {d0:w[1][0], d1:w[1][1]});
+  if (w){ const per = txtCmp(), a = tot(T, {d0:w[0][0], d1:w[0][1]}), c = tot(T, {d0:w[1][0], d1:w[1][1]});
     if (c) hz.push({ cl:a>=c ? 'd' : 'u', ic:a>=c ? '▲' : '▼', h:(nna ? 'NNA canalizados' : 'Adultos acompañantes')+' '+(a>=c ? 'suben ' : 'bajan ')+Math.abs((a/c-1)*100).toFixed(1)+'% '+per, t:miles(c)+' → '+miles(a)+' · ver la tendencia ›', act:'' });
     if (nna){ const na = tot(NNA, {cls:1, d0:w[0][0], d1:w[0][1]}), nc = tot(NNA, {cls:1, d0:w[1][0], d1:w[1][1]}); hz.push({ cl:na>nc ? 'al' : 'u', ic:na>nc ? '!' : '▼', h:'NNA no acompañados '+(na>=nc ? 'suben' : 'bajan')+': '+miles(nc)+' → '+miles(na)+' '+per, t:'ver solo no acompañados ›', act:' data-ccls="1"' }); }
     const xa = agg(T, i => T.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), xc = agg(T, i => T.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]}); let m = -1, dm = 0;
