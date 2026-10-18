@@ -542,12 +542,24 @@ def nombre_punto(x):
     return t.title() if t.isupper() else t
 
 
-def por_punto_mes(t):
+def por_punto_mes(t, con_via=False, mexicanos=None):
     """Todos los puntos (también los que no tienen coordenadas), en el mismo formato que las composiciones:
-    [mes, estado, nacionalidad, punto, valor, ...]; los puntos van de mayor a menor total."""
+    [mes, estado, nacionalidad, categoría, valor, ...]; los puntos van de mayor a menor total.
+    Con con_via, la categoría es punto × 3 + vía (0 aérea, 1 terrestre, 2 marítima), para filtrar los puntos por vía.
+    Con mexicanos, «mx» trae [mes, punto, valor, ...] de los mexicanos que entraron por cada punto (no están en «c»)."""
     nom = t["PUNTO DE INTERNACION"].map(nombre_punto)
     orden = list(t.assign(nom=nom.values).groupby("nom").v.sum().sort_values(ascending=False).index)
-    return {"cats": orden, "c": composicion(t, nom.map({x: i for i, x in enumerate(orden)}), t["v"])}
+    idx = nom.map({x: i for i, x in enumerate(orden)})
+    o = {"cats": orden, "c": composicion(t, idx * 3 + t["via"] if con_via else idx, t["v"])}
+    if con_via:
+        o["via"] = True
+    if mexicanos is not None and len(mexicanos):
+        nm = mexicanos["PUNTO DE INTERNACION"].map(nombre_punto).map({x: i for i, x in enumerate(orden)})
+        mes = (mexicanos["DIA"].dt.year - INICIO_BASES.year) * 12 + mexicanos["DIA"].dt.month - INICIO_BASES.month
+        g = pd.DataFrame({"m": mes.values, "p": nm.values, "v": mexicanos["v"].values}).dropna()
+        g = g.groupby(["m", "p"]).v.sum().reset_index()
+        o["mx"] = [int(x) for x in g[g.v > 0].values.flatten()]
+    return o
 
 
 # ==== [9] DOCUMENTOS VIGENTES =====================================
@@ -816,7 +828,7 @@ def main():
     with open(os.path.join(a.destino, "datos.js"), "w", encoding="utf-8") as f:
         f.write("window.IANAMI_DATOS=" + texto + ";\n")
     # Ingresos y rechazos por punto: archivo aparte para no hacer más pesada la carga inicial de la página
-    pto = {"ing": por_punto_mes(BX["ing"]), "rech": por_punto_mes(rech)}
+    pto = {"ing": por_punto_mes(BX["ing"], con_via=True, mexicanos=ing_mx), "rech": por_punto_mes(rech)}
     with open(os.path.join(a.destino, "puntos.js"), "w", encoding="utf-8") as f:
         f.write("window.IANAMI_PUNTOS=" + json.dumps(pto, separators=(",", ":"), ensure_ascii=False) + ";\n")
     with open(os.path.join(a.destino, "reporte.txt"), "w", encoding="utf-8") as f:

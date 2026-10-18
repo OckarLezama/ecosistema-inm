@@ -194,6 +194,12 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .barra>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 button.barra:hover{background:var(--panel2)}
 .barra.on{background:var(--panel2);font-weight:600}
+/* Línea «Estás viendo» de las tarjetas de abajo y filas de Composición que filtran */
+#ruta-bajo .ruta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13.5px;padding:0 2px 10px}
+#ruta-bajo .ruta i{font-style:normal;color:var(--ink3)}#ruta-bajo .ruta .mini{margin:0}
+.ruta-x{border:0;background:var(--panel2);color:var(--ink);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:15px;line-height:1;padding:0;margin-left:-2px}
+.ruta-x:hover{background:var(--line)}
+.cien-l.elige{cursor:pointer;border-radius:4px}.cien-l.elige:hover,.cien-l.elige.on{background:var(--panel2)}.cien-l.elige.on{font-weight:600}
 .barra .b{height:10px;border-radius:3px;background:var(--panel2);overflow:hidden}
 .barra .b i{display:block;height:100%;border-radius:3px;transition:width .35s ease}
 .barra .x{font:600 15px var(--f-num);text-align:right;font-variant-numeric:tabular-nums}
