@@ -18,7 +18,7 @@ const { BASES, INDK, total, porDim, serie, cubetas, medParte, parteDe, finBase, 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const miles = n => Math.round(n).toLocaleString('en-US');
-const corto = n => { const a = Math.abs(n); return a>=1e6 ? (n/1e6).toFixed(2)+' M' : a>=1e4 ? (n/1e3).toFixed(1)+' k' : miles(n); };
+const corto = n => { const a = Math.abs(n); return a>=1e6 ? (n/1e6).toFixed(2)+' M' : a>=1e4 ? (n/1e3).toFixed(1)+' mil' : miles(n); };
 const pct = (a, b) => b ? a/b*100 : 0, pc = (a, b) => Math.round(pct(a, b))+'%';
 const flecha = x => (x>=0 ? '▲ ' : '▼ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%';
 const cap = s => s ? s[0].toUpperCase()+s.slice(1) : s;

@@ -282,7 +282,7 @@ const BODY = `<div class="cargav" id="cargav"><span><i></i>Preparando la vista�
 let HOST = null, R = null, API = null, ACTIVA = false;
 const $ = id => R.getElementById(id);
 /* ---------- datos: se calculan aquí, con el mismo motor de Pregunta a INAMI, por periodo y solo cuando se piden ---------- */
-const L = [['ing','Ingresos','Regular'],['rech','Rechazos','Regular'],['tram','Trámites','Regular'],['resc','Rescatados','Irregular'],['pres','Presentados','Irregular'],['nna','Canalizados','Irregular'],['ret','Retornados','Irregular'],['rec','Recibidos','Desde EE. UU.'],['rep','Repatriados','Desde EE. UU.'],['cbp','Encuentros','Desde EE. UU.']];
+const L = [['ing','Ingresos','Regular'],['rech','Rechazos','Regular'],['tram','Trámites','Regular'],['resc','Rescatados','Irregular'],['pres','Presentados','Irregular'],['nna','NNA canalizados','Irregular'],['ret','Retornados','Irregular'],['rec','Recibidos','Desde EE. UU.'],['rep','Repatriados','Desde EE. UU.'],['cbp','Encuentros','Desde EE. UU.']];
 const INI = '2024-10-01', MSL0 = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const sum = (s, n) => { const d = new Date(s+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0, 10); };
 const anio = (s, dy) => { const d = new Date(s+'T00:00:00Z'); d.setUTCFullYear(d.getUTCFullYear()+dy); return d.toISOString().slice(0, 10); };
@@ -335,8 +335,8 @@ function montar(D, GEO, CEN){
 
 const DATA = D.ind, RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const GC = { 'Regular':['#5FB79B','rgba(95,183,155,.2)'], 'Irregular':['#E58A82','rgba(229,138,130,.2)'], 'Desde EE. UU.':['#D6C26A','rgba(214,194,106,.2)'] };
-const U = { ing:'entradas', rech:'rechazos', tram:'trámites', resc:'personas rescatadas', pres:'personas presentadas', nna:'niñas, niños y adolescentes canalizados', ret:'personas retornadas', rec:'personas recibidas de EE. UU.', rep:'mexicanos repatriados', cbp:'encuentros en la frontera' };
-const VB = { ing:['entraron','personas por los puntos de internación'], rech:['hubo','rechazos en los puntos de internación'], tram:['se recibieron','trámites migratorios'], resc:['se rescató a','personas'], pres:['se presentó a','personas ante el INM'], nna:['se canalizó a','niñas, niños y adolescentes'], ret:['retornaron','personas a su país'], rec:['se recibió a','personas desde EE. UU.'], rep:['regresaron','mexicanos repatriados'], cbp:['la CBP registró','encuentros en la frontera'] };
+const U = { ing:'entradas', rech:'rechazos', tram:'trámites', resc:'rescates (eventos)', pres:'personas presentadas', nna:'niñas, niños y adolescentes canalizados', ret:'personas retornadas', rec:'personas recibidas de EE. UU.', rep:'mexicanos repatriados', cbp:'encuentros en la frontera' };
+const VB = { ing:['entraron','personas por los puntos de internación'], rech:['hubo','rechazos en los puntos de internación'], tram:['se recibieron','trámites migratorios'], resc:['hubo','rescates de personas (eventos)'], pres:['se presentó a','personas ante el INM'], nna:['se canalizó a','niñas, niños y adolescentes'], ret:['retornaron','personas a su país'], rec:['se recibió a','personas desde EE. UU.'], rep:['regresaron','mexicanos repatriados'], cbp:['la CBP registró','encuentros en la frontera'] };
 const DON = { ing:'Por dónde entran', rech:'Dónde', tram:'Dónde tramitan', resc:'Dónde', pres:'Dónde', nna:'Dónde', ret:'Desde dónde', rec:'Dónde', rep:'Por dónde', cbp:'Sector' };
 const ICON = { ing:'M3 12h12M11 7l5 5-5 5M20 4v16', rech:'M5.6 5.6l12.8 12.8M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18z', tram:'M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5',
   resc:'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM12 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6zM5.7 5.7l4.2 4.2M14.1 14.1l4.2 4.2M18.3 5.7l-4.2 4.2M9.9 14.1l-4.2 4.2', pres:'M4 21V9l8-5 8 5v12M9 21v-6h6v6',

@@ -129,7 +129,7 @@ window.IANAMI_CUAD = op => { if (!op || op.geo || [].concat(op.series || []).som
 window.IANAMI_MEZCLA = function(el, c){ if (!el) return;
   const e = s => String(s).replace(/[&<>"]/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]));
   const claro = h => { const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(h || ''); if (!m) return false; const [r,g,b] = m.slice(1).map(x => parseInt(x,16)); return .299*r+.587*g+.114*b > 175; };
-  const C = c.cats, num = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' k' : num(n);
+  const C = c.cats, num = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' mil' : num(n);
   let F = c.filas.filter(f => f.tot>0);
   if (c.orden!=null) F = F.slice().sort((a,b) => b.v[c.orden]/b.tot - a.v[c.orden]/a.tot);
   const mayor = f => f.v.reduce((m,x,i) => x>f.v[m] ? i : m, 0);
@@ -570,7 +570,7 @@ function pintarKpis(){
       if (F.nd!=null && !m.nat) return '<button class="kc" disabled><span class="kc-top">'+ic+'<span class="kc-n">'+m.n+'</span></span><span class="kc-v num">—</span><span class="kc-pie"><span class="kc-d">solo mexicanos</span></span></button>';
       const d = diario(m.k,F), v = suma(d,0,S.dia), va = variacion(d), fuerte = va.ok && Math.abs(va.dl)>=20;
       const sem = D.ends.map((e,i)=>suma(d, i?D.ends[i-1]:0, e)), mx = Math.max.apply(null,sem) || 1;
-      const delta = S.dia<ND ? '<span class="kc-d">al '+fechaDia(S.dia-1)+'</span>' : (va.ok ? '<span class="kc-d'+(fuerte?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[S.cmp]+': '+(va.a>=1e6 ? (va.a/1e6).toFixed(2)+' M' : va.a>=1e4 ? (va.a/1e3).toFixed(1)+' k' : va.a>0 && va.a<5 ? 'menos de 5' : miles(va.a))+'</span> ')+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%'+(cmpFijo() ? '<span class="kc-l"> vs. '+refFija().txt+'</span>' : '')+'</span>' : '<span class="kc-d">sin comparación</span>');
+      const delta = S.dia<ND ? '<span class="kc-d">al '+fechaDia(S.dia-1)+'</span>' : (va.ok ? '<span class="kc-d'+(fuerte?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[S.cmp]+': '+(va.a>=1e6 ? (va.a/1e6).toFixed(2)+' M' : va.a>=1e4 ? (va.a/1e3).toFixed(1)+' mil' : va.a>0 && va.a<5 ? 'menos de 5' : miles(va.a))+'</span> ')+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%'+(cmpFijo() ? '<span class="kc-l"> vs. '+refFija().txt+'</span>' : '')+'</span>' : '<span class="kc-d">sin comparación</span>');
       const on = S.ind===m.k;
       return '<button class="kc'+(on?' on':'')+'" data-k="'+m.k+'" aria-pressed="'+on+'">'+
         '<span class="kc-top">'+ic+(FUENTE[m.k] ? '<span class="kc-nf">' : '')+'<span class="kc-n">'+m.n+(conAviso[m.k]?'<u title="Tiene un aviso de cambio"></u>':'')+'</span>'+(FUENTE[m.k] ? '<span class="kc-f">'+FUENTE[m.k][0]+'</span></span>' : '')+'</span>'+
@@ -584,7 +584,7 @@ const DEF_IND = {
   ing:'Entradas de personas extranjeras por puntos de internación aéreos, terrestres y marítimos. Los mexicanos que regresan se cuentan aparte.',
   rech:'Personas a las que, en segunda revisión, se les negó la internación al país.',
   tram:'Trámites migratorios concluidos en oficinas del INM: los que expiden tarjeta (residencias y visitantes) y los que no (constancias, oficios, permisos o sin documento).',
-  resc:'Personas extranjeras en situación irregular rescatadas, según el reporte de las oficinas de representación.',
+  resc:'Rescates de personas extranjeras en situación irregular, según el reporte de las oficinas de representación. Se cuentan eventos: si a una persona se le rescata dos veces, cuenta dos.',
   pres:'Personas presentadas ante una estación o estancia migratoria.',
   can:'Niñas, niños y adolescentes, y sus acompañantes, canalizados a la protección del DIF.',
   ret:'Personas extranjeras retornadas a su país, por deportación o retorno asistido.',
@@ -1279,6 +1279,28 @@ function cajaInternacion(F){
     (l.map(r => { const v = comp('rech_det',F.ss,r[0]);
       return '<button class="barra pc" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+' <small>'+pct(v[1],v[0]+v[1])+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>'; }).join('') || '<span class="mini">Sin registros.</span>')+'</div>';
 }
+// Ingresos y rechazos por punto de internación: todos los puntos, también los que no se dibujan en el mapa.
+// Los datos (datos/puntos.js, del robot convertir.py) se bajan la primera vez que se piden; vienen por mes, como las composiciones.
+let PTOS = window.IANAMI_PUNTOS || null, PTOS_PIDE = false;
+function cajaPuntos(k, F){
+  const tit = k==='ing' ? 'Puntos de ingreso' : 'Dónde se rechaza · por punto', c = colG(IND[k].g);
+  const caja = cuerpo => '<div class="caja" data-ptos="'+k+'"><h2><span>'+tit+'</span>'+infoP(k==='ing' ? 'Puntos de internación (aeropuertos, garitas, puentes y puertos) por los que entraron los extranjeros del periodo, con su parte del total.' : 'Puntos de internación donde se rechazó a más personas en segunda revisión, con su parte del total de rechazos.')+'</h2>'+cuerpo+'</div>';
+  if (!PTOS){ if (!PTOS_PIDE){ PTOS_PIDE = true; setTimeout(() => bajarJS('datos/puntos.js').then(() => { PTOS = window.IANAMI_PUNTOS || null; if (PTOS && document.querySelector('[data-ptos]')) pintarBajo(); }, () => { PTOS_PIDE = false; }), 0); }
+    return caja('<span class="mini">Cargando puntos…</span>'); }
+  const P = PTOS[k]; if (!P) return '';
+  const ss = F.ss ? new Set(F.ss) : null, nl = F.nd==null ? null : new Set(Array.isArray(F.nd) ? F.nd : [F.nd]), fr = {}, v = new Float64Array(P.cats.length), edo = {};
+  for (let i=0; i<P.c.length; i+=5){ const n = P.c[i+2];
+    if ((ss && !ss.has(P.c[i+1])) || (nl ? !nl.has(n) : S.region && (n>=OT || !enRegion(n)))) continue;
+    let f = fr[P.c[i]]; if (f==null) f = fr[P.c[i]] = fraccionMes(P.c[i]); if (!f) continue;
+    v[P.c[i+3]] += P.c[i+4]*f; const e = edo[P.c[i+3]] || (edo[P.c[i+3]] = {}); e[P.c[i+1]] = (e[P.c[i+1]] || 0) + P.c[i+4]*f; }
+  let tot = 0, cuantos = 0; v.forEach(x => { tot += x; if (x>=0.5) cuantos++; });
+  const l = Array.from(v, (x,i) => [i, x]).filter(r => r[1]>=0.5).sort((a,b) => b[1]-a[1]).slice(0, TOP), mx = l.length ? l[0][1] : 1;
+  const enMapa = nom => D.puntos.findIndex(p => p.n===nom), cifra = x => x<5 ? 'menos de 5' : corto(Math.round(x));
+  const filas = l.map(r => { const nom = P.cats[r[0]], j = k==='ing' ? enMapa(nom) : -1, e = edo[r[0]], s = e ? +Object.keys(e).sort((a,b) => e[b]-e[a])[0] : -1;
+    const pp = tot ? r[1]/tot*100 : 0, txt = pp>=1 || !pp ? Math.round(pp) : pp.toFixed(1);
+    return '<'+(j>=0 ? 'button' : 'div')+' class="barra pc"'+(j>=0 ? ' data-pto="'+j+'"' : '')+' title="'+esc(nom)+(s>=0 ? ' · '+esc(EST[s]) : '')+(j>=0 ? ' · clic para verlo en el mapa' : '')+'"><span>'+esc(nom)+' <small>'+txt+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+cifra(r[1])+'</span></'+(j>=0 ? 'button' : 'div')+'>'; }).join('');
+  return caja('<span class="mini">Periodo completo · el % es su parte del total'+(cuantos>TOP ? ' · '+cuantos+' puntos con registros' : '')+'</span>'+(filas || '<span class="mini">Sin registros con este filtro.</span>'));
+}
 // Trámites: los 10 tipos más frecuentes
 function cajaTramites(F){
   const v = comp('tram_tipo',F.ss,F.nd).map((x,i)=>[i,x]).filter(r => r[1]>0 && D.tramTipos[r[0]]!=='Otros').sort((x,y)=>y[1]-x[1]).slice(0,5), mx = v.length ? v[0][1] : 1, tot = comp('tram_tipo',F.ss,F.nd).reduce((a,b)=>a+b,0);
@@ -1414,6 +1436,7 @@ function pintarBajo(){
     cajas.push(h+'</div>'); }
   // 3) Lugares: con indicador, el suyo; sin indicador, el par regular e irregular
   if (S.ind) cajas.push(cajaLugares(S.ind, F)); else { cajas.push(cajaLugares('ing', F)); cajas.push(cajaLugares('resc', F)); }
+  if (S.ind==='ing' || S.ind==='rech') cajas.push(cajaPuntos(S.ind, F));      // por qué puntos entran o dónde se les rechaza
   // 4) Composición del indicador, con su tarjeta complementaria
   if (S.ind==='tram') cajas.push(cajaTramites(F));
   if (S.ind) cajas.push(htmlComp(S.ind, F));
@@ -1716,7 +1739,7 @@ const SALA = { on:false, cmp:false, A:null, B:null, guarda:null, gr:null, anim:{
 const PALABRA = { ing:'ingresos de extranjeros', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados', cbp:'encuentros de la CBP (EE. UU.)', co:'trámites que no expiden tarjeta', va:'solicitudes de validación de actas' };
 const ORDEN_SALA = ['ing','resc','rep','rech','can','pres'];
 const IND_SALA = [['', 'Resumen', 'Panorama', 'Lo principal de todo en un vistazo'], ['ing', 'Regular', 'Ingresos', 'Extranjeros que entraron al país'], ['tram', 'Regular', 'Trámites', 'Trámites migratorios concluidos'],
-  ['resc', 'Irregular', 'Rescatados', 'Personas en situación irregular'], ['can', 'Irregular', 'Canalizados', 'NNA y acompañantes al DIF'], ['rep', 'Desde EE. UU.', 'Repatriados', 'Mexicanos devueltos por EE. UU.']].concat(IND.cbp ? [['cbp', 'Desde EE. UU.', 'Encuentros', 'Los registra la CBP en EE. UU.']] : []);
+  ['resc', 'Irregular', 'Rescatados', 'Rescates (eventos) según las O.R.'], ['can', 'Irregular', 'Canalizados', 'NNA y acompañantes al DIF'], ['rep', 'Desde EE. UU.', 'Repatriados', 'Mexicanos devueltos por EE. UU.']].concat(IND.cbp ? [['cbp', 'Desde EE. UU.', 'Encuentros', 'Los registra la CBP en EE. UU.']] : []);
 const ICONO_PAN = 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z';
 const MES_L = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 // Suma de un indicador entre los días a y b (de las bases completas), con estados ss y nacionalidad n (número, lista o null)
@@ -1742,7 +1765,7 @@ const nomRango = (a, b) => { const f0 = fechaBase(a), f1 = fechaBase(b-1);
   if (f0.getDate()===1 && isoDe(new Date(f1.getFullYear(), f1.getMonth(), f1.getDate()+1)).slice(8)==='01' && f0.getMonth()===f1.getMonth() && f0.getFullYear()===f1.getFullYear()) return MES_L[f0.getMonth()]+' '+f0.getFullYear();
   return f0.getDate()+' '+MES12[f0.getMonth()]+(f0.getFullYear()!==f1.getFullYear() ? ' '+f0.getFullYear() : '')+' – '+f1.getDate()+' '+MES12[f1.getMonth()]+' '+f1.getFullYear(); };
 const nomCortoR = r => { const t = nomRango(r[0], r[1]); return /^[a-z]+ \d{4}$/.test(t) ? t.slice(0,3)+' '+t.slice(-4) : t; };
-const cortoK = v => v>=1e6 ? (v/1e6).toFixed(2)+' M' : v>=1e4 ? (v/1e3).toFixed(1)+' k' : miles(v);
+const cortoK = v => v>=1e6 ? (v/1e6).toFixed(2)+' M' : v>=1e4 ? (v/1e3).toFixed(1)+' mil' : miles(v);
 const cifraG = v => { const s = cortoK(v), m = s.match(/^(.*) ([Mk])$/); return m ? m[1]+'<small>'+m[2]+'</small>' : s; };
 // Cifras que se mueven: de lo que muestran a su nuevo valor (como los indicadores del Pulso)
 function mover(el, v, fmt, dur){
@@ -2058,7 +2081,7 @@ const PERFILES = {
   pulso:{ nom:'Pulso migratorio', ctx:'Panorama: regular, irregular y desde EE. UU.', inds:IND_SALA, pan:CUATRO, orden:ORDEN_SALA, cam:['ing','tram','resc','can','rep'] },
   control:{ nom:'Control migratorio', ctx:'Panorama: quienes llegan y quienes son rescatados', dos:true, puntoIng:true, orden:['ing','resc','rech','pres','can','ret'], cam:['ing','rech','resc','pres','can','ret'],
     inds:[['', 'Resumen', 'Panorama', 'Llegadas y rescates en un vistazo'], ['ing', 'Regular · llegan', 'Ingresos', 'Extranjeros que entraron al país'], ['rech', 'Regular · llegan', 'Rechazos', 'Negados en segunda revisión'],
-          ['resc', 'Irregular · rescate y destino', 'Rescatados', 'Personas en situación irregular'], ['pres', 'Irregular · rescate y destino', 'Presentados', 'Ante una estación migratoria (sistema)'],
+          ['resc', 'Irregular · rescate y destino', 'Rescatados', 'Rescates (eventos) según las O.R.'], ['pres', 'Irregular · rescate y destino', 'Presentados', 'Ante una estación migratoria (sistema)'],
           ['can', 'Irregular · rescate y destino', 'Canalizados', 'NNA y acompañantes al DIF'], ['ret', 'Irregular · rescate y destino', 'Retornados', 'Asistidos o deportados a su país']],
     pan:[['ing','Ingresos','reg','extranjeros que entraron','Regular · llegan y son revisados'],['rech','Rechazos','reg','en segunda revisión','Regular · llegan y son revisados'],
          ['resc','Rescatados','irr','rescates (eventos)','Irregular · rescate y destino'],['pres','Presentados','irr','en estación (sistema)','Irregular · rescate y destino'],
@@ -2426,6 +2449,7 @@ function iniciar(){
     const gg = T('[data-g]'); if (gg){ fijarSel({t:'g', a:gg.dataset.g[0], q:+gg.dataset.g.slice(1)}, true); return; }
     const n = T('[data-n]'); if (n){ fijarSel({t:'n', i:+n.dataset.n}, true); return; }
     const es = T('[data-e]'); if (es){ fijarSel({t:'e', i:+es.dataset.e}, true); return; }
+    const pt = T('[data-pto]'); if (pt){ fijarSel({t:'p', tipo:'ing', i:+pt.dataset.pto}, true); return; }
     const tp = T('[data-top]'); if (tp){ S.topModo = tp.dataset.top; pintarBajo(); marcarFiltro(); return; }
     const r = T('[data-r]'); if (r){ elegir(+r.dataset.r); return; }
     const cz = T('[data-cruce]'); if (cz){ const q = cz.dataset.cruce.split(':'); S.cruce[q[0]] = +q[1]; pintarBajo(); marcarFiltro(); return; }

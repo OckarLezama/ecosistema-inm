@@ -43,7 +43,7 @@ const personas = i => K.s[i]!==EMP;
 
 /* ==== [2] UTILIDADES Y COLORES ==================================== */
 const $ = id => document.getElementById(id), MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-const miles = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' k' : miles(n);
+const miles = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' mil' : miles(n);
 // Cifra de las tarjetas: la misma regla en todo el tablero (completa hasta 999,999; millones con dos decimales), como en el Pulso
 const cifraKpi = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : miles(n);
 const pct = (a,b) => b ? (a/b*100).toFixed(1) : '0.0', esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -95,7 +95,7 @@ function ventanas(){ if (cmpFijo()) return ventanaFija(); if (['sem',30,90].inde
   if (N==='sem'){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); return b-7 >= Q.d0 ? [[b, b+7], [b-7, b]] : null; }
   return N==='aa' || 2*N > Q.d1-Q.d0 ? null : [[Q.d1-N,Q.d1],[Q.d1-2*N,Q.d1-N]]; }
 const etqCmp = () => { const w = ventanas(); if (!w) return ''; if (cmpFijo()) return 'el periodo '+txtCmp(); return Q.cmp==='sem' ? 'la semana del '+fecha(w[0][0])+' al '+fecha(w[0][1]-1)+' (contra la anterior)' : Q.cmp===7 ? 'los últimos 7 días' : Q.cmp===90 ? 'los últimos 3 meses' : 'los últimos '+Q.cmp+' días'; };
-const chipD = (a,b) => { if (!b) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' k' : a>0 && a<5 ? 'menos de 5' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
+const chipD = (a,b) => { if (!b) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' mil' : a>0 && a<5 ? 'menos de 5' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
 const mov = m => '<span class="mv '+(m>0?'u':m<0?'d':'e')+'">'+(m>0?'▲'+m:m<0?'▼'+(-m):'=')+'</span>';
 function lugares(key, nk, r, o){ const x = agg(key, nk, Object.assign({}, o, {d0:r[0], d1:r[1]})), l = Array.from(x).map((v,i)=>[i,v]).sort((a,b)=>b[1]-a[1]), p = {}; l.forEach((y,j) => p[y[0]] = j+1); return p; }
 // Del catálogo único de fechas (js/temporadas.js)
@@ -681,7 +681,7 @@ function pintarMotivo(){ const el = $('rg-mot'); if (!el || !K.m) return; const 
     yAxis:[{ type:'value', max:100, axisLabel:{ formatter:'{value}%', color:'#5C5952', fontSize:10.5 } }, { type:'value', show:false, min:tMn-rg*2.6, max:tMx+rg*.35, splitLine:{ show:false } }],
     series:[...Array(NGR).keys()].map(g => ({ name:nomG(g), type:'bar', stack:'m', barMaxWidth:30, color:colG(g), itemStyle:{ borderColor:'#FCFBF7', borderWidth:1 }, data:lab.map((_,j) => tm[j] ? +(mm[j*NGR+g]/tm[j]*100).toFixed(2) : 0) }))
       .concat([{ name:'Trámites del mes', type:'line', yAxisIndex:1, z:10, smooth:false, data:tv, symbol:'circle', symbolSize:5, lineStyle:{ width:1.4, color:'#5C5952', type:[4,3] }, itemStyle:{ color:'#FCFBF7', borderColor:'#5C5952', borderWidth:1.3 },
-        label:{ show:true, position:'top', distance:5, fontSize:9.5, color:'#5C5952', fontWeight:600, textBorderColor:'#FCFBF7', textBorderWidth:2.5, formatter:p => p.value==null ? '' : (p.value/1e3).toFixed(0)+'k' } }]) });
+        label:{ show:true, position:'top', distance:5, fontSize:9.5, color:'#5C5952', fontWeight:600, textBorderColor:'#FCFBF7', textBorderWidth:2.5, formatter:p => p.value==null ? '' : (p.value/1e3).toFixed(0)+' mil' } }]) });
 
 }
 function vistaTramites(){

@@ -6,6 +6,8 @@ Lee los archivos .xlsx de la carpeta DATA y genera los archivos ligeros
 que usa la página:
 
     datos/datos.js      resumen de todas las bases (lo lee js/app.js)
+    datos/puntos.js     ingresos y rechazos por punto de internación (tarjeta
+                        del Pulso; la página lo carga solo cuando se pide)
     datos/reporte.txt   revisión de cada base: días faltantes, nombres
                         no reconocidos y renglones que no cuadran
 
@@ -45,6 +47,7 @@ import datetime as dt
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import unicodedata
@@ -524,6 +527,29 @@ def por_punto(t, indice):
     return {int(n): [[indice[p], int(v)] for p, v in zip(sub["punto"], sub["v"])][:3] for n, sub in g.groupby("n")}
 
 
+def nombre_punto(x):
+    """Nombre corto del punto: el del catálogo si lo tiene; si no, el del archivo sin «Aeropuerto Internacional…»."""
+    for k, v in C.PUNTOS_INTERNACION.items():
+        if norm(k) == norm(x):
+            return v[0]
+    t = str(x).strip().replace('"', "")
+    t = re.sub(r"^Aeropuerto Internacional (de la |de |del )?", "Aerop. ", t)
+    t = re.sub(r"(Sub )?Representación Local ", "", t)
+    t = re.sub(r"\s*Punto de [Ii]nternación\s*", " ", t).strip()
+    if not t or t.lower() == "nan":
+        return "Sin punto registrado"
+    t = t[0].upper() + t[1:]
+    return t.title() if t.isupper() else t
+
+
+def por_punto_mes(t):
+    """Todos los puntos (también los que no tienen coordenadas), en el mismo formato que las composiciones:
+    [mes, estado, nacionalidad, punto, valor, ...]; los puntos van de mayor a menor total."""
+    nom = t["PUNTO DE INTERNACION"].map(nombre_punto)
+    orden = list(t.assign(nom=nom.values).groupby("nom").v.sum().sort_values(ascending=False).index)
+    return {"cats": orden, "c": composicion(t, nom.map({x: i for i, x in enumerate(orden)}), t["v"])}
+
+
 # ==== [9] DOCUMENTOS VIGENTES =====================================
 def documentos(tablas, cargas):
     """Fotografía semanal: total, sexo, tipo de documento, por estado y por nacionalidad."""
@@ -789,6 +815,10 @@ def main():
     texto = json.dumps(salida, separators=(",", ":"), ensure_ascii=False)
     with open(os.path.join(a.destino, "datos.js"), "w", encoding="utf-8") as f:
         f.write("window.IANAMI_DATOS=" + texto + ";\n")
+    # Ingresos y rechazos por punto: archivo aparte para no hacer más pesada la carga inicial de la página
+    pto = {"ing": por_punto_mes(BX["ing"]), "rech": por_punto_mes(rech)}
+    with open(os.path.join(a.destino, "puntos.js"), "w", encoding="utf-8") as f:
+        f.write("window.IANAMI_PUNTOS=" + json.dumps(pto, separators=(",", ":"), ensure_ascii=False) + ";\n")
     with open(os.path.join(a.destino, "reporte.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(lineas) + "\n")
     print("\n".join(lineas))

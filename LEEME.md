@@ -13,6 +13,7 @@ Página principal (Pulso) y convertidor de bases.
 | `js/temporadas.js` | Vacaciones del calendario SEP desde 2018, para marcar temporadas y comparar. Se edita a mano |
 | `js/contexto.js` | Eventos por país desde 2018: qué pasó, efecto migratorio y fuente. Se edita a mano |
 | `datos/datos.js` | Resumen de las bases. **Se genera, no se edita a mano** |
+| `datos/puntos.js` | Ingresos y rechazos por punto de internación (tarjeta del Pulso). **Se genera con `convertir.py`**; la página lo baja solo cuando se elige Ingresos o Rechazos |
 | `datos/reporte.txt` | Revisión de la última conversión |
 | `robot/convertir.py` | Convierte las bases de `DATA` en `datos/` |
 | `robot/regulacion.py` | Genera `datos/regulacion.js` (tabla diaria de trámites para la vista de Regulación) |
@@ -143,6 +144,18 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - **Ficha o Bullets:** la misma consulta, como hoja con gráficas o en viñetas para mandar como mensaje. Las viñetas siguen el estilo de la Mesa de Seguridad (cifra en «2 MIL 771», «(75%) 2 MIL 070 mexicanos», cambio contra los días anteriores, acumulado desde el 1 oct 2024 y principales con su %), solo con cifras: sin causas ni interpretación. **WhatsApp** abre el chat con el texto listo; **Copiar texto**, **Imagen** y **PDF** también funcionan.
 - **Compartir la ficha:** en celular y tableta, la imagen se prepara en cuanto sale el resultado y al tocar Compartir abre el menú del teléfono con la imagen adjunta (el botón se ve atenuado mientras se prepara). En computadora abre WhatsApp Web y descarga la imagen para adjuntarla.
 
+## Glosario (un nombre por cifra)
+
+| Nombre | Qué cuenta | Dónde aparece |
+|---|---|---|
+| **Ingresos** | Entradas de extranjeros por los puntos de internación (sin mexicanos) | Pulso, Resumen, Infografía, Control › Ingresos, Informes, Pregunta a INAMI. «Punto de internación» y «vía de internación» se quedan: son el nombre oficial del lugar y de la vía |
+| **Rescatados** | Rescates (eventos) del reporte de las O.R.: una persona rescatada dos veces cuenta dos | Igual en todas; donde se describe dice «rescates (eventos)» |
+| **Canalizados** | NNA + adultos que los acompañan, canalizados al DIF | Pulso e Infografía |
+| **NNA canalizados** | Solo niñas, niños y adolescentes (SIRENNA) | Resumen, Control › Canalizados (NNA), Informes, Pregunta a INAMI |
+| **Retornados** | Deportados + retornos asistidos | Igual en todas |
+
+Áreas en «Arma tu informe»: Control (ingresos, segunda revisión, rechazos, rescatados, presentados, NNA canalizados, retornados), Regulación, Protección (repatriados) y Desde EE. UU. (recibidos y encuentros CBP), igual que el menú Procesos.
+
 ## Reglas de los datos
 
 - **Trámites:** todos = expiden tarjetas + no expiden tarjetas, según la columna «Tipo de conclusión» (con / sin expedición de tarjeta migratoria). «Tipo no registrado» = salieron con tarjeta pero no marcan cuál. No expiden = constancias, oficios, permisos y sin expedición.
@@ -150,10 +163,11 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - **Motivo de estancia:** en Trámites (caja «¿Por qué se quedan?») y en Pregunta a INAMI.
 
 - **% de rechazo:** rechazos ÷ (extranjeros que llegan por aire o tierra + rechazos). Sin mexicanos ni vía marítima (tripulación de cruceros). Es la misma cifra en Pulso y en Control migratorio.
-- **Ingresos:** las tarjetas cuentan extranjeros (76.51 M). Los mexicanos que regresan se muestran aparte y suman el total del país (extranjeros + mexicanos = 98.90 M) en la ayuda de la tarjeta del Pulso, en Control › Internaciones y en Pregunta a INAMI.
+- **Ingresos:** las tarjetas cuentan extranjeros (76.51 M). Los mexicanos que regresan se muestran aparte y suman el total del país (extranjeros + mexicanos = 98.90 M) en la ayuda de la tarjeta del Pulso, en Control › Ingresos y en Pregunta a INAMI.
 - **Segunda revisión y rechazos:** solo extranjeros en todas las vistas; los casos con nacionalidad mexicana se avisan en Bases.
 - **Retornados:** deportados + retornos asistidos (así el desglose cuadra con el total); si la columna del total no coincide, se avisa en Bases.
-- **Cifras en las tarjetas:** número completo hasta 999,999; desde un millón, «x.xx M».
+- **Cifras en las tarjetas:** número completo hasta 999,999; desde un millón, «x.xx M». En listas y comparaciones cortas, de 10,000 en adelante: «x.x mil» (nunca «k»).
+- **Puntos de ingreso (Pulso):** con Ingresos o Rechazos aparece la tarjeta con los 8 puntos de internación principales del periodo, con su % del total; cuenta todos los puntos de la base (también los que no se dibujan en el mapa), así que la suma de todos los puntos es igual a la tarjeta del indicador. Viene por mes, como las composiciones. Presentados ya trae sus estaciones en «Composición».
 - **Encuentros CBP:** los registra EE. UU. (no el INM), incluyen mexicanos y no tienen O.R.: en el Pulso la tarjeta está en «Desde EE. UU.» (recibidos → repatriados → encuentros), se desactiva al elegir un estado, funciona con nacionalidad y al elegirla el mapa muestra los sectores de la frontera. El análisis completo irá en Analizar.
 - **Rescates y recibidos:** vienen del reporte de las O.R. (DGCOR); presentados y canalizados, del sistema (DGCVM). Son fuentes distintas y no se suman.
 

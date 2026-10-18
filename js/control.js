@@ -1,7 +1,7 @@
 /* ==================================================================
    IA-NAMI · CONTROL Y VERIFICACIÓN MIGRATORIA (DGCVM)
    Vista de la Dirección General de Control y Verificación Migratoria,
-   con tres pestañas: Internaciones (llegadas, segunda revisión y
+   con tres pestañas: Ingresos (llegadas, segunda revisión y
    rechazos), Estaciones (presentados y retornos) y Canalizados (NNA y
    adultos que los acompañan). Todo se calcula en la página sobre
    datos/control.js. Usa los estilos de la vista de Regulación.
@@ -44,7 +44,7 @@ const rech = i => SEG.r[i]===1;
 
 /* ==== [2] UTILIDADES ============================================== */
 const $ = id => document.getElementById(id), MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-const miles = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' k' : miles(n);
+const miles = n => Math.round(n).toLocaleString('en-US'), corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' mil' : miles(n);
 // Cifra de las tarjetas: la misma regla en todo el tablero (completa hasta 999,999; millones con dos decimales), como en el Pulso
 const cifraKpi = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : miles(n);
 const pct = (a,b) => b ? (a/b*100).toFixed(1) : '0.0', esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -94,7 +94,7 @@ function abrirMasC(){ const k = $('cv-kpis'), g = k && k.querySelector('.rg-mas'
 const DET = { int:'totales, semana a semana y rechazos por punto', est:'totales y dónde se presenta cada nacionalidad', can:'nacionalidad, O.R. que canaliza y recibidos de EE. UU.' };
 const detIni = () => { const on = !!Q.det[Q.vista]; return '<button class="rg-det-b cv-det-b'+(on?' on':'')+'" data-cdet aria-expanded="'+on+'">'+(on ? 'Ocultar detalle ▴' : 'Ver detalle: '+DET[Q.vista]+' ▾')+'</button><div class="cv-det"'+(on ? '' : ' hidden')+'>'; };
 const plegar = () => '<button class="plegar" data-cplegar aria-label="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'" title="'+(Q.compacto?'Mostrar tarjetas':'Compactar indicadores')+'"><svg width="12" height="12" viewBox="0 0 12 12"><path d="'+(Q.compacto?'M2 4l4 4 4-4':'M2 8l4-4 4 4')+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
-const chipD = (a,b) => { if (!b || a+b<40) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' k' : a>0 && a<5 ? 'menos de 5' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
+const chipD = (a,b) => { if (!b || a+b<40) return '<span class="kc-d">—</span>'; const dl = (a/b-1)*100; return '<span class="kc-d'+(Math.abs(dl)>=20?' f':'')+'">'+(cmpFijo() ? '' : '<span class="kc-l">'+({ sem:'Semana', 30:'30 días', 90:'3 meses' })[Q.cmp]+': '+(a>=1e6 ? (a/1e6).toFixed(2)+' M' : a>=1e4 ? (a/1e3).toFixed(1)+' mil' : a>0 && a<5 ? 'menos de 5' : miles(a))+'</span> ')+(dl>=0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1)+'%'+(cmpFijo() && nomFijo() ? '<span class="kc-l"> vs. '+nomFijo()+'</span>' : '')+'</span>'; };   // el % dice de qué es
 const IC = { avion:'M2 16l20-6-20-6 3 6zM5 10h9', tierra:'M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6', barco:'M3 17l2 3h14l2-3zM12 3v11M6 14l6-7 6 7', lupa:'M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-4-4',
              no:'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM6 6l12 12', tot:'M4 7h16M4 12h16M4 17h10', est:'M4 20V8l8-5 8 5v12zM9 20v-6h6v6', ret:'M20 12H5M11 6l-6 6 6 6', nino:'M12 4a2 2 0 1 0 0 4a2 2 0 0 0 0-4zM8 21v-7l-2-3 6-2 6 2-2 3v7', adulto:'M12 3a3 3 0 1 0 0 6a3 3 0 0 0 0-6zM6 21v-6a6 6 0 0 1 12 0v6' };
 const svgI = d => '<span class="kc-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>';
@@ -160,7 +160,7 @@ function htmlCtl(){
     '<span class="rg-chips">'+Q.nats.map((n,j) => '<span class="tag-f" style="background:'+COMP[j]+'">'+esc(nomN(n))+' <button data-cquita="n'+n+'" aria-label="Quitar">×</button></span>').join('')+
     Q.ests.map(e => '<span class="tag-f" style="background:'+OCRE+'">'+esc(nomE(e))+' <button data-cquita="e'+e+'" aria-label="Quitar">×</button></span>').join('')+
     (Q.via>=0 && Q.vista==='int' ? '<span class="tag-f" style="background:'+COLV[Q.via]+'">Vía '+esc(VIAS[Q.via].toLowerCase())+' <button data-cquita="v" aria-label="Quitar">×</button></span>' : '')+
-    (Q.pto>=0 ? '<span class="tag-f" style="background:'+VERDE+'"'+(Q.vista!=='int' ? ' title="El punto solo aplica a Internaciones"' : '')+'>'+esc(nomP(Q.pto))+(Q.vista!=='int' ? ' <small>(solo Internaciones)</small>' : '')+' <button data-cquita="p" aria-label="Quitar">×</button></span>' : '')+'</span>';
+    (Q.pto>=0 ? '<span class="tag-f" style="background:'+VERDE+'"'+(Q.vista!=='int' ? ' title="El punto solo aplica a Ingresos"' : '')+'>'+esc(nomP(Q.pto))+(Q.vista!=='int' ? ' <small>(solo Ingresos)</small>' : '')+' <button data-cquita="p" aria-label="Quitar">×</button></span>' : '')+'</span>';
 }
 function buscador(){
   const items = DIC.n.map((n,i) => ({n:n, t:'Nacionalidad', v:{t:'n', i:i}})).filter(x => x.v.i!==MX)
@@ -310,8 +310,8 @@ function pintarInt(){
   const L = tot(ING, {ex:llegada}), R = tot(SEG, {ex:rech}), base = tasa(R, L);
   const tv = (k, nom, sub, ic) => tarjeta(nom, sub, ic, k<0 ? '#2B2926' : COLV[k], ING, {via:k}, ' data-cvia="'+k+'" aria-pressed="'+(Q.via===k)+'"', null, Q.via===k);
   b.innerHTML = '<section class="kpis rg-kpis" id="cv-kpis" data-modo="'+(Q.compacto?'compacto':'tarjetas')+'">'+
-      '<div class="kg" style="flex:4 1 0;--g:#2B2926"><div class="eti">Internaciones de extranjeros · toca una vía para filtrar</div><div>'+
-        tv(-1, 'Todas las vías', 'internaciones', IC.tot)+tv(0, 'Aérea', '', IC.avion)+tv(1, 'Terrestre', '', IC.tierra)+tv(2, 'Marítima', 'pasajeros de crucero', IC.barco)+'</div></div>'+
+      '<div class="kg" style="flex:4 1 0;--g:#2B2926"><div class="eti">Ingresos de extranjeros · toca una vía para filtrar</div><div>'+
+        tv(-1, 'Todas las vías', 'ingresos', IC.tot)+tv(0, 'Aérea', '', IC.avion)+tv(1, 'Terrestre', '', IC.tierra)+tv(2, 'Marítima', 'pasajeros de crucero', IC.barco)+'</div></div>'+
       '<div class="kg g-irr" style="flex:3 1 0;--g:'+ROJO+'"><div class="eti">Segunda revisión · aire y tierra</div><div>'+
         tarjeta('Casos', 'en segunda revisión', IC.lupa, OCRE, SEG, {})+tarjeta('Rechazos', 'no se internaron', IC.no, ROJO, SEG, {ex:rech})+
         kc({ nom:'% rechazado', sub:'de quienes llegan', ic:IC.no, col:VINO, val:crucero ? '—' : tasaTxt(base), d: crucero ? '<span class="kc-d">no aplica a cruceros</span>' : w ? chipD(tasa(tot(SEG, {ex:rech, d0:w[0][0], d1:w[0][1]}), tot(ING, {ex:llegada, d0:w[0][0], d1:w[0][1]}))*1e3, tasa(tot(SEG, {ex:rech, d0:w[1][0], d1:w[1][1]}), tot(ING, {ex:llegada, d0:w[1][0], d1:w[1][1]}))*1e3) : '' })+'</div></div>'+plegar()+'</section>'+
@@ -321,19 +321,19 @@ function pintarInt(){
     '<div class="rg-g rg-g21"><div class="caja"><h2><span>¿Dónde y a quién se rechaza?</span>'+info('disp')+pil('data-csc', Q.sc, [['n','Nacionalidades'],['p','Puntos']])+'</h2><span class="q" id="cv-disp-q"></span><div id="cv-disp" class="cv-fill" style="min-height:440px"></div></div>'+
       '<div class="caja"><h2><span id="cv-emb-t"></span>'+info('emb')+'<span class="cv-h2r" id="cv-emb-o"></span></h2><span class="q" id="cv-emb-q"></span><div id="cv-emb"></div></div></div>')+
     detIni()+
-    '<div class="caja rg-ancho cv-ancho"><h2><span>Totales de internaciones</span>'+info('tot')+'<span class="cv-h2r cv-h2b" id="cv-tt-sel"></span></h2><span class="q" id="cv-tt-q"></span><div class="cv-scroll cv-fill"><div id="cv-tt"></div></div></div>'+
+    '<div class="caja rg-ancho cv-ancho"><h2><span>Totales de ingresos</span>'+info('tot')+'<span class="cv-h2r cv-h2b" id="cv-tt-sel"></span></h2><span class="q" id="cv-tt-q"></span><div class="cv-scroll cv-fill"><div id="cv-tt"></div></div></div>'+
     (crucero ? '' : '<div class="rg-g rg-g2">'+cajaTend('cv-sem', 'sem')+
       '<div class="caja"><h2><span>Rechazos por punto</span>'+info('pto')+pil('data-crk', Q.rk, [['r','Rechazos'],['t','De cada 1,000']])+'</h2><span class="q" id="cv-pto-q"></span><div class="cv-scroll cv-fill"><div id="cv-pto"></div></div></div></div>')+'</div>';
   const tn = crucero ? [] : tablaRech('n'), tp = crucero ? [] : tablaRech('p'), prom = tasa(tot(SEG, {ex:rech, nats:null, pto:-1, via:-1}), tot(ING, {ex:llegada, nats:null, pto:-1, via:-1})), hz = [];
   if (w){ const a = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), c0 = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]}), cuenta = k => k!==MX && (!Q.nats.length || Q.nats.indexOf(k)>=0);   // sin mexicanos, igual que las tarjetas; con nacionalidades elegidas, solo ellas
     let ta = 0, tc = 0; for (let k=0;k<NN;k++) if (cuenta(k)){ ta += a[k]; tc += c0[k]; }
     let m = -1, dm = 0; if (Q.nats.length<2) for (let k=0;k<NN;k++){ const dl = a[k]-c0[k]; if (k!==MX && !Q.nats.length && Math.abs(dl)>Math.abs(dm)){ dm = dl; m = k; } }
-    if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:'Internaciones '+(ta>=tc ? 'suben ' : 'bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+txtCmp()+(Q.via>=0 ? ' por vía '+VIAS[Q.via].toLowerCase() : ''), t:corto(tc)+' → '+corto(ta)+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+corto(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' }); }
+    if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:'Ingresos '+(ta>=tc ? 'suben ' : 'bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+txtCmp()+(Q.via>=0 ? ' por vía '+VIAS[Q.via].toLowerCase() : ''), t:corto(tc)+' → '+corto(ta)+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+corto(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' }); }
   const pt = tp.filter(x => x.r>=100).sort((a,b) => b.t-a.t)[0]; if (pt && prom) hz.push({ cl:'al', ic:'!', h:esc(nomP(pt.k))+' rechaza a '+deCada(pt.t)+' que llegan', t:'el promedio nacional es '+deCada(prom)+' · '+miles(pt.r)+' rechazos · ver solo este punto ›', act:' data-cpt="'+pt.k+'"' });
   const nt = tn.slice().sort((a,b) => b.r-a.r)[0], Rn = tn.reduce((t,x) => t+x.r, 0); if (nt && Rn) hz.push({ cl:'d', ic:'%', h:esc(nomN(nt.k))+' concentra '+pct(nt.r, Rn)+'% de los rechazos', t:'se rechaza a '+deCada(nt.t)+' que llegan · '+miles(nt.r)+' de '+miles(Rn)+' · filtrar por ella ›', act:' data-cn="'+nt.k+'"' });
   $('cv-hz').innerHTML = hz.map(titular).join('')+info('hz');
   pintarTr(); pintarTp();
-  totales({ ch:'cv-tt', q:'cv-tt-q', pil:'cv-tt-sel', attr:'data-ctot', val:Q.tot, unidad:'internaciones', ops:[['n','Por nacionalidad'],['e','Por O.R.'],['p','Por punto']],
+  totales({ ch:'cv-tt', q:'cv-tt-q', pil:'cv-tt-sel', attr:'data-ctot', val:Q.tot, unidad:'ingresos', ops:[['n','Por nacionalidad'],['e','Por O.R.'],['p','Por punto']],
     dim:{ n:{ T:ING, key:i => ING.n[i], nk:NN, nom:nomN, quita:{nats:null}, sel:Q.nats },
           p:{ T:ING, key:i => ING.p[i], nk:NP, nom:nomP, corto:k => nomP(k).replace(/^Aerop\. /,''), quita:{pto:-1}, sel:Q.pto>=0 ? [Q.pto] : [] },
           e:{ T:ING, key:i => ING.e[i], nk:NE, nom:nomE, corto:k => abr(nomE(k)), quita:{ests:null}, sel:Q.ests } },
@@ -345,9 +345,9 @@ function pintarTr(){
   const lin = k => k==='via' ? VIAS.map((v,j) => ({ nom:v, col:COLV[j], T:ING, o:{via:j}, j:j })).filter(x => Q.via<0 || Q.via===x.j)
     : k==='nat' ? (Q.nats.length ? Q.nats : topK(ING, i => ING.n[i], NN, {nats:null}, 5, MX)).map((n,j) => ({ nom:nomN(n), col:Q.nats.length ? COMP[j] : PAL5[j], T:ING, o:{nats:[n]} }))
     : (Q.ests.length ? Q.ests : topK(ING, i => ING.e[i], NE, {ests:null}, 5)).map((e,j) => ({ nom:nomE(e), col:Q.ests.length ? COMP[j] : PAL5[j], T:ING, o:{ests:[e]} }));
-  tendencia({ id:'cv-tr', ctl:'cv-tr-c', ley:'cv-tr-l', titulo:['cv-tr-t', k => 'Internaciones'+{tot:'', via:' por vía', nat:' por nacionalidad', or:' por O.R.'}[k]], desg:Q.desgI, attr:'data-cdesgi',
+  tendencia({ id:'cv-tr', ctl:'cv-tr-c', ley:'cv-tr-l', titulo:['cv-tr-t', k => 'Ingresos'+{tot:'', via:' por vía', nat:' por nacionalidad', or:' por O.R.'}[k]], desg:Q.desgI, attr:'data-cdesgi',
     ops:[['tot','Total'],['via','Por vía'],['nat','Por nacionalidad'],['or','Por O.R.']], total:{ nom:'Internaciones', T:ING, o:{} }, lineas:lin,
-    nota:k => ({ via:'Las tres vías.', nat:Q.nats.length ? 'Las nacionalidades que elegiste.' : 'Las 5 nacionalidades con más internaciones.', or:Q.ests.length ? 'Las O.R. que elegiste.' : 'Las 5 O.R. con más internaciones.' }[k]),
+    nota:k => ({ via:'Las tres vías.', nat:Q.nats.length ? 'Las nacionalidades que elegiste.' : 'Las 5 nacionalidades con más ingresos.', or:Q.ests.length ? 'Las O.R. que elegiste.' : 'Las 5 O.R. con más ingresos.' }[k]),
     clic:cub => { Q.sel = [cub.a, cub.b]; pintarTp(); } });
 }
 // Panel «¿Quién entra?»: primero la vía; después las listas en el orden de lo que muestra la gráfica (Ver)
@@ -359,7 +359,7 @@ function pintarTp(){
               or:{ tit:'Estados (O.R.)', T:ING, key:i => ING.e[i], nk:NE, nom:nomE, attr:'data-ce', quita:{ests:null}, sel:Q.ests, n:6 },
               pto:{ tit:'Puntos de internación', T:ING, key:i => ING.p[i], nk:NP, nom:nomP, attr:'data-cpt', quita:{pto:-1}, sel:Q.pto>=0 ? [Q.pto] : [], n:6 } };
   const orden = Q.desgI==='or' ? ['or','nat','pto'] : ['nat','or','pto'], col = Q.via>=0 ? COLV[Q.via] : '#2B2926';
-  panelP({ t:'cv-tp-t', q:'cv-tp-q', body:'cv-tp', titulo:'¿Quién entra?', unidad:'internaciones'+(Q.via>=0 ? ' por vía '+VIAS[Q.via].toLowerCase() : ''), o:{}, total:o => tot(ING, o), pre:viaBar, secciones:orden.map(k => Object.assign({ col:col }, S[k])) });
+  panelP({ t:'cv-tp-t', q:'cv-tp-q', body:'cv-tp', titulo:'¿Quién entra?', unidad:'ingresos'+(Q.via>=0 ? ' por vía '+VIAS[Q.via].toLowerCase() : ''), o:{}, total:o => tot(ING, o), pre:viaBar, secciones:orden.map(k => Object.assign({ col:col }, S[k])) });
   // Con nacionalidades elegidas: abrir Pulso filtrado por la primera (mapa grande, flujos y perfil)
   const P = window.IANAMI_PULSO, n0 = Q.nats.find(n => P && P.tiene(DIC.n[n]));
   if (n0!=null) $('cv-tp').insertAdjacentHTML('beforeend', '<button class="rg-vert cv-apulso" data-cpulso="'+n0+'">Ver '+esc(DIC.n[n0])+' en el mapa de Pulso ›</button>');
@@ -697,12 +697,12 @@ const INFO = {
   cp:'<b>Composición del periodo:</b> cómo concluyó la canalización (motivo de salida), nacionalidades y O.R., y su cambio contra el periodo anterior de la misma duración.',
   cor:'<b>O.R. que canalizan</b>, de mayor a menor, divididas por condición de los NNA (acompañados, no acompañados o separados) o por sexo de los adultos.',
   rec:'<b>Extranjeros que EE. UU. entregó a México</b>, adultos y menores, según el reporte de las O.R. de la frontera norte (DGCOR). Es otra fuente: no se suma a los canalizados de SIRENNA.',
-  tr:'<b>Internaciones legales de extranjeros</b> por día, semana o mes, en total o por vía, nacionalidad u O.R. La franja marca el rango habitual (calculado fuera de vacaciones) y la sombra gris, las temporadas vacacionales. No incluye mexicanos.',
-  tp:'<b>Quién entra en el periodo:</b> el reparto por vía (aérea, terrestre y marítima), las 10 nacionalidades, los estados (O.R.) y los puntos de internación con más internaciones.',
+  tr:'<b>Ingresos legales de extranjeros</b> por día, semana o mes, en total o por vía, nacionalidad u O.R. La franja marca el rango habitual (calculado fuera de vacaciones) y la sombra gris, las temporadas vacacionales. No incluye mexicanos.',
+  tp:'<b>Quién entra en el periodo:</b> el reparto por vía (aérea, terrestre y marítima), las 10 nacionalidades, los estados (O.R.) y los puntos de internación con más ingresos.',
   ctend:'<b>Canalizados en el tiempo</b> (SIRENNA), en total o por motivo de salida, condición, nacionalidad u O.R. La línea punteada son los NNA que las O.R. reportan como canalizados al DIF tras un rescate (DGCOR): es otra fuente y no se suma.',
-  tot:'<b>Internaciones por nacionalidad, O.R. o punto</b>, de mayor a menor: las 30 principales y el resto sumado en «Otras». No incluye mexicanos.',
+  tot:'<b>Ingresos por nacionalidad, O.R. o punto</b>, de mayor a menor: las 30 principales y el resto sumado en «Otras». No incluye mexicanos.',
   tote:'<b>Totales por nacionalidad, O.R. o estación</b>, de mayor a menor: las 30 principales y el resto sumado en «Otras».',
-  perfil:'<b>Qué parte del total nacional corresponde a cada O.R.</b> en internaciones, rechazos, presentados, retornos y canalizados. Muestra el perfil de cada O.R.: una frontera sur concentra presentados y NNA; un aeropuerto, internaciones y rechazos.',
+  perfil:'<b>Qué parte del total nacional corresponde a cada O.R.</b> en ingresos, rechazos, presentados, retornos y canalizados. Muestra el perfil de cada O.R.: una frontera sur concentra presentados y NNA; un aeropuerto, internaciones y rechazos.',
   disp:'<b>Llegadas y rechazos por nacionalidad o punto.</b> Cada círculo es una nacionalidad o un punto de internación: hacia la derecha, más llegadas; hacia arriba, mayor % de rechazo; el tamaño es el número de rechazos. Rojo: arriba del promedio nacional; verde: abajo. Las escalas son logarítmicas para comparar volúmenes grandes y chicos. Llegadas = internados + rechazados, por aire y tierra.',
   emb:() => { const t = tablaRech('n').filter(x => x.r>=100), may = t.slice().sort((a,b) => b.r-a.r)[0], alt = t.slice().sort((a,b) => b.t-a.t)[0], f = v => v>=10 ? Math.round(v) : v.toFixed(1);
     return '<b>¿Por qué «de cada 1,000»?</b> Si solo se cuentan rechazos, siempre ganan las nacionalidades que más viajan. Medirlo de cada 1,000 personas que llegan permite comparar a todas en la misma escala.'+
@@ -710,7 +710,7 @@ const INFO = {
       '<br><br>«Llegan» = se internaron + fueron rechazadas, por aire y tierra. Solo se listan nacionalidades con 100 rechazos o más, para que unos cuantos casos no exageren la proporción.'; },
   sem:'<b>Casos de segunda revisión por semana</b> (lunes a domingo) y su resultado: rechazo o internación. Las semanas incompletas del inicio y del final van en tono claro.',
   pto:'<b>Puntos de internación</b> ordenados por número de rechazos o por rechazos de cada 1,000 llegadas. No incluye cruceros, que no pasan por segunda revisión.',
-  hz:'<b>Titulares:</b> el cambio de las internaciones contra el periodo de comparación, el punto que más rechaza en proporción a sus llegadas y la nacionalidad que concentra más rechazos.',
+  hz:'<b>Titulares:</b> el cambio de los ingresos contra el periodo de comparación, el punto que más rechaza en proporción a sus llegadas y la nacionalidad que concentra más rechazos.',
   fuentes:'<b>Dos fuentes distintas.</b> «Sistema» es lo registrado por DGCVM; «Reporte de las O.R.» es lo que cada Oficina de Representación informa tras un rescate (DGCOR). Miden cosas parecidas con criterios diferentes, por eso no se suman ni se restan.',
   pr:'<b>Presentados y retornos por nacionalidad u O.R.</b> (sistema DGCVM): presentados, retornos asistidos y deportaciones. «Retornan de cada 100» indica cuántos salen del país por cada 100 presentados; no da seguimiento a las mismas personas.',
   mx:'<b>Dónde se presenta cada nacionalidad</b> (sistema DGCVM): presentados por estación u O.R. y por nacionalidad. Más oscuro = más personas.',
@@ -726,7 +726,7 @@ function mostrarInfo(b){ let p = $('cv-pop'); if (!p){ p = document.createElemen
 function cuerpo(){ const c = $('cv-ctl'); if (!c) return; c.innerHTML = htmlCtl(); buscador(); ({ int:pintarInt, est:pintarEst, can:pintarCan })[Q.vista](); }
 function montar(cont){
   cont.innerHTML = '<div class="rg cv"><div class="rg-sub"><div><span class="mini">Procesos › DGCVM y DGCOR</span><h1>Control migratorio <button type="button" class="pc-b" data-cvsala aria-label="Infografía" title="Infografía: lo principal en pantalla completa"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg><span>Infografía</span></button></h1></div><div class="rg-vistas">'+
-    [['int','Internaciones'],['est','Rescates'],['can','Canalizados (NNA)']].map(x => '<button data-cvista="'+x[0]+'" class="'+(Q.vista===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div></div>'+
+    [['int','Ingresos'],['est','Rescates'],['can','Canalizados (NNA)']].map(x => '<button data-cvista="'+x[0]+'" class="'+(Q.vista===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div></div>'+
     '<div class="ctl rg-ctl" id="cv-ctl"></div><div id="cv-body" class="rg-body anim"></div>'+
     (CV.calidad.length ? '<details class="cv-calw"><summary>Notas de calidad de los datos ('+CV.calidad.length+')</summary><ul>'+CV.calidad.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul></details>' : '')+'</div>';
   setTimeout(() => { const b = $('cv-body'); if (b) b.classList.remove('anim'); }, 1100);

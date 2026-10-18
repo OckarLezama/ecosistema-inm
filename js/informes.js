@@ -36,16 +36,16 @@ let tToast; function toast(m){ const t = $('ar-toast'); if (!t) return; t.textCo
 /* ==== [2] CONCEPTOS =============================================== */
 // A = «¿quién / de dónde?», B = «¿dónde / qué?»; cada lado puede tener varias dimensiones (punto | estado). V = vía para el KPI.
 const CONC = [
-  ['ing','Control','Internaciones','entradas',['n'],['p','e'],'via'], ['ingmx','Control','Mexicanos que ingresaron','entradas',['p','e'],['via']],
+  ['ing','Control','Ingresos','entradas',['n'],['p','e'],'via'], ['ingmx','Control','Mexicanos que ingresaron','entradas',['p','e'],['via']],
   ['seg','Control','Segunda revisión','casos',['n'],['p','e']], ['rech','Control','Rechazos','rechazos',['n'],['p','e']],
   ['tram','Regulación','Trámites','trámites',['n'],['tipo','doc','e']], ['va','Regulación','Validación de actas','solicitudes',['n'],['tr','e']],
-  ['resc','Protección','Rescatados','rescatados',['n'],['e']], ['rep','Protección','Repatriados','repatriados',['p','e'],['mod']],
-  ['nna','Protección','NNA canalizados','niñas, niños y adolescentes',['n'],['e']], ['pres','Protección','Presentados','presentados',['n'],['e','est']],
-  ['ret','Protección','Retornados','retornados',['n'],['e']], ['cbp','Frontera norte','Encuentros CBP','encuentros',['n'],['sec']],
-  ['rec','Frontera norte','Recibidos de EE. UU.','recibidos',['n'],['e']]
+  ['resc','Control','Rescatados','rescates (eventos)',['n'],['e']], ['rep','Protección','Repatriados','repatriados',['p','e'],['mod']],
+  ['nna','Control','NNA canalizados','niñas, niños y adolescentes',['n'],['e']], ['pres','Control','Presentados','presentados',['n'],['e','est']],
+  ['ret','Control','Retornados','retornados',['n'],['e']], ['cbp','Desde EE. UU.','Encuentros CBP','encuentros',['n'],['sec']],
+  ['rec','Desde EE. UU.','Recibidos de EE. UU.','recibidos',['n'],['e']]
 ].filter(c => INDK[c[0]] && BASES[INDK[c[0]].b]).map(c => ({ k:c[0], area:c[1], t:c[2], u:c[3], A:c[4].filter(d => BASES[INDK[c[0]].b].dims[d]), B:c[5].filter(d => BASES[INDK[c[0]].b].dims[d]), V:c[6] && BASES[INDK[c[0]].b].dims[c[6]] ? c[6] : null }));
 const CK = Object.fromEntries(CONC.map(c => [c.k, c]));
-const COLA = { Control:['#2F6657','#E3EEE9'], Protección:['#7E302B','#F5E4E1'], Regulación:['#8F7F2E','#F3EEDB'], 'Frontera norte':['#4A463F','#ECE9E2'] };
+const COLA = { Control:['#2F6657','#E3EEE9'], Protección:['#7E302B','#F5E4E1'], Regulación:['#8F7F2E','#F3EEDB'], 'Desde EE. UU.':['#4A463F','#ECE9E2'] };
 const base = k => BASES[INDK[k].b], finK = k => finBase(base(k)), iniK = k => base(k).inicio;
 const esOR = (k, d) => d==='e' && /O\.R\./.test(base(k).dims.e.nom);
 function DIM(k, d){ const rep = k==='rep' || k==='ingmx';
@@ -301,11 +301,11 @@ function indice(){ const I = [], vistos = new Set();
   ['ing','resc'].forEach(k => porNom(k, 'n', finK(k).slice(0,4)+'-01-01', finK(k)).forEach((v, n) => { if (vistos.has(n) || n==='Otros') return; vistos.add(n);
     I.push({ g:'Países', n, pre:'Internaciones de ', d:f(y26('ing', { n:indices('ing','n',n) }))+' entradas este año', fn:() => { S = nuevo('ing', { fa:n }); draw(true); } });
     if (indices('resc','n',n).length) I.push({ g:'Países', n, pre:'Rescatados de ', d:f(y26('resc', { n:indices('resc','n',n) }))+' este año', fn:() => { S = nuevo('resc', { fa:n }); draw(true); } }); }));
-  base('ing').dims.e.vals.forEach(e => { I.push({ g:'Estados', n:e, pre:'Internaciones en ', d:'por estado de llegada', fn:() => { S = nuevo('ing', { iB:1, fb:e }); draw(true); } });
+  base('ing').dims.e.vals.forEach(e => { I.push({ g:'Estados', n:e, pre:'Ingresos en ', d:'por estado de llegada', fn:() => { S = nuevo('ing', { iB:1, fb:e }); draw(true); } });
     if (indices('resc','e',e).length) I.push({ g:'Estados', n:e, pre:'Rescatados en ', d:'O.R. '+e, fn:() => { S = nuevo('resc', { fb:e }); draw(true); } });
     if (indices('rep','e',e).length) I.push({ g:'Estados', n:e, pre:'Repatriados en ', d:'O.R. '+e, fn:() => { S = nuevo('rep', { iA:1, fa:e }); draw(true); } }); });
   const pts_ = new Set(); base('ing').dims.p.vals.forEach(v => pts_.add(grp('p', v)));
-  pts_.forEach(p => I.push({ g:'Puntos', n:p, pre:'Internaciones por ', d:'punto de internación', fn:() => { S = nuevo('ing', { fb:p }); draw(true); } }));
+  pts_.forEach(p => I.push({ g:'Puntos', n:p, pre:'Ingresos por ', d:'punto de internación', fn:() => { S = nuevo('ing', { fb:p }); draw(true); } }));
   base('rep').dims.p.vals.forEach(p => I.push({ g:'Puntos', n:p, pre:'Repatriados por ', d:'punto de repatriación', fn:() => { S = nuevo('rep', { fa:p }); draw(true); } }));
   [['Periodo Sheinbaum','sx'],['Periodo Trump','tr'],['Última semana','sem']].forEach(([n, p]) => I.push({ g:'Periodos', n, d:'aplica a la lámina abierta', fn:() => { if (!S) S = nuevo('resc'); S.p = p; const L = CMP(S.k, p, S); S.cmp = L.length ? L[0] : null; draw(true); } }));
   return I; }
@@ -411,7 +411,7 @@ function hallazgos(){ const L = []; ['rep','resc','ing','seg','tram','cbp','rec'
   if (CK.rep){ const s = nuevo('rep', { fb:'Aérea (vuelos PRIM)' }); if (s.cmp){ const P = PER('rep', s)[s.p], F = filtros(s), V = T_('rep', P.a, P.b, F), W = T_('rep', s.cmp.a, s.cmp.b, F); if (W) L.push({ s, r:V/W-1, V, W, k:'rep', t:'Repatriados por avión' }); } }
   return L.sort((a, b) => Math.abs(b.r)-Math.abs(a.r)).slice(0, 4).map(x => ({ s:x.s, r:x.r, t:(x.t || CK[x.k].t)+(Math.abs(x.r)<0.01 ? ': prácticamente igual' : (x.r<0 ? ' bajan ' : ' suben ')+pc(x.r)+'%'), d:f(x.W)+' → '+f(x.V)+' · contra '+x.s.cmp.lab })); }
 const ICON = { Control:'<path d="M2 11l16-6-6 14-2-6z" fill="currentColor"/>', Protección:'<circle cx="10" cy="7" r="3.5" fill="currentColor"/><path d="M3 18c1-4 4-6 7-6s6 2 7 6" fill="currentColor"/>',
-  Regulación:'<rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M7 7h6M7 11h6" stroke="currentColor" stroke-width="2"/>', 'Frontera norte':'<path d="M3 15l4-5 4 3 6-8" stroke="currentColor" stroke-width="2" fill="none"/>' };
+  Regulación:'<rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M7 7h6M7 11h6" stroke="currentColor" stroke-width="2"/>', 'Desde EE. UU.':'<path d="M3 15l4-5 4 3 6-8" stroke="currentColor" stroke-width="2" fill="none"/>' };
 function pintar(host){ HOST = host; HZ = hallazgos();
   const areas = [...new Set(CONC.map(c => c.area))];
   host.innerHTML = '<div class="ar">'+

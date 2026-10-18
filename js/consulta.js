@@ -97,18 +97,18 @@ const IND = [
     partes:[ {k:'pre', nom:'Presentados en estación', q:'fueron presentados', med:'pre', g:1, sin:['presentad']}, {k:'can', nom:'Canalizados al DIF', q:'fueron canalizados', med:'can', g:1, sin:['canaliz']},
              {k:'sd', nom:'Sin destino registrado', q:'no tienen destino registrado', med:'sd', g:1, sin:['sin destino','destino']}, {k:'pv', nom:'Primera vez', q:'eran de primera vez', med:'pv', g:2, sin:['primera vez']},
              {k:'rei', nom:'Reincidentes', q:'eran reincidentes', med:'rei', g:2, rei:true, sin:['reincid']} ] },
-  { k:'ing', nom:'internaciones', art:'las', cu:'cuántas', b:'ing', sin:['internacion','ingres','entrad','llegad'], proc:'Control migratorio · Internaciones', ir:{d:'control', vista:'int'}, nota:'Extranjeros que se internaron al país; no incluye mexicanos.',
+  { k:'ing', nom:'ingresos de extranjeros', art:'los', cu:'cuántos', b:'ing', sin:['internacion','ingres','entrad','llegad'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'}, nota:'Extranjeros que se internaron al país; no incluye mexicanos.',
     partes:[ {k:'aer', nom:'Vía aérea', q:'fueron por vía aérea', ex:(T,i) => T.vi[i]===0, g:1, sin:['aere','avion','aeropuert']}, {k:'ter', nom:'Vía terrestre', q:'fueron por vía terrestre', ex:(T,i) => T.vi[i]===1, g:1, sin:['terrestre']},
              {k:'mar', nom:'Cruceros', q:'fueron de cruceros', ex:(T,i) => T.vi[i]===2, g:1, sin:['crucero','maritim']} ] },
-  { k:'ingmx', nom:'mexicanos que ingresaron', art:'los', cu:'cuántos', b:'ingmx', sin:['mexicanos que ingres','mexicanos que entr','ingresos de mexican','entradas de mexican','internaciones de mexican','mexicanos ingres'], proc:'Control migratorio · Internaciones', ir:{d:'control', vista:'int'},
+  { k:'ingmx', nom:'mexicanos que ingresaron', art:'los', cu:'cuántos', b:'ingmx', sin:['mexicanos que ingres','mexicanos que entr','ingresos de mexican','entradas de mexican','internaciones de mexican','mexicanos ingres'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'},
     nota:'Mexicanos que entraron al país por los puntos de internación. Extranjeros + mexicanos = todos los ingresos.', partes:[ {k:'aer', nom:'Vía aérea', q:'fueron por vía aérea', ex:(T,i) => T.vi[i]===0, g:1, sin:['aere','avion','aeropuert']}, {k:'ter', nom:'Vía terrestre', q:'fueron por vía terrestre', ex:(T,i) => T.vi[i]===1, g:1, sin:['terrestre']},
              {k:'mar', nom:'Cruceros', q:'fueron de cruceros', ex:(T,i) => T.vi[i]===2, g:1, sin:['crucero','maritim']} ] },
-  { k:'ingall', nom:'ingresos al país (extranjeros y mexicanos)', art:'los', cu:'cuántos', b:'ingall', sin:['todos los internaci','internaci','internaciones totales','total de internaci','gran total','internaciones de extranjeros y mexican'], proc:'Control migratorio · Internaciones', ir:{d:'control', vista:'int'},
+  { k:'ingall', nom:'ingresos al país (extranjeros y mexicanos)', art:'los', cu:'cuántos', b:'ingall', sin:['todos los internaci','internaci','internaciones totales','total de internaci','gran total','internaciones de extranjeros y mexican'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'},
     nota:'Todos los ingresos por los puntos de internación: extranjeros + mexicanos.',
     partes:[ {k:'ext', nom:'Extranjeros', q:'eran extranjeros', ex:(T,i) => T.n[i]!==MXc, g:1, sin:['extranjer']}, {k:'mx', nom:'Mexicanos', q:'eran mexicanos', ex:(T,i) => T.n[i]===MXc, g:1, sin:['mexican']}, {k:'aer', nom:'Vía aérea', q:'fueron por vía aérea', ex:(T,i) => T.vi[i]===0, g:2, sin:['aere','avion','aeropuert']}, {k:'ter', nom:'Vía terrestre', q:'fueron por vía terrestre', ex:(T,i) => T.vi[i]===1, g:2, sin:['terrestre']}, {k:'mar', nom:'Cruceros', q:'fueron de cruceros', ex:(T,i) => T.vi[i]===2, g:2, sin:['crucero','maritim']} ] },
-  { k:'seg', nom:'casos de segunda revisión', art:'los', cu:'cuántos', b:'seg', sin:['segunda revision','revision'], proc:'Control migratorio · Internaciones', ir:{d:'control', vista:'int'},
+  { k:'seg', nom:'casos de segunda revisión', art:'los', cu:'cuántos', b:'seg', sin:['segunda revision','revision'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'},
     partes:[ {k:'rch', nom:'Rechazados', q:'terminaron en rechazo', ex:(T,i) => T.r[i]===1, g:1, sin:['rechaz']}, {k:'int', nom:'Internados', q:'se internaron', ex:(T,i) => T.r[i]===0, g:1, sin:['internad']} ] },
-  { k:'rech', nom:'rechazos', art:'los', cu:'cuántos', b:'seg', ex:(T,i) => T.r[i]===1, sin:['rechaz','inadmi'], proc:'Control migratorio · Internaciones', ir:{d:'control', vista:'int'}, nota:'Personas a las que, en segunda revisión, se les negó la internación; no incluye mexicanos.' },
+  { k:'rech', nom:'rechazos', art:'los', cu:'cuántos', b:'seg', ex:(T,i) => T.r[i]===1, sin:['rechaz','inadmi'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'}, nota:'Personas a las que, en segunda revisión, se les negó la internación; no incluye mexicanos.' },
   { k:'pres', nom:'presentados en el sistema', art:'los', cu:'cuántos', b:'pre', sin:['presentad'], proc:'Control migratorio · Rescates', ir:{d:'control', vista:'est', em:'pre'}, nota:'Personas presentadas según el sistema de DGCVM.' },
   { k:'ret', nom:'retornados', art:'los', cu:'cuántos', b:'ret', sin:['retorn','deport'], proc:'Control migratorio · Rescates', ir:{d:'control', vista:'est', em:'ra'},
     partes:[ {k:'ra', nom:'Retorno asistido', q:'salieron por retorno asistido', med:'ra', g:1, sin:['retorno asistido','asistid']}, {k:'dep', nom:'Deportación', q:'fueron deportados', med:'dep', g:1, sin:['deport']} ] },
@@ -368,7 +368,7 @@ function entender0(txt){
     if (nn!=='México') q.perfil = { dim:'n', nom:nn, cz:{ dim:'e', nom:ne } }; }
   if (!cand.length && !q.perfil) avisos.unshift('No reconocí qué quieres ver; se muestra '+ind.nom+'. Elígelo en «Qué» o prueba una de las sugerencias.');
   limitar(q);
-  if (!cand.length && !q.perfil){ const fx = fraseFiltros(q), per = mes>=0 ? ' en '+MES[mes] : ''; q.sugs = ['rescatados','internaciones','NNA canalizados'].map(x => x+(fx ? ' '+fx : '')+per); } q.avisos = avisos; q.entendi = usado; q.fix = pre.fix; return q;
+  if (!cand.length && !q.perfil){ const fx = fraseFiltros(q), per = mes>=0 ? ' en '+MES[mes] : ''; q.sugs = ['rescatados','ingresos','NNA canalizados'].map(x => x+(fx ? ' '+fx : '')+per); } q.avisos = avisos; q.entendi = usado; q.fix = pre.fix; return q;
 }
 
 /* ---- Perfil: todo lo del Pulso para una nacionalidad o una O.R. en el periodo. Se activa al escribir solo el país
@@ -597,7 +597,7 @@ const BASEOP = anim => ({ textStyle:{ fontFamily:'Barlow, sans-serif', color:'#2
   tooltip:{ backgroundColor:'#2B2926', borderWidth:0, textStyle:{ color:'#F4F2EA', fontSize:12 }, extraCssText:'border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)' } });
 const eje = o => Object.assign({}, EJE, o, { axisLabel:Object.assign({}, EJE.axisLabel, o && o.axisLabel), splitLine:Object.assign({}, EJE.splitLine, o && o.splitLine) });
 const partir = (t, n) => String(t).split(' ').reduce((a,w) => { const u = a[a.length-1]; if (u && (u+' '+w).length<=n) a[a.length-1] = u+' '+w; else a.push(w); return a; }, []).join('\n');
-const corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' k' : miles(n);
+const corto = n => n>=1e6 ? (n/1e6).toFixed(2)+' M' : n>=1e4 ? (n/1e3).toFixed(1)+' mil' : miles(n);
 const etiq = (v, nna) => nna && v>0 && v<5 ? '<5' : corto(v);
 // Barras verticales de mayor a menor, con el valor encima (como «Totales»)
 function opBarrasV(l, nna, col){ return { grid:{ left:46, right:10, top:24, bottom:l.some(x => x[0].length>11) ? 44 : 30 }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => '<b>'+esc(l[p[0].dataIndex][0])+'</b><br>'+cifra(p[0].value, nna) },
