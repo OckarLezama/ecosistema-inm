@@ -638,7 +638,7 @@ function comparte(como){ $('cm').classList.remove('on'); const u = location.orig
   e.zrX = (e.clientX-b.left)/k; e.zrY = (e.clientY-b.top)/k; }, { capture:true, passive:true }));
 setPer('shein');
 return { pausa(){ clearTimeout(HT); clearTimeout(capas.t); $('pm').classList.remove('on'); bqCierra(); },
-  sigue(){ fijaZ(); MAPEL.style.width = ''; MAPEL.style.height = ''; if (conTam(MAPEL)) MAP.resize(); VIEW = null; if (FICHA) ficha(FICHA[0], FICHA[1]); else if (CUR>=0) tab(TAB); else hl(HI); } };
+  sigue(){ fijaZ(); MAPEL.style.width = ''; MAPEL.style.height = ''; if (conTam(MAPEL)) MAP.resize(); VIEW = null; if (FICHA || CUR>=0) cerrar(); else hl(HI); } };   // al volver a entrar abre limpio: sin la hoja o la ficha que quedó abierta (el periodo se conserva)
 
 }
 function abrir(op){ op = op || {};

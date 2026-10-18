@@ -19,7 +19,24 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await p.goBack(); await p.waitForTimeout(2500); ok(/Control migratorio/.test(await p.evaluate(() => document.querySelector('#vista-otra h1').textContent)), 'atrás: de Regulación a Control');
   await p.goBack(); await p.waitForTimeout(2000); ok(await p.evaluate(() => !document.getElementById('vista-pulso').hidden), 'atrás: de Control al Pulso, sin salir de la plataforma');
   await p.goForward(); await p.waitForTimeout(2500); ok(/Control migratorio/.test(await p.evaluate(() => document.querySelector('#vista-otra h1').textContent)), 'adelante: vuelve a Control');
+  // Lo que cambió: sin «concentración» (no es un cambio) y nada de temporada (hace un año, mismo sentido y al menos la mitad)
+  await p.goBack(); await p.waitForTimeout(2000);
+  for (const v of ['30','sem','90']){
+    await p.evaluate(v => { const s = document.getElementById('cmp-sel'); if (s){ s.value = v; s.dispatchEvent(new Event('change', { bubbles:true })); } }, v); await p.waitForTimeout(1500);
+    const avs = await p.evaluate(() => [...document.querySelectorAll('#analisis .av')].map(e => ({ k:e.querySelector('.av-k').textContent, v:e.querySelector('.av-v').textContent, tx:e.querySelector('.tx').textContent, ya:(e.querySelector('.av-ya')||{}).textContent || '' })));
+    ok(avs.every(a => !/concentración/.test(a.k)), 'Lo que cambió ('+v+'): sin concentración');
+    avs.filter(a => a.ya).forEach(a => { const dl = +a.v.replace(/[^\d]/g,'') * (/bajaron/.test(a.tx) ? -1 : 1), m = a.ya.match(/([+−])(\d+)%/), ya = m ? +m[2]*(m[1]==='−'?-1:1) : null;
+      ok(ya!=null && !(Math.sign(dl)===Math.sign(ya) && Math.abs(ya) >= Math.abs(dl)/2 + 1), 'Lo que cambió ('+v+'): «'+a.tx+'» es de temporada ('+a.ya+')'); }); }
   await p.close();
+  // Resumen: si se sale con una hoja abierta, al volver a entrar abre limpio
+  { const q = await abre(1600, 900); const vz = s => q.locator('#vistazo').locator(s);
+    await q.dblclick('#b-vz'); await vz('.ch').first().waitFor({ timeout:60000 }); await q.waitForTimeout(2200);
+    await vz('.ch[data-i="3"]').click(); await q.waitForTimeout(1200);
+    const abierta = await q.evaluate(() => document.getElementById('vistazo').shadowRoot.getElementById('app').classList.contains('sel'));
+    await q.evaluate(() => window.IANAMI_VISTAZO.cerrar()); await q.waitForTimeout(600);
+    await q.evaluate(() => window.IANAMI_VISTAZO.abrir()); await q.waitForTimeout(1500);
+    const sigue = await q.evaluate(() => document.getElementById('vistazo').shadowRoot.getElementById('app').classList.contains('sel'));
+    ok(abierta && !sigue, 'Resumen: al volver a entrar abre sin la hoja que quedó abierta ('+abierta+' → '+sigue+')'); await q.close(); }
   for (const w of [360, 390, 430]){ const m = await abre(w, 844, true);
     const ancho = () => m.evaluate(() => document.documentElement.scrollWidth);
     ok(await ancho()<=w+1, w+' Pulso no ensancha la página');

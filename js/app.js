@@ -497,12 +497,24 @@ function sumaCompleta(k, F, q0, q1){
 const fechaIdx = i => { const f = fechaBase(i); return f.getDate()+' '+MES12[f.getMonth()]+' '+String(f.getFullYear()).slice(2); };
 function cmpDisponible(o){ if (o==='sem') return !!semanasCmp(ND); return o==='aa' ? idxBase(isoDe(new Date(INICIO.getFullYear()-1, INICIO.getMonth(), INICIO.getDate()))) >= 0 : 2*o<=ND; }
 function validarCmp(){ if (['sem',30,90].indexOf(S.cmp)<0 || !cmpDisponible(S.cmp)) S.cmp = [30,'sem',90].find(cmpDisponible) || 30; }
+// Temporada: el mismo cambio medido en las mismas fechas de hace un año (52 semanas antes, en las bases completas).
+// Tramos en días del periodo: a = el reciente, b = el de comparación. Da el % de hace un año o null si no se puede medir.
+function haceUnAnio(k, F, a0, a1, b0, b1){
+  if (cmpFijo() || S.cmp==='aa') return null;            // comparar contra el año anterior ya descuenta la temporada
+  const q = P0-364; if (q+Math.min(a0,b0) < 0) return null;
+  const A = sumaCompleta(k, F, q+a0, q+a1), B = sumaCompleta(k, F, q+b0, q+b1);
+  if (A==null || B==null || B < 30) return null;
+  return ((A/(a1-a0))/(B/(b1-b0))-1)*100;
+}
+// Un hallazgo es de temporada si hace un año pasó lo mismo: mismo sentido y al menos la mitad del cambio
+const deTemporada = (dl, ya) => ya!=null && Math.sign(dl)===Math.sign(ya) && Math.abs(ya) >= Math.abs(dl)/2;
 function analizar(F){
   const out = [], N = cmpN(), umbral = N>=30 ? 15 : 25;
   INDS.forEach(m => {
     if (F.nd!=null && !m.nat) return;
     const d = diario(m.k, F), v = variacion(d);
-    if (v.ok && Math.abs(v.dl)>=umbral) out.push({t:'cambio', k:m.k, dl:v.dl, a:v.a, b:v.b, imp:Math.abs(v.a-v.b)});
+    if (v.ok && Math.abs(v.dl)>=umbral){ const U = finDatos(m.k), w = S.cmp==='sem' ? semanasCmp(U) : [U-N, U, U-2*N, U-N], ya = w ? haceUnAnio(m.k, F, w[0], w[1], w[2], w[3]) : null;
+      if (!deTemporada(v.dl, ya)) out.push({t:'cambio', k:m.k, dl:v.dl, a:v.a, b:v.b, ya:ya, imp:Math.abs(v.a-v.b)}); }
     const base = d.slice(Math.max(0,ND-70), ND-14).sort((x,y)=>x-y), mitad = base.length>>1, med = base[mitad] || 0;   // lo habitual: 8 semanas previas
     const des = base.map(x=>Math.abs(x-med)).sort((x,y)=>x-y)[mitad]*1.4826 || 1;
     let mejor = null;
@@ -517,17 +529,16 @@ function analizar(F){
     [['resc',300],['ing',4000],['rech',150]].forEach(par => { const k = par[0]; let mejor = null;
       for (let n=0;n<OT;n++){ if (F.r && D.nats[n][2]!==S.region) continue; const a = sumaSem(k,w[0],w[1],F.ss,n)/w[4], b = sumaSem(k,w[2],w[3],F.ss,n)/w[5];
         if (b*28>=par[1]){ const dl = (a/b-1)*100; if (Math.abs(dl)>=25 && (!mejor || Math.abs(dl)>Math.abs(mejor.dl))) mejor = {n:n, dl:dl, a:a, b:b}; } }
-      if (mejor) out.push({t:'nac', k:k, n:mejor.n, dl:mejor.dl, a:mejor.a, b:mejor.b, imp:Math.abs(mejor.a-mejor.b)*N});
+      if (mejor){ const dd = x => x>0 ? D.ends[x-1] : 0, ya = haceUnAnio(k, {ss:F.ss, n:mejor.n}, dd(w[0]), D.ends[w[1]], dd(w[2]), D.ends[w[3]]);
+        if (!deTemporada(mejor.dl, ya)) out.push({t:'nac', k:k, n:mejor.n, dl:mejor.dl, a:mejor.a, b:mejor.b, ya:ya, imp:Math.abs(mejor.a-mejor.b)*N}); }
     });
-    const tr = topNats(n => !F.r || D.nats[n][2]===S.region ? sumaSem('rech',0,NW-1,F.ss,n) : 0, 1)[0], tot = sumaSem('rech',0,NW-1,F.ss,F.r);
-    if (tr && tot>=200 && tr[1]/tot>=0.4) out.push({t:'conc', k:'rech', n:tr[0], a:tr[1], b:tot, imp:tr[1]/4});
   }
   if (!F.ss && F.nd==null){                     // estados que más se movieron (antes eran los puntos que parpadeaban)
     const o = [];
     INDS.forEach(m => { const a = D.ds[m.k], U = finDatos(m.k);
       for (let s=0;s<NS;s++){ let x = 0, y = 0;
         for (let d=U-N;d<U;d++) x += a[d*NS+s]; for (let d=U-2*N;d<U-N;d++) y += a[d*NS+s];
-        if (2*N<=U && y>=(N>=30?80:25)){ const dl = (x/y-1)*100; if (Math.abs(dl)>=40) o.push({t:'est', k:m.k, s:s, dl:dl, a:x, b:y, imp:Math.abs(x-y)}); } } });
+        if (2*N<=U && y>=(N>=30?80:25)){ const dl = (x/y-1)*100; if (Math.abs(dl)>=40){ const ya = haceUnAnio(m.k, {ss:[s]}, U-N, U, U-2*N, U-N); if (!deTemporada(dl, ya)) o.push({t:'est', k:m.k, s:s, dl:dl, a:x, b:y, ya:ya, imp:Math.abs(x-y)}); } } } });
     o.sort((x,y)=>y.imp-x.imp); const vistos = {}; let c = 0;
     o.forEach(r => { if (!vistos[r.s] && c<3){ vistos[r.s] = 1; c++; out.push(r); } });
   }
@@ -558,7 +569,7 @@ function filaAviso(a, i){
   else if (a.t==='conc'){ const p = pct(a.a,a.b); ic = '<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="'+c+'" stroke-width="3" stroke-dasharray="'+(p*0.283).toFixed(1)+' 28.3" transform="rotate(-90 6 6)"/></svg>'; ci = p+'%'; }
   else if (a.t==='pico'){ ic = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 10l3-3 2 2 5-7" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; ci = '▲ '+Math.round((a.v/Math.max(a.med,1)-1)*100)+'%'; }
   else { ic = tri(a.dl>=0, c); ci = Math.abs(a.dl).toFixed(0)+'%'; }
-  return '<button class="av" data-av="'+i+'" style="--c:'+c+'"><span class="av-t"><span class="av-k">'+eti+'</span><span class="av-v">'+ic+ci+'</span></span><span class="tx">'+textoAviso(a)+'</span></button>';
+  return '<button class="av" data-av="'+i+'" style="--c:'+c+'"><span class="av-t"><span class="av-k">'+eti+'</span><span class="av-v">'+ic+ci+'</span></span><span class="tx">'+textoAviso(a)+'</span>'+(a.ya!=null ? '<span class="av-ya">Hace un año en estas fechas: '+(a.ya>=0?'+':'−')+Math.abs(a.ya).toFixed(0)+'%</span>' : '')+'</button>';
 }
 function abrirAviso(i){ const a = AVISOS[i]; if (!a) return;
   if (a.t==='car'){ verCaravana(a.c); return; }
@@ -1225,7 +1236,7 @@ function pintarDocs(){
 function pintarAnalisis(){
   const F = filtro(); AVISOS = analizar(F).filter(a => !S.ind || a.k===S.ind || (a.t==='car' && S.ind==='resc'));   // con un indicador elegido, solo sus cambios
   const quien = (S.ind ? IND[S.ind].n+' · ' : '')+(nombreFiltro() || 'todo el país');
-  $('analisis').innerHTML = '<h2><span>Lo que cambió</span>'+infoP('Cambios recientes que conviene atender: indicadores que subieron o bajaron más de lo normal, nacionalidades o estados que se movieron y caravanas. La comparación es contra el periodo de «Comparar con». Solo aparece cuando el periodo llega a hoy.')+(AVISOS.length ? '<small class="av-n">'+AVISOS.length+' hallazgos</small>' : '')+'</h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
+  $('analisis').innerHTML = '<h2><span>Lo que cambió</span>'+infoP('Cambios recientes que conviene atender: indicadores que subieron o bajaron más de lo normal, nacionalidades o estados que se movieron y caravanas. La comparación es contra el periodo de «Comparar con». No aparece lo que es de temporada: si hace un año en estas mismas fechas pasó lo mismo, no es noticia. Solo aparece cuando el periodo llega a hoy.')+(AVISOS.length ? '<small class="av-n">'+AVISOS.length+' hallazgos</small>' : '')+'</h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
     (AVISOS.length ? '<div class="avisos-lista">'+AVISOS.map(filaAviso).join('')+'</div>' : '<span class="mini">Sin cambios relevantes con este filtro.</span>');
 }
 const barrasNat = (l, color) => { const mx = l.length?l[0][1]:1; return l.map(r => '<button class="barra" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+color+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); };
