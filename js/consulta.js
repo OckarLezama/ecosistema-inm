@@ -805,7 +805,7 @@ const AYUDA = [
   ['Cuántos', 'Un indicador, con país, estado o fecha', ['rescatados en noviembre', 'trámites de Venezuela', 'repatriados en Tamaulipas']],
   ['De los… cuántos', 'Una parte de un total', ['de los rescatados cuántos fueron canalizados', 'de los repatriados cuántos son NNA']],
   ['Por', 'Repartir por nacionalidad, O.R., vía o tipo', ['NNA de Colombia por O.R.', 'rescatados por nacionalidad', 'ingresos por vía']],
-  ['Cambio', 'Qué subió o bajó, y comparar dos periodos', ['qué nacionalidad de rescatados creció más', 'rescatados que más bajaron por O.R.', 'internaciones noviembre contra diciembre']],
+  ['Cambio', 'Qué subió o bajó, y comparar dos periodos', ['qué nacionalidad de rescatados creció más', 'rescatados que más bajaron por O.R.', 'ingresos noviembre contra diciembre']],
   ['Otros temas', 'Encuentros en EE. UU., caravanas, Registro Civil, documentos vigentes y mexicanos', ['encuentros de mexicanos por sector', 'caravanas 2025', 'validaciones del registro civil', 'documento vigente Venezuela', 'mexicanos que ingresaron', 'todos los ingresos']],
   ['Fechas relativas', 'Se cuentan hacia atrás desde el último dato', ['rescatados últimos 30 días', 'trámites últimas 2 semanas', 'repatriados últimos 3 meses', 'ingresos último trimestre', 'rescatados primera quincena de noviembre']]
 ];
@@ -813,7 +813,7 @@ const AYUDA_NOTAS = ['La respuesta sale primero en <b>una frase</b>; abajo, la g
   'Si algo no se entiende o tiene un error de dedo, aparece <b>«¿Quisiste decir?»</b> con opciones para tocar.',
   'A <b>«¿Por qué…?»</b> responde con lo que muestran los datos (cuánto, dónde, cuándo) y lo avisa: no da causas ni pronósticos.',
   'Cada parte de la consulta es una pieza: tócala para cambiarla o usa × para quitarla.'];
-const EJ = ['de los rescatados cuántos fueron canalizados', 'NNA de Colombia por O.R.', 'qué nacionalidad de rescatados creció más', 'internaciones noviembre contra diciembre'];
+const EJ = ['de los rescatados cuántos fueron canalizados', 'NNA de Colombia por O.R.', 'qué nacionalidad de rescatados creció más', 'ingresos noviembre contra diciembre'];
 function montar(){
   if ($('cq')) return;
   const m = document.createElement('div'); m.id = 'cq'; m.className = 'cq'; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); m.setAttribute('aria-labelledby','cq-t'); m.hidden = true;

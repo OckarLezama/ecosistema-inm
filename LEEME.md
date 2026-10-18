@@ -166,6 +166,9 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 - **Segunda revisión y rechazos:** solo extranjeros en todas las vistas; los casos con nacionalidad mexicana se avisan en Bases.
 - **Retornados:** deportados + retornos asistidos (así el desglose cuadra con el total); si la columna del total no coincide, se avisa en Bases.
 - **Cifras en las tarjetas:** número completo hasta 999,999; desde un millón, «x.xx M». En listas y comparaciones cortas, de 10,000 en adelante: «x.x mil» (nunca «k»).
+- **Periodo incompleto en las gráficas por mes o semana:** el tramo hacia ese punto va punteado y dice cuántos días tiene («13 días»), para que su cifra más baja no se lea como caída.
+- **Botón «atrás» del navegador:** regresa a la sección anterior dentro de la plataforma (cada sección conserva sus filtros); no saca del sitio.
+- **Menú:** Prospectiva y Contexto no se muestran hasta que existan (su código se conserva).
 - **Puntos en el Pulso:** son solo información en el mapa (su globo al pasar el mouse); las tarjetas de abajo siempre son del país, del estado o de la nacionalidad elegida. Un clic en un punto (o buscarlo) lleva a su análisis: punto de internación → Control › Ingresos con ese punto; estación → Control › Rescates (presentados); punto de repatriación → Protección al migrante con ese punto. En la Infografía el punto solo muestra su globo.
 - **Encuentros CBP:** los registra EE. UU. (no el INM), incluyen mexicanos y no tienen O.R.: en el Pulso la tarjeta está en «Desde EE. UU.» (recibidos → repatriados → encuentros), se desactiva al elegir un estado, funciona con nacionalidad y al elegirla el mapa muestra los sectores de la frontera. El análisis completo irá en Analizar.
 - **Rescates y recibidos:** vienen del reporte de las O.R. (DGCOR); presentados y canalizados, del sistema (DGCVM). Son fuentes distintas y no se suman.

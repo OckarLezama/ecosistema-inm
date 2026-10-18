@@ -412,11 +412,12 @@ function pintarPrincipal(){
     label:{ show:Q.eti, position:'top', fontSize:9.5, color:x.col, formatter:p => corto(p.value) } }));
   if (solo) series.push({ name:'banda-a', type:'line', data:C.lab.map(() => Math.max(0, Math.round(mu-sd))), stack:'banda', lineStyle:{ opacity:0 }, symbol:'none', silent:true, z:1 },
                         { name:'banda-b', type:'line', data:C.lab.map(() => Math.round(mu+sd - Math.max(0, mu-sd))), stack:'banda', lineStyle:{ width:1, type:'dashed', color:'rgba(47,102,87,.35)' }, symbol:'none', silent:true, z:1, areaStyle:{ color:'rgba(47,102,87,.10)' } });
+  if (window.IANAMI_INC){ const r = window.IANAMI_INC(series, k => C.inc[k]>0 ? C.inc[k] : 0); series.length = 0; r.forEach(x => series.push(x)); }   // periodo incompleto: tramo punteado
   let mesAnt = -1;
   const etiqueta = (v, k) => { const r = C.rango(k); if (!r) return v; const f = fDia(r[0]); if (C.g==='m') return '{m|'+MES[f.getMonth()]+'}\n{a|'+f.getFullYear()+'}';
     const nuevo = f.getMonth()!==mesAnt || k===0; mesAnt = f.getMonth(); return nuevo ? '{d|'+f.getDate()+'}\n{m|'+MES[f.getMonth()]+'}' : '{d|'+f.getDate()+'}'; };
   let foco = null;
-  const ch = graf('rg-evo', { tooltip:{ trigger:'axis', axisPointer:{ type:'line', lineStyle:{ color:'#9A958A', type:'dashed' } }, formatter:ps => { ps = ps.filter(p => p.seriesName.indexOf('banda')<0); if (foco!=null && ps.some(p => p.seriesIndex===foco)) ps = ps.filter(p => p.seriesIndex===foco); const k = ps[0].dataIndex;
+  const ch = graf('rg-evo', { tooltip:{ trigger:'axis', axisPointer:{ type:'line', lineStyle:{ color:'#9A958A', type:'dashed' } }, formatter:ps => { ps = ps.filter(p => p.seriesName.indexOf('banda')<0); if (window.IANAMI_INC_TT) ps = window.IANAMI_INC_TT(ps); if (!ps.length) return ''; if (foco!=null && ps.some(p => p.seriesIndex===foco)) ps = ps.filter(p => p.seriesIndex===foco); const k = ps[0].dataIndex;
       const est = C.inc[k]===-1 ? 'Semana de cierre de oficinas: muy pocos trámites' : C.inc[k] ? 'Periodo incompleto: '+plural(C.inc[k], '1 día', 'días') : tot[k]>mu+sd ? 'Arriba de lo habitual' : tot[k]<mu-sd ? 'Abajo de lo habitual' : 'Dentro de lo habitual';
       return '<b>'+may(nomPunto(C, k))+'</b><br>'+ps.map(p => p.marker+esc(p.seriesName)+': <b>'+miles(p.value)+'</b>'+(solo ? '' : ' <span style="opacity:.7">('+pct(p.value, tot[k])+'%)</span>')).join('<br>')+'<br><span style="opacity:.75">'+(solo ? est+' · ' : '')+'toca para ver qué cambió</span>'; } },
     legend:solo ? { show:false } : { top:0, left:0, textStyle:{fontSize:11.5, color:'#2B2926'}, icon:'roundRect', itemWidth:14, itemHeight:4, itemGap:16, data:L.map(x => x.nom) },

@@ -248,9 +248,10 @@ function tendencia(c){
       label:{ show:Q.eti, position:j===L.length-1 ? 'top' : 'inside', fontSize:9.5, color:j===L.length-1 ? '#2B2926' : '#fff', formatter:p => p.value ? corto(p.value) : '' } }
     : { markArea:j===0 ? marca : undefined, name:x.nom, type:'line', smooth:.35, data:datos[j].map(pt), symbol:'circle', symbolSize:C.g==='d' ? 3 : 6, lineStyle:{ width:2.6, color:x.col, type:x.dash ? 'dashed' : 'solid' }, color:x.col, emphasis:{ focus:'series', lineStyle:{ width:4 } },
       label:{ show:Q.eti, position:'top', fontSize:9.5, color:x.col, formatter:p => p.value ? corto(p.value) : '' } }));
+  if (window.IANAMI_INC){ const r = window.IANAMI_INC(series, k => C.l[k].inc); series.length = 0; r.forEach(x => series.push(x)); }   // periodo incompleto: tramo punteado
   let mesAnt = -1;
   const etiqueta = (v, k) => { const f = fDia(C.l[k].a); if (C.g==='m') return '{m|'+MES[f.getMonth()]+'}\n{a|'+f.getFullYear()+'}'; const nuevo = f.getMonth()!==mesAnt || k===0; mesAnt = f.getMonth(); return nuevo ? '{d|'+f.getDate()+'}\n{m|'+MES[f.getMonth()]+'}' : '{d|'+f.getDate()+'}'; };
-  const ch = graf(c.id, { tooltip:{ trigger:'axis', axisPointer:{ type:c.barras ? 'shadow' : 'line', lineStyle:{ color:'#9A958A', type:'dashed' } }, formatter:ps => { ps = ps.filter(p => p.seriesName.indexOf('banda')<0); const k = ps[0].dataIndex, cub = C.l[k];
+  const ch = graf(c.id, { tooltip:{ trigger:'axis', axisPointer:{ type:c.barras ? 'shadow' : 'line', lineStyle:{ color:'#9A958A', type:'dashed' } }, formatter:ps => { ps = ps.filter(p => p.seriesName.indexOf('banda')<0); if (window.IANAMI_INC_TT) ps = window.IANAMI_INC_TT(ps); if (!ps.length) return ''; const k = ps[0].dataIndex, cub = C.l[k];
       const est = cub.inc ? 'Periodo incompleto ('+cub.inc+(cub.inc===1 ? ' día' : ' días')+')' : tot[k]>mu+sd ? 'Arriba de lo habitual' : tot[k]<mu-sd ? 'Abajo de lo habitual' : 'Dentro de lo habitual';
       return '<b>'+nomCub(C, k)+'</b><br>'+ps.map(p => p.marker+esc(p.seriesName)+': <b>'+miles(p.value)+'</b>'+(solo || !tot[k] || c.barras ? '' : ' <span style="opacity:.7">('+pct(p.value, tot[k])+'%)</span>')).join('<br>')+'<br><span style="opacity:.75">'+(solo ? est : '')+(c.clic ? (solo ? ' · ' : '')+'toca para ver el detalle' : '')+'</span>'; } },
     legend:solo ? { show:false } : { type:'scroll', top:0, left:0, right:0, textStyle:{fontSize:11.5, color:'#2B2926'}, inactiveColor:'#C9C4B5', icon:'roundRect', itemWidth:14, itemHeight:4, itemGap:16, selectedMode:true, data:solo ? [c.total.nom].concat(c.extra.map(x => x.nom)) : L.map(x => x.nom) },
@@ -346,7 +347,7 @@ function pintarTr(){
     : k==='nat' ? (Q.nats.length ? Q.nats : topK(ING, i => ING.n[i], NN, {nats:null}, 5, MX)).map((n,j) => ({ nom:nomN(n), col:Q.nats.length ? COMP[j] : PAL5[j], T:ING, o:{nats:[n]} }))
     : (Q.ests.length ? Q.ests : topK(ING, i => ING.e[i], NE, {ests:null}, 5)).map((e,j) => ({ nom:nomE(e), col:Q.ests.length ? COMP[j] : PAL5[j], T:ING, o:{ests:[e]} }));
   tendencia({ id:'cv-tr', ctl:'cv-tr-c', ley:'cv-tr-l', titulo:['cv-tr-t', k => 'Ingresos'+{tot:'', via:' por vía', nat:' por nacionalidad', or:' por O.R.'}[k]], desg:Q.desgI, attr:'data-cdesgi',
-    ops:[['tot','Total'],['via','Por vía'],['nat','Por nacionalidad'],['or','Por O.R.']], total:{ nom:'Internaciones', T:ING, o:{} }, lineas:lin,
+    ops:[['tot','Total'],['via','Por vía'],['nat','Por nacionalidad'],['or','Por O.R.']], total:{ nom:'Ingresos', T:ING, o:{} }, lineas:lin,
     nota:k => ({ via:'Las tres vías.', nat:Q.nats.length ? 'Las nacionalidades que elegiste.' : 'Las 5 nacionalidades con más ingresos.', or:Q.ests.length ? 'Las O.R. que elegiste.' : 'Las 5 O.R. con más ingresos.' }[k]),
     clic:cub => { Q.sel = [cub.a, cub.b]; pintarTp(); } });
 }

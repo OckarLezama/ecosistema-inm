@@ -65,6 +65,7 @@ const casos = [
  // Fase 1: cambio entre periodos, fechas relativas y quincenas
  ['qué nacionalidad de rescatados creció más', {ind:'resc', tipo:'cambio', desg:'n', d0:UM[0], d1:UM[1]}, { total:orr(i=>enR(C.orr, C.inicio, ...UM)(i)), tA:orr(i=>enR(C.orr, C.inicio, ...UMa)(i)) }],
  ['internaciones noviembre contra diciembre', {ind:'ing', tipo:'cambio', d0:DICi[0], d1:DICi[1]}, { total:S(C.ing, i=>C.ing.n[i]!==MX && enR(C.ing, C.inicio, ...DICi)(i)), tA:S(C.ing, i=>C.ing.n[i]!==MX && enR(C.ing, C.inicio, ...NOVi)(i)) }],
+ ['ingresos noviembre contra diciembre', {ind:'ing', tipo:'cambio', d0:DICi[0], d1:DICi[1]}, { total:S(C.ing, i=>C.ing.n[i]!==MX && enR(C.ing, C.inicio, ...DICi)(i)), tA:S(C.ing, i=>C.ing.n[i]!==MX && enR(C.ing, C.inicio, ...NOVi)(i)) }],
  ['rescatados que más bajaron por O.R.', {ind:'resc', tipo:'cambio', desg:'e'}, { total:orr(i=>enR(C.orr, C.inicio, ...UM)(i)) }],
  ['rescatados últimos 30 días', {ind:'resc', d0:masD(Z,-29), d1:Z}, { total:orr(i=>enR(C.orr, C.inicio, masD(Z,-29), Z)(i)) }],
  ['NNA canalizados en el último trimestre', {ind:'nna', d0:T3[0], d1:T3[1]}, { total:S(C.nna, enR(C.nna, C.inicio, ...T3)) }],

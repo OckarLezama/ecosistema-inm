@@ -57,7 +57,8 @@ const ICONO = {
   cbp:'M3 21V9l9-6 9 6v12M3 13h18M8 21v-4h8v4M12 3v4'
 };
 // Secciones del menú (las que aún no existen muestran qué llevarán)
-const SECCIONES = [['pulso','Pulso'],['dir','Procesos'],['inf','Informes'],['prosp','Prospectiva'],['contexto','Contexto'],['bases','Bases']];
+// Prospectiva y Contexto todavía no existen: no se muestran en el menú (su vista se conserva para cuando se construyan)
+const SECCIONES = [['pulso','Pulso'],['dir','Procesos'],['inf','Informes'],['prosp','Prospectiva'],['contexto','Contexto'],['bases','Bases']].filter(s => s[0]!=='prosp' && s[0]!=='contexto');
 // Procesos del INM y las direcciones que los alimentan
 const DIRS = [
   {k:'control',    s:'Control migratorio',     n:'DGCVM y DGCOR', ind:['ing','rech','pres','can','ret','resc','recib']},
@@ -1524,9 +1525,9 @@ const INDICE = [];
 D.nats.slice(0,OT).forEach((n,i) => INDICE.push({t:'Nacionalidad', n:n[0], sel:{t:'n',i:i}}));
 EST.forEach((e,i) => INDICE.push({t:'Estado', n:e, sel:{t:'e',i:i}}));
 ['c','o'].forEach(a => AGR[a].nombres.forEach((nom,q) => INDICE.push({t:AGR[a].n, n:nom, sel:{t:'g',a:a,q:q}})));
-D.puntos.forEach((p,i) => INDICE.push({t:'Punto de ingreso', n:p.n, sel:{t:'p',tipo:'ing',i:i}}));
-D.repPuntos.forEach((p,i) => INDICE.push({t:'Repatriación', n:p.n, sel:{t:'p',tipo:'rep',i:i}}));
-D.emPuntos.forEach((p,i) => INDICE.push({t:'Estación', n:p.n, sel:{t:'p',tipo:'em',i:i}}));
+D.puntos.forEach((p,i) => INDICE.push({t:'Punto de ingreso → Control', n:p.n, sel:{t:'p',tipo:'ing',i:i}}));
+D.repPuntos.forEach((p,i) => INDICE.push({t:'Repatriación → Protección', n:p.n, sel:{t:'p',tipo:'rep',i:i}}));
+D.emPuntos.forEach((p,i) => INDICE.push({t:'Estación → Control', n:p.n, sel:{t:'p',tipo:'em',i:i}}));
 INDICE.forEach(x => x.q = sinAcento(x.n));
 let hallados = [];
 function buscar(){
@@ -1618,7 +1619,34 @@ window.IANAMI_PULSO = {
     else if (S.ind) acercarSiMundo();
     window.scrollTo(0,0); return true; }
 };
+// Gráficas por mes o semana: el periodo incompleto (al inicio o al final, a medio mes) va con tramo punteado y sus días,
+// para que su cifra más baja no se lea como una caída. Cada línea con algún periodo incompleto se parte en dos series del mismo
+// nombre (la leyenda las prende y apaga juntas). inc(k) = días con datos del periodo k si está incompleto, o 0.
+window.IANAMI_INC = function(series, inc){ const extra = [];
+  series.forEach(s => { if (s.type!=='line' || !Array.isArray(s.data) || /^banda/.test(s.name || '')) return;
+    const n = s.data.length, v = s.data.map(d => d!=null && typeof d==='object' ? d.value : d), es = k => inc(k)>0;
+    if (!v.some((_,k) => es(k))) return;
+    const dash = v.map(() => '-');
+    for (let k=0; k<n; k++) if (es(k)){ const d = inc(k);
+      dash[k] = { value:v[k], symbol:'emptyCircle', symbolSize:9, label:{ show:true, position:k===n-1 ? 'left' : k===0 ? 'right' : 'top', distance:8, fontSize:10.5, fontWeight:600, color:'#716D65', formatter:d+(d===1 ? ' día' : ' días') } };
+      if (k>0 && !es(k-1)) dash[k-1] = { value:v[k-1], symbol:'none' }; if (k<n-1 && !es(k+1)) dash[k+1] = { value:v[k+1], symbol:'none' }; }
+    s.data = s.data.map((d,k) => es(k) ? '-' : d);
+    extra.push({ name:s.name, type:'line', smooth:s.smooth, data:dash, z:s.z, color:s.color, lineStyle:Object.assign({}, s.lineStyle || {}, { type:[5,5] }), emphasis:{ disabled:true } }); });
+  return series.concat(extra); };
+// En la ayuda de esas gráficas, cada línea una sola vez y sin los huecos del tramo punteado
+window.IANAMI_INC_TT = ps => ps.filter(p => p.value!=='-' && p.value!=null && !(typeof p.value==='number' && isNaN(p.value))).filter((p,i,a) => a.findIndex(q => q.seriesName===p.seriesName)===i);
+// «Atrás» del navegador: cada cambio de sección queda en el historial y «atrás» regresa a la anterior, con sus filtros
+// (los filtros de cada sección se conservan en memoria). La liga compartida del Resumen y la Infografía no cambian el historial.
+let NAV_HIST = false;
+function marcaHist(v){ if (NAV_HIST || SALA.on || /[?&]resumen-inami\b/.test(location.search)) return; const h = history.state, st = { ianami:true, v:v, dir:S.dir || 0 };
+  if (h && h.ianami && h.v===v && (v!=='dir' || h.dir===st.dir)) return;
+  try { if (h && h.ianami) history.pushState(st, ''); else history.replaceState(st, ''); } catch(e){} }
+window.addEventListener('popstate', e => { const st = e.state; if (!st || !st.ianami) return;
+  if (SALA.on){ if (SALA.compartida) return; cerrarSala(); }
+  NAV_HIST = true; try { if (st.v==='dir') S.dir = st.dir; irA(st.v); } finally { NAV_HIST = false; } });
+try { if (!(history.state && history.state.ianami)) history.replaceState({ ianami:true, v:S.vista || 'pulso', dir:S.dir || 0 }, ''); } catch(e){}   // la vista con la que abre
 function irA(v){
+  marcaHist(v);
   if (window.IANAMI_VISTAZO && window.IANAMI_VISTAZO.activa()) window.IANAMI_VISTAZO.cerrar();   // ir a otra sección cierra la vista tablet
   S.vista = v; pintarNav(); const pulso = v==='pulso'; $('vista-pulso').hidden = !pulso; $('vista-otra').hidden = pulso;
   if (pulso){ ajustarAlto(); reencuadrar(); ajustarLienzo(); pintarTodo(); return; }

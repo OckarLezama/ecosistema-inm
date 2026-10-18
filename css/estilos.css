@@ -351,7 +351,7 @@ button.fk:hover{background:var(--panel2)}
 @media (max-width:620px){
   .nav button:not(.on){padding:12px 7px 10px}
   .busca{flex-basis:100%;margin-left:0}
-  .varia span{display:none}
+  .varia>span:first-child,.varia .cmp-n{display:none}   /* en celular se oculta solo el texto «Comparar con» y las fechas; el combo se queda */
   .m-tit{width:auto;max-width:min(210px,calc(100% - 64px));padding:6px 9px 7px}
   .m-tit>span,.m-tit .rampa{display:none}
   .m-tit .gr svg{display:none}
@@ -1788,6 +1788,9 @@ body.en-inf{overflow:hidden}
 .ar-nl{flex:1;display:grid;gap:14px;align-content:start;margin-top:10px}.ar-ni{display:flex;gap:14px;background:#fff;border:1px solid var(--ln);border-left:4px solid var(--v);border-radius:12px;padding:14px 18px}
 .ar-ni span{font:600 30px/1 'Barlow Condensed',sans-serif;color:var(--o)}.ar-ni b{font:600 22px 'Barlow Condensed',sans-serif;color:var(--v)}.ar-ni p{font-size:19px;color:var(--k2);margin:4px 0 0;line-height:1.4}
 .an-g:has(.an-an[hidden]){grid-template-columns:minmax(0,640px)}
+/* Celular: la lista de conceptos no ensancha la página y el aviso de cambios se lee como un párrafo, no en columnas */
+@media(max-width:620px){.ar-areas{grid-template-columns:minmax(0,1fr)}.ar-areas>div,.ar-cb .tx{min-width:0}.ar-hz summary{display:block;line-height:1.45;padding:10px 34px 10px 14px;position:relative}.ar-hz summary i{position:absolute;right:12px;top:10px}
+  .ar-hzr{grid-template-columns:58px minmax(0,1fr) auto auto;gap:8px;padding:8px 10px}.ar-empty{display:none}}
 @media(max-width:620px){.ar{padding:6px 10px 130px}.ar-band{padding:18px 16px}.ar-band h1{font-size:28px}.ar-cb{min-width:0}.ar-cb .tx{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ar-lam{padding:14px 12px}.ar-frase{font-size:18px}}
 /* Arma tu informe · portada y narrativa con el estilo del informe migratorio; vía con nombre */
 .ar-cvp,.ar-cvn{--u:16px}
