@@ -434,20 +434,23 @@ function filtro(){
   return F;
 }
 const nombreRegion = () => S.region ? REGIONES[S.region][0] : '';
-function nombreFiltro(){ return [S.sel && S.sel.t==='p' ? '' : S.sel ? nombreSel() : S.agr==='c' ? 'Cinturones de contención' : S.agr==='o' ? 'Todos los CECO' : '', S.sel && S.sel.t==='n' ? '' : nombreRegion()].filter(Boolean).join(' · '); }
+function nombreFiltro(){ return [S.sel ? nombreSel() : S.agr==='c' ? 'Cinturones de contención' : S.agr==='o' ? 'Todos los CECO' : '', S.sel && S.sel.t==='n' ? '' : nombreRegion()].filter(Boolean).join(' · '); }
 const alFinal = () => S.dia>=ND && !S.play;
 const semDe = d => { for (let w=0;w<NW;w++) if (d<=D.ends[w]) return w; return NW-1; };
 const listaPuntos = tp => tp==='ing'?D.puntos:tp==='rep'?D.repPuntos:D.emPuntos;
 function nombreSel(){ const s = S.sel; if (!s) return ''; return s.t==='n'?D.nats[s.i][0]:s.t==='e'?EST[s.i]:s.t==='g'?AGR[s.a].nombres[s.q]:listaPuntos(s.tipo)[s.i].n; }
 let chart = null, AVISOS = [];
 
-// Un punto solo tiene datos de sus indicadores: punto de internación → Ingresos y Rechazos; estación → Presentados; repatriación → Repatriados
-const PUNTO_IND = { ing:['ing','rech'], em:['pres'], rep:['rep'] };
-const puntoAplica = (sel, k) => !sel || sel.t!=='p' || PUNTO_IND[sel.tipo].indexOf(k)>=0;
-function fijarInd(k){ S.ind = (S.ind===k ? null : k); if (!puntoAplica(S.sel, S.ind)) S.sel = null; pintarTodo(); if (S.ind) acercarSiMundo(); }   // segundo clic lo apaga; otro indicador quita el punto
+// En el Pulso un punto no se elige (las tarjetas de abajo son siempre del país, estado o nacionalidad): el clic lleva a su proceso,
+// donde está su análisis completo. Punto de internación → Control › Ingresos con ese punto; estación → Control › Rescates (presentados);
+// punto de repatriación → Protección al migrante con ese punto.
+function irPunto(tp, i){ const P = listaPuntos(tp)[i]; if (!P || !window.IANAMI_NAV) return;
+  if (tp==='ing') window.IANAMI_NAV.ir('control', { vista:'int', ptos:[P.n] });
+  else if (tp==='em') window.IANAMI_NAV.ir('control', { vista:'est', em:'pre' });
+  else window.IANAMI_NAV.ir('proteccion', { ptos:[P.n.replace(/\(vuelos\)$/, '(vuelos PRIM)')] }); }
+function fijarInd(k){ S.ind = (S.ind===k ? null : k); pintarTodo(); if (S.ind) acercarSiMundo(); }   // segundo clic lo apaga
 function fijarSel(sel, volar){ S.sel = sel; if (S.ind==='rep' && sel && sel.t==='n') S.ind = null; if (S.ind && sinEdo(S.ind) && sel && sel.t!=='n') S.ind = null;
   if (volar && sel) prepararVuelo();                 // se apagan líneas y círculos; reaparecen al llegar
-  if (sel && !puntoAplica(sel, S.ind)) S.ind = PUNTO_IND[sel.tipo][0];   // un punto lleva a su indicador
   pintarTodo(); if (volar && sel) volarA(sel); }
 
 /* ==== [5] ANÁLISIS AUTOMÁTICO ===================================== */
@@ -923,7 +926,7 @@ function tarjeta(p){
     const nom = tp==='ing' ? ['Aéreo','Terrestre','Marítimo'][P.t]+' · ingresos' : tp==='rep' ? 'Punto de repatriación' : 'Presentados';
     const extra = tp==='ing' ? '<div class="g">Quién entra por aquí</div>'+P.top.slice(0,3).map(r => fila(esc(typeof r[0]==='number'?D.nats[r[0]][0]:r[0]), r[1]/P.top[0][1], corto(r[1]), col)).join('')+(P.seg?dato('Rechazos en segunda revisión', miles(P.rech)):'')
                 : tp==='rep' ? dato('Menores', miles(P.men))+dato('No acompañados', miles(P.na)) : '';
-    return '<div class="tt"><b class="h">'+esc(P.n)+'</b><span class="s">'+nom+' · ubicación aproximada</span><span class="v">'+miles(p.data.value[2])+'</span>'+chispa(P.wk,232,30,col,sem)+extra+'<span class="f">'+accion('abrir su ficha', true)+'</span></div>'; }
+    return '<div class="tt"><b class="h">'+esc(P.n)+'</b><span class="s">'+nom+' · ubicación aproximada</span><span class="v">'+miles(p.data.value[2])+'</span>'+chispa(P.wk,232,30,col,sem)+extra+(SALA.on ? '' : '<span class="f">'+accion('ver su análisis en '+(tp==='rep' ? 'Protección al migrante' : 'Control migratorio'), true)+'</span>')+'</div>'; }
   if (p.seriesId==='car'){
     if (p.data.fin!=null) return tarjetaCaravana(D.caravanas[p.data.fin]);
     const l = p.data.cars.map(j => D.caravanas[j]);
@@ -1406,15 +1409,6 @@ function pintarBajo(){
   // 1b) Principales nacionalidades (cuando no hay una elegida)
   if (F.n==null){ if (!S.ind){ cajas.push(htmlTops(F,'ing')); cajas.push(htmlTops(F,'resc')); } else if (IND[S.ind].nat) cajas.push(htmlTops(F,S.ind)); }
   if (S.ind==='rech' && F.n==null) cajas.push(cajaInternacion(F));
-  // 2) Punto elegido
-  if (s && s.t==='p'){ const tp = s.tipo, P = listaPuntos(tp)[s.i], tot = suma(P.wk,0,NW), c = colG(tp==='ing'?'reg':tp==='rep'?'usa':'irr');
-    let h = '<div class="caja" data-propia="1"><h2><span>'+esc(P.n)+'</span></h2><span class="mini">'+(tp==='ing' ? ['Punto aéreo','Punto terrestre','Punto marítimo'][P.t]+' · '+EST[P.s] : tp==='rep' ? 'Punto de repatriación · '+EST[P.s] : 'Estación o estancia migratoria')+' · ubicación aproximada</span>'+
-      '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span><span class="num" style="font-size:30px">'+miles(tot)+'</span><br><span class="mini">'+(tp==='ing'?'ingresos':tp==='rep'?'mexicanos repatriados':'presentados')+' en el periodo</span></span>'+chispa(P.wk,130,40,c,semDe(S.dia))+'</div>';
-    if (tp==='ing'){ const mxv = P.top.length?P.top[0][1]:1;
-      h += '<hr class="sep"><span class="mini"><b>Quién entra por aquí</b> · '+pct(P.mx,tot)+'% mexicanos</span>'+P.top.map(r => '<div class="barra"><span>'+esc(typeof r[0]==='number'?D.nats[r[0]][0]:r[0])+'</span><span class="b"><i style="width:'+(r[1]/mxv*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></div>').join('')+
-        (P.seg ? '<span class="mini"><b>Segunda revisión:</b> '+miles(P.seg)+' casos, '+miles(P.rech)+' rechazos ('+pct(P.rech,P.seg)+'%).</span>' : ''); }
-    if (tp==='rep') h += '<hr class="sep"><span class="mini"><b>'+miles(P.men)+'</b> menores, '+miles(P.na)+' no acompañados · <b>'+pct(P.muj,tot)+'%</b> mujeres.</span>';
-    cajas.push(h+'</div>'); }
   // 3) Lugares: con indicador, el suyo; sin indicador, el par regular e irregular
   if (S.ind) cajas.push(cajaLugares(S.ind, F)); else { cajas.push(cajaLugares('ing', F)); cajas.push(cajaLugares('resc', F)); }
   // 4) Composición del indicador, con su tarjeta complementaria
@@ -1543,6 +1537,7 @@ function buscar(){
   el.innerHTML = hallados.length ? hallados.map((x,i) => '<button data-r="'+i+'" class="'+(i?'':'act')+'"><span>'+esc(x.n)+'</span><small>'+x.t+'</small></button>').join('') : '<span class="mini" style="padding:6px 9px;display:block">Sin coincidencias</span>';
 }
 function elegir(i){ const x = hallados[i]; if (!x) return; $('buscar').value = ''; $('res').hidden = true;
+  if (x.sel.t==='p'){ irPunto(x.sel.tipo, x.sel.i); return; }
   if (x.sel.t==='g') S.agr = x.sel.a; fijarSel(x.sel, true); }
 function pintarNav(){ $('nav').innerHTML = SECCIONES.map(s => s[0]==='dir'
   ? '<button data-menu-dir aria-haspopup="true" aria-expanded="false" class="'+(S.vista==='dir'?'on':'')+'">Procesos ▾</button>'
@@ -2366,7 +2361,7 @@ function iniciar(){
     const mismo = sel => S.sel && S.sel.t===sel.t && S.sel.i===sel.i && S.sel.a===sel.a && S.sel.q===sel.q;      // segundo clic en lo mismo: se quita
     const elegirMapa = (sel, volar) => mismo(sel) ? fijarSel(null, false) : fijarSel(sel, volar);
     if (p.seriesId==='bub' || p.seriesId==='lat') elegirMapa({t:'n', i:p.data.nat}, false);
-    else if (p.seriesId==='pts') fijarSel({t:'p', tipo:p.data.pTipo, i:p.data.pt}, false);
+    else if (p.seriesId==='pts'){ if (!SALA.on) irPunto(p.data.pTipo, p.data.pt); }   // en la Infografía el punto solo muestra su globo
     else if (p.seriesId==='car'){ S.carSel = p.data.fin!=null ? p.data.fin : null; pintarMapa(); }
     else if (p.name && p.name.indexOf('MX_')===0){ const s = ECLAVE.indexOf(p.name); if (s<0) return;
       if (S.agr!=='e' && AGR[S.agr].de[s]>=0) elegirMapa({t:'g', a:S.agr, q:AGR[S.agr].de[s]}, false); else elegirMapa({t:'e', i:s}, false); }
