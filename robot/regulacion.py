@@ -124,7 +124,7 @@ def codificar(t):
 def vigentes(origen):
     """Documentos vigentes: estado × países (los 25 que trae el archivo) y tipo de tarjeta × sexo."""
     o = {}
-    for ruta in sorted(glob.glob(os.path.join(origen, "*.xlsx"))):
+    for ruta in lector.por_entrega(glob.glob(os.path.join(origen, "*.xlsx")), origen):   # si hay varias entregas, la más reciente queda al final y manda
         fila0 = [norm(x) for x in lector.primera_fila(ruta)]
         if not ("OTROS PAISES" in fila0 or (fila0 and fila0[0] in ("NACIONALIDAD", "O.R.") and "TOTAL GENERAL" in fila0)):
             continue                                         # solo se abren completos los archivos de documentos vigentes
@@ -197,7 +197,7 @@ def validaciones(origen):
     """Validación de actas del Registro Civil. Nunca se publican número de acta, oficialía, libro ni municipio.
     Desde oct 2026 llega la base histórica (may 2025 en adelante), con un renglón vacío arriba del encabezado."""
     base = "Validación del Registro Civil"
-    for ruta in sorted(glob.glob(os.path.join(origen, "*.xlsx"))):
+    for ruta in reversed(lector.por_entrega(glob.glob(os.path.join(origen, "*.xlsx")), origen)):   # cada entrega trae la base completa: se usa la más reciente
         if os.path.basename(ruta).startswith("~$"):
             continue
         hoja, k = _encabezado_va(ruta)

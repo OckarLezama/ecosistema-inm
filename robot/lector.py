@@ -12,13 +12,13 @@ Reglas
     que la primera (las tablas dinámicas o copias viejas se ignoran y se avisa).
   · Encabezados: mayúsculas, sin acentos ni espacios sobrantes; los errores de
     escritura conocidos se corrigen y se avisan (ALIAS).
-  · Si dos archivos traen el mismo día, se queda el que llega más lejos en
-    fechas (el más reciente) y se avisa. Así un reenvío corregido no cuenta doble.
+  · Gana la entrega más reciente y cada archivo manda en todo su rango de fechas;
+    las correcciones se reconocen por el nombre («CORRECCION 2026-09»). Ver [3].
   · Todo se toma desde INICIO (el periodo de la presidenta); lo anterior se avisa.
   · Nombre sugerido de los archivos: «FUENTE BASE AAAA-MM-DD a AAAA-MM-DD.xlsx».
     El nombre no decide nada: si sus fechas no coinciden con el contenido, se avisa.
 
-ÍNDICE  [1] UTILIDADES   [2] HOJAS   [3] JUNTAR   [4] AVISOS
+ÍNDICE  [1] UTILIDADES   [2] HOJAS   [3] JUNTAR   [4] AVISOS   [5] BITÁCORA
 """
 import os
 import re
@@ -52,6 +52,7 @@ def avisar(base, texto):
 
 def fechas_del_nombre(nombre):
     """«… 2026-10-13 a 2026-10-19.xlsx» → (desde, hasta); «… al 2026-10-12» o «… 2025» también."""
+    nombre = sin_entrega(nombre)
     f = re.findall(r"(20\d\d)-(\d\d)-(\d\d)", nombre)
     if f:
         d = [pd.Timestamp(int(a), int(m), int(x)) for a, m, x in f]
@@ -127,16 +128,89 @@ def tabla_de(ruta, base=None, acepta=None):
 
 
 # ==== [3] JUNTAR ==================================================
+# Reglas de carga (también para correcciones de un mes completo):
+#   1. Gana la entrega más reciente. Fecha de entrega: la que diga el nombre («… entregado 2026-10-17»);
+#      si no dice, cuándo entró el archivo al repositorio (git). Si no se sabe, una corrección va después de lo que
+#      corrige y, entre envíos normales, el que llega más lejos (como antes).
+#   2. Cada archivo manda en todo su rango de fechas: los días de ese rango se toman solo de él, aunque un
+#      día no venga (cuenta como cero) y aunque una entrega anterior sí lo trajera. Nada se suma dos veces.
+#   3. Tipo de envío por el nombre: si dice «CORRECCION» es una corrección y su rango es el que dice el nombre
+#      («… CORRECCION 2026-09.xlsx» = todo septiembre; «… CORRECCION 2026-09-01 a 2026-09-15.xlsx»);
+#      cualquier otro es un envío de días nuevos y su rango es del primer al último día que trae.
+#   4. Cada corrida deja huella por base y día (renglones y total); la siguiente compara y anota en la bitácora
+#      qué cambió (datos/bitacora.js, sección Bases).
 def dia(serie):
     return pd.to_datetime(serie, errors="coerce", dayfirst=True).dt.normalize()
 
 
-def juntar(partes, base, col_dia="DIA"):
-    """partes: [(archivo, tabla con encabezados normalizados)]. Junta en orden de fechas; un día que
-    aparece en dos archivos se toma del que llega más lejos. Recorta antes de INICIO."""
-    if col_dia not in partes[0][1].columns:                 # sin fechas (catálogos, cortes): el último archivo
+def es_correccion(nombre):
+    return "CORRECCION" in norm(nombre)
+
+
+def rango_del_nombre(nombre):
+    """Rango que declara el nombre: «2026-09-01 a 2026-09-30», «2026-09» (el mes completo) o «2026-08 a 2026-09»."""
+    nombre = sin_entrega(nombre)
+    f = re.findall(r"(20\d\d)-(\d\d)-(\d\d)", nombre)
+    if f:
+        d = [pd.Timestamp(int(a), int(m), int(x)) for a, m, x in f]
+        return min(d), max(d)
+    m = re.findall(r"(20\d\d)-(\d\d)(?!-?\d)", nombre)
+    if m:
+        d = [pd.Timestamp(int(a), int(b), 1) for a, b in m]
+        return min(d), max(d) + pd.offsets.MonthEnd(0)
+    return None
+
+
+def sin_entrega(nombre):
+    """El nombre sin «entregado AAAA-MM-DD» (esa fecha es de la entrega, no del periodo que trae)."""
+    return re.sub(r"(?i)\b(entregad[oa]|recibid[oa]|enviad[oa]|entrega)\s+20\d\d-\d\d-\d\d", "", nombre)
+
+
+FECHA_ENTREGA = re.compile(r"(?:ENTREGAD[OA]|RECIBID[OA]|ENVIAD[OA]|ENTREGA)\s+(20\d\d)-(\d\d)-(\d\d)")
+
+
+def entrega_de(nombre, origen=None):
+    """Momento de la entrega (segundos): lo que diga el nombre, si no cuándo entró al repositorio (git); si no, 0."""
+    m = FECHA_ENTREGA.search(norm(nombre))
+    if m:
+        return pd.Timestamp(int(m.group(1)), int(m.group(2)), int(m.group(3)), 23, 59).timestamp(), "nombre"
+    if origen:
+        ruta = os.path.join(origen, nombre)
+        try:
+            import subprocess
+            r = subprocess.run(["git", "log", "--diff-filter=AM", "-1", "--format=%ct", "--", nombre], cwd=origen, capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and r.stdout.strip():
+                return float(r.stdout.strip()), "repositorio"
+        except Exception:
+            pass
+    return 0.0, "sin fecha"      # la fecha del archivo en disco no sirve (al copiar o clonar cambia): se ordena por tipo y alcance
+
+
+def por_entrega(rutas, origen):
+    """Rutas ordenadas de la entrega más antigua a la más reciente (para bases que llegan completas cada vez: cortes y validaciones)."""
+    return sorted(rutas, key=lambda r: (entrega_de(os.path.basename(r), origen)[0], os.path.basename(r)))
+
+
+MEDIDAS = ("TOTAL", "PRESENTADOS", "RETORNADOS A SU PAIS", "EXTRANJEROS RECIBIDOS DE EE.UU.", "MEXICANOS REPATRIADOS", "PERSONAS")
+HUELLAS = {}          # base → {día: [renglones, total]} de esta corrida (para la bitácora)
+CAMBIOS = {}          # base → [archivos más recientes y su tipo] (para la bitácora)
+
+
+def huella(base, t, col):
+    med = next((c for c in MEDIDAS if c in t.columns), None)
+    g = t.groupby(col)
+    filas = g.size()
+    tot = g[med].apply(lambda s: float(pd.to_numeric(s, errors="coerce").fillna(0).sum())) if med else filas.astype(float)
+    HUELLAS[base] = {str(d.date()): [int(filas[d]), round(float(tot[d]), 2)] for d in filas.index}
+
+
+def juntar(partes, base, col_dia="DIA", origen=None):
+    """partes: [(archivo, tabla con encabezados normalizados)]. Junta según las reglas de arriba y recorta antes de INICIO."""
+    if col_dia not in partes[0][1].columns:                 # sin fechas (cortes): la entrega más reciente
         if len(partes) > 1:
-            avisar(base, "Hay " + str(len(partes)) + " archivos de esta base y no trae fechas: se usa " + partes[-1][0] + ".")
+            k = max(range(len(partes)), key=lambda i: (entrega_de(partes[i][0], origen)[0], partes[i][0]))
+            avisar(base, "Hay " + str(len(partes)) + " archivos de esta base y no trae fechas: se usa la entrega más reciente, " + partes[k][0] + ".")
+            return partes[k][1].reset_index(drop=True)
         return partes[-1][1].reset_index(drop=True)
     info = []
     for nombre, t in partes:
@@ -150,30 +224,57 @@ def juntar(partes, base, col_dia="DIA"):
             avisar(base, f"{nombre}: no trae renglones con fecha.")
             continue
         a, b = t["_D"].min(), t["_D"].max()
+        corr = es_correccion(nombre)
         fn = fechas_del_nombre(nombre)
-        if isinstance(fn, int) and (a.year != fn or b.year != fn):
-            avisar(base, f"{nombre}: el nombre dice {fn}, pero trae {a.date()} a {b.date()}.")
-        elif isinstance(fn, tuple) and (fn[0] > a + pd.Timedelta(days=6) or fn[1] < b - pd.Timedelta(days=6) or fn[1] > b + pd.Timedelta(days=6)):
-            avisar(base, f"{nombre}: el nombre dice {fn[0].date()} a {fn[1].date()}, pero trae {a.date()} a {b.date()}.")
-        info.append((b, nombre, t))
-    info.sort(key=lambda x: (x[0], x[1]))                     # el que llega más lejos va al final y gana
-    usados, salida, filas = set(), [], {}
-    for b, nombre, t in reversed(info):
-        dias = set(t["_D"].unique())
-        rep = dias & usados
-        if rep:
-            # salvaguarda: un día que el archivo más nuevo trae con muchos menos renglones puede ser un envío incompleto
-            n_viejo = t[t["_D"].isin(rep)].groupby("_D").size()
-            bajos = [(d.date(), int(n_viejo[d]), filas[d]) for d in sorted(rep) if d in n_viejo and filas.get(d, 0) < 0.5 * n_viejo[d] and n_viejo[d] >= 20]
-            if bajos:
-                avisar(base, "Revisar: " + str(len(bajos)) + " días llegan en el archivo más reciente con menos de la mitad de renglones que en " + nombre +
-                       " (" + ", ".join(f"{d}: {nv:,} → {nn:,}" for d, nv, nn in bajos[:5]) + (" …" if len(bajos) > 5 else "") + "). Puede ser un envío incompleto.")
-            avisar(base, f"{nombre} es una versión anterior: sus {len(rep):,} días también vienen en {info[-1][1]} y se tomaron de ese. No se suma nada dos veces.")
-            t = t[~t["_D"].isin(rep)]
-        for d, n in t.groupby("_D").size().items():
-            filas.setdefault(d, int(n))
-        usados |= dias
+        rn = rango_del_nombre(nombre) if corr else None
+        if corr and rn is None:
+            avisar(base, f"{nombre}: dice CORRECCION pero el nombre no trae el periodo (ej. «… CORRECCION 2026-09.xlsx»); se corrige del {a.date()} al {b.date()}, que es lo que trae.")
+        if rn:
+            fuera = (t["_D"] < rn[0]) | (t["_D"] > rn[1])
+            if fuera.any():
+                avisar(base, f"{nombre}: es corrección del {rn[0].date()} al {rn[1].date()} y trae {int(fuera.sum()):,} renglones fuera de ese periodo; no se usan.")
+                t = t[~fuera]
+            r0, r1 = rn
+        else:
+            r0, r1 = a, b
+            if isinstance(fn, int) and (a.year != fn or b.year != fn):
+                avisar(base, f"{nombre}: el nombre dice {fn}, pero trae {a.date()} a {b.date()}.")
+            elif isinstance(fn, tuple) and (fn[0] > a + pd.Timedelta(days=6) or fn[1] < b - pd.Timedelta(days=6) or fn[1] > b + pd.Timedelta(days=6)):
+                avisar(base, f"{nombre}: el nombre dice {fn[0].date()} a {fn[1].date()}, pero trae {a.date()} a {b.date()}.")
+        ent, fuente = entrega_de(nombre, origen)
+        info.append({"n": nombre, "t": t, "r0": r0, "r1": r1, "b": b, "corr": corr, "ent": ent, "fte": fuente})
+    if not info:
+        return partes[0][1].iloc[0:0]
+    # gana la entrega más reciente; si no se sabe, una corrección va después de lo que corrige y luego el que llega más lejos
+    info.sort(key=lambda x: (x["ent"], x["corr"], x["b"], x["n"]))
+    tomados = []          # rangos ya cubiertos por entregas más recientes
+    salida, filas = [], {}
+    for x in reversed(info):
+        t, d = x["t"], x["t"]["_D"]
+        tapado = pd.Series(False, index=t.index)
+        for (q0, q1, quien) in tomados:
+            tapado |= (d >= q0) & (d <= q1)
+        if tapado.any():
+            rep = sorted(set(d[tapado].unique()))
+            n_viejo = t[tapado].groupby("_D").size()
+            bajos = [(dd.date(), int(n_viejo[dd]), filas.get(dd, 0)) for dd in rep if n_viejo[dd] >= 20 and filas.get(dd, 0) < 0.5 * n_viejo[dd]]
+            nuevo_es_corr = any(q[2]["corr"] for q in tomados)
+            if bajos and not nuevo_es_corr:
+                avisar(base, "Revisar: " + str(len(bajos)) + " días llegan en la entrega más reciente con menos de la mitad de renglones que en " + x["n"] +
+                       " (" + ", ".join(f"{a}: {nv:,} → {nn:,}" for a, nv, nn in bajos[:5]) + (" …" if len(bajos) > 5 else "") + "). Puede ser un envío incompleto.")
+            quien = next(q[2]["n"] for q in tomados if ((d[tapado] >= q[0]) & (d[tapado] <= q[1])).any())
+            avisar(base, f"{x['n']} es una entrega anterior: sus {len(rep):,} días del periodo que cubre {quien} se tomaron de ese archivo. No se suma nada dos veces.")
+            vacios = [dd for dd in rep if dd not in filas]
+            if vacios:
+                avisar(base, f"{len(vacios):,} días que traía {x['n']} no vienen en la entrega más reciente que cubre ese periodo; se cuentan en cero"
+                             f" ({', '.join(str(v.date()) for v in vacios[:5])}{' …' if len(vacios) > 5 else ''}). Si faltan por error, pedir el archivo completo.")
+            t = t[~tapado]
+        for dd, n in t.groupby("_D").size().items():
+            filas.setdefault(dd, int(n))
+        tomados.append((x["r0"], x["r1"], x))
         salida.append(t)
+    CAMBIOS[base] = [{"archivo": x["n"], "tipo": "corrección" if x["corr"] else "días nuevos", "desde": str(x["r0"].date()), "hasta": str(x["r1"].date()),
+                      "entrega": pd.Timestamp(x["ent"], unit="s").strftime("%Y-%m-%d") if x["ent"] else "", "segun": x["fte"]} for x in info]
     t = pd.concat(salida[::-1], ignore_index=True).sort_values("_D", kind="stable")
     antes = t["_D"] < INICIO
     if antes.any():
@@ -181,6 +282,7 @@ def juntar(partes, base, col_dia="DIA"):
                      "No se usan: la plataforma empieza el 1 oct 2024.")
         t = t[~antes]
     t[col_dia] = t["_D"]
+    huella(base, t, "_D")
     return t.drop(columns="_D").reset_index(drop=True)
 
 
@@ -197,7 +299,7 @@ def leer_por_columnas(origen, columnas, base, sin=frozenset()):
             partes.append((os.path.basename(ruta), t))
     if not partes:
         return None, []
-    return juntar(partes, base), [p[0] for p in partes]
+    return juntar(partes, base, origen=origen), [p[0] for p in partes]
 
 
 # ==== [3b] TRÁMITES: UN TRÁMITE, UN DOCUMENTO =======================
@@ -264,9 +366,69 @@ def guardar(destino, robot):
         except ValueError:
             todo = {}
     todo[robot] = AVISOS
+    bitacora(destino, robot)
     if PERIODOS:
         todo.setdefault("_periodos", {}).update(PERIODOS)
     os.makedirs(destino, exist_ok=True)
     with open(ruta, "w", encoding="utf-8") as f:
         f.write("// Observaciones de cada base, por robot. Lo escribe robot/lector.py · no editar a mano\n")
         f.write("window.IANAMI_OBS=" + json.dumps(todo, ensure_ascii=False, separators=(",", ":")) + ";\n")
+
+
+# ==== [5] BITÁCORA ================================================
+def _carga_js(ruta, var):
+    import json
+    if not os.path.exists(ruta):
+        return None
+    txt = open(ruta, encoding="utf-8").read()
+    try:
+        return json.loads(txt[txt.index("[", txt.index(var)):txt.rindex("]") + 1])
+    except ValueError:
+        return None
+
+
+def bitacora(destino, robot, hoy=None):
+    """Compara la huella de cada base con la corrida anterior y anota lo que cambió: días con otra cifra, días que se
+    quitaron y días nuevos, con la entrega responsable. datos/huella.json guarda la última huella; datos/bitacora.js,
+    las anotaciones (lo más reciente primero). La primera corrida solo deja la huella."""
+    import json
+    if not HUELLAS:
+        return
+    hoy = hoy or pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+    rh = os.path.join(destino, "huella.json")
+    prev = json.load(open(rh, encoding="utf-8")) if os.path.exists(rh) else {}
+    rb = os.path.join(destino, "bitacora.js")
+    lista = _carga_js(rb, "IANAMI_BITACORA") or []
+    for base, h in HUELLAS.items():
+        clave = robot + "|" + base
+        p = prev.get(clave)
+        prev[clave] = h
+        if p is None:
+            continue
+        cambio = sorted(d for d in h if d in p and h[d] != p[d])
+        quitados = sorted(d for d in p if d not in h)
+        nuevos = sorted(d for d in h if d not in p)
+        if not (cambio or quitados):
+            if nuevos:
+                lista.insert(0, {"fecha": hoy, "robot": robot, "base": base, "tipo": "días nuevos", "nuevos": len(nuevos), "desde": nuevos[0], "hasta": nuevos[-1],
+                                 "total": round(sum(h[d][1] for d in nuevos), 2)})
+            continue
+        dias = cambio + quitados
+        antes = round(sum(p[d][1] for d in dias), 2)
+        despues = round(sum(h[d][1] for d in cambio), 2)
+        porm = {}
+        for d in dias:
+            m = porm.setdefault(d[:7], [0, 0.0, 0.0])
+            m[0] += 1; m[1] += p[d][1]; m[2] += h[d][1] if d in h else 0
+        resp = [c for c in CAMBIOS.get(base, []) if c["desde"] <= dias[-1] and c["hasta"] >= dias[0]]
+        resp = resp[-1:]                                    # la entrega más reciente que cubre esos días es la que los cambió
+        lista.insert(0, {"fecha": hoy, "robot": robot, "base": base, "tipo": "corrección" if any(c["tipo"] == "corrección" for c in resp) else "cambio en días ya cargados",
+                         "archivos": [c["archivo"] for c in resp], "dias": len(dias), "quitados": len(quitados), "desde": dias[0], "hasta": dias[-1],
+                         "antes": antes, "despues": despues, "meses": [[k, v[0], round(v[1], 2), round(v[2], 2)] for k, v in sorted(porm.items())],
+                         "detalle": [[d, p[d][1], h[d][1] if d in h else 0] for d in dias[:62]], "nuevos": len(nuevos)})
+    os.makedirs(destino, exist_ok=True)
+    json.dump(prev, open(rh, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    with open(rb, "w", encoding="utf-8") as f:
+        f.write("// Bitácora de cambios en los datos: qué cambió en cada carga, por base y día. Lo escribe robot/lector.py · no editar a mano\n")
+        f.write("window.IANAMI_BITACORA=" + json.dumps(lista[:400], ensure_ascii=False, separators=(",", ":")) + ";\n")
+    HUELLAS.clear()

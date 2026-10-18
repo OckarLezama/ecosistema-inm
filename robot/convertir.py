@@ -654,10 +654,11 @@ def main():
         if clave in PENDIENTES:
             lector.avisar(NOMBRES[clave], PENDIENTES[clave])
             continue
-        if "DIA" not in lector.encabezados(lector.primera_fila(l[0][0], ACEPTA)):   # sin fechas (documentos vigentes, caravanas): el último archivo, tal cual
+        if "DIA" not in lector.encabezados(lector.primera_fila(l[0][0], ACEPTA)):   # sin fechas (documentos vigentes, caravanas): la entrega más reciente, tal cual
+            ult = max(l, key=lambda x: (lector.entrega_de(os.path.basename(x[0]), a.origen)[0], os.path.basename(x[0])))[0]
             if len(l) > 1:
-                lector.avisar(NOMBRES[clave], "Hay " + str(len(l)) + " archivos de esta base; se usa el último: " + os.path.basename(l[-1][0]) + ".")
-            tablas[clave], ocultas[clave] = leer_hoja(l[-1][0])
+                lector.avisar(NOMBRES[clave], "Hay " + str(len(l)) + " archivos de esta base; se usa la entrega más reciente: " + os.path.basename(ult) + ".")
+            tablas[clave], ocultas[clave] = leer_hoja(ult)
             continue
         partes = []
         for ruta, _, _ in l:                                   # todas las hojas visibles con las mismas columnas
@@ -667,7 +668,7 @@ def main():
             partes.append((os.path.basename(ruta), t))
         orig = partes[0][1].attrs.get("orig") or list(partes[0][1].columns)
         orig = [lector.ALIAS.get(lector.norm(c), c) for c in orig]          # encabezados con errores de captura («NACIONADLIDAD»)
-        t = lector.juntar(partes, NOMBRES[clave])
+        t = lector.juntar(partes, NOMBRES[clave], origen=a.origen)
         t = t[[c for c in partes[0][1].columns]]
         tablas[clave] = pd.concat([pd.DataFrame([orig], columns=t.columns), t], ignore_index=True)
         tablas[clave].columns = range(t.shape[1])

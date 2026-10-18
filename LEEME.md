@@ -27,7 +27,9 @@ Página principal (Pulso) y convertidor de bases.
 | `pruebas/` | Pruebas automáticas (Playwright) |
 | `js/consulta.js` | Ventana Pregunta a INAMI: combos, texto libre, hoja de una página (PDF, imagen y compartir por WhatsApp), deshacer y nueva pregunta y «Profundizar en el tablero» |
 | `robot/catalogos.py` | Nacionalidades, estados y coordenadas de puntos |
-| `robot/lector.py` | Lectura común de las bases: junta hojas y archivos de una misma base, corrige encabezados mal escritos, resuelve días repetidos, recorta al 1 oct 2024 y escribe `datos/observaciones.js` |
+| `robot/lector.py` | Lectura común de las bases: junta hojas y archivos (gana la entrega más reciente; correcciones de mes), corrige encabezados mal escritos, recorta al 1 oct 2024 y escribe `datos/observaciones.js`, `datos/bitacora.js` y `datos/huella.json` |
+| `robot/consolidar.py` | Consolidación periódica: un archivo por base y los originales a `DATA/_reemplazados/` |
+| `robot/prueba_correcciones.py` | Prueba automática de las reglas de carga con un mes corregido simulado |
 | `DATA/` | Bases en xlsx, tal como las entrega cada área |
 
 ## Actualizar los datos
@@ -35,7 +37,11 @@ Página principal (Pulso) y convertidor de bases.
 1. Subir los xlsx a `DATA/` (GitHub Desktop: Pull origin → copiar → Commit → Push origin). Cada base se reconoce por sus columnas, no por el nombre.
    - Nombre sugerido: `FUENTE BASE AAAA-MM-DD a AAAA-MM-DD.xlsx` (primer y último día que trae). Las fotos al corte (documentos vigentes) llevan `al AAAA-MM-DD`.
    - Una base puede venir en varias hojas (si pasa del millón de renglones de Excel) o en varios archivos (por año, semana o día): el robot los junta. Los archivos semanales o diarios se van sumando; no se borran los anteriores.
-   - Si dos archivos traen el mismo día, se toma el que llega más lejos en fechas (un reenvío corregido reemplaza, no suma).
+   - **Gana la entrega más reciente** y **cada archivo manda en todo su periodo**: los días de ese periodo se toman solo de él (un día que no trae cuenta como cero), aunque una entrega anterior también los traiga. Nada se suma dos veces.
+   - Fecha de entrega: la que diga el nombre (`… entregado AAAA-MM-DD`); si no la dice, cuándo entró el archivo al repositorio. Si no se puede saber, la corrección va después de lo que corrige y, entre envíos normales, el que llega más lejos.
+   - **Correcciones de un mes completo**: el nombre lleva `CORRECCION` y el periodo que corrige, por ejemplo `DGCOR RESCATES CORRECCION 2026-09 entregado 2026-10-20.xlsx` (todo septiembre) o `DGCOR RESCATES CORRECCION 2026-09-01 a 2026-09-15.xlsx`. Reemplaza ese periodo completo; lo que traiga fuera de él no se usa (se avisa).
+   - Envío de días nuevos: cualquier otro nombre; su periodo es del primer al último día que trae.
+   - Cada carga deja una huella por base y día (`datos/huella.json`) y la siguiente anota en `datos/bitacora.js` qué cambió (sección **Bases › Cambios en los datos**).
    - Todo se toma desde el 1 oct 2024; lo anterior se avisa y no se usa.
    - Las hojas ocultas o con otras columnas no se leen (se avisa).
 2. Desde la raíz del repositorio:
@@ -49,6 +55,9 @@ Página principal (Pulso) y convertidor de bases.
    python robot/vocabulario.py --destino datos
    python robot/indices.py          # una vez al año, con los archivos oficiales en DATA/indices/
    ```
+
+   Consolidación periódica (cada 3 meses, o cuando una base pase de unos 10 archivos): `python robot/consolidar.py` dice qué haría; `python robot/consolidar.py --aplicar` junta los archivos de cada base en uno solo (con las mismas reglas) y guarda los originales en `DATA/_reemplazados/AAAA-MM-DD/`, que los robots no leen. Comprueba que el consolidado dé lo mismo por día antes de mover nada.
+   Prueba de las reglas de carga: `python robot/prueba_correcciones.py` (también corre con las pruebas de la página).
 
 3. Revisar la sección **Bases** de la página (o `datos/reporte.txt`): periodo de cada base, días sin datos y observaciones. Subir todo lo de `datos/`.
 
