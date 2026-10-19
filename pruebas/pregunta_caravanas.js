@@ -27,7 +27,7 @@ const { chromium } = require('playwright'); const path=require('path'); const di
     // Bullets: el primer renglón dice cuántas y cuántas personas; nunca compara con otros años
     await p.evaluate(() => document.querySelector('[data-cqmodo="b"]').click()); await p.waitForTimeout(300);
     const bt = await p.evaluate(() => (document.querySelector('.cq-bul')||{}).innerText || '');
-    const okb = /caravanas? migrantes? sali|No salieron caravanas/.test(bt) && !/vs\.|respecto|frente a|que en 20\d\d|más que|menos que/.test(bt);
+    const okb = /\d+ caravanas? del .*personas\.|Sin caravanas del/.test(bt) && !/Sin Nombre/.test(bt) && !/Todas, de la más reciente/.test(bt) && !/vs\.|respecto|frente a|que en 20\d\d|más que|menos que/.test(bt);
     if (!okb) mal++; console.log(vw, q.padEnd(26), 'b', okb ? 'bien' : 'MAL '+bt.slice(0,200));
     await p.evaluate(() => document.querySelector('[data-cqmodo="f"]').click()); await p.waitForTimeout(150); }
   await p.close(); }
