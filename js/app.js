@@ -1509,9 +1509,9 @@ const BAJADOS = {};
 const modListo = k => !!window[LISTO_MOD[k]];
 function bajarJS(src){ return BAJADOS[src] || (BAJADOS[src] = new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src+(VERSION ? '?'+VERSION : '');
   s.onload = ok; s.onerror = () => { delete BAJADOS[src]; s.remove(); mal(new Error(src)); }; document.body.appendChild(s); })); }
-function cargarModulo(k){
+function cargarModulo(k, enPagina){
   if (modListo(k)) return Promise.resolve();
-  const av = $('cargando'); av.classList.remove('error'); av.textContent = 'Cargando '+NOM_MOD[k]+'…'; av.hidden = false;
+  const av = $('cargando'); av.classList.remove('error'); av.textContent = 'Cargando '+NOM_MOD[k]+'…'; av.hidden = !!enPagina;
   return (MODULOS[k] || []).reduce((p, src) => p.then(() => bajarJS(src)), Promise.resolve())
     .then(() => { av.hidden = true; }, e => { av.classList.add('error'); av.textContent = 'No se pudo cargar '+NOM_MOD[k]+'. Revisa tu conexión e inténtalo de nuevo.'; setTimeout(() => { av.hidden = true; }, 4500); throw e; });
 }
@@ -1531,7 +1531,7 @@ function iniciarConsulta(){
 }
 // Abre un proceso con filtros (los usa «Profundizar en el tablero» de Pregunta a INAMI)
 window.IANAMI_NAV = { ir(k, p){ const i = DIRS.findIndex(d => d.k===k); if (i<0) return;
-  if (!modListo(k)){ cargarModulo(k).then(() => window.IANAMI_NAV.ir(k, p), () => {}); return; }
+  if (!modListo(k)){ S.dir = i; NAV_P = { k:k, p:p }; irA('dir'); return; }   // primero la sección con «Preparando los datos…»; al llegar el módulo se aplica lo pedido
   S.dir = i;
   const M = { control:window.IANAMI_CONTROL, regulacion:window.IANAMI_REGULACION, proteccion:window.IANAMI_PROTECCION }[k];
   if (M && M.fijar) M.fijar(p || {}); irA('dir'); window.scrollTo(0,0); } };
@@ -1661,24 +1661,29 @@ window.addEventListener('popstate', e => { const st = e.state; if (!st || !st.ia
   if (SALA.on){ if (SALA.compartida) return; cerrarSala(); }
   NAV_HIST = true; try { if (st.v==='dir') S.dir = st.dir; irA(st.v); } finally { NAV_HIST = false; } });
 try { if (!(history.state && history.state.ianami)) history.replaceState({ ianami:true, v:S.vista || 'pulso', dir:S.dir || 0 }, ''); } catch(e){}   // la vista con la que abre
-function irA(v){
+// Mientras se preparan los datos de una sección: el esqueleto con un aviso claro, y la sección se dibuja en el siguiente cuadro
+// (así el aviso alcanza a verse). Si se cambia de sección antes, el dibujo pendiente ya no se hace.
+let PREP = 0, NAV_P = null;
+const esqPrep = nom => '<div class="esq" role="status" aria-live="polite"><div class="prep"><i></i>Preparando los datos de '+esc(nom)+'…</div><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
+function preparar(nom, fn){ const t = ++PREP; $('vista-otra').innerHTML = esqPrep(nom); requestAnimationFrame(() => setTimeout(() => { if (t===PREP) fn(); }, 0)); }
+function irA(v){ PREP++;
   marcaHist(v);
   if (window.IANAMI_VISTAZO && window.IANAMI_VISTAZO.activa()) window.IANAMI_VISTAZO.cerrar();   // ir a otra sección cierra la vista tablet
   S.vista = v; pintarNav(); const pulso = v==='pulso'; $('vista-pulso').hidden = !pulso; $('vista-otra').hidden = pulso;
   if (pulso){ ajustarAlto(); reencuadrar(); ajustarLienzo(); pintarTodo(); return; }
   if (S.play) detener();
-  if (v==='dir'){ const k = DIRS[S.dir || 0].k; if (MODULOS[k] && !modListo(k)){ $('vista-otra').innerHTML = '<div class="esq" role="status" aria-label="Cargando '+esc(NOM_MOD[k])+'"><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
-    cargarModulo(k).then(() => { if (S.vista==='dir' && DIRS[S.dir || 0].k===k) irA('dir'); }, () => {}); return; } }
-  if (v==='arma'){ if (!modListo('arma')){ $('vista-otra').innerHTML = '<div class="esq" role="status" aria-label="Cargando Arma tu informe"><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
-      cargarModulo('arma').then(() => { if (S.vista==='arma') irA('arma'); }, () => {}); return; }
-    window.IANAMI_ARMA.pintar($('vista-otra')); return; }
-  if (v==='analizar'){ if (!modListo('analizar')){ $('vista-otra').innerHTML = '<div class="esq" role="status" aria-label="Cargando Analizar"><i class="e1"></i><div class="e2"><i></i><i></i><i></i><i></i></div><div class="e3"><i></i><i></i></div></div>';
-      cargarModulo('analizar').then(() => { if (S.vista==='analizar') irA('analizar'); }, () => {}); return; }
+  if (v==='dir'){ const k = DIRS[S.dir || 0].k; if (MODULOS[k] && !modListo(k)){ $('vista-otra').innerHTML = esqPrep(NOM_MOD[k]);
+    cargarModulo(k, true).then(() => { if (S.vista!=='dir' || DIRS[S.dir || 0].k!==k) return; if (NAV_P && NAV_P.k===k){ const x = NAV_P; NAV_P = null; window.IANAMI_NAV.ir(x.k, x.p); } else irA('dir'); }, () => {}); return; } }
+  if (v==='arma'){ if (!modListo('arma')){ $('vista-otra').innerHTML = esqPrep('Arma tu informe');
+      cargarModulo('arma', true).then(() => { if (S.vista==='arma') irA('arma'); }, () => {}); return; }
+    preparar('Arma tu informe', () => window.IANAMI_ARMA.pintar($('vista-otra'))); return; }
+  if (v==='analizar'){ if (!modListo('analizar')){ $('vista-otra').innerHTML = esqPrep('Informe migratorio');
+      cargarModulo('analizar', true).then(() => { if (S.vista==='analizar') irA('analizar'); }, () => {}); return; }
     window.IANAMI_ANALIZAR.pintar($('vista-otra')); return; }
   const F0 = {ss:null, n:null}; let h = '';
-  if (v==='dir' && DIRS[S.dir || 0].k==='regulacion' && window.IANAMI_REGULACION){ window.IANAMI_REGULACION.pintar($('vista-otra')); return; }   // Regulación tiene su propia vista
-  if (v==='dir' && DIRS[S.dir || 0].k==='control' && window.IANAMI_CONTROL){ window.IANAMI_CONTROL.pintar($('vista-otra')); return; }      // Control migratorio también
-  if (v==='dir' && DIRS[S.dir || 0].k==='proteccion' && window.IANAMI_PROTECCION){ window.IANAMI_PROTECCION.pintar($('vista-otra')); return; }   // Protección al migrante
+  if (v==='dir' && DIRS[S.dir || 0].k==='regulacion' && window.IANAMI_REGULACION){ preparar(NOM_MOD.regulacion, () => window.IANAMI_REGULACION.pintar($('vista-otra'))); return; }   // Regulación tiene su propia vista
+  if (v==='dir' && DIRS[S.dir || 0].k==='control' && window.IANAMI_CONTROL){ preparar(NOM_MOD.control, () => window.IANAMI_CONTROL.pintar($('vista-otra'))); return; }      // Control migratorio también
+  if (v==='dir' && DIRS[S.dir || 0].k==='proteccion' && window.IANAMI_PROTECCION){ preparar(NOM_MOD.proteccion, () => window.IANAMI_PROTECCION.pintar($('vista-otra'))); return; }   // Protección al migrante
   if (v==='dir') h = htmlDireccion(DIRS[S.dir || 0]);
   else if (v==='bases') h = vistaBases();
   else { const T = {

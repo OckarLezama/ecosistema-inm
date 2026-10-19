@@ -130,6 +130,8 @@ function render(host, s, inter){
   if (cm){ if (cn) y2 = serieK(k, a, b, filtros(s, cm.fa), Cb);
     else if (porDia){ C1 = cub(ca<a ? ca : a, cb>b ? cb : b); const t1 = serieK(k, a, b, F, C1), t2 = serieK(k, ca, cb, F, C1); y1 = C1.l.map((q,i) => q.b<a || q.a>b ? null : t1[i]); y2 = C1.l.map((q,i) => q.b<ca || q.a>cb ? null : t2[i]); }
     else { const C2 = cub(ca, cb); if (C2.g===Cb.g) y2 = serieK(k, ca, cb, F, C2).slice(0, y1.length); } }
+  const cuandoMax = () => { const i = y1.reduce((m, v, j) => v!=null && (m<0 || v>y1[m]) ? j : m, -1); if (i<0) return ''; const q = C1.l[i], d = f0(q.a);   // el mayor: en qué mes, semana o día fue
+    return C1.g==='m' ? 'en '+ML[d.getUTCMonth()]+(C1.l.some(z => f0(z.a).getUTCFullYear()!==d.getUTCFullYear()) ? ' '+d.getUTCFullYear() : '') : C1.g==='s' ? 'la semana del '+d.getUTCDate()+' '+MS[d.getUTCMonth()] : 'el '+d.getUTCDate()+' '+MS[d.getUTCMonth()]; };
   const ys1 = y1.filter(z => z!=null), ys2 = y2 ? y2.filter(z => z!=null) : null, gl = { d:'por día', s:'por semana', m:'por mes' }[C1.g];
   if (y2 && !porDia && !cn && Math.max(...ys2)>Math.max(...ys1)*3.5) disp = true;
   const mover = (m1, m2) => { if (!m2) return null; const s2 = sm(m2); let best = null; m1.forEach((v, n) => { const o = m2.get(n) || 0; if (n==='Otros' || o<s2*0.02) return; const d = (v/(porDia ? dias : 1))/(o/(porDia ? cd : 1))-1; if (!best || Math.abs(d)>Math.abs(best[1])) best = [n, d]; }); return best; };
@@ -150,7 +152,7 @@ function render(host, s, inter){
   const u = nota ? '<abbr title="'+esc(nota)+'">'+c.u+' ⓘ</abbr>' : c.u;
   kpi('ks', 'Total', kc('sum', 'Total · '+esc(cn ? s.fa : P.lab+(P.sub ? ' ('+P.sub+')' : '')), f(V), cm && W ? chip(V/W-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">'+u+'</span>',
     cm && W ? esc(ref)+': <b>'+f(W)+'</b> · '+(V-W<0 ? '−' : '+')+f(Math.abs(V-W)) : '', mspk(ys1, ys2 && !disp ? ys2 : null, '#2F6657')));
-  kpi('kd', 'Promedio por día', kc('day', 'Promedio por día', f(V/dias), cm && W ? chip((V/dias)/(W/cd)-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">máximo '+f(Math.max(...ys1, 0))+' '+gl.replace('por ', 'en un ')+'</span>',
+  kpi('kd', 'Promedio por día', kc('day', 'Promedio por día', f(V/dias), cm && W ? chip((V/dias)/(W/cd)-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">máximo '+f(Math.max(...ys1, 0))+' '+cuandoMax()+'</span>',
     cm && W ? esc(ref)+': <b>'+f(W/cd)+'</b> por día' : '', mbar(ys1, '#8F7F2E')));
   const share = (m, m2, sel, D_, lado, sel2) => { if (!m) return ''; const o = ord(m), s1 = sm(m); if (!o.length || !s1) return '';
     const pp = p => (p<0.01 ? (p*100).toFixed(2) : Math.round(p*100))+'%';
