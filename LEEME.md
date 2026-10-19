@@ -154,6 +154,7 @@ El menú «Procesos» agrupa las vistas por lo que hace el INM, no por direcció
 | **Retornados** | Deportados + retornos asistidos | Igual en todas |
 
 Áreas en «Arma tu informe»: Control (ingresos, segunda revisión, rechazos, rescatados, presentados, NNA canalizados, retornados), Regulación, Protección (repatriados) y Desde EE. UU. (recibidos y encuentros CBP), igual que el menú Procesos.
+Lámina de Arma tu informe: lo que eliges (un país, un punto, un estado, un trámite) va como KPI —su peso en el total y cuánto cambió contra la comparación— y ya no como lista; las listas que quedan son solo de lo elegido. Si eliges el país, su lugar lo toma la otra forma de repartir (en Ingresos: «¿A qué estado?» y «¿Por dónde entran?»). La frase de arriba dice si su peso cambió (crece o cae más, o menos, que el resto). Los KPI se quitan con su ✕ como las gráficas y se regresan desde «Quitaste». Una combinación sin datos lo dice («Sin registros para esta combinación»). En rechazos y segunda revisión el recuadro de puntos dice «¿En qué punto?».
 
 ## Reglas de los datos
 

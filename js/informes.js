@@ -50,7 +50,7 @@ const base = k => BASES[INDK[k].b], finK = k => finBase(base(k)), iniK = k => ba
 const esOR = (k, d) => d==='e' && /O\.R\./.test(base(k).dims.e.nom);
 function DIM(k, d){ const rep = k==='rep' || k==='ingmx';
   return ({ n:{ w:'de', all:'todas las nacionalidades', tit:'¿De dónde son?', tipo:'país', ic:'glo' },
-    p:{ w:'por', all:'todos los puntos', tit:rep ? '¿Por dónde '+(k==='rep' ? 'regresan' : 'entran')+'?' : '¿Por dónde entran?', tipo:'punto', ic:'pin', sub:'aeropuertos agrupados' },
+    p:{ w:'por', all:'todos los puntos', tit:rep ? '¿Por dónde '+(k==='rep' ? 'regresan' : 'entran')+'?' : k==='rech' || k==='seg' ? '¿En qué punto?' : '¿Por dónde entran?', tipo:'punto', ic:'pin', sub:'aeropuertos agrupados' },
     e:esOR(k, d) ? { w:'en', all:'todas las O.R. (estados)', tit:'¿En qué O.R. (estado)?', tipo:'O.R.', ic:'pin' } : { w:'en', all:'todos los estados', tit:'¿A qué estado?', tipo:'estado', ic:'pin' },
     via:{ w:'vía', all:'todas las vías', tit:'¿Por qué vía de internación?', tipo:'vía', ic:'via' }, mod:{ w:'vía', all:'todas las vías', tit:'¿Cómo regresan?', tipo:'vía', ic:'via' },
     sec:{ w:'en', all:'todos los sectores', tit:'¿En qué sector?', tipo:'sector', ic:'pin' }, est:{ w:'en', all:'todas las estaciones', tit:'¿En qué estación?', tipo:'estación', ic:'pin' },
@@ -140,13 +140,17 @@ function render(host, s, inter){
   if (cn) fra = s.fa+' equivale '+(V>=W ? 'a '+(V/W).toFixed(1)+' veces' : 'al '+(V/W*100<1 ? (V/W*100).toFixed(2) : Math.round(V/W*100))+'% de')+' '+lab2+'.';
   else if (cm && W) fra = tt+': '+(Math.abs(r)<0.01 ? 'prácticamente igual que '+lab2 : (r<0 ? 'bajan ' : 'suben ')+pc(r)+'%'+(porDia ? ' por día' : '')+' contra '+lab2)+(mvA ? '; el mayor cambio es '+mvA[0]+' ('+(mvA[1]<0 ? '' : '+')+Math.round(mvA[1]*100)+'%).' : '.');
   else fra = tA && s.fa==null ? tA[0]+' es el primer lugar con '+Math.round(tA[1]/sm(mA)*100)+' de cada 100'+(tB && s.fb==null ? ' y '+tB[0]+' concentra '+Math.round(tB[1]/sm(mB)*100)+'%' : '')+'.' : tt+': '+f(V)+' '+c.u+' en '+P.lab+'.';
+  // con un país (o lo de la izquierda) elegido y comparación: la frase dice si su peso cambió (¿le pasa solo a él o a todos?)
+  if (cm && !cn && W && s.fa!=null && mA && mA2){ const t1 = sm(mA), t2 = sm(mA2), p1 = t1 ? (mA.get(s.fa) || 0)/t1*100 : 0, p2 = t2 ? (mA2.get(s.fa) || 0)/t2*100 : 0, dp = p1-p2, ds = p1<10 ? 1 : 0;
+    if (t1 && t2) fra = fra.replace(/\.$/, '')+'; '+(Math.abs(dp)<0.15 ? 'su peso en el total no cambia ('+p1.toFixed(ds)+'%): '+(r>=0 ? 'crece' : 'baja')+' al ritmo de todos.' : 'su peso en el total '+(dp>0 ? 'sube' : 'baja')+' de '+p2.toFixed(ds)+'% a '+p1.toFixed(ds)+'%: '+(dp>0 ? (r>=0 ? 'crece más que el resto.' : 'cae menos que el resto.') : (r>=0 ? 'crece menos que el resto.' : 'cae más que el resto.'))); }
   if (s.fra) fra = s.fra;
   // KPI
-  const K = [], ref = cm ? lab2.replace(' al mismo día','') : '', nota = INDK[k].nota;
+  const K = [], NK = {}, ref = cm ? lab2.replace(' al mismo día','') : '', nota = INDK[k].nota;
+  const kpi = (id, nom, h) => { if (!h || H.includes(id)) { if (h) NK[id] = nom; return; } NK[id] = nom; K.push(inter ? h.replace(/^<div class="ar-kc([^"]*)">/, m => m+'<button class="ar-qz" data-hide="'+id+'" title="Quitar de la lámina">✕</button>') : h); };
   const u = nota ? '<abbr title="'+esc(nota)+'">'+c.u+' ⓘ</abbr>' : c.u;
-  K.push(kc('sum', 'Total · '+esc(cn ? s.fa : P.lab+(P.sub ? ' ('+P.sub+')' : '')), f(V), cm && W ? chip(V/W-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">'+u+'</span>',
+  kpi('ks', 'Total', kc('sum', 'Total · '+esc(cn ? s.fa : P.lab+(P.sub ? ' ('+P.sub+')' : '')), f(V), cm && W ? chip(V/W-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">'+u+'</span>',
     cm && W ? esc(ref)+': <b>'+f(W)+'</b> · '+(V-W<0 ? '−' : '+')+f(Math.abs(V-W)) : '', mspk(ys1, ys2 && !disp ? ys2 : null, '#2F6657')));
-  K.push(kc('day', 'Promedio por día', f(V/dias), cm && W ? chip((V/dias)/(W/cd)-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">máximo '+f(Math.max(...ys1, 0))+' '+gl.replace('por ', 'en un ')+'</span>',
+  kpi('kd', 'Promedio por día', kc('day', 'Promedio por día', f(V/dias), cm && W ? chip((V/dias)/(W/cd)-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">máximo '+f(Math.max(...ys1, 0))+' '+gl.replace('por ', 'en un ')+'</span>',
     cm && W ? esc(ref)+': <b>'+f(W/cd)+'</b> por día' : '', mbar(ys1, '#8F7F2E')));
   const share = (m, m2, sel, D_, lado, sel2) => { if (!m) return ''; const o = ord(m), s1 = sm(m); if (!o.length || !s1) return '';
     const pp = p => (p<0.01 ? (p*100).toFixed(2) : Math.round(p*100))+'%';
@@ -154,17 +158,20 @@ function render(host, s, inter){
       return kc(D_.ic, esc(sel)+' en el total', pp(p), '<span class="ar-dvs">de todo el '+(c.u==='entradas' ? 'flujo' : 'total')+'</span>'+pts((p-p2)*100), esc(sel2)+': <b>'+pp(p2)+'</b>'+(R2>=0 ? ' · lugar '+(R2+1)+' de '+o.length : ''), ring(p, '#7E302B')); }
     if (sel==null){ const t = o[0], p = t[1]/s1, s2 = m2 ? sm(m2) : 0, p2 = m2 && s2 ? (m2.get(t[0]) || 0)/s2 : null;
       return kc(D_.ic, 'Primer lugar · '+D_.tipo, esc(t[0]), '<span class="ar-dvs"><b>'+Math.round(p*100)+'</b> de cada 100</span>'+(p2!=null ? pts((p-p2)*100) : ''), p2!=null ? 'en '+esc(ref)+' eran '+Math.round(p2*100)+' de cada 100' : '', ring(p, '#7E302B'), 'kn'); }
-    const v = m.get(sel) || 0, p = v/s1, R = o.findIndex(x => x[0]===sel);
-    return kc(D_.ic, esc(sel)+' en el total', (p<0.01 ? (p*100).toFixed(2) : Math.round(p*100))+'%', '<span class="ar-dvs">de todo el '+(c.u==='entradas' ? 'flujo' : 'total')+'</span>', R>=0 ? 'lugar <b>'+(R+1)+'</b> de '+o.length+' · '+esc(P.lab) : '', ring(p, '#7E302B')); };
-  if (da) K.push(share(mA, mA2, s.fa, DA, 'A', cn ? cm.fa : null));
-  if (db && !(c.V && db===c.V)) K.push(share(mB, mB2, s.fb, DB, 'B'));
+    const v = m.get(sel) || 0, p = v/s1, R = o.findIndex(x => x[0]===sel), s2 = m2 ? sm(m2) : 0, q2 = m2 && s2 ? (m2.get(sel) || 0)/s2 : null;   // su peso y cuánto cambió contra la comparación
+    const otro = lado==='A' ? s.fb : s.fa;   // con la otra dimensión elegida, el total es el de esa (p. ej. India dentro de Cozumel)
+    return kc(D_.ic, esc(sel)+(otro!=null ? ' dentro de '+esc(otro) : ' en el total'), pp(p), '<span class="ar-dvs">'+(otro!=null ? 'de todo lo de '+esc(otro) : 'de todo el '+(c.u==='entradas' ? 'flujo' : 'total'))+'</span>'+(q2!=null ? pts((p-q2)*100) : ''), (q2!=null ? 'en '+esc(ref)+' era '+pp(q2)+' · ' : '')+(R>=0 ? 'lugar <b>'+(R+1)+'</b> de '+o.length : ''), ring(p, '#7E302B')); };
+  if (da) kpi('ka', s.fa!=null ? s.fa+(s.fb!=null ? ' dentro de '+s.fb : ' en el total') : 'Primer lugar · '+DA.tipo, share(mA, mA2, s.fa, DA, 'A', cn ? cm.fa : null));
+  if (db && !(c.V && db===c.V)) kpi('kb', s.fb!=null ? s.fb+(s.fa!=null ? ' dentro de '+s.fa : ' en el total') : 'Primer lugar · '+DB.tipo, share(mB, mB2, s.fb, DB, 'B'));
   let vTxt = '';
   if (c.V && db!==c.V && (s.fb==null || db!=='p')){ const Fv = Object.assign({}, F), mV = porNom(k, c.V, a, b, Fv), mV2 = cm ? (cn ? porNom(k, c.V, a, b, filtros(s, cm.fa)) : porNom(k, c.V, ca, cb, Fv)) : null, tv = sm(mV), tv2 = mV2 ? sm(mV2) : 0, ov = ord(mV);
     if (tv) vTxt = 'Por vía de internación: '+ov.map(([n, v]) => { const p = v/tv*100, p2 = mV2 && tv2 ? (mV2.get(n) || 0)/tv2*100 : null; return esc(n.replace(/ \(.*\)/, '')).toLowerCase()+' <b>'+(p<10 ? p.toFixed(1) : Math.round(p))+'%</b>'+(p2!=null && Math.abs(p-p2)>=0.5 ? ' ('+(p>p2 ? '▲' : '▼')+' '+Math.abs(p-p2).toFixed(1)+' pts)' : ''); }).join(', ')+(mV2 ? ' frente a '+esc(ref) : '')+'.';
-    if (tv) K.push(kc('via', '¿Por qué vía de internación?', esc(ov[0][0].replace(' (cruceros)',''))+' '+Math.round(ov[0][1]/tv*100)+'%', '<div class="ar-vrow">'+[...mV.keys()].map(n => { const p = mV.get(n)/tv*100, p2 = mV2 && tv2 ? (mV2.get(n) || 0)/tv2*100 : null;
+    if (tv) kpi('kv', 'Vía de internación', kc('via', '¿Por qué vía de internación?', esc(ov[0][0].replace(' (cruceros)',''))+' '+Math.round(ov[0][1]/tv*100)+'%', '<div class="ar-vrow">'+[...mV.keys()].map(n => { const p = mV.get(n)/tv*100, p2 = mV2 && tv2 ? (mV2.get(n) || 0)/tv2*100 : null;
       return '<span class="ar-vi" title="'+esc(n)+': '+p.toFixed(1)+'% de las entradas'+(p2!=null ? '; en '+esc(ref)+' era '+p2.toFixed(1)+'%' : '')+'"><svg width="16" height="16" viewBox="0 0 24 24">'+(IVIA[n] || AV)+'</svg><i>'+esc(n.replace(/ \(.*\)/, ''))+'</i><b>'+(p<10 ? p.toFixed(1) : Math.round(p))+'%</b>'+(p2!=null ? pts(p-p2, 1) : '')+'</span>'; }).join('')+'</div>', '', '', 'wide')); }
   const show = id => !H.includes(id), x = id => inter ? '<button class="ar-qz" data-hide="'+id+'" title="Quitar de la lámina">✕</button>' : '';
-  const tw = show('t'), aw = da && show('a'), bw = db && show('b');
+  const tw = show('t'), aw = da && show('a') && s.fa==null, bw = db && show('b') && s.fb==null;   // lo que ya elegiste va como KPI, no como lista
+  // si el país (o lo de la izquierda) ya está elegido, su lugar lo toma la otra forma de repartir lo de la derecha (p. ej. India: estados y puntos)
+  const dx = !aw && s.fa!=null && s.fb==null && show('x') && c.B.length>1 ? c.B.find(d => d!==db) : null, DX = dx ? DIM(k, dx) : null;
   const segA = inter && c.A.length>1 ? '<span class="ar-sg2">'+c.A.map((d, i) => '<button data-o="iA" data-v="'+i+'" class="'+((s.iA || 0)===i ? 'on' : '')+'">'+DIM(k, d).tipo+'</button>').join('')+'</span>' : '';
   const segB = inter && c.B.length>1 ? '<span class="ar-sg2">'+c.B.map((d, i) => '<button data-o="iB" data-v="'+i+'" class="'+((s.iB || 0)===i ? 'on' : '')+'">'+DIM(k, d).tipo+'</button>').join('')+'</span>' : '';
   const tok = (cls, pop, txt) => '<span class="ar-tk '+cls+'" data-pop="'+pop+'">'+esc(txt)+' <small>▾</small><div class="ar-pop"></div></span>';
@@ -173,8 +180,8 @@ function render(host, s, inter){
     (db ? ' '+DB.w+' '+segB+' '+tok(s.fb!=null ? 't3' : 't0', 'fb', s.fb!=null ? s.fb : DB.all) : '')+
     ' en '+tok('t4', 'p', P.lab)+' '+tok(cm ? 't5' : 't0', 'cmp', cm ? 'contra '+lab2 : '⇄ comparar')+
     '<button class="ar-cerrar" data-close title="Cerrar lámina">✕</button></div>'+
-    (H.filter(h => (h!=='a' || da) && (h!=='b' || db)).length ? '<div class="ar-oc">Quitaste: '+H.map(id => '<button data-show="'+id+'">＋ '+esc(id==='a' ? DA.tit : id==='b' ? DB.tit : '¿Cuándo?')+'</button>').join('')+'</div>' : '') : '';
-  const r1 = tw, r2 = aw || bw;
+    (H.filter(h => (h!=='a' || (da && s.fa==null)) && (h!=='b' || (db && s.fb==null)) && (h!=='x' || (s.fa!=null && s.fb==null && c.B.length>1)) && (h[0]!=='k' || NK[h])).length ? '<div class="ar-oc">Quitaste: '+H.filter(h => (h!=='a' || (da && s.fa==null)) && (h!=='b' || (db && s.fb==null)) && (h!=='x' || (s.fa!=null && s.fb==null && c.B.length>1)) && (h[0]!=='k' || NK[h])).map(id => '<button data-show="'+id+'">＋ '+esc(id==='a' ? DA.tit : id==='b' ? DB.tit : id==='t' ? '¿Cuándo?' : id==='x' ? (DX ? DX.tit : 'Gráfica') : NK[id])+'</button>').join('')+'</div>' : '') : '';
+  const r1 = tw, r2 = aw || bw || dx;
   host.innerHTML = fr+'<div class="ar-cv">'+
     '<div class="ar-lt"><div class="ar-lt1"><div class="ar-ey">'+esc(c.area)+' · '+esc(c.u)+'</div><h2>'+esc(c.t)+'<span>'+esc(tt.slice(c.t.length))+'</span></h2><div class="ar-bar"></div>'+
       '<div class="ar-fra" '+(inter ? 'contenteditable="true" spellcheck="false" data-fra title="Toca para editar"' : '')+'>'+esc(fra)+'</div></div>'+
@@ -182,11 +189,13 @@ function render(host, s, inter){
     '<div class="ar-ks">'+K.join('')+'</div>'+
     (r1 || r2 ? '<div class="ar-bd" style="grid-template-rows:'+[r1, r2].filter(Boolean).map(() => 'minmax(0,1fr)').join(' ')+'">'+
       (r1 ? '<div class="ar-rw" style="grid-template-columns:1fr"><div class="ar-box">'+x('t')+'<div class="ar-h"><b>¿Cuándo?</b><span class="s1"></span></div><div class="ar-gr g1"></div></div></div>' : '')+
-      (r2 ? '<div class="ar-rw" style="grid-template-columns:'+(aw && bw ? '1fr 1fr' : '1fr')+'">'+
+      (r2 ? '<div class="ar-rw" style="grid-template-columns:'+((aw || dx) && bw ? '1fr 1fr' : '1fr')+'">'+
         (aw ? '<div class="ar-box">'+x('a')+'<div class="ar-h"><b>'+esc(DA.tit)+'</b><span class="s2"></span></div><div class="ar-gr g2"></div></div>' : '')+
+        (dx ? '<div class="ar-box">'+x('x')+'<div class="ar-h"><b>'+esc(DX.tit)+'</b><span class="sx"></span></div><div class="ar-gr gx"></div></div>' : '')+
         (bw ? '<div class="ar-box">'+x('b')+'<div class="ar-h"><b>'+esc(DB.tit)+'</b><span class="s3"></span></div><div class="ar-gr g3"></div></div>' : '')+'</div>' : '')+'</div>' : '<div class="ar-bd"></div>')+
     '<div class="ar-pie"><span>Fuente: '+esc(INDK[k].proc || c.area)+(nota ? ' · '+esc(nota) : '')+'</span><span>IA-NAMI · datos al '+fd(finK(k))+'</span></div></div>';
-  if (tw){ const mxI = y1.reduce((m, v, i) => v!=null && (m<0 || v>y1[m]) ? i : m, -1), bg = C1.l.length<=26;
+  if (!V){ host.querySelectorAll('.ar-rw').forEach(r => r.remove()); const bd = host.querySelector('.ar-bd'); if (bd) bd.innerHTML = '<div class="ar-vacio"><b>Sin registros para esta combinación</b><span>'+esc(tt)+' no tiene '+c.u+' en '+esc(P.lab)+'. Prueba otro periodo o quita uno de los filtros.</span></div>'; }
+  if (tw && V){ const mxI = y1.reduce((m, v, i) => v!=null && (m<0 || v>y1[m]) ? i : m, -1), bg = C1.l.length<=26;
     host.querySelector('.s1').textContent = gl+(disp ? ' · en gris, '+lab2+' (escala muy distinta: va como cifra bajo cada '+(C1.g==='m' ? 'mes' : 'periodo')+')' : y2 ? (porDia ? ' · gris: '+lab2 : ' · línea punteada: '+lab2) : '')+(C1.l.some(q => q.inc) ? ' · * incompleto' : '');
     mk(host.querySelector('.g1'), { tooltip:Object.assign({ trigger:'axis', axisPointer:{ type:'line', lineStyle:{ color:'#2F6657', type:'dashed' } } }, TIP), grid:{ left:62, right:18, top:26, bottom:disp ? 36 : 22 },
       legend:y2 && !disp ? { top:-2, right:0, itemWidth:14, itemHeight:3, textStyle:{ fontSize:11, color:'#8A857A' } } : undefined,
@@ -211,10 +220,12 @@ function render(host, s, inter){
       series:[{ name:nm1, type:'bar', color:'#2F6657', data:o.map(n => ({ value:Math.round((m1.get(n) || 0)/d1), itemStyle:{ color:sel!=null && sel!==n ? '#C8DAD3' : '#2F6657' } })), barWidth:bw, barGap:'25%', itemStyle:{ borderRadius:[0,4,4,0] },
           label:{ show:true, position:'right', fontSize:11.5, color:'#2F6657', fontWeight:700, formatter:q => f(q.value)+(m2 ? '' : '  '+Math.round((m1.get(o[q.dataIndex]) || 0)/s1*100)+'%') } },
         ...(m2 ? [{ name:lab2, type:'bar', color:'#C9C2B2', data:o.map(n => Math.round((m2.get(n) || 0)/(cn ? 1 : d2))), barWidth:bw, itemStyle:{ borderRadius:[0,4,4,0] }, label:{ show:true, position:'right', fontSize:10.5, color:'#8A857A', formatter:q => f(q.value) } }] : [])] });
-    if (inter && ch){ ch.off('click'); ch.on('click', q => { const n = q.name; if (!n) return; S[dim] = S[dim]===n ? null : n; if (dim==='fa' && S.cmp && S.cmp.fa!=null) S.cmp = null; draw(); toast(S[dim]==null ? 'Filtro quitado' : 'Ahora solo: '+n+' · toca otra vez para quitarlo'); }); } };
+    if (inter && ch && dim){ ch.off('click'); ch.on('click', q => { const n = q.name; if (!n) return; S[dim] = S[dim]===n ? null : n; if (dim==='fa' && S.cmp && S.cmp.fa!=null) S.cmp = null; draw(); toast(S[dim]==null ? 'Filtro quitado' : 'Ahora solo: '+n+' · toca otra vez para quitarlo'); }); } };
   const mt = m => m ? ' · mayor cambio: '+(m[1]<0 ? '▼ ' : '▲ ')+m[0]+' '+(m[1]<0 ? '' : '+')+Math.round(m[1]*100)+'%' : '';
-  if (aw){ bars(host.querySelector('.g2'), mA, cn ? null : mA2, cn ? null : s.fa, 'fa'); host.querySelector('.s2').textContent = (porDia ? 'por día · ' : '')+(s.fb!=null ? s.fb : DB ? DB.all : '')+mt(mvA); }
-  if (bw){ bars(host.querySelector('.g3'), mB, mB2, s.fb, 'fb'); host.querySelector('.s3').textContent = (porDia ? 'por día · ' : '')+(DB.sub || '')+(s.fa!=null ? ' · '+s.fa : '')+mt(mvB); }
+  if (dx && V){ const Fx = Object.assign({}, F); delete Fx[dx]; const mX = porNom(k, dx, a, b, Fx), mX2 = cm ? (cn ? porNom(k, dx, a, b, Object.assign(filtros(s, cm.fa), { [dx]:[] })) : porNom(k, dx, ca, cb, Fx)) : null;
+    bars(host.querySelector('.gx'), mX, mX2, null, null); host.querySelector('.sx').textContent = (porDia ? 'por día · ' : '')+(DX.sub ? DX.sub+' · ' : '')+s.fa+(s.fb!=null ? ' · '+s.fb : '')+mt(mX2 ? mover(mX, mX2) : null); }
+  if (aw && V){ bars(host.querySelector('.g2'), mA, cn ? null : mA2, cn ? null : s.fa, 'fa'); host.querySelector('.s2').textContent = (porDia ? 'por día · ' : '')+(s.fb!=null ? s.fb : DB ? DB.all : '')+mt(mvA); }
+  if (bw && V){ bars(host.querySelector('.g3'), mB, mB2, s.fb, 'fb'); host.querySelector('.s3').textContent = (porDia ? 'por día · ' : '')+(DB.sub || '')+(s.fa!=null ? ' · '+s.fa : '')+mt(mvB); }
   // Narrativa: frases con cifras (como el informe migratorio); cada una solo aparece si hay datos
   const hz = [], g_ = { d:'día', s:'semana', m:'mes' }[C1.g], gP = { d:'días', s:'semanas', m:'meses' }[C1.g], dc = (m, t) => Math.round(t[1]/sm(m)*100), cuan = d => (d<0 ? '−' : '+')+f(Math.abs(d));
   const pctT = x => (Math.abs(x)<0.01 ? (x*100).toFixed(1) : Math.round(x*100));
@@ -274,7 +285,7 @@ function opts(kind){ const c = CK[S.k], k = S.k, P = PER(k, S), Pp = P[S.p], a =
     return h; } }
 function clic(ev){ const nt = ev.target.closest('[data-hide],[data-show],[data-close]');
   if (nt){ ev.stopPropagation(); if (nt.dataset.close!=null){ S = null; draw(); return; } S.hide = S.hide || [];
-    if (nt.dataset.hide){ const vis = ['t','a','b'].filter(z => !S.hide.includes(z) && (z!=='a' || dimA(S)) && (z!=='b' || dimB(S))); if (vis.length<=1){ toast('Deja al menos una gráfica en la lámina'); return; } S.hide.push(nt.dataset.hide); toast('Pieza quitada: lo demás ocupa su lugar'); }
+    if (nt.dataset.hide){ const vis = ['t','a','b','x'].filter(z => !S.hide.includes(z) && (z!=='a' || (dimA(S) && S.fa==null)) && (z!=='b' || (dimB(S) && S.fb==null)) && (z!=='x' || (S.fa!=null && S.fb==null && CK[S.k].B.length>1))); if (nt.dataset.hide[0]!=='k' && vis.length<=1){ toast('Deja al menos una gráfica en la lámina'); return; } S.hide.push(nt.dataset.hide); toast('Pieza quitada: lo demás ocupa su lugar'); }
     else S.hide = S.hide.filter(z => z!==nt.dataset.show); draw(); return; }
   const o = ev.target.closest('[data-o]');
   if (o){ ev.stopPropagation(); const k = o.dataset.o, v = o.dataset.v;
