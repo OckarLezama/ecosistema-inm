@@ -652,8 +652,113 @@ const tarjeta = (nom, sub, val, d, col, on) => '<div class="cq-kc'+(on ? ' on' :
 const tarjetaCh = (id, tit, q) => '<div class="cq-card"><h3>'+esc(tit)+'</h3><span class="q">'+q+'</span><div class="cq-ch" data-ch="'+id+'"></div></div>';
 // Dimensión chica para las tarjetas de un ranking (pocas categorías: condición, vía, modalidad, resultado…)
 function dimChica(r){ const B = r.B; for (const d of ['cond','mod','via','res','sexo']){ if (B.dims[d] && !(r.q.filtros[d] || []).length && B.dims[d].vals.length<=4){ const l = porDim(r.base, d); if (l.length>=2) return { dim:d, l:l }; } } return null; }
+/* ==== [5c] CARAVANAS ================================================ */
+// Ficha propia: una caravana es un evento (nombre, fecha, salida, llegada y personas estimadas), no un conteo como los demás.
+// La ruta va por la carretera costera, de la salida al último lugar reportado: la base trae salida y llegada, no los puntos de paso,
+// así que es la ruta probable. Cuando el área reporte los puntos por donde pasa cada caravana, aquí se dibuja la ruta real.
+const RUTA_CAR = [['Tapachula',-92.263,14.905],['Huixtla',-92.465,15.139],['Escuintla',-92.659,15.317],['Mapastepec',-92.898,15.434],['Pijijiapan',-93.209,15.686],['Tonalá',-93.754,16.089],
+  ['Arriaga',-93.899,16.236],['Tapanatepec',-94.198,16.365],['Zanatepec',-94.351,16.479],['La Ventosa',-94.946,16.553],['Juchitán',-95.024,16.433],['San Blas Atempa',-95.224,16.326],['Chipehua',-95.451,16.032]];
+const RAMA_CAR = { 'Camron Yautepec':['Camarón',-95.955,16.476], 'Camarón':['Camarón',-95.955,16.476] };
+function rutaCar(dest){ if (!dest) return null; const rk = Object.keys(RAMA_CAR).find(k => dest.indexOf(k)>=0);
+  if (rk){ const j = RUTA_CAR.findIndex(r => r[0]==='San Blas Atempa'); return RUTA_CAR.slice(0, j+1).concat([RAMA_CAR[rk]]); }
+  const j = RUTA_CAR.findIndex(r => dest.indexOf(r[0])>=0); return j>0 ? RUTA_CAR.slice(0, j+1) : null; }
+const kmRuta = p => { let t = 0; for (let i=1;i<p.length;i++){ const a = p[i-1], b = p[i], R = 6371, r = Math.PI/180, x = Math.sin((b[2]-a[2])*r/2)**2+Math.cos(a[2]*r)*Math.cos(b[2]*r)*Math.sin((b[1]-a[1])*r/2)**2; t += 2*R*Math.asin(Math.sqrt(x)); } return Math.round(t*1.15/5)*5; };   // 1.15: la carretera no es línea recta
+const lugCar = s => String(s || 'Sin dato').replace(/^Parque Bicentenario, /, ''), lugCor = s => lugCar(s).split(',')[0];
+const fCor = f => { const d = fecha0(f); return d.getDate()+' '+MESC[d.getMonth()]; };
+// Las caravanas de la consulta (periodo y filtros de lugar o nombre), más recientes primero, y los datos que se derivan de ellas
+function datosCar(r){ const q = r.q, B = r.B, ini = DD.inicio, dif = f => Math.round((fecha0(f) - fecha0(ini))/864e5), A = DD.caravanas.filter(c => dif(c.f)>=0);
+  const fs = q.filtros.sal || [], fk = q.filtros.car || [], salV = B.dims.sal.vals, lugar = s => String(s || 'Sin dato').split(',').slice(-2).join(',').trim();
+  const L = A.map((c, i) => Object.assign({ i:i }, c)).filter(c => c.f>=q.d0 && c.f<=q.d1 && (!fs.length || fs.some(j => salV[j]===lugar(c.s))) && (!fk.length || fk.indexOf(c.i)>=0)).sort((x, y) => y.f.localeCompare(x.f));
+  const corte = finBase(B), hace = c => difDias(c.f, corte), tot = L.reduce((t, c) => t+(c.p || 0), 0);
+  const asc = L.slice().reverse(), gaps = asc.slice(1).map((c, i) => difDias(asc[i].f, c.f)), ritmo = gaps.length ? Math.round(gaps.reduce((a, b) => a+b, 0)/gaps.length) : null;
+  const rec = L[0] || null, big = L.reduce((m, c) => !m || c.p>m.p ? c : m, null), ant = rec ? A.filter(c => c.f<rec.f).sort((x, y) => y.f.localeCompare(x.f))[0] : null;
+  const sal = {}; L.forEach(c => { const k = lugCor(c.s); (sal[k] = sal[k] || { n:0, p:0, xy:c.sx, l:[] }); sal[k].n++; sal[k].p += c.p || 0; sal[k].l.push(c); });
+  const todo = q.d0<=DD.inicio && q.d1>=finBase(B), anio = !todo && q.d0.slice(5)==='01-01' && q.d0.slice(0,4)===q.d1.slice(0,4) && (q.d1.slice(5)==='12-31' || q.d1===finBase(B)), per = todo ? 'desde octubre 2024' : anio ? 'en '+q.d0.slice(0,4) : (nomPer(q.d0, q.d1)!==rangoTxt(q.d0, q.d1) ? 'en '+nomPer(q.d0, q.d1) : 'del '+rangoTxt(q.d0, q.d1).replace(' – ', ' al '));
+  const filt = (fs.length ? ' que salieron de '+fs.map(j => lugCor(salV[j])).join(' o ') : '');
+  const titulo = fk.length ? 'Caravana'+(fk.length>1 ? 's ' : ' ')+fk.map(j => '«'+A[j].n+'»').join(', ')+(fs.length ? filt : '')+', '+per : 'Caravanas migrantes'+filt+' '+per;
+  return { filt:filt, titulo:titulo, A:A, L:L, tot:tot, ritmo:ritmo, rec:rec, big:big, ant:ant, sal:sal, hace:hace, corte:corte, per:per, perCorto:anio ? 'de '+q.d0.slice(0,4) : 'del periodo' }; }
+// El hallazgo se elige solo: el primero que se cumpla, para que nunca salga una frase forzada
+const fkUsa = r => (r.q.filtros.car || []).length>0;
+function hallCar(X){ const L = X.L, rec = X.rec; if (!rec) return '';
+  const sa = Object.keys(X.sal).sort((a, b) => X.sal[b].n-X.sal[a].n), dom = sa[0], dAnt = X.ant ? difDias(X.ant.f, rec.f) : null, lr = lugCor(rec.s);
+  const tras = dAnt!=null ? ', '+dAnt+' días después de la anterior' : '';
+  if (L.length>=3 && lr!==dom && X.sal[dom].n>=2 && L.filter(c => lugCor(c.s)===lr).length===1) return '«'+esc(rec.n)+'» salió de '+esc(lugCar(rec.s))+tras+': la primera '+X.perCorto+' que no sale de '+esc(dom)+'.';
+  if (L.length>=2 && X.big===rec) return '«'+esc(rec.n)+'», la más reciente, es también la más grande '+X.perCorto+': ≈'+miles(rec.p)+' personas'+tras+'.';
+  if (L.length>=2 && dAnt!=null) return '«'+esc(rec.n)+'» salió de '+esc(lugCar(rec.s))+tras+'; '+X.perCorto.replace('de ', 'en ').replace('del periodo', 'en el periodo')+' sale una cada '+X.ritmo+' días.';
+  return 'Salió una caravana '+X.per+': «'+esc(rec.n)+'», de '+esc(lugCar(rec.s))+', con ≈'+miles(rec.p)+' personas.'; }
+function hojaCar(r, fmt){
+  // Sin caravanas en el periodo: la ficha no queda en blanco, muestra todas desde oct 2024 como contexto y dice cuánto duró la pausa
+  const X0 = datosCar(r), vac = !X0.L.length && X0.A.length>0, rq = vac ? Object.assign({}, r.q, { d0:DD.inicio, d1:finBase(r.B) }) : r.q;
+  const X = vac ? datosCar(Object.assign({}, r, { q:rq })) : X0, L = X.L, rec = X.rec, big = X.big, ahora = new Date(), ch = [], mk = op => { ch.push(op); return 'c'+(ch.length-1); };
+  const fte = 'DGCVM, registro de caravanas', tit = X0.titulo, N = 6, otras = Math.max(0, L.length-N);
+  const pie = '<footer class="cq-pie"><span>— sin lugar de llegada reportado · personas estimadas al salir · nombres repetidos son caravanas distintas</span><span class="fte">Fuente: <b>'+fte+'</b><br>Datos al '+fechaTxt(finBase(r.B))+' · generado '+fechaTxt(iso(ahora))+' '+String(ahora.getHours()).padStart(2,'0')+':'+String(ahora.getMinutes()).padStart(2,'0')+'</span></footer>';
+  const top = '<header class="cq-top"><div><div class="cq-ceja">IA-NAMI · Pulso · Caravanas</div><h2 class="cq-tit">'+esc(tit)+'</h2></div><div class="cq-meta"><b>'+rangoTxt(r.q.d0, r.q.d1)+'</b>'+fte+'</div></header>';
+  if (!L.length) return { html:'<article class="cq-hoja f'+fmt+' t-car">'+top+'<div class="cq-hall"><b>No salieron caravanas '+esc(X.per)+'.</b> La más reciente registrada '+(X.A.length ? 'es «'+esc(X.A.slice().sort((a, b) => b.f.localeCompare(a.f))[0].n)+'», del '+fechaTxt(X.A.slice().sort((a, b) => b.f.localeCompare(a.f))[0].f)+'.' : 'no existe.')+'</div><div class="cq-cuerpo"></div>'+pie+'</article>', ch:[] };
+  const pAnt = vac ? X.A.filter(c => c.f<r.q.d0).sort((a, b) => b.f.localeCompare(a.f))[0] : null, pSig = vac ? X.A.filter(c => c.f>r.q.d1).sort((a, b) => a.f.localeCompare(b.f))[0] : null;
+  const kpis = vac ? tarjeta('Caravanas', esc(X0.per), '0', 'ninguna salió · <b>'+X.A.length+'</b> desde oct 2024', '#2B2926', true)+
+      (pAnt ? tarjeta('La anterior', 'salió de '+lugCor(pAnt.s), '«'+esc(pAnt.n)+'»', '<b>'+fechaTxt(pAnt.f)+'</b> · ≈'+miles(pAnt.p)+' personas', '#8A857A').replace(/class="v[^"]*"/, 'class="v cqc-nm'+(pAnt.n.length>20 ? ' lg' : '')+'"') : '')+
+      (pSig ? tarjeta('La siguiente', 'salió de '+lugCor(pSig.s), '«'+esc(pSig.n)+'»', '<b>'+fechaTxt(pSig.f)+'</b> · ≈'+miles(pSig.p)+' personas', OCRE).replace(/class="v[^"]*"/, 'class="v cqc-nm'+(pSig.n.length>20 ? ' lg' : '')+'"') : '')+
+      tarjeta('La más reciente', 'salió de '+lugCor(rec.s), '«'+esc(rec.n)+'»', '<b>'+fechaTxt(rec.f)+'</b> · salió hace <b>'+X.hace(rec)+'</b> días · ≈'+miles(rec.p), '#7E302B').replace(/class="v[^"]*"/, 'class="v cqc-nm'+(rec.n.length>20 ? ' lg' : '')+'"')
+    : tarjeta('Caravanas', 'DGCVM', String(L.length), (X.ritmo ? 'una cada <b>'+X.ritmo+'</b> días · ' : '')+(L.length<X.A.length ? '<b>'+X.A.length+'</b> desde oct 2024' : 'todas desde oct 2024'), '#2B2926', true)+
+    tarjeta('Personas', 'aproximadas, al salir', '≈'+miles(X.tot), '≈<b>'+miles(X.tot/L.length)+'</b> por caravana', ROJO)+
+    tarjeta('La más reciente', 'salió de '+lugCor(rec.s), '«'+esc(rec.n)+'»', '<b>'+fechaTxt(rec.f)+'</b> · salió hace <b>'+X.hace(rec)+'</b> días · ≈'+miles(rec.p), '#7E302B').replace(/class="v[^"]*"/, 'class="v cqc-nm'+(rec.n.length>20 ? ' lg' : '')+'"')+
+    (L.length>1 ? tarjeta('La más grande', 'salió de '+lugCor(big.s), '«'+esc(big.n)+'»', '<b>'+fechaTxt(big.f)+'</b> · ≈'+miles(big.p)+' personas', OCRE).replace(/class="v[^"]*"/, 'class="v cqc-nm'+(big.n.length>20 ? ' lg' : '')+'"') : '');
+  // Mapa: en rojo las caravanas de la consulta; en gris punteado las demás desde oct 2024
+  if (window.echarts && window.IANAMI_GEO && !echarts.getMap('cqc')) echarts.registerMap('cqc', { type:'FeatureCollection', features:window.IANAMI_GEO.features });
+  const rutas = L.map(c => ({ c:c, p:rutaCar(c.d) })).filter(x => x.p), hist = X.A.filter(c => !L.some(x => x.f===c.f && x.n===c.n)).map(c => ({ c:c, p:rutaCar(c.d) })).filter(x => x.p);
+  const pasos = []; rutas.forEach(x => x.p.slice(1, -1).forEach(r => pasos.push(r)));
+  const dm = {}; rutas.forEach(x => { const e = x.p[x.p.length-1]; (dm[e[0]] = dm[e[0]] || { e:e, km:kmRuta(x.p), l:[] }).l.push(x.c); }); const dest = Object.values(dm).sort((a, b) => b.km-a.km);   // la más lejana primero: solo ella lleva etiqueta, las demás van en el tooltip
+  const xs = Object.values(X.sal).map(o => o.xy).filter(Boolean).concat(rutas.map(x => x.p[x.p.length-1].slice(1))), minX = Math.min(-96.3, ...xs.map(p => p[0]-0.6)), maxX = Math.max(-86.6, ...xs.map(p => p[0]+1.2));
+  const etq = [['OAXACA',-96.05,17.3],['GUATEMALA',-90.9,15.25],['HONDURAS',-86.9,14.25],['EL SALVADOR',-89.1,13.75],['OCÉANO PACÍFICO',-93.4,14.15]].filter(e => e[1]>minX && e[1]<maxX && !(e[0]==='OAXACA' && dest.length));
+  const mapa = mk({ backgroundColor:'#E6ECEA', tooltip:{ trigger:'item', confine:true, formatter:q => q.data && q.data.tt ? q.data.tt : '' },
+    geo:{ map:'cqc', nameProperty:'nom', roam:false, boundingCoords:[[minX, 17.5],[maxX, 13.5]], itemStyle:{ areaColor:'#F4F0E6', borderColor:'#D9D2C2', borderWidth:.7 }, emphasis:{ disabled:true }, regions:[{ name:'México', itemStyle:{ areaColor:'#EFE8D6', borderColor:'#C9BFA8', borderWidth:1.1 } }] },
+    series:[
+      { type:'scatter', coordinateSystem:'geo', silent:true, symbolSize:0, data:etq.map(e => ({ value:[e[1], e[2]], n:e[0] })), label:{ show:true, formatter:q => q.data.n, fontSize:10, fontWeight:600, color:'rgba(107,102,92,.55)' } },
+      { type:'lines', coordinateSystem:'geo', polyline:true, zlevel:1, silent:true, data:hist.map(x => ({ coords:x.p.map(r => [r[1], r[2]]) })), lineStyle:{ color:'#8F887A', width:2.2, opacity:.55, cap:'round', type:[4,3] } },
+      { type:'scatter', coordinateSystem:'geo', zlevel:1, data:hist.map(x => { const e = x.p[x.p.length-1]; return { value:[e[1], e[2]], tt:'«'+esc(x.c.n)+'» ('+fechaTxt(x.c.f)+') llegó a '+esc(x.c.d) }; }), symbolSize:5, itemStyle:{ color:'#A39C8C' } },
+      { type:'lines', coordinateSystem:'geo', polyline:true, zlevel:2, data:rutas.map(x => ({ coords:x.p.map(r => [r[1], r[2]]) })), lineStyle:{ color:'#B4524C', width:4, opacity:.95, cap:'round', join:'round' }, effect:{ show:true, constantSpeed:22, symbol:'circle', symbolSize:6, color:'#fff', trailLength:0 } },
+      { type:'scatter', coordinateSystem:'geo', zlevel:3, data:pasos.map(r => ({ value:[r[1], r[2]], tt:'pasa por '+r[0] })), symbolSize:6, itemStyle:{ color:'#fff', borderColor:'#B4524C', borderWidth:1.5 } },
+      { type:'scatter', coordinateSystem:'geo', zlevel:4, data:Object.keys(X.sal).filter(k => X.sal[k].xy).map(k => { const o = X.sal[k]; return { value:o.xy.concat(o.p), tt:'<b>'+esc(k)+'</b><br>'+o.l.map(c => '«'+esc(c.n)+'» '+fechaTxt(c.f)+' · ≈'+miles(c.p)).join('<br>'),
+          label:{ position:o.xy[0]<-91 ? 'left' : 'right', formatter:'{a|'+k+'}\n{b|'+o.n+' caravana'+(o.n>1 ? 's' : '')+' · ≈'+miles(o.p)+'}' } }; }),
+        symbolSize:v => Math.max(14, Math.min(46, Math.sqrt(v[2])*0.95)), itemStyle:{ color:'rgba(196,96,90,.82)', borderColor:'#fff', borderWidth:2, shadowBlur:8, shadowColor:'rgba(126,48,43,.35)' },
+        label:{ show:true, distance:8, rich:{ a:{ fontSize:12.5, fontWeight:700, color:'#2B2926' }, b:{ fontSize:11, color:'#6B665C' } } } },
+      { type:'scatter', coordinateSystem:'geo', zlevel:5, symbol:'pin', symbolSize:26, itemStyle:{ color:'#7E302B' }, data:dest.map((o, i) => ({ value:[o.e[1], o.e[2]], tt:'<b>'+esc(o.e[0])+'</b> · ≈'+o.km+' km por la ruta probable<br>'+o.l.map(c => '«'+esc(c.n)+'» '+fechaTxt(c.f)).join('<br>'), symbolSize:i===0 ? 26 : 16,
+          label:{ show:i===0, formatter:'{a|'+(dest.length>1 ? 'hasta '+o.e[0] : o.e[0])+'}\n{b|'+(o.l.length>1 ? o.l.length+' caravanas llegaron' : 'llegó «'+(o.l[0].n.length>24 ? o.l[0].n.slice(0, 23).trim()+'…' : o.l[0].n)+'»')+' · ≈'+o.km+' km}' } })),
+        label:{ show:true, position:'top', distance:2, backgroundColor:'rgba(255,255,255,.92)', padding:[3,6], borderRadius:5, rich:{ a:{ fontSize:12, fontWeight:700, color:'#7E302B', align:'center' }, b:{ fontSize:10.5, color:'#6B665C', align:'center' } } } },
+      ...(rec.sx ? [{ type:'effectScatter', coordinateSystem:'geo', zlevel:6, data:[{ value:rec.sx, tt:'La más reciente: «'+esc(rec.n)+'»' }], symbolSize:11, rippleEffect:{ scale:4.5, brushType:'stroke', color:'#C4605A' }, itemStyle:{ color:'#7E302B' },
+        label:{ show:true, position:'top', distance:14, formatter:'más reciente · '+fCor(rec.f), fontSize:10.5, fontWeight:600, color:'#fff', backgroundColor:'#C4605A', padding:[2,6], borderRadius:99 } }] : [])] });
+  // Línea de tiempo delgada: un punto por caravana, «hoy» marcado
+  const lapso = difDias(rq.d0, rq.d1);
+  const tl = mk({ grid:{ left:8, right:8, top:12, bottom:16 }, tooltip:{ trigger:'item', confine:true, formatter:q => q.data && q.data.c ? '<b>«'+esc(q.data.c.n)+'»</b><br>'+fechaTxt(q.data.c.f)+' · ≈'+miles(q.data.c.p)+' personas' : '' },
+    xAxis:{ type:'time', min:rq.d0, max:rq.d1, axisLine:{ show:true, onZero:false, lineStyle:{ color:'#C9C1AE', width:1.5 } }, axisTick:{ show:true, length:3, lineStyle:{ color:'#C9C1AE' } }, splitLine:{ show:false }, axisLabel:{ fontSize:9.5, color:'#8A857A', margin:4, hideOverlap:true, formatter:v => { const d = new Date(v); return lapso<=92 ? d.getDate()+' '+MESC[d.getMonth()] : lapso>400 && d.getMonth()===0 ? 'ene '+String(d.getFullYear()).slice(2) : MESC[d.getMonth()]; } } },
+    yAxis:{ type:'value', show:false, min:0, max:1 },
+    series:[{ type:'scatter', data:L.map(c => ({ value:[c.f, 0, c.p], c:c, itemStyle:{ color:c===rec ? '#C4605A' : 'rgba(196,96,90,.45)', borderColor:'#fff', borderWidth:1.5 } })), symbolSize:v => Math.max(7, Math.min(16, Math.sqrt(v[2])*0.5)),
+      ...(vac ? { markArea:{ silent:true, itemStyle:{ color:'rgba(196,96,90,.22)', borderColor:'#C4605A', borderWidth:1, borderType:'dashed' }, data:[[{ xAxis:r.q.d0 }, { xAxis:r.q.d1 }]] } } : {}) },
+      ...(X.corte<=rq.d1 && X.corte>=rq.d0 ? [{ type:'line', data:[[X.corte, 0]], symbol:'none', markLine:{ silent:true, symbol:'none', data:[{ xAxis:X.corte }], lineStyle:{ color:'#2B2926', type:[3,3] }, label:{ formatter:'hoy', position:'end', fontSize:9, color:'#2B2926', distance:1 } } }] : [])] });
+  const lista = L.slice(0, N).map((c, i) => '<div class="cqc-r'+(i===0 ? ' nw' : '')+'"><span class="f"><b>'+fCor(c.f)+'</b><em>hace '+X.hace(c)+' d</em></span><span class="t"><b>'+esc(c.n)+'</b><i>'+esc(lugCor(c.s))+' → '+(c.d ? esc(c.d.split(',')[0]) : '—')+'</i></span><span class="v">≈'+miles(c.p)+'</span></div>').join('')+
+    (otras ? '<div class="cqc-mas">y '+otras+' caravana'+(otras>1 ? 's' : '')+' más '+(vac ? 'desde oct 2024' : X.perCorto.replace('de ', 'en ').replace('del periodo', 'en el periodo'))+' · la lista completa va en Bullets</div>' : '');
+  const html = '<article class="cq-hoja f'+fmt+' t-car">'+top+'<div class="cq-kpis"><div class="cq-eti">Caravanas</div><div class="cq-kr">'+kpis+'</div></div>'+
+    '<div class="cq-hall cqc-hall"><b>'+(vac ? 'No salieron caravanas '+esc(X0.per)+(pAnt && pSig ? ': entre «'+esc(pAnt.n)+'» ('+fCor(pAnt.f)+') y «'+esc(pSig.n)+'» ('+fCor(pSig.f)+') pasaron '+difDias(pAnt.f, pSig.f)+' días.' : pAnt ? ': la última fue «'+esc(pAnt.n)+'», hace '+X.hace(pAnt)+' días.' : '.') : hallCar(X))+'</b></div>'+
+    '<div class="cq-cuerpo cqc-cu"><div class="cq-card"><h3>Recorrido</h3><span class="q">'+(vac ? 'sin caravanas '+esc(X0.per)+' · se muestran todas desde oct 2024' : hist.length ? 'rojo: '+(X.filt || fkUsa(r) || /^desde/.test(X.per) ? 'esta consulta' : esc(X.per.replace(/^(en|del) /, '')))+' · gris: las demás desde oct 2024 · ' : '')+(vac ? '' : 'ruta probable por la carretera costera')+(!vac && dest.length>1 ? ' · '+rutas.length+' con lugar de llegada' : '')+'</span><div class="cqc-map" data-ch="'+mapa+'"></div></div>'+
+    '<div class="cqc-der"><div class="cq-card"><h3>'+(vac ? 'Todas desde oct 2024 <small class="cqc-fr">▢ '+esc(X0.per.replace(/^(en|del) /, ''))+'</small>' : 'Las caravanas '+esc(X.perCorto))+'</h3><span class="q">'+(vac ? 'la franja marca '+esc(X0.per.replace(/^(en|del) /, '')) : 'de la más reciente a la más antigua')+'</span><div class="cqc-tl" data-ch="'+tl+'"></div><div class="cqc-ls">'+lista+'</div></div></div></div>'+pie+'</article>';
+  return { html:html, ch:ch }; }
+function bulletsCar(r){ const X = datosCar(r), L = X.L, b = x => '<b>'+x+'</b>', l = [], q = r.q;
+  const out = { tit:X.titulo, per:rangoTxt(q.d0, q.d1), l:l, nota:'Personas estimadas al salir; cada caravana cuenta el día que salió. Nombres repetidos son caravanas distintas.', fte:'DGCVM, registro de caravanas', fin:finBase(r.B) };
+  if (!L.length){ l.push('No salieron caravanas '+X.per+'.'); return out; }
+  const rec = X.rec, big = X.big, cd = L.filter(c => c.d);
+  l.push(b(L.length+' caravana'+(L.length>1 ? 's' : ''))+' migrante'+(L.length>1 ? 's salieron ' : ' salió ')+X.per+', con unas '+b(mesa(X.tot))+' personas.');
+  if (X.ritmo) l.push('Ritmo: sale una caravana cada '+b(X.ritmo)+' días en promedio.');
+  l.push('La más reciente: '+b('«'+esc(rec.n)+'»')+', '+fechaTxt(rec.f)+' (salió hace '+X.hace(rec)+' días), desde '+esc(lugCar(rec.s))+', ≈'+b(miles(rec.p))+' personas.');
+  if (L.length>1) l.push('La más grande: '+b('«'+esc(big.n)+'»')+', '+fechaTxt(big.f)+', desde '+esc(lugCor(big.s))+', ≈'+b(miles(big.p))+' personas.');
+  l.push('Salieron de: '+Object.keys(X.sal).sort((a, c) => X.sal[c].p-X.sal[a].p).map(k => esc(k)+' '+b(X.sal[k].n)+' (≈'+miles(X.sal[k].p)+')').join('; ')+'.');
+  l.push('Hasta dónde llegaron: '+(cd.length ? cd.map(c => '«'+esc(c.n)+'» a '+esc(c.d)).join('; ')+(L.length-cd.length===1 ? '; la otra sin lugar de llegada reportado.' : L.length>cd.length ? '; las otras '+(L.length-cd.length)+' sin lugar de llegada reportado.' : '.') : 'ninguna reporta lugar de llegada.'));
+  l.push('Todas, de la más reciente: '+L.map(c => '«'+esc(c.n)+'» '+fCor(c.f)+(c.f.slice(0,4)!==rec.f.slice(0,4) ? ' '+c.f.slice(0,4) : '')+' (≈'+miles(c.p)+')').join(' · ')+'.');
+  const hasta = X.A.filter(c => c.f<=q.d1), fa = q.d1<X.corte ? q.d1 : X.corte;
+  if (hasta.length>L.length) l.push('Acumulado del 1 oct 2024 (inicio de la administración) al '+fechaTxt(fa)+': '+b(hasta.length)+' caravanas, ≈'+b(mesa(hasta.reduce((t, c) => t+(c.p || 0), 0)))+' personas.');
+  return out; }
 function hoja(r, fmt, angosta){
   if (r.tipo==='perfil') return hojaPF(r, fmt);
+  if (r.ind.k==='carn' || r.ind.k==='carp') return hojaCar(r, fmt);
   const q = r.q, T = r.total, nna = r.ind.nna, ch = [], ahora = new Date(), mk = (op) => { ch.push(op); return 'c'+(ch.length-1); };
   const fte = r.tipo==='fuentes' ? 'DGCOR, DGCVM y SIRENNA' : r.B.fuente+(r.B.fuente==='DGCOR' ? ', reporte de las O.R.' : '');
   const L1 = r.listas[0], L2 = r.listas[1], nL = fmt==='v' ? 6 : 10, top = (L, n) => L ? L.filas.slice(0, n).map(f => [f.nom, f.v]) : [];
@@ -742,6 +847,7 @@ const flB = x => (x>=0 ? '▲ ' : '▼ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1
 const GRUPO_IND = { ing:'r', ingmx:'r', ingall:'r', seg:'r', rech:'r', tram:'r', dv:'r', va:'r', resc:'i', pres:'i', ret:'i', nna:'i', adu:'i', carp:'i', carn:'i', rec:'u', rep:'u', cbp:'u' };
 const colInd = r => r.tipo==='perfil' ? '#2B2926' : ({ r:VERDE, i:ROJO, u:OCRE })[GRUPO_IND[r.ind.k]] || VERDE;
 function bullets(r){
+  if (r.ind.k==='carn' || r.ind.k==='carp') return bulletsCar(r);
   const q = r.q, b = x => '<b>'+x+'</b>', l = [];
   if (r.tipo==='perfil'){ const P = r.pf;
     P.g.forEach(g => g.cs.forEach(c => l.push(b(mesa(c.tot))+' '+esc(minus(c.nom))+(c.k==='docs' ? ', al último corte' : '')+(c.cam!=null && P.cp ? ' ('+flB(c.cam)+' '+P.cp.corto+')' : '')+(c.top ? '; encabeza '+esc(c.top[0])+' ('+c.top[1]+'%)' : '')+'.')));
