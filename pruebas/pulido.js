@@ -15,6 +15,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   const inc = await p.evaluate(() => { const el = document.querySelector('#cv-tr'); const c = el && echarts.getInstanceByDom(el); if (!c) return null; const s = c.getOption().series.filter(x => x.type==='line' && x.lineStyle && Array.isArray(x.lineStyle.type));
     return s.length ? s[0].data.filter(d => d && d.label && d.label.show).map(d => d.label.formatter) : []; });
   ok(inc && inc.length && /días?$/.test(inc[inc.length-1]), 'Control: el mes incompleto va punteado con sus días ('+JSON.stringify(inc)+')');
+  ok(/hace un año en estas fechas: [+−]\d+%/.test(await p.evaluate(() => document.getElementById('cv-hz').textContent)), 'Control: el titular dice cuánto cambió hace un año en estas fechas');
   await proceso(p, 1); await p.waitForTimeout(4500);
   await p.goBack(); await p.waitForTimeout(2500); ok(/Control migratorio/.test(await p.evaluate(() => document.querySelector('#vista-otra h1').textContent)), 'atrás: de Regulación a Control');
   await p.goBack(); await p.waitForTimeout(2000); ok(await p.evaluate(() => !document.getElementById('vista-pulso').hidden), 'atrás: de Control al Pulso, sin salir de la plataforma');

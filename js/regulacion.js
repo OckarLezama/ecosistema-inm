@@ -91,6 +91,9 @@ function nomFijo(){ const w = ventanaFija(); if (!w) return ''; if (w[1][1]===w[
 const txtCmp = () => cmpFijo() ? (nomFijo() ? 'contra '+nomFijo() : '') : Q.cmp==='sem' ? 'en la semana' : Q.cmp===90 ? 'en los últimos 3 meses' : 'en los últimos 30 días';
 const OPC_CMP = [['sem','Semana anterior'],[30,'Últimos 30 días'],[90,'Últimos 3 meses']];
 const cmpFijoHtml = () => '<span class="rg-sel rg-fijo">'+(nomFijo() ? 'Comparado con <b>'+nomFijo()+'</b>' : 'Sin periodo anterior con datos para comparar')+'</span>';
+// Hace un año en estas fechas (52 semanas antes): el mismo cambio, para ver si es de temporada. f(d0, d1) suma un tramo de días
+function haceUnAnio(f, a0, a1, c0, c1){ if (cmpFijo() || c0-364 < 0) return ''; const a = f(a0-364, a1-364), c = f(c0-364, c1-364); if (c < 30) return '';
+  const p = (a/c-1)*100; return ' · hace un año en estas fechas: '+(p>=0 ? '+' : '−')+Math.abs(p).toFixed(0)+'%'; }
 function ventanas(){ if (cmpFijo()) return ventanaFija(); if (['sem',30,90].indexOf(Q.cmp)<0) Q.cmp = 30; const N = Q.cmp;
   if (N==='sem'){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); return b-7 >= Q.d0 ? [[b, b+7], [b-7, b]] : null; }
   return N==='aa' || 2*N > Q.d1-Q.d0 ? null : [[Q.d1-N,Q.d1],[Q.d1-2*N,Q.d1-N]]; }
@@ -540,7 +543,7 @@ function ventanasNormales(){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--
   return p>=0 && semIni(p) >= Q.d0 ? { rB:{d0:semIni(w), d1:semIni(w)+7}, rA:{d0:semIni(p), d1:semIni(p)+7}, etq:'la última semana normal ('+fecha(semIni(w))+' al '+fecha(semIni(w)+6)+')' } : null; }
 function pintarHallazgos(){
   const v = ventanasTit(), out = [], A = tot(v.rA), B = tot(v.rB), dl = A ? (B/A-1)*100 : 0, temp = temporadaEn(v.rB.d0, v.rB.d1-1), cierre = !semNormal(semDe(v.rB.d0));
-  out.push({ cl:dl>=0 ? 'u' : 'd', ic:dl>=0 ? '▲' : '▼', h:'<b>'+(dl>=0?'Suben':'Bajan')+' '+Math.abs(dl).toFixed(1)+'%</b> los trámites en '+v.etq+(cierre ? ': las oficinas casi no operaron'+(temp ? ' ('+temp.replace(/^las /,'')+')' : '') : temp ? ' (temporada vacacional)' : ''), t:miles(A)+' → '+miles(B)+' · ver qué lo explica ›', act:' data-rpv="var"' });
+  out.push({ cl:dl>=0 ? 'u' : 'd', ic:dl>=0 ? '▲' : '▼', h:'<b>'+(dl>=0?'Suben':'Bajan')+' '+Math.abs(dl).toFixed(1)+'%</b> los trámites en '+v.etq+(cierre ? ': las oficinas casi no operaron'+(temp ? ' ('+temp.replace(/^las /,'')+')' : '') : temp ? ' (temporada vacacional)' : ''), t:miles(A)+' → '+miles(B)+haceUnAnio((d0, d1) => tot({d0:d0, d1:d1}), v.rB.d0, v.rB.d1, v.rA.d0, v.rA.d1)+' · ver qué lo explica ›', act:' data-rpv="var"' });
   const vn = cierre ? ventanasNormales() : v;
   if (Q.nats.length!==1 && vn){ const a = agg(K.n, NN, Object.assign({ex:personas}, vn.rA)), b = agg(K.n, NN, Object.assign({ex:personas}, vn.rB)); let best = -1, bv = 0;
     for (let i=0;i<NN;i++){ if (a[i] < 150) continue; const x = (b[i]-a[i])/a[i]; if (Math.abs(x) > Math.abs(bv)){ bv = x; best = i; } }

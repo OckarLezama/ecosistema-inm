@@ -79,6 +79,9 @@ function nomFijo(){ const w = ventanaFija(); if (!w) return ''; if (w[1][1]===w[
 const txtCmp = () => cmpFijo() ? (nomFijo() ? 'contra '+nomFijo() : '') : Q.cmp==='sem' ? 'en la semana' : Q.cmp===90 ? 'en los últimos 3 meses' : 'en los últimos 30 días';
 const OPC_CMP = [['sem','Semana anterior'],[30,'Últimos 30 días'],[90,'Últimos 3 meses']];
 const cmpFijoHtml = () => '<span class="rg-sel rg-fijo">'+(nomFijo() ? 'Comparado con <b>'+nomFijo()+'</b>' : 'Sin periodo anterior con datos para comparar')+'</span>';
+// Hace un año en estas fechas (52 semanas antes): el mismo cambio, para ver si es de temporada. f(d0, d1) suma un tramo de días
+function haceUnAnio(f, a0, a1, c0, c1){ if (cmpFijo() || c0-364 < 0) return ''; const a = f(a0-364, a1-364), c = f(c0-364, c1-364); if (c < 30) return '';
+  const p = (a/c-1)*100; return ' · hace un año en estas fechas: '+(p>=0 ? '+' : '−')+Math.abs(p).toFixed(0)+'%'; }
 function ventanas(){ if (cmpFijo()) return ventanaFija(); if (['sem',30,90].indexOf(Q.cmp)<0) Q.cmp = 30; const N = Q.cmp;
   if (N==='sem'){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); return b-7 >= Q.d0 ? [[b, b+7], [b-7, b]] : null; }
   return N==='aa' || 2*N > Q.d1-Q.d0 ? null : [[Q.d1-N, Q.d1], [Q.d1-2*N, Q.d1-N]]; }
@@ -329,7 +332,7 @@ function pintarInt(){
   if (w){ const a = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), c0 = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]}), cuenta = k => k!==MX && (!Q.nats.length || Q.nats.indexOf(k)>=0);   // sin mexicanos, igual que las tarjetas; con nacionalidades elegidas, solo ellas
     let ta = 0, tc = 0; for (let k=0;k<NN;k++) if (cuenta(k)){ ta += a[k]; tc += c0[k]; }
     let m = -1, dm = 0; if (Q.nats.length<2) for (let k=0;k<NN;k++){ const dl = a[k]-c0[k]; if (k!==MX && !Q.nats.length && Math.abs(dl)>Math.abs(dm)){ dm = dl; m = k; } }
-    if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:'Ingresos '+(ta>=tc ? 'suben ' : 'bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+txtCmp()+(Q.via>=0 ? ' por vía '+VIAS[Q.via].toLowerCase() : ''), t:corto(tc)+' → '+corto(ta)+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+corto(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' }); }
+    if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:'Ingresos '+(ta>=tc ? 'suben ' : 'bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+txtCmp()+(Q.via>=0 ? ' por vía '+VIAS[Q.via].toLowerCase() : ''), t:corto(tc)+' → '+corto(ta)+haceUnAnio((d0, d1) => tot(ING, {d0:d0, d1:d1}), w[0][0], w[0][1], w[1][0], w[1][1])+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+corto(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' }); }
   const pt = tp.filter(x => x.r>=100).sort((a,b) => b.t-a.t)[0]; if (pt && prom) hz.push({ cl:'al', ic:'!', h:esc(nomP(pt.k))+' rechaza a '+deCada(pt.t)+' que llegan', t:'el promedio nacional es '+deCada(prom)+' · '+miles(pt.r)+' rechazos · ver solo este punto ›', act:' data-cpt="'+pt.k+'"' });
   const nt = tn.slice().sort((a,b) => b.r-a.r)[0], Rn = tn.reduce((t,x) => t+x.r, 0); if (nt && Rn) hz.push({ cl:'d', ic:'%', h:esc(nomN(nt.k))+' concentra '+pct(nt.r, Rn)+'% de los rechazos', t:'se rechaza a '+deCada(nt.t)+' que llegan · '+miles(nt.r)+' de '+miles(Rn)+' · filtrar por ella ›', act:' data-cn="'+nt.k+'"' });
   $('cv-hz').innerHTML = hz.map(titular).join('')+info('hz');
@@ -464,8 +467,8 @@ function pintarEst(){
   const hz = [];
   if (w){ const a = tot(ORR, {d0:w[0][0], d1:w[0][1]}), c = tot(ORR, {d0:w[1][0], d1:w[1][1]}), xa = agg(ORR, i => ORR.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), xc = agg(ORR, i => ORR.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]});
     let m = -1, dm = 0; for (let k=0;k<NN;k++){ const d = xa[k]-xc[k]; if (Math.abs(d)>Math.abs(dm)){ dm = d; m = k; } }
-    if (c) hz.push({ cl:a>=c ? 'd' : 'u', ic:a>=c ? '▲' : '▼', h:'Rescates '+(a>=c ? 'suben ' : 'bajan ')+Math.abs((a/c-1)*100).toFixed(1)+'% '+txtCmp(), t:miles(c)+' → '+miles(a)+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+miles(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' });
-    const pa = tot(PRE, {d0:w[0][0], d1:w[0][1]}), pc = tot(PRE, {d0:w[1][0], d1:w[1][1]}); if (pc) hz.push({ cl:pa>=pc ? 'd' : 'u', ic:pa>=pc ? '▲' : '▼', h:'Presentados (sistema) '+(pa>=pc ? 'suben ' : 'bajan ')+Math.abs((pa/pc-1)*100).toFixed(1)+'% '+txtCmp(), t:miles(pc)+' → '+miles(pa)+' · ver la tendencia ›', act:' data-cem="pre"' }); }
+    if (c) hz.push({ cl:a>=c ? 'd' : 'u', ic:a>=c ? '▲' : '▼', h:'Rescates '+(a>=c ? 'suben ' : 'bajan ')+Math.abs((a/c-1)*100).toFixed(1)+'% '+txtCmp(), t:miles(c)+' → '+miles(a)+haceUnAnio((d0, d1) => tot(ORR, {d0:d0, d1:d1}), w[0][0], w[0][1], w[1][0], w[1][1])+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+miles(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' });
+    const pa = tot(PRE, {d0:w[0][0], d1:w[0][1]}), pc = tot(PRE, {d0:w[1][0], d1:w[1][1]}); if (pc) hz.push({ cl:pa>=pc ? 'd' : 'u', ic:pa>=pc ? '▲' : '▼', h:'Presentados (sistema) '+(pa>=pc ? 'suben ' : 'bajan ')+Math.abs((pa/pc-1)*100).toFixed(1)+'% '+txtCmp(), t:miles(pc)+' → '+miles(pa)+haceUnAnio((d0, d1) => tot(PRE, {d0:d0, d1:d1}), w[0][0], w[0][1], w[1][0], w[1][1])+' · ver la tendencia ›', act:' data-cem="pre"' }); }
   const rn = agg(ORR, i => ORR.n[i], NN, {nats:null, v:'rei'}), tn = agg(ORR, i => ORR.n[i], NN, {nats:null, ex:conRei}), cand = [...Array(NN).keys()].filter(k => rn[k]).sort((a,b) => rn[b]-rn[a])[0], alta = [...Array(NN).keys()].filter(k => tn[k]>=300).sort((a,b) => rn[b]/tn[b]-rn[a]/tn[a])[0];
   if (cand!=null && tn[cand]) hz.push({ cl:'al', ic:'↻', h:esc(nomN(cand))+': '+Math.round(rn[cand]/tn[cand]*100)+' de cada 100 rescatados ya lo habían sido ('+corto(rn[cand])+' personas)', t:(alta!=null && alta!==cand ? 'la proporción más alta es '+esc(nomN(alta))+' ('+Math.round(rn[alta]/tn[alta]*100)+' de cada 100, '+corto(rn[alta])+' personas) · ' : '')+'solo '+esc(reiTxt)+' registra reincidencia · filtrar ›', act:' data-cn="'+cand+'"' });
   $('cv-hz').innerHTML = hz.map(titular).join('')+info('hze');
@@ -602,7 +605,7 @@ function pintarCan(){
   // Titulares: qué pasó con los NNA en la comparación elegida
   const hz = [];
   if (w){ const per = txtCmp(), a = tot(T, {d0:w[0][0], d1:w[0][1]}), c = tot(T, {d0:w[1][0], d1:w[1][1]});
-    if (c) hz.push({ cl:a>=c ? 'd' : 'u', ic:a>=c ? '▲' : '▼', h:(nna ? 'NNA canalizados' : 'Adultos acompañantes')+' '+(a>=c ? 'suben ' : 'bajan ')+Math.abs((a/c-1)*100).toFixed(1)+'% '+per, t:miles(c)+' → '+miles(a)+' · ver la tendencia ›', act:'' });
+    if (c) hz.push({ cl:a>=c ? 'd' : 'u', ic:a>=c ? '▲' : '▼', h:(nna ? 'NNA canalizados' : 'Adultos acompañantes')+' '+(a>=c ? 'suben ' : 'bajan ')+Math.abs((a/c-1)*100).toFixed(1)+'% '+per, t:miles(c)+' → '+miles(a)+haceUnAnio((d0, d1) => tot(T, {d0:d0, d1:d1}), w[0][0], w[0][1], w[1][0], w[1][1])+' · ver la tendencia ›', act:'' });
     if (nna){ const na = tot(NNA, {cls:1, d0:w[0][0], d1:w[0][1]}), nc = tot(NNA, {cls:1, d0:w[1][0], d1:w[1][1]}); hz.push({ cl:na>nc ? 'al' : 'u', ic:na>nc ? '!' : '▼', h:'NNA no acompañados '+(na>=nc ? 'suben' : 'bajan')+': '+miles(nc)+' → '+miles(na)+' '+per, t:'ver solo no acompañados ›', act:' data-ccls="1"' }); }
     const xa = agg(T, i => T.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), xc = agg(T, i => T.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]}); let m = -1, dm = 0;
     for (let k=0;k<NN;k++){ const d = xa[k]-xc[k]; if (Math.abs(d)>Math.abs(dm)){ dm = d; m = k; } }

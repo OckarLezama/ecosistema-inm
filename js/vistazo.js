@@ -412,9 +412,15 @@ function capas(x, modo){ limpia(); const col = GC[x.g][0], N = nats(x).filter(z 
 const INF = D.per.sem; $('inft').parentNode.title = 'Informe migratorio de la semana '+dd(INF.a)+' – '+dd(INF.b);
 /* ---------- alerta: lo que se sale de lo normal (contra sus semanas previas) ---------- */
 let ALR = [];
+// hace un año en estas fechas: la misma semana (52 semanas antes) contra sus 11 semanas previas; null si no hay datos
+function haceUnAnio(k, ini){ const M = window.IANAMI_MOTOR; if (!M || !ini) return null; const a = sum(ini, -364); if (sum(a, -77) < INI) return null;
+  const q = (d0, d1) => M.total({ ind:M.INDK[k], d0:d0, d1:d1, filtros:{} }), u = q(a, sum(a, 6)), m = q(sum(a, -77), sum(a, -1))/11;
+  return m>=30 ? u/m-1 : null; }
 function alerta(){ const el = $('alerta'); ALR = [];
-  const F = DATA.map((x, i) => { const w = P_(x, 'sem').s.map(z => z[1]), u = w[w.length-1], prev = w.slice(0, -1), m = prev.reduce((a, b) => a+b, 0)/prev.length, sd = Math.sqrt(prev.reduce((a, b) => a+(b-m)*(b-m), 0)/prev.length) || 1;
-    return { i, x, z:(u-m)/sd, d:u/m-1, u, m }; }).filter(o => o.m>=300 && Math.abs(o.z)>=2 && Math.abs(o.d)>=0.1).sort((a, b) => Math.abs(b.z)-Math.abs(a.z));
+  const F = DATA.map((x, i) => { const s = P_(x, 'sem').s, w = s.map(z => z[1]), u = w[w.length-1], prev = w.slice(0, -1), m = prev.reduce((a, b) => a+b, 0)/prev.length, sd = Math.sqrt(prev.reduce((a, b) => a+(b-m)*(b-m), 0)/prev.length) || 1;
+    return { i, x, z:(u-m)/sd, d:u/m-1, u, m, s }; }).filter(o => o.m>=300 && Math.abs(o.z)>=2 && Math.abs(o.d)>=0.1)
+    .filter(o => { const ya = haceUnAnio(o.x.k, o.s[o.s.length-1][0]); return !(ya!=null && Math.sign(ya)===Math.sign(o.d) && Math.abs(ya) >= Math.abs(o.d)/2); })   // lo de temporada no es alerta
+    .sort((a, b) => Math.abs(b.z)-Math.abs(a.z));
   ALR = F.map(o => o.i);
   el.innerHTML = F.length ? '<div class="al" data-al="'+F[0].i+'"><i>!</i><span>Última semana, fuera de lo normal: <b>'+F[0].x.n+'</b> '+(F[0].d>0 ? 'subió' : 'bajó')+' '+Math.abs(Math.round(F[0].d*100))+'% contra su promedio de 11 semanas'+(F.length>1 ? ' · y '+(F.length-1)+' más' : '')+'</span></div>'
     : ''; $('corte').classList.toggle('ok', !F.length); }

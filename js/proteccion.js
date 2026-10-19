@@ -76,6 +76,9 @@ function nomFijo(){ const w = ventanaFija(); if (!w) return ''; if (w[1][1]===w[
 const txtCmp = () => cmpFijo() ? (nomFijo() ? 'contra '+nomFijo() : '') : Q.cmp==='sem' ? 'en la semana' : Q.cmp===90 ? 'en los últimos 3 meses' : 'en los últimos 30 días';
 const OPC_CMP = [['sem','Semana anterior'],[30,'Últimos 30 días'],[90,'Últimos 3 meses']];
 const cmpFijoHtml = () => '<span class="rg-sel rg-fijo">'+(nomFijo() ? 'Comparado con <b>'+nomFijo()+'</b>' : 'Sin periodo anterior con datos para comparar')+'</span>';
+// Hace un año en estas fechas (52 semanas antes): el mismo cambio, para ver si es de temporada. f(d0, d1) suma un tramo de días
+function haceUnAnio(f, a0, a1, c0, c1){ if (cmpFijo() || c0-364 < 0) return ''; const a = f(a0-364, a1-364), c = f(c0-364, c1-364); if (c < 30) return '';
+  const p = (a/c-1)*100; return ' · hace un año en estas fechas: '+(p>=0 ? '+' : '−')+Math.abs(p).toFixed(0)+'%'; }
 function ventanas(){ if (cmpFijo()) return ventanaFija(); if (['sem',30,90].indexOf(Q.cmp)<0) Q.cmp = 30; const N = Q.cmp;
   if (N==='sem'){ let w = semDe(Q.d1-1); if (semIni(w)+6 >= Q.d1) w--; const b = semIni(w); return b-7 >= Q.d0 ? [[b, b+7], [b-7, b]] : null; }
   return N==='aa' || 2*N > Q.d1-Q.d0 ? null : [[Q.d1-N, Q.d1], [Q.d1-2*N, Q.d1-N]]; }
@@ -323,7 +326,7 @@ function pintarRep(){
   if (w){ const ta = tot(REP, vEm({d0:w[0][0], d1:w[0][1]})), tc = tot(REP, vEm({d0:w[1][0], d1:w[1][1]}));
     let m = -1, dm = 0; if (Q.pto<0){ const a = agg(REP, i => REP.p[i], NP, vEm({d0:w[0][0], d1:w[0][1]})), c = agg(REP, i => REP.p[i], NP, vEm({d0:w[1][0], d1:w[1][1]})); for (let k=0;k<NP;k++){ const dl = a[k]-c[k]; if (Math.abs(dl)>Math.abs(dm)){ dm = dl; m = k; } } }
     if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:cap(M[0])+(ta>=tc ? ' suben ' : ' bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+txtCmp(),
-      t:miles(tc)+' → '+miles(ta)+(m>=0 && dm ? ' · lo que más cambió: '+esc(nomP(m))+' ('+(dm>0 ? '+' : '')+miles(dm)+') · filtrar ›' : ''), act:m>=0 && dm ? ' data-ppt="'+m+'"' : '' }); }
+      t:miles(tc)+' → '+miles(ta)+haceUnAnio((d0, d1) => tot(REP, vEm({d0:d0, d1:d1})), w[0][0], w[0][1], w[1][0], w[1][1])+(m>=0 && dm ? ' · lo que más cambió: '+esc(nomP(m))+' ('+(dm>0 ? '+' : '')+miles(dm)+') · filtrar ›' : ''), act:m>=0 && dm ? ' data-ppt="'+m+'"' : '' }); }
   const me = agg(REP, i => REP.p[i], NP, {pto:-1, v:'me'}), na = agg(REP, i => REP.p[i], NP, {pto:-1, v:'na'}), sMe = me.reduce((a,b)=>a+b,0), sNa = na.reduce((a,b)=>a+b,0);
   const pn = [...Array(NP).keys()].filter(k => me[k]>=100).sort((a,b) => na[b]/me[b]-na[a]/me[a])[0];
   if (pn!=null && na[pn]) hz.push({ cl:'al', ic:'!', h:esc(nomP(pn))+': '+pct(na[pn], me[pn])+'% de sus NNA llegan no acompañados', t:miles(na[pn])+' de '+miles(me[pn])+' · en todos los puntos: '+pct(sNa, sMe)+'% · ver solo este punto ›', act:' data-ppt="'+pn+'"' });
@@ -488,7 +491,7 @@ function pintarOtro(){ pintarGH(); }
 // Lo que cambió: las últimas 4 semanas de la base contra las 4 anteriores, el grupo que más se movió y la última llegada
 function cambiosOtro(X, grupos, nomU){ const T = X.T, b1 = X.d1+1, a0 = b1-28, p0 = a0-28, sumaV = (d0, d1, f) => { let t = 0; for (let i=0;i<T.N;i++) if (T.d[i]>=d0 && T.d[i]<d1 && (!f || f(i))) t += T.v[i]; return t; };
   const A = sumaV(a0, b1), P = sumaV(p0, a0), hz = [], rng = fecha(a0)+' – '+fecha(X.d1);
-  if (P) hz.push({ cl:A>=P ? 'u' : 'd', ic:A>=P ? '▲' : '▼', h:cap(nomU)+(A>=P ? ' suben ' : ' bajan ')+Math.abs((A/P-1)*100).toFixed(1)+'% en las últimas 4 semanas', t:miles(P)+' → '+miles(A)+' · '+rng+' contra las 4 semanas anteriores' });
+  if (P) hz.push({ cl:A>=P ? 'u' : 'd', ic:A>=P ? '▲' : '▼', h:cap(nomU)+(A>=P ? ' suben ' : ' bajan ')+Math.abs((A/P-1)*100).toFixed(1)+'% en las últimas 4 semanas', t:miles(P)+' → '+miles(A)+' · '+rng+' contra las 4 semanas anteriores'+haceUnAnio(sumaV, a0, b1, p0, a0) });
   const g = grupos.map(x => [x, sumaV(a0, b1, x.f), sumaV(p0, a0, x.f)]).filter(x => x[1] || x[2]).sort((a,b) => Math.abs(b[1]-b[2])-Math.abs(a[1]-a[2]))[0];
   if (g && g[1]!==g[2]) hz.push({ cl:'n', ic:g[1]>g[2] ? '+' : '−', h:esc(g[0].name)+(g[1]>g[2] ? ' es lo que más sube' : ' es lo que más baja')+': '+(g[1]>g[2] ? '+' : '')+miles(g[1]-g[2]), t:miles(g[2])+' → '+miles(g[1])+(A ? ' · ahora es '+pct(g[1], A)+'% del total' : '')+' · últimas 4 semanas' });
   let u = -1, uv = 0; for (let i=0;i<T.N;i++) if (T.d[i]>u){ u = T.d[i]; uv = 0; } for (let i=0;i<T.N;i++) if (T.d[i]===u) uv += T.v[i];
