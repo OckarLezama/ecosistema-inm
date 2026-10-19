@@ -450,7 +450,8 @@ function irPunto(tp, i){ const P = listaPuntos(tp)[i]; if (!P || !window.IANAMI_
   else if (tp==='em') window.IANAMI_NAV.ir('control', { vista:'est', em:'pre' });
   else window.IANAMI_NAV.ir('proteccion', { ptos:[P.n.replace(/\(vuelos\)$/, '(vuelos PRIM)')] }); }
 function fijarInd(k){ S.ind = (S.ind===k ? null : k); pintarTodo(); if (S.ind) acercarSiMundo(); }   // segundo clic lo apaga
-function fijarSel(sel, volar){ S.sel = sel; if (S.ind==='rep' && sel && sel.t==='n') S.ind = null; if (S.ind && sinEdo(S.ind) && sel && sel.t!=='n') S.ind = null;
+// desdeCard: el clic vino de una barra de las tarjetas de abajo: solo filtra, sin tarjetas nuevas ni vuelo del mapa
+function fijarSel(sel, volar, desdeCard){ S.sel = sel; S.selCard = !!(sel && desdeCard); if (S.ind==='rep' && sel && sel.t==='n') S.ind = null; if (S.ind && sinEdo(S.ind) && sel && sel.t!=='n') S.ind = null;
   if (volar && sel) prepararVuelo();                 // se apagan líneas y círculos; reaparecen al llegar
   pintarTodo(); if (volar && sel) volarA(sel); }
 
@@ -1239,7 +1240,7 @@ function pintarAnalisis(){
   $('analisis').innerHTML = '<h2><span>Lo que cambió</span>'+infoP('Cambios recientes que conviene atender: indicadores que subieron o bajaron más de lo normal, nacionalidades o estados que se movieron y caravanas. La comparación es contra el periodo de «Comparar con». No aparece lo que es de temporada: si hace un año en estas mismas fechas pasó lo mismo, no es noticia. Solo aparece cuando el periodo llega a hoy.')+(AVISOS.length ? '<small class="av-n">'+AVISOS.length+' hallazgos</small>' : '')+'</h2><span class="mini">'+esc(quien)+' · '+textoCmp()+'</span>'+
     (AVISOS.length ? '<div class="avisos-lista">'+AVISOS.map(filaAviso).join('')+'</div>' : '<span class="mini">Sin cambios relevantes con este filtro.</span>');
 }
-const barrasNat = (l, color) => { const mx = l.length?l[0][1]:1; return l.map(r => '<button class="barra" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+color+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); };
+const barrasNat = (l, color) => { const mx = l.length?l[0][1]:1; return l.map(r => '<button class="barra" data-n="'+r[0]+'"><span>'+(r[2] ? r[2]+'.º ' : '')+esc(D.nats[r[0]][0])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+color+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); };
 function htmlBreve(n){                          // datos clave de una nacionalidad
   const rr = comp('resc_rei',null,n), ts = comp('tram_se',null,n), H = suma(ts,0,8), M = suma(ts,8,16), nn = comp('can_nna',null,n), nna = suma(nn,0,12), na = nn.reduce((t,x,i)=>t+(i%3===1?x:0),0);
   const tr = rechazoExt(null,n);
@@ -1249,7 +1250,9 @@ function htmlBreve(n){                          // datos clave de una nacionalid
     (nna ? '<span class="mini"><b>'+miles(nna)+'</b> niñas, niños y adolescentes canalizados; '+miles(na)+' no acompañados.</span>' : '');
 }
 function htmlTops(F, k){
-  const l = topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, TOP);
+  const f = n => enRegion(n) ? acum(k,F.ss,n) : 0, uno = S.sel && S.sel.t==='n' ? S.sel.i : -1; let l = topNats(f, TOP);
+  if (uno>=0 && f(uno)>0 && !l.some(r => r[0]===uno)){ const todos = topNats(f, D.nats.length), lugar = todos.findIndex(r => r[0]===uno); l = l.slice(0, TOP-1).concat([[uno, f(uno), lugar+1]]); }
+  else if (uno>=0) l = l.map((r, i) => r[0]===uno ? [r[0], r[1], i+1] : r);   // la elegida lleva su lugar, como en estados
   return '<div class="caja"><h2><span>Principales nacionalidades · '+nomInd(k)+'</span>'+infoP('Las nacionalidades con más registros de este indicador en el periodo, y su parte del total.')+(S.region ? '<small>'+REGIONES[S.region][0]+'</small>' : '')+'</h2>'+
     '<span class="mini">'+(S.dia<ND ? 'Acumulado al '+fechaDia(S.dia-1) : 'Periodo completo')+'</span>'+
     (barrasNat(l, colG(IND[k].g)) || '<span class="mini">Sin registros.</span>')+'</div>';
@@ -1293,7 +1296,7 @@ function cajaCruce(k, F){
 // Rechazos: nacionalidades que sí se internaron tras la segunda revisión, con su tasa de rechazo
 function cajaInternacion(F){
   const c = colG('reg'), l = topNats(n => enRegion(n) ? comp('rech_det',F.ss,n)[0] : 0, TOP), mx = l.length ? l[0][1] : 1;
-  return '<div class="caja"><h2><span>Principales nacionalidades · Internación</span>'+infoP('Nacionalidades que pasaron a segunda revisión y se internaron. El % es su tasa de rechazo en esa revisión.')+'</h2><span class="mini">Se internaron tras la 2da revisión · periodo completo · el % es su tasa de rechazo</span>'+
+  return '<div class="caja"><h2><span>Se internaron tras la 2da revisión</span>'+infoP('Nacionalidades que pasaron a segunda revisión y se internaron. El % es su tasa de rechazo en esa revisión.')+'</h2><span class="mini">Se internaron tras la 2da revisión · periodo completo · el % es su tasa de rechazo</span>'+
     (l.map(r => { const v = comp('rech_det',F.ss,r[0]);
       return '<button class="barra pc" data-n="'+r[0]+'"><span>'+esc(D.nats[r[0]][0])+' <small>'+pct(v[1],v[0]+v[1])+'%</small></span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>'; }).join('') || '<span class="mini">Sin registros.</span>')+'</div>';
 }
@@ -1325,7 +1328,7 @@ function htmlComp(k, F){
   else if (k==='resc'){ const a = comp('resc_rei',s,n), d = comp('resc_des',s,n);
     h = elegible('Primera vez o reincidente','resc',[['Primera vez',a[0],c2],['Reincidente',a[1]]]) + grupo('Destino',[['Estación migr.',d[0]],['DIF',d[1]],['Sin destino',d[2],c2]]); }
   else if (k==='pres'){ const v = comp('pres_est',s,n).map((x,i)=>[i,x]).filter(r=>r[1]>0).sort((x,y)=>y[1]-x[1]).slice(0,TOP), mx = v.length ? v[0][1] : 1; sub = 'Estaciones con más presentados · clic para ver sus nacionalidades';
-    return '<div class="caja"><h2><span>Composición · Presentados</span>'+infoP('Cómo se reparten las personas presentadas ante el INM, por estación o categoría.')+'</h2><span class="mini">'+sub+' · periodo completo</span>'+
+    return '<div class="caja"><h2><span>Estaciones con más presentados</span>'+infoP('Cómo se reparten las personas presentadas ante el INM, por estación o categoría.')+'</h2><span class="mini">'+sub+' · periodo completo</span>'+
       (v.map(r => '<button class="barra'+(S.cruce.pres===r[0]?' on':'')+'" data-cruce="pres:'+r[0]+'"><span>'+esc(nomEst(r[0]))+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join('') || '<span class="mini">Sin registros con este filtro.</span>')+'</div>'; }
   else if (k==='can'){ const v = comp('can_nna',s,n), a = comp('can_ad',s,n), g2 = f => v.reduce((t,x,i)=>t+(f(i)?x:0),0); sub = 'Niñas, niños y adolescentes, y sus acompañantes';
     h = grupo('NNA por sexo',[['Niñas',g2(i=>i>=6)],['Niños',g2(i=>i<6),c2]]) + grupo('NNA por edad',[['0 a 11 años',g2(i=>Math.floor(i/3)%2===0)],['12 a 17 años',g2(i=>Math.floor(i/3)%2===1),c2]]) +
@@ -1347,14 +1350,14 @@ function cajaSectores(F){ const sec = cbpAhora(F), l = D.cbp.sectores.map((P,i) 
 function cajaLugares(k, F){                      // un indicador repartido por estado, cinturón o CECO
   if (sinEdo(k)) return cajaSectores(F);
   const nF = IND[k].nat ? F.nd : null, c = colG(IND[k].g); let filas, tit;
-  if (S.agr==='e' || (F.ss && !F.todo)){ const todos = topEsts(s => acum(k,[s],nF), NS), uno = F.ss && F.ss.length===1 ? F.ss[0] : -1;
+  if (S.agr==='e' || (F.ss && !F.todo && !(S.selCard && S.sel && S.sel.t==='g'))){ const todos = topEsts(s => acum(k,[s],nF), NS), uno = F.ss && F.ss.length===1 ? F.ss[0] : -1;
     let lista = F.ss && F.ss.length>1 ? todos.filter(r => F.ss.indexOf(r[0])>=0).slice(0,TOP) : todos.slice(0,TOP);
     const lugar = todos.findIndex(r => r[0]===uno), mx = lista.length?lista[0][1]:1;
     if (lugar>=TOP) lista = lista.slice(0,TOP-1).concat([todos[lugar]]);
-    tit = F.nd!=null ? IND[k].donde : nomInd(k)+' por estado';
+    tit = nomInd(k)+' por estado';   // el nombre de la tarjeta no cambia con el filtro: el filtro va en su etiqueta
     filas = lista.map(r => '<button class="barra'+(r[0]===uno?' on':'')+'" data-e="'+r[0]+'"><span>'+(r[0]===uno?(lugar+1)+'.º ':'')+esc(ESTC[r[0]])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); }
   else { const ag = AGR[S.agr], tot = ag.nombres.map((x,q)=>acum(k,miembros(S.agr,q),nF)), sin = acum(k,null,nF)-tot.reduce((x,y)=>x+y,0);
-    const mx = Math.max(sin, Math.max.apply(null,tot), 1); tit = (F.nd!=null ? IND[k].donde : nomInd(k))+' por '+ag.n.toLowerCase();
+    const mx = Math.max(sin, Math.max.apply(null,tot), 1); tit = nomInd(k)+' por '+ag.n.toLowerCase();
     filas = ag.nombres.map((nom,q) => '<button class="barra" data-g="'+S.agr+q+'"><span>'+nom+'</span><span class="b"><i style="width:'+(tot[q]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="x">'+corto(tot[q])+'</span></button>').join('')+
             '<div class="barra"><span>'+ag.sin+'</span><span class="b"><i style="width:'+(Math.max(sin,0)/mx*100).toFixed(1)+'%;background:'+cssv('--ink3')+'"></i></span><span class="x">'+corto(Math.max(sin,0))+'</span></div>'; }
   return '<div class="caja"><h2><span>'+esc(tit)+'</span>'+infoP('Total por estado en el periodo, o por la agrupación activa en el mapa (cinturón o CECO).')+'</h2><span class="mini">'+(S.dia<ND?'Acumulado al '+fechaDia(S.dia-1):'Periodo completo')+(S.agr!=='e'&&(!F.ss||F.todo)?' · clic en un grupo para filtrar solo ese':'')+'</span>'+(filas || '<span class="mini">Sin registros.</span>')+'</div>';
@@ -1414,23 +1417,25 @@ function htmlEventos(lista, n){ return lista.map(e => '<div class="ev"><time>'+f
 function pintarBajo(){
   const F = filtro(), s = S.sel, cajas = [];
   // 1) Todos los indicadores de la selección (país, estado, cinturón o CECO)
-  if (s && s.t!=='p'){ const lista = INDS.filter(m => F.nd==null || m.nat);
+  const fijo = !!S.selCard;                     // filtro desde una card: mismas tarjetas, mismo orden; solo cambian las cifras
+  if (s && s.t!=='p' && !fijo){ const lista = INDS.filter(m => F.nd==null || m.nat);
     cajas.push('<div class="caja" data-propia="1"><h2><span>'+esc(nombreSel())+'</span><small>todos sus indicadores</small></h2><span class="mini">'+(s.t==='g' ? miembros(s.a,s.q).map(x=>ESTC[x]).join(', ') : s.t==='e' ? ['c','o'].map(a => AGR[a].de[s.i]>=0 ? AGR[a].nombres[AGR[a].de[s.i]] : AGR[a].sin).join(' · ') : 'Clic en un renglón para verlo en el mapa')+'</span>'+
       lista.map(m => { const sem = semanal(m.k,F.ss,F.nd); return '<button class="fk'+(S.ind===m.k?' on':'')+'" data-k="'+m.k+'"><span>'+m.n+'</span>'+chispa(sem,64,20,colG(m.g),semDe(S.dia))+'<span class="x">'+corto(acum(m.k,F.ss,F.nd))+'</span></button>'; }).join('')+
       (s.t==='n' ? '<hr class="sep">'+htmlBreve(s.i) : '')+'</div>'); }
   // 1b) Principales nacionalidades (cuando no hay una elegida)
-  if (F.n==null){ if (!S.ind){ cajas.push(htmlTops(F,'ing')); cajas.push(htmlTops(F,'resc')); } else if (IND[S.ind].nat) cajas.push(htmlTops(F,S.ind)); }
-  if (S.ind==='rech' && F.n==null) cajas.push(cajaInternacion(F));
+  if (F.n==null || fijo){ if (!S.ind){ cajas.push(htmlTops(F,'ing')); cajas.push(htmlTops(F,'resc')); } else if (IND[S.ind].nat) cajas.push(htmlTops(F,S.ind)); }
   // 3) Lugares: con indicador, el suyo; sin indicador, el par regular e irregular
   if (S.ind) cajas.push(cajaLugares(S.ind, F)); else { cajas.push(cajaLugares('ing', F)); cajas.push(cajaLugares('resc', F)); }
   // 4) Composición del indicador, con su tarjeta complementaria
   if (S.ind==='tram') cajas.push(cajaTramites(F));
   if (S.ind) cajas.push(htmlComp(S.ind, F));
-  if (F.n==null && (S.ind==='ing' || S.ind==='resc' || S.ind==='pres')) cajas.push(cajaCruce(S.ind, F));
-  // 5) Contexto: aparece al elegir una nacionalidad
-  if (F.n!=null && contextoDe(F.n)) cajas.push(cajaContexto(F.n));
-  else if (F.n!=null && idxPais(F.n)) cajas.push('<div class="caja ancha" data-propia="1"><h2><span>Contexto · '+esc(D.nats[F.n][0])+'</span></h2>'+bloqueIdx(F.n)+'</div>');   // sin eventos propios: solo los índices
+  if ((F.n==null || fijo) && (S.ind==='ing' || S.ind==='resc' || S.ind==='pres')) cajas.push(cajaCruce(S.ind, F));
+  if (S.ind==='rech' && (F.n==null || fijo)) cajas.push(cajaInternacion(F));   // rechazos: mismo orden que los demás (nacionalidades, estado, composición y su complemento)
+  // 5) Contexto: aparece al elegir una nacionalidad en el mapa o el buscador
+  if (F.n!=null && !fijo && contextoDe(F.n)) cajas.push(cajaContexto(F.n));
+  else if (F.n!=null && !fijo && idxPais(F.n)) cajas.push('<div class="caja ancha" data-propia="1"><h2><span>Contexto · '+esc(D.nats[F.n][0])+'</span></h2>'+bloqueIdx(F.n)+'</div>');   // sin eventos propios: solo los índices
   $('bajo').innerHTML = cajas.join('');
+  if (s && (s.t==='n' || s.t==='g')) document.querySelectorAll('#bajo .barra[data-'+s.t+'="'+(s.t==='n' ? s.i : s.a+s.q)+'"]').forEach(b => b.classList.add('on'));   // la barra elegida queda marcada
   const cl = document.querySelector('.ctx-lista');       // el contexto muestra de inicio los primeros 4 eventos
   if (cl){ const ev = cl.querySelectorAll(':scope > .ev'); if (ev.length>4) cl.style.maxHeight = ev[4].offsetTop+'px'; }
 }
@@ -1474,7 +1479,7 @@ function marcarFiltro(){
     c.classList.toggle('filtro', !!nom);
     const h = c.querySelector('h2 > span'); if (!h) return;
     let t = h.querySelector('.tag');
-    if (nom && !c.dataset.propia){ if (!t){ t = document.createElement('span'); t.className = 'tag'; h.appendChild(t); } t.textContent = nom; }
+    if (nom && !c.dataset.propia && !c.querySelector('.barra.on')){ if (!t){ t = document.createElement('span'); t.className = 'tag'; h.appendChild(t); } t.textContent = nom; }
     else if (t) t.remove();
   });
 }
@@ -2460,6 +2465,10 @@ function iniciar(){
       S.agr = v==='m' ? 'e' : v; if (S.sel && S.sel.t==='g' && (v==='m' || v==='e' || S.sel.a!==S.agr)) S.sel = null;
       if (v==='m') herramienta('mundo'); else if (v==='e') herramienta('mx'); else acercarSiMundo();
       pintarTodo(); return; }
+    const enCard = T('#bajo .barra[data-n], #bajo .barra[data-e], #bajo .barra[data-g]');   // barra de una tarjeta: filtra ahí mismo; otro clic en la misma la quita
+    if (enCard){ const d = enCard.dataset, sel = d.n!=null ? {t:'n', i:+d.n} : d.e!=null ? {t:'e', i:+d.e} : {t:'g', a:d.g[0], q:+d.g.slice(1)};
+      const igual = S.sel && S.sel.t===sel.t && (sel.t==='g' ? S.sel.a===sel.a && S.sel.q===sel.q : S.sel.i===sel.i);
+      if (igual) fijarSel(null, false); else fijarSel(sel, false, true); return; }
     const gg = T('[data-g]'); if (gg){ fijarSel({t:'g', a:gg.dataset.g[0], q:+gg.dataset.g.slice(1)}, true); return; }
     const n = T('[data-n]'); if (n){ fijarSel({t:'n', i:+n.dataset.n}, true); return; }
     const es = T('[data-e]'); if (es){ fijarSel({t:'e', i:+es.dataset.e}, true); return; }
