@@ -40,7 +40,7 @@ CLASES = ["Acompañado", "No acompañado", "Separado"]
 
 def nacionalidad(x):
     n = ALIAS.get(norm(x), norm(x))
-    return CORTO.get(n) or str(x).strip().title()
+    return CORTO.get(n) or ("México" if n in ("MEXICO", "ESTADOS UNIDOS MEXICANOS") else str(x).strip().title())
 
 
 def estado(x):

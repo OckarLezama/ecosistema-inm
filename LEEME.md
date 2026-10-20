@@ -44,6 +44,9 @@ Página principal (Pulso) y convertidor de bases.
    - Cada carga deja una huella por base y día (`datos/huella.json`) y la siguiente anota en `datos/bitacora.js` qué cambió (sección **Bases › Cambios en los datos**).
    - Todo se toma desde el 1 oct 2024; lo anterior se avisa y no se usa.
    - Las hojas ocultas o con otras columnas no se leen (se avisa).
+   - Encabezados que el área cambió de nombre se leen con el de siempre y se avisa: CBP «FECHA» y «Encuentro» (= «DIA» y «AGENCIA»), DGPMV «FECHA_REPATRIACION» y «ESTADO» (= «DIA» y «O.R.»). La lista está en `RENOMBRES` de `robot/lector.py`.
+   - Si una entrega nueva trae otras columnas de nacionalidad (CBP), se conservan las de las entregas anteriores.
+   - Validación del Registro Civil: se juntan las entregas igual que las demás bases (cada una manda en su periodo de fechas de solicitud); sirve tanto la base completa como solo las solicitudes de la semana.
 2. Desde la raíz del repositorio:
 
    ```
@@ -201,7 +204,7 @@ Lámina de Arma tu informe: lo que eliges (un país, un punto, un estado, un tr�
 
 - Vigentes: pedir al área un archivo estado × país × tipo de documento para el cruce de tres (hoy los archivos cruzan de dos en dos).
 - Vigentes: que el robot guarde cada corte semanal para medir la variación del stock.
-- Validación: confirmar si el archivo semanal trae solo solicitudes nuevas o el acumulado con resultados actualizados.
+- Validación: el archivo semanal trae solo las solicitudes nuevas (oct 2026). Si algún día trae resultados actualizados de solicitudes anteriores, mandarlo como base completa para que reemplace todo.
 - Trámites: confirmar con el área el cierre de oficinas del 20 al 31 de diciembre y la clasificación «personas nuevas».
 - Control: presentados según las O.R. (≈397 mil) contra el sistema (≈50 mil); Tabasco reporta 2% y Coahuila y Chihuahua 0 en el sistema.
 - Control: confirmar si «canalizados al DIF» del reporte de rescates incluye adultos, y la definición de «abandono de PAM».

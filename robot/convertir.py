@@ -666,10 +666,18 @@ def main():
             if fuera:
                 lector.avisar(NOMBRES[clave], os.path.basename(ruta) + ": las hojas «" + "», «".join(fuera) + "» no se usaron (están ocultas o no tienen las columnas de la base). Si traen datos que deben contar, pedir al área que los pase a la hoja principal.")
             partes.append((os.path.basename(ruta), t))
-        orig = partes[0][1].attrs.get("orig") or list(partes[0][1].columns)
-        orig = [lector.ALIAS.get(lector.norm(c), c) for c in orig]          # encabezados con errores de captura («NACIONADLIDAD»)
+        # Columnas: las de todos los archivos (si una entrega nueva trae otras nacionalidades, no se pierden las anteriores)
+        cols, nom = [], {}
+        for _, p in partes:
+            o = p.attrs.get("orig") or list(p.columns)
+            for c, x in zip(p.columns, o):
+                if c not in nom:
+                    cols.append(c)
+                    x = lector.ALIAS.get(lector.norm(x), x)                     # errores de captura («NACIONADLIDAD»)
+                    nom[c] = x if norm(x) == c else c                           # y nombres nuevos («FECHA» → «DIA»)
         t = lector.juntar(partes, NOMBRES[clave], origen=a.origen)
-        t = t[[c for c in partes[0][1].columns]]
+        t = t.reindex(columns=cols)
+        orig = [nom[c] for c in cols]
         tablas[clave] = pd.concat([pd.DataFrame([orig], columns=t.columns), t], ignore_index=True)
         tablas[clave].columns = range(t.shape[1])
         ocultas[clave] = []

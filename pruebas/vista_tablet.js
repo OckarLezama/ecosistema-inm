@@ -7,7 +7,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
 global.window = {}; global.document = { getElementById(){ return null; } };
 for (const f of ['datos.js','control.js','proteccion.js','regulacion.js','vocabulario.js']) require(dir+'/datos/'+f);
 require(dir+'/js/consulta.js'); const M = window.IANAMI_MOTOR;
-const FIN = ['ing','rech','tram','resc','pres','nna','ret','rec','rep','cbp'].map(k => M.finBase(M.BASES[M.INDK[k].b])).sort()[0];
+const FIN = ['ing','rech','tram','resc','pres','nna','ret','rec','rep','cbp'].map(k => M.finBase(M.BASES[M.INDK[k].b])).sort().pop();   // como la vista: hasta el corte más reciente (cada base suma lo que trae)
 const T = (k, a, b) => M.total({ ind:M.INDK[k], d0:a, d1:b, filtros:{} });
 const CAP = process.argv[2];
 (async () => { const b = await chromium.launch({ executablePath:process.env.CHROMIUM || undefined }); const errs = []; let mal = 0; const ok = (c, t) => { if (!c){ mal++; console.log('  MAL: '+t); } };

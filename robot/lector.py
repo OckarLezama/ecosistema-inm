@@ -29,6 +29,10 @@ import pandas as pd
 
 INICIO = pd.Timestamp("2024-10-01")
 ALIAS = {"NACIONADLIDAD": "NACIONALIDAD", "NACIONALIDA": "NACIONALIDAD"}
+RENOMBRES = [("FECHA", "DIA", {"LOCATION", "CIUDAD EEUU", "TOTAL"}),                      # CBP desde oct 2026
+           ("ENCUENTRO", "AGENCIA", {"LOCATION", "CIUDAD EEUU", "TOTAL"}),
+           ("FECHA_REPATRIACION", "DIA", {"PUNTO_REPATRIACION", "MEXICANOS REPATRIADOS"}),   # DGPMV desde oct 2026
+           ("ESTADO", "O.R.", {"PUNTO_REPATRIACION", "MEXICANOS REPATRIADOS"})]
 AVISOS = {}          # nombre de la base → observaciones (sin repetir)
 PERIODOS = {}        # nombre de la base → {desde, hasta, archivo, filas}: lo que lee cada robot fuera de datos.js (página Bases)
 
@@ -73,6 +77,13 @@ def encabezados(fila, base=None):
                 avisar(base, f"Encabezado «{c}» leído como «{ALIAS[n]}» (corregir en el archivo).")
             n = ALIAS[n]
         cols.append(n)
+    # Encabezados que cambiaron de nombre en entregas recientes: se leen con el nombre de siempre solo si la base
+    # trae sus columnas propias y le falta la de siempre (así no se confunde «FECHA» o «ESTADO» de otra base).
+    for viejo, nuevo, si in RENOMBRES:
+        if viejo in cols and nuevo not in cols and si <= set(cols):
+            if base:
+                avisar(base, f"Encabezado «{viejo}» leído como «{nuevo}».")
+            cols[cols.index(viejo)] = nuevo
     return cols
 
 
