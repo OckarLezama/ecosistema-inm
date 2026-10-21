@@ -30,7 +30,8 @@ if (CV){
   T.rec.v = T.rec.ad.map((x,i) => x+T.rec.me[i]); T.ret.v = T.ret.dep.map((x,i) => x+T.ret.ra[i]);
   const reiOR = new Set(); T.orr.rei.forEach((v,i) => { if (v>0) reiOR.add(T.orr.e[i]); });
   const c = { inicio:CV.inicio, dias:CV.dias, fuente:'DGCVM' };
-  base('ing', Object.assign({}, c, { T:T.ing, ex:i => T.ing.n[i]!==MX, dims:{ e:ES, n:N, p:{nom:'Punto de internación', col:'p', vals:D.p}, via:{nom:'Vía', col:'vi', vals:['Aérea','Terrestre','Marítima (cruceros)']} } }));
+  // Ingresos: el total completo (extranjeros + mexicanos, oct 2026); «ingext» es solo extranjeros (contra ella se miden los rechazos)
+  base('ing', Object.assign({}, c, { T:T.ing, dims:{ e:ES, n:N, p:{nom:'Punto de internación', col:'p', vals:D.p}, via:{nom:'Vía', col:'vi', vals:['Aérea','Terrestre','Marítima (cruceros)']} } }));
   base('seg', Object.assign({}, c, { T:T.seg, ex:i => T.seg.n[i]!==MX, dims:{ e:ES, n:N, p:{nom:'Punto de internación', col:'p', vals:D.p}, res:{nom:'Resultado', col:'r', vals:['Internación','Rechazo']} } }));
   base('pre', Object.assign({}, c, { T:T.pre, dims:{ e:E, n:N, est:{nom:'Estación', col:'s', vals:D.s} } }));
   base('ret', Object.assign({}, c, { T:T.ret, dims:{ e:E, n:N } }));
@@ -40,10 +41,10 @@ if (CV){
   base('rec', Object.assign({}, c, { fuente:'DGCOR', T:T.rec, dims:{ e:E, n:N } }));
   // cada base con su propio corte: las que llegan menos lejos no se cuentan como ceros
   if (CV.fin) Object.keys(CV.fin).forEach(k => { if (BASES[k]){ BASES[k].dias = CV.fin[k]+1; } });
-  // mexicanos que ingresaron y el gran total (extranjeros + mexicanos): misma base de ingresos
+  // mexicanos que ingresaron y solo extranjeros: misma base de ingresos
   const dI = { e:ES, p:{nom:'Punto de internación', col:'p', vals:D.p}, via:{nom:'Vía', col:'vi', vals:['Aérea','Terrestre','Marítima (cruceros)']} };
   base('ingmx', Object.assign({}, c, { T:T.ing, dias:BASES.ing.dias, ex:i => T.ing.n[i]===MX, dims:dI }));
-  base('ingall', Object.assign({}, c, { T:T.ing, dias:BASES.ing.dias, dims:Object.assign({ n:N }, dI) }));
+  base('ingext', Object.assign({}, c, { T:T.ing, dias:BASES.ing.dias, ex:i => T.ing.n[i]!==MX, dims:Object.assign({ n:N }, dI) }));
 }
 if (PM) base('rep', { inicio:PM.inicio, dias:PM.dias, fuente:'DGPMV', T:tabla(PM.rep), dims:{ e:{nom:'O.R.', col:'e', vals:PM.dic.e}, p:{nom:'Punto de repatriación', col:'p', vals:PM.dic.p}, mod:{nom:'Modalidad', col:'m', vals:['Terrestre','Aérea (vuelos PRIM)']} } });
 // Vuelos comerciales y Guatemala-Honduras: archivos aparte de DGPMV (no están en el total de repatriados), cada uno con su corte
@@ -97,15 +98,14 @@ const IND = [
     partes:[ {k:'pre', nom:'Presentados en estación', q:'fueron presentados', med:'pre', g:1, sin:['presentad']}, {k:'can', nom:'Canalizados al DIF', q:'fueron canalizados', med:'can', g:1, sin:['canaliz']},
              {k:'sd', nom:'Sin destino registrado', q:'no tienen destino registrado', med:'sd', g:1, sin:['sin destino','destino']}, {k:'pv', nom:'Primera vez', q:'eran de primera vez', med:'pv', g:2, sin:['primera vez']},
              {k:'rei', nom:'Reincidentes', q:'eran reincidentes', med:'rei', g:2, rei:true, sin:['reincid']} ] },
-  { k:'ing', nom:'ingresos de extranjeros', art:'los', cu:'cuántos', b:'ing', sin:['internacion','ingres','entrad','llegad'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'}, nota:'Extranjeros que se internaron al país; no incluye mexicanos.',
+  { k:'ing', nom:'ingresos', art:'los', cu:'cuántos', b:'ing', sin:['internacion','ingres','entrad','llegad','todos los internaci','internaci','internaciones totales','total de internaci','gran total','internaciones de extranjeros y mexican'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'}, nota:'Extranjeros y mexicanos que entraron al país por los puntos de internación.',
+    partes:[ {k:'ext', nom:'Extranjeros', q:'eran extranjeros', ex:(T,i) => T.n[i]!==MXc, g:1, sin:['extranjer']}, {k:'mx', nom:'Mexicanos', q:'eran mexicanos', ex:(T,i) => T.n[i]===MXc, g:1, sin:['mexican']}, {k:'aer', nom:'Vía aérea', q:'fueron por vía aérea', ex:(T,i) => T.vi[i]===0, g:2, sin:['aere','avion','aeropuert']}, {k:'ter', nom:'Vía terrestre', q:'fueron por vía terrestre', ex:(T,i) => T.vi[i]===1, g:2, sin:['terrestre']}, {k:'mar', nom:'Cruceros', q:'fueron de cruceros', ex:(T,i) => T.vi[i]===2, g:2, sin:['crucero','maritim']} ] },
+  { k:'ingext', nom:'ingresos de extranjeros', art:'los', cu:'cuántos', b:'ingext', sin:['ingresos de extranjer','extranjeros que ingres','extranjeros que entr','entradas de extranjer','internaciones de extranjer','llegadas de extranjer','extranjeros que lleg'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'}, nota:'Solo extranjeros; contra esta cifra se miden los rechazos.',
     partes:[ {k:'aer', nom:'Vía aérea', q:'fueron por vía aérea', ex:(T,i) => T.vi[i]===0, g:1, sin:['aere','avion','aeropuert']}, {k:'ter', nom:'Vía terrestre', q:'fueron por vía terrestre', ex:(T,i) => T.vi[i]===1, g:1, sin:['terrestre']},
              {k:'mar', nom:'Cruceros', q:'fueron de cruceros', ex:(T,i) => T.vi[i]===2, g:1, sin:['crucero','maritim']} ] },
   { k:'ingmx', nom:'mexicanos que ingresaron', art:'los', cu:'cuántos', b:'ingmx', sin:['mexicanos que ingres','mexicanos que entr','ingresos de mexican','entradas de mexican','internaciones de mexican','mexicanos ingres'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'},
     nota:'Mexicanos que entraron al país por los puntos de internación. Extranjeros + mexicanos = todos los ingresos.', partes:[ {k:'aer', nom:'Vía aérea', q:'fueron por vía aérea', ex:(T,i) => T.vi[i]===0, g:1, sin:['aere','avion','aeropuert']}, {k:'ter', nom:'Vía terrestre', q:'fueron por vía terrestre', ex:(T,i) => T.vi[i]===1, g:1, sin:['terrestre']},
              {k:'mar', nom:'Cruceros', q:'fueron de cruceros', ex:(T,i) => T.vi[i]===2, g:1, sin:['crucero','maritim']} ] },
-  { k:'ingall', nom:'ingresos al país (extranjeros y mexicanos)', art:'los', cu:'cuántos', b:'ingall', sin:['todos los internaci','internaci','internaciones totales','total de internaci','gran total','internaciones de extranjeros y mexican'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'},
-    nota:'Todos los ingresos por los puntos de internación: extranjeros + mexicanos.',
-    partes:[ {k:'ext', nom:'Extranjeros', q:'eran extranjeros', ex:(T,i) => T.n[i]!==MXc, g:1, sin:['extranjer']}, {k:'mx', nom:'Mexicanos', q:'eran mexicanos', ex:(T,i) => T.n[i]===MXc, g:1, sin:['mexican']}, {k:'aer', nom:'Vía aérea', q:'fueron por vía aérea', ex:(T,i) => T.vi[i]===0, g:2, sin:['aere','avion','aeropuert']}, {k:'ter', nom:'Vía terrestre', q:'fueron por vía terrestre', ex:(T,i) => T.vi[i]===1, g:2, sin:['terrestre']}, {k:'mar', nom:'Cruceros', q:'fueron de cruceros', ex:(T,i) => T.vi[i]===2, g:2, sin:['crucero','maritim']} ] },
   { k:'seg', nom:'casos de segunda revisión', art:'los', cu:'cuántos', b:'seg', sin:['segunda revision','revision'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'},
     partes:[ {k:'rch', nom:'Rechazados', q:'terminaron en rechazo', ex:(T,i) => T.r[i]===1, g:1, sin:['rechaz']}, {k:'int', nom:'Internados', q:'se internaron', ex:(T,i) => T.r[i]===0, g:1, sin:['internad']} ] },
   { k:'rech', nom:'rechazos', art:'los', cu:'cuántos', b:'seg', ex:(T,i) => T.r[i]===1, sin:['rechaz','inadmi'], proc:'Control migratorio · Ingresos', ir:{d:'control', vista:'int'}, nota:'Personas a las que, en segunda revisión, se les negó la internación; no incluye mexicanos.' },
@@ -187,7 +187,8 @@ const total = o => suma(o)[0];
 const medParte = (ind, p) => p ? { med:p.med, ex:p.ex, exDim:p.dim } : {};
 // Por dimensión: [[índice, valor], …] de mayor a menor
 function porDim(o, dim){ const B = BASES[o.ind.b], D = B.dims[dim], nk = D.vals.length, x = suma(Object.assign({}, o, { dim:dim, nk:nk+1, key:(T,i) => { const v = T[D.col][i]; return v>=0 && v<nk ? v : nk; } }));
-  return [...Array(nk).keys()].filter(k => x[k]>0).sort((a,b) => x[b]-x[a]).map(k => [k, x[k]]); }
+  const sinMx = dim==='n' && o.ind.b==='ing' && !o.conMx ? D.vals.indexOf('México') : -1;   // en ingresos, México va aparte («mexicanos que regresan»), no en el ranking de países
+  return [...Array(nk).keys()].filter(k => x[k]>0 && k!==sinMx).sort((a,b) => x[b]-x[a]).map(k => [k, x[k]]); }
 // Cubetas de tiempo dentro del rango: día, semana (lunes a domingo) o mes
 function cubetas(d0, d1, g){
   const n = difDias(d0, d1)+1; g = g==='auto' ? (n<=35 ? 'd' : n<=200 ? 's' : 'm') : g; const l = [];
@@ -314,8 +315,9 @@ function entender0(txt){
   if (B.dims.n) Object.keys(GENT).forEach(g => { const m = t.match(new RegExp(' ('+g+'[a-zñ]*)')); if (m){ const i = B.dims.n.vals.indexOf(GENT[g]); if (i>=0){ filtro('n', i, m.index); toma(m[1]); } } });
   if (B.dims.doc) DOCK.forEach(([w,txt]) => { const m = t.match(new RegExp(' ('+w+'[a-zñ]*)')); if (m){ const i = B.dims.doc.vals.findIndex(v => v.indexOf(txt)>=0); if (i>=0){ filtro('doc', i, m.index); toma(m[1]); tomaRaiz('visa') || tomaRaiz('tarjeta') || tomaRaiz('residen'); } } });
   Object.keys(q.filtros).forEach(d => q.filtros[d].sort((a,b) => pos[d+':'+a]-pos[d+':'+b]));
-  if (q.ind==='ing' && (q.filtros.n || []).indexOf(MXc)>=0 && INDK.ingall) q.ind = 'ingall';
-  if (q.ind==='ingall' && q.filtros.n && q.filtros.n.length===1 && q.filtros.n[0]===MXc && INDK.ingmx){ q.ind = 'ingmx'; delete q.filtros.n; q.partes = q.partes.filter(k => k!=='mx' && k!=='ext'); }    // «ingresos de mexicanos»: la base de extranjeros no los trae
+  // «extranjeros que ingresaron…»: el vocabulario borra «extranjeros» (palabra de relleno en otros temas), así que se busca en el texto original
+  if (q.ind==='ing' && INDK.ingext && / extranjer/.test(' '+norm(txt)) && !/ mexican/.test(' '+norm(txt)) && !(q.filtros.n || []).length){ q.ind = 'ingext'; q.partes = q.partes.filter(k => k!=='ext' && k!=='mx'); }
+  if (q.ind==='ing' && q.filtros.n && q.filtros.n.length===1 && q.filtros.n[0]===MXc && INDK.ingmx){ q.ind = 'ingmx'; delete q.filtros.n; q.partes = q.partes.filter(k => k!=='mx' && k!=='ext'); }    // «ingresos de mexicanos»: se responde como «mexicanos que ingresaron»
   // 5. periodo (uno o dos meses; con dos meses se comparan)
   const anio = t.match(/ (20\d\d) /), finB = fecha0(finBase(B)), ms = MES.map((m,i) => [i, t.indexOf(' '+m+' ')]).filter(x => x[1]>=0).sort((a,b) => a[1]-b[1]), mes = ms.length ? ms[0][0] : -1;
   const rangoMes = m => { let y = anio ? +anio[1] : finB.getFullYear(); if (!anio && new Date(y, m, 1)>finB) y--; return [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))]; };
@@ -374,7 +376,7 @@ function entender0(txt){
 /* ---- Perfil: todo lo del Pulso para una nacionalidad o una O.R. en el periodo. Se activa al escribir solo el país
    («Venezuela», «venezolanos») o solo el estado («Chiapas», «O.R. Chiapas»). Las cifras no se suman entre sí: una
    persona puede contar en varios indicadores. Canalizados = NNA + adultos que los acompañan (como en el Pulso). */
-const PFD = () => [['Regular', VERDE, [['ing','Ingresos de extranjeros',['ing']], ['rech','Rechazos',['rech']], ['tram','Trámites concluidos',['tram']], ['docs','Extranjeros con documento vigente',null]]],
+const PFD = () => [['Regular', VERDE, [['ing','Ingresos',['ing']], ['rech','Rechazos',['rech']], ['tram','Trámites concluidos',['tram']], ['docs','Extranjeros con documento vigente',null]]],
   ['Irregular', ROJO, [['resc','Rescatados',['resc']], ['pres','Presentados',['pres']], ['can','Canalizados al DIF',['nna','adu']], ['ret','Retornados',['ret']]]],
   ['Desde EE. UU.', OCRE, [['rec','Recibidos de EE. UU.',['rec']], ['rep','Mexicanos repatriados',['rep']], ['cbp','Encuentros CBP (en EE. UU.)',['cbp']]]]];
 const IR_PF = { can:'nna' };
@@ -388,12 +390,12 @@ function medirPF(ks, dim, nom, d0, d1, C, M, cz){
     const i = idxNom(B.dims[dim].vals, nom), a = d0>B.inicio ? d0 : B.inicio, z = d1<finBase(B) ? d1 : finBase(B); if (fin==null || finBase(B)<fin) fin = finBase(B);
     dias = Math.max(dias, z>=a ? difDias(a, z)+1 : 0); if (i<0 || z<a) return;
     const o = { ind:ind, filtros:Object.assign({ [dim]:[i] }, cz ? { [cz.dim]:[j] } : {}), d0:a, d1:z }; tot += total(o); serie(o, C).forEach((x,j) => sem[j] += x);
-    if (!cz && B.dims[otra]) porDim(o, otra).forEach(([j,x]) => { const nm = B.dims[otra].vals[j]; top.set(nm, (top.get(nm) || 0) + x); });
+    if (!cz && B.dims[otra]) porDim(Object.assign({ conMx:true }, o), otra).forEach(([j,x]) => { const nm = B.dims[otra].vals[j]; top.set(nm, (top.get(nm) || 0) + x); });
     if (M) M.forEach((p,j) => { const pa = p[0]>B.inicio ? p[0] : B.inicio, pz = p[1]<finBase(B) ? p[1] : finBase(B); if (pz<pa) return; cmp[j*2] += total(Object.assign({}, o, { d0:pa, d1:pz })); cmp[j*2+1] = difDias(pa, pz)+1; }); });
   if (!ok) return null;
   const t1 = [...top].filter(x => x[0]!=='México').sort((a,b) => b[1]-a[1])[0];
   const cam = cmp && cmp[0]>=300 && cmp[1] && cmp[3] ? ((cmp[2]/cmp[3])/(cmp[0]/cmp[1])-1)*100 : null;
-  return { tot:tot, dia:dias ? tot/dias : 0, sem:sem, top:t1 && tot ? [t1[0], deCien(t1[1], tot)] : null, cam:cam, fin:fin };
+  return { tot:tot, dia:dias ? tot/dias : 0, sem:sem, top:t1 && tot ? [t1[0], deCien(t1[1], tot)] : null, cam:cam, fin:fin, mx:top.get('México') || 0 };
 }
 // Con qué se compara: los días anteriores del mismo largo; si las bases no llegan, el último mes completo contra el anterior
 function comparacionPF(d0, d1){ const n = difDias(d0, d1)+1, a0 = sumaDias(d0, -n), a1 = sumaDias(d0, -1);
@@ -412,7 +414,7 @@ function perfil(q){
   const todas = [].concat(...g.map(x => x.cs)), de = k => todas.find(c => c.k===k), ing = de('ing'), res = de('resc'), nat = dim==='n';
   const vac = c => c.k==='tram' && cp && cp.B && cp.B[0].slice(5,7)==='12';      // el INM cierra oficinas a fin de año
   const fr = [];
-  if (ing) fr.push('Entraron <b>'+palabras(ing.tot)+(nat ? ' personas de '+esc(nom)+'</b> por puntos de internación' : ' extranjeros</b> por '+esc(nom)+(ing.top ? ', '+ing.top[1]+'% de '+esc(ing.top[0]) : '')));
+  if (ing) fr.push('Entraron <b>'+palabras(ing.tot)+(nat ? ' personas de '+esc(nom)+'</b> por puntos de internación' : ' personas</b> por '+esc(nom)+' ('+palabras(ing.tot-ing.mx)+' extranjeros y '+palabras(ing.mx)+' mexicanos)'+(ing.top ? ', '+ing.top[1]+'% de '+esc(ing.top[0]) : '')));
   if (res) fr.push((ing ? 'hubo ' : 'Hubo ')+'<b>'+palabras(res.tot)+' rescates</b>'+(res.top ? ', '+res.top[1]+'% '+(nat ? 'en ' : 'de ')+esc(res.top[0]) : ''));
   const cam = todas.filter(c => c.cam!=null && Math.abs(c.cam)>=5).sort((a,b) => Math.abs(b.cam)-Math.abs(a.cam)).slice(0,2);
   let resp = fr.length ? fr.join(ing && !nat ? ', y ' : ' y ')+'.' : 'No hay registros de '+esc(nom)+' en el periodo.';
@@ -820,7 +822,7 @@ function hoja(r, fmt, angosta){
   }
   else {   // ranking
     eti = cap(r.ind.nom)+(fraseFiltros(q) ? ' '+fraseFiltros(q) : '');
-    const ch2 = r.ind.k==='ingall' ? null : dimChica(r), Td = ch2 ? ch2.l.reduce((s,x) => s+x[1], 0) : 0, pg = !ch2 && r.ind.partes ? r.ind.partes.filter(p => p.g===1).slice(0,3) : [];
+    const ch2 = r.ind.k==='ing' && !(r.q.filtros.n || []).length ? null : dimChica(r), Td = ch2 ? ch2.l.reduce((s,x) => s+x[1], 0) : 0, pg = !ch2 && r.ind.partes ? r.ind.partes.filter(p => p.g===1).slice(0,3) : [];
     kpis = tot+(ch2 ? ch2.l.slice(0,3).map(([k,v],j) => tarjeta(r.B.dims[ch2.dim].vals[k], '', cifra(v, nna), nna && v>0 && v<5 ? 'cifra protegida' : '<b>'+deCien(v, Td)+'</b> de cada 100', [SALVIA, ROJO, OCRE][j])).join('')
       : pg.length ? pg.map((p,j) => { const v = total(Object.assign({}, r.base, medParte(r.ind, p))); return tarjeta(p.nom, '', cifra(v, nna), T>=30 ? '<b>'+deCien(v, T)+'</b> de cada 100' : '', [VERDE, ROJO, OCRE][j]); }).join('')
       : [L1, L2].filter(L => L && L.filas.length>=2).map((L,j) => tarjeta(L.filas[0].nom, 'principal '+(PLU[L.nom] ? 'entre '+L.filas.length+' '+PLU[L.nom] : 'por '+min(L.nom)), cifra(L.filas[0].v, nna), T>=30 ? '<b>'+deCien(L.filas[0].v, T)+'</b> de cada 100' : '', [VERDE, OCRE][j])).join('')+
@@ -848,7 +850,7 @@ const mesa = (v, nna) => { v = Math.round(v); if (nna && v>0 && v<5) return 'MEN
   const m = Math.floor(v/1e6), k = Math.floor(v%1e6/1000); return m+(m===1 ? ' MILLÓN' : ' MILLONES')+(k ? ' '+k+' MIL' : ''); };
 const pcB = (a, T, nna) => { if (!T || (nna && a>0 && a<5)) return ''; const x = a/T*100; return '('+(x>0 && x<1 ? 'menos de 1' : Math.round(x))+'%)'; };
 const flB = x => (x>=0 ? '▲ ' : '▼ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%';
-const GRUPO_IND = { ing:'r', ingmx:'r', ingall:'r', seg:'r', rech:'r', tram:'r', dv:'r', va:'r', resc:'i', pres:'i', ret:'i', nna:'i', adu:'i', carp:'i', carn:'i', rec:'u', rep:'u', cbp:'u' };
+const GRUPO_IND = { ing:'r', ingmx:'r', ingext:'r', seg:'r', rech:'r', tram:'r', dv:'r', va:'r', resc:'i', pres:'i', ret:'i', nna:'i', adu:'i', carp:'i', carn:'i', rec:'u', rep:'u', cbp:'u' };
 const colInd = r => r.tipo==='perfil' ? '#2B2926' : ({ r:VERDE, i:ROJO, u:OCRE })[GRUPO_IND[r.ind.k]] || VERDE;
 function bullets(r){
   if (r.ind.k==='carn' || r.ind.k==='carp') return bulletsCar(r);
@@ -878,8 +880,8 @@ function bullets(r){
   l.push(b(mesa(T, nna))+' '+nf+' '+per+'.');
   if (r.antes!=null && r.antes>=30) l.push(flB((T/r.antes-1)*100)+' contra los '+dias+' días anteriores ('+b(mesa(r.antes, nna))+', '+r.antesTxt+').');
   if (!foto && !r.ind.pocos && dias>1) l.push('Promedio: '+b(mesa(T/dias, nna))+' por día.');
-  const ch = r.partes.length || r.ind.k==='ingall' ? null : dimChica(r);
-  if (!r.partes.length && r.ind.k==='ingall') l.push(r.ind.partes.filter(p => p.g===1).map(p => { const v = total(Object.assign({}, r.base, medParte(r.ind, p))); return pcB(v, T)+' '+b(mesa(v))+' '+esc(minus(p.nom)); }).join(' + ')+'.');
+  const ch = r.partes.length || (r.ind.k==='ing' && !(r.q.filtros.n || []).length) ? null : dimChica(r);
+  if (!r.partes.length && r.ind.k==='ing' && !(r.q.filtros.n || []).length) l.push(r.ind.partes.filter(p => p.g===1).map(p => { const v = total(Object.assign({}, r.base, medParte(r.ind, p))); return pcB(v, T)+' '+b(mesa(v))+' '+esc(minus(p.nom)); }).join(' + ')+'.');
   if (r.partes.length) r.partes.forEach(x => l.push((pcB(x.v, T, nna)+' '+b(mesa(x.v, nna))+' '+esc(minus(x.p.nom))).trim()+'.'));
   else if (ch) l.push(ch.l.map(([k,v]) => (pcB(v, T, nna)+' '+b(mesa(v, nna))+' '+esc(minus(B.dims[ch.dim].vals[k]))).trim()).join(' · ')+'.');
   if (r.tipo==='tiempo'){ const s = r.serie, C = r.C, mk = s.indexOf(Math.max(...s)), u = { d:'día', s:'semana', m:'mes' }[C.g]; if (s.length>2) l.push('El '+u+' más alto: '+nomCub(C, mk)+', con '+b(mesa(s[mk], nna))+'.'); }
@@ -1038,7 +1040,7 @@ function sugerir(){
   const v = $('cq-q').value, i = v.lastIndexOf(' '), w = norm(v.slice(i+1)), box = $('cq-sug');
   if (w.length<2){ box.hidden = true; return; }
   const c = [], ya = new Set(), mete = (txt, tipo) => { const k = norm(txt); if (ya.has(k)) return; ya.add(k); c.push([txt, tipo, k]); };
-  mete('ingresos de extranjeros', 'qué ver'); IND.forEach(x => mete(x.nom, 'qué ver')); IND.forEach(x => (x.partes || []).forEach(p => mete(minus(p.nom), 'parte de '+x.nom)));
+  IND.forEach(x => mete(x.nom, 'qué ver')); IND.forEach(x => (x.partes || []).forEach(p => mete(minus(p.nom), 'parte de '+x.nom)));
   ['nacionalidad','O.R.','punto','estación','mes','semana'].forEach(d => mete('por '+d, 'desglose'));
   MES.forEach(m => mete(m, 'periodo'));
   Object.values(BASES).forEach(B => Object.keys(B.dims).forEach(d => { if (['n','e','p','est','doc','cond','mod','via'].indexOf(d)>=0) B.dims[d].vals.forEach(x => mete(x, B.dims[d].nom.toLowerCase())); }));

@@ -600,7 +600,7 @@ function pintarKpis(){
   if (S.estreno){ S.estreno = false; if (!reducido()) contar(); }
 }
 const DEF_IND = {
-  ing:'Entradas de personas extranjeras por puntos de internación aéreos, terrestres y marítimos. Los mexicanos que regresan se cuentan aparte.',
+  ing:'Entradas al país por puntos de internación aéreos, terrestres y marítimos: extranjeros y mexicanos que regresan.',
   rech:'Personas a las que, en segunda revisión, se les negó la internación al país.',
   tram:'Trámites migratorios concluidos en oficinas del INM: los que expiden tarjeta (residencias y visitantes) y los que no (constancias, oficios, permisos o sin documento).',
   resc:'Rescates de personas extranjeras en situación irregular, según el reporte de las oficinas de representación. Se cuentan eventos: si a una persona se le rescata dos veces, cuenta dos.',
@@ -612,7 +612,7 @@ const DEF_IND = {
   cbp:'Encuentros que registra la CBP en la frontera de EE. UU. con México. Esta actividad la hace EE. UU., no el INM. Incluye mexicanos y no se reparte por O.R.: se ve por sector de la frontera.'
 };
 const BASE_IND = {ing:'ing', rech:'seg', tram:'tram', resc:'resc', pres:'pres', can:'can_nna', ret:'ret', recib:'recib', rep:'rep', cbp:'cbp'};
-const FUENTE = {ing:['de extranjeros',null], resc:['eventos · O.R.','O.R.'], pres:['Sistema','Sistema'], cbp:['en EE. UU.','CBP (EE. UU.)']};     // [nota en la tarjeta, fuente en el detalle]
+const FUENTE = {ing:['extranjeros y mexicanos',null], resc:['eventos · O.R.','O.R.'], pres:['Sistema','Sistema'], cbp:['en EE. UU.','CBP (EE. UU.)']};     // [nota en la tarjeta, fuente en el detalle]
 const nomInd = k => IND[k].n+(k==='resc' ? ' (eventos)' : '');                 // nombre para títulos de listas
 // Último día con datos de cada indicador dentro del periodo: los días posteriores están pendientes, no son cero
 function finDatos(k){
@@ -620,7 +620,7 @@ function finDatos(k){
   if (!bs.length) return ND;
   return Math.max(0, Math.min(ND, Math.min.apply(null, bs.map(b => idxBase(b.hasta)+1)) - P0));
 }
-// Mexicanos que ingresaron (no entran en «Ingresos de extranjeros»): para mostrar el total completo del país
+// Mexicanos que ingresaron (ya están dentro de «Ingresos»): para decir cuántos son extranjeros y cuántos mexicanos
 function ingMx(ss, hasta){ const A = D0.ds.ing_mx, B2 = D0.daily.ing_mx; if (!A || !B2) return 0; const b = P0 + Math.min(hasta==null ? S.dia : hasta, ND); let t = 0;
   if (!ss){ for (let d=P0; d<b; d++) t += B2[d] || 0; return t; }
   for (let d=P0; d<b; d++) for (let j=0; j<ss.length; j++) t += A[d*NS+ss[j]]; return t; }
@@ -633,7 +633,7 @@ function cbpMx(t, mx){ const T = t || 1;
 function tipKpi(el){
   const k = el.dataset.k, m = IND[k], F = filtro(), va = variacion(diario(k,F)), b = D.bases.find(x => x.k===BASE_IND[k]) || {};
   const tot = acum(k,F.ss,m.nat ? F.nd : null) || 1, tn = m.nat && F.n==null ? topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 3) : [];
-  return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+(k==='ing' && F.n==null ? totalPais(acum('ing',F.ss,null), ingMx(F.ss)) : '')+(k==='cbp' && F.n==null ? cbpMx(acum('cbp',null,F.r ? F.nd : null), F.r ? 0 : acum('cbp',null,MX)) : '')+
+  return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+(k==='ing' && F.n==null ? (m => totalPais(acum('ing',F.ss,null) - m, m))(ingMx(F.ss)) : '')+(k==='cbp' && F.n==null ? cbpMx(acum('cbp',null,F.r ? F.nd : null), F.r ? 0 : acum('cbp',null,MX)) : '')+
     (va.ok ? '<span>'+(cmpFijo() ? 'Este periodo' : S.cmp==='sem' ? 'Última semana completa' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(cmpFijo() ? refFija().txt : S.cmp==='sem' ? 'semana previa' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
     (U => U>0 ? '<span>Promedio: <b>'+miles(suma(diario(k,F),0,U)/U)+'</b> al día · <b>'+miles(suma(diario(k,F),0,U)/U*7)+'</b> a la semana'+(U>=60 ? ' · <b>'+miles(suma(diario(k,F),0,U)/U*30.4)+'</b> al mes' : '')+'</span>' : '')(finDatos(k))+
     (k==='tram' && D.comp.tram_exp ? (e => { const p = comp('tram_plz',F.ss,F.nd), te = e[0]+e[1], tp = p[0]+p[1]; return te ? '<span>Expiden tarjetas: <b>'+miles(e[0])+'</b> · no expiden: <b>'+miles(e[1])+'</b>'+(tp && p[1] ? ' · <b>'+pct(p[0], tp)+'%</b> dentro del plazo normativo' : '')+'</span>' : ''; })(comp('tram_exp',F.ss,F.nd)) : '')+
@@ -1317,7 +1317,7 @@ function htmlComp(k, F){
   let h = '', sub = 'Esta base no trae sexo ni edad';
   if (k==='ing'){ const v = comp('ing_via',s,n);
     h = elegible('Vía de ingreso','ing',[['Aérea',v[0]],['Terrestre',v[1]],['Marítima',v[2]]]);
-    if (n==null){ const tot = sumaSem('ing',0,NW-1,s,null), mxv = ingMx(s, ND); h += grupo('Quién ingresa al país',[['Extranjeros',tot],['Mexicanos que regresan',mxv,c2]]); } }
+    if (n==null){ const tot = sumaSem('ing',0,NW-1,s,null), mxv = ingMx(s, ND); h += grupo('Quién ingresa al país',[['Extranjeros',Math.max(0, tot-mxv)],['Mexicanos que regresan',mxv,c2]]); } }
   else if (k==='rech'){ const v = comp('rech_det',s,n), tr = rechazoExt(s,n);
     h = grupo('Resultado de la segunda revisión',[['Rechazo',v[1]],['Internación',v[0],c2]]) + (tr[1] ? '<div><span class="mini"><b>'+(tr[0]/tr[1]*100).toFixed(2)+'%</b> de los extranjeros que llegan por aire o tierra termina en rechazo ('+miles(tr[0])+' de '+corto(tr[1])+'). Sin mexicanos ni cruceros, igual que en Control migratorio.</span></div>' : ''); }
   else if (k==='tram'){ const v = comp('tram_se',s,n), r = comp('tram_res',s,n), ed = ['0–11','12–17','18–24','25–34','35–44','45–54','55–64','65+'];
@@ -1760,9 +1760,9 @@ function escala(){ const n = window.innerWidth>=2200 ? Math.min(4, window.innerW
 // una gráfica de barras y la barra de tiempo. Usa el mismo motor del Pulso (periodo, filtro, día del cursor),
 // así que el mapa, las cifras y la reproducción siempre dicen lo mismo. Al salir, el Pulso queda como estaba.
 const SALA = { on:false, cmp:false, A:null, B:null, guarda:null, gr:null, anim:{}, por:{}, fijo:false };
-const PALABRA = { ing:'ingresos de extranjeros', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados', cbp:'encuentros de la CBP (EE. UU.)', co:'trámites que no expiden tarjeta', va:'solicitudes de validación de actas' };
+const PALABRA = { ing:'ingresos al país', rech:'rechazos', tram:'trámites concluidos', resc:'rescates', pres:'presentados en estación', can:'NNA y acompañantes canalizados al DIF', ret:'retornados', recib:'recibidos de EE. UU.', rep:'mexicanos repatriados', cbp:'encuentros de la CBP (EE. UU.)', co:'trámites que no expiden tarjeta', va:'solicitudes de validación de actas' };
 const ORDEN_SALA = ['ing','resc','rep','rech','can','pres'];
-const IND_SALA = [['', 'Resumen', 'Panorama', 'Lo principal de todo en un vistazo'], ['ing', 'Regular', 'Ingresos', 'Extranjeros que entraron al país'], ['tram', 'Regular', 'Trámites', 'Trámites migratorios concluidos'],
+const IND_SALA = [['', 'Resumen', 'Panorama', 'Lo principal de todo en un vistazo'], ['ing', 'Regular', 'Ingresos', 'Extranjeros y mexicanos que entraron'], ['tram', 'Regular', 'Trámites', 'Trámites migratorios concluidos'],
   ['resc', 'Irregular', 'Rescatados', 'Rescates (eventos) según las O.R.'], ['can', 'Irregular', 'Canalizados', 'NNA y acompañantes al DIF'], ['rep', 'Desde EE. UU.', 'Repatriados', 'Mexicanos devueltos por EE. UU.']].concat(IND.cbp ? [['cbp', 'Desde EE. UU.', 'Encuentros', 'Los registra la CBP en EE. UU.']] : []);
 const ICONO_PAN = 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z';
 const MES_L = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -1777,8 +1777,10 @@ function rangoBase(k, a, b, ss, n){
   if (n!=null){ const A = D0.dn[k]; for (let d=a; d<b; d++) t += A[d*NN+n]; return t; }
   const A = D0.daily[k]; for (let d=a; d<b; d++) t += A[d]; return t;
 }
-// «Ingresos» en el Pulso incluye a los mexicanos que regresan; aquí la cifra dice «extranjeros», así que se descuentan
-const sinMx = (k, n) => (k==='ing' || (k==='rech' && SALA.perfil==='control')) && n==null;   // en Control, los rechazos tampoco cuentan mexicanos (igual que su vista)
+// «Ingresos» es el total (extranjeros + mexicanos), igual que en el Pulso. En Control, los rechazos no cuentan mexicanos (igual que su vista)
+const sinMx = (k, n) => k==='rech' && SALA.perfil==='control' && n==null;
+// «… (X extranjeros y Y mexicanos)»: lo que se dice siempre que aparece el total de ingresos (sin filtro de país)
+const partIng = (ss, n, f) => { if (n!=null) return ''; const t = acum('ing', ss, null), m = acum('ing', ss, MX); return t ? ' ('+(f || cortoK)(t-m)+' extranjeros y '+(f || cortoK)(m)+' mexicanos)' : ''; };   // en Control, los rechazos tampoco cuentan mexicanos (igual que su vista)
 const valAcum = (k, ss, n) => k==='co' ? coRango(P0, P0+Math.min(S.dia, ND), ss, n) : acum(k, ss, n) - (sinMx(k, n) ? acum(k, ss, MX) : 0);
 const valRango = (k, a, b, ss, n) => k==='co' ? coRango(a, b, ss, n) : rangoBase(k, a, b, ss, n) - (sinMx(k, n) ? rangoBase(k, a, b, ss, MX) : 0);
 // La misma unidad que --u en el CSS: centésima del rectángulo 16:9 que cabe; en columna (teléfono o vertical), fija
@@ -1972,7 +1974,7 @@ function pintarSala(soloTiempo){
     const v = valAcum(k, F.ss, nF), dias = Math.max(1, Math.min(S.dia, finDatos(k)));
     mover($('sl-big'), v, cifraG, dur);
     $('sl-cap').innerHTML = cap1(PALABRA[k])+(fin ? ' en el periodo' : ' hasta el '+fechaLarga(S.dia-1));
-    $('sl-dl').innerHTML = '<b>'+cortoK(v/dias)+'</b> por día · '+dias+' días';
+    $('sl-dl').innerHTML = '<b>'+cortoK(v/dias)+'</b> por día · '+dias+' días'+(k==='ing' && nF==null ? (x => x ? ' · '+x.slice(2, -1) : '')(partIng(F.ss, null)) : '');
   }
   // debajo de la cifra: el desglose del indicador
   const otros = k && k!=='co' ? ORDEN_SALA.filter(x => x!==k && (F.nd==null || IND[x].nat) && x!=='tram').slice(0,4) : [], G = $('sl-g');
@@ -1990,9 +1992,9 @@ const ventanaCmp = () => textoCmp().replace(' vs. la anterior','');
 function flecha(a, b){ const x = (b/a-1)*100; if (Math.abs(x)<0.5) return '<span class="ig">= sin cambio</span>'; return '<span class="'+(x<0?'baja':'sube')+'">'+(x<0?'▼ ':'▲ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%</span>'; }
 function fuentesSala(k){ const f = { co:'DGRAM', va:'DGRAM', ing:'DGCVM', rech:'DGCVM', tram:'DGRAM', resc:'DGCOR', pres:'DGCVM', can:'SIRENNA', ret:'DGCOR', recib:'DGCOR', rep:'DGPMV', cbp:'CBP' };
   const l = [...new Set([k].concat(perfilSala().orden).map(x => f[x]))]; return l.length>1 ? l.slice(0,-1).join(', ')+' y '+l[l.length-1] : l[0]; }
-// Reparto de un indicador en el periodo (sin mexicanos en ingresos, para que cuadre con «extranjeros»)
+// Reparto de un indicador en el periodo (en Control, los rechazos sin mexicanos, igual que su vista)
 function compSala(key, F){ const ss = F.ss, n = F.nd, v = comp(key, ss, n);
-  if ((key==='ing_via' || (key==='rech_det' && SALA.perfil==='control')) && n==null){ const m = comp(key, ss, MX); return v.map((x,i) => Math.max(0, x - m[i])); } return v; }
+  if (key==='rech_det' && SALA.perfil==='control' && n==null){ const m = comp(key, ss, MX); return v.map((x,i) => Math.max(0, x - m[i])); } return v; }
 function cbpTotal(F){ return cbpAhora(F).reduce((a,y) => { a.v += y.v; a.mx += y.mx; y.ag.forEach((z,i) => a.ag[i] += z); return a; }, { v:0, mx:0, ag:[0,0,0] }); }
 function repartos(k, F){ const z = (key) => compSala(key, F);
   if (k==='ing'){ const v = z('ing_via'); return [[['Aérea',v[0]],['Terrestre',v[1]],['Marítima',v[2]]]]; }
@@ -2015,7 +2017,7 @@ function barra100(l, c){ const T = l.reduce((a,x) => a+x[1], 0); if (!T) return 
   const tit = l.t ? '<span class="t">'+esc(l.t)+':</span>' : '';
   const al = [1, .62, .34], seg = l.map((x,i) => '<i style="width:'+(x[1]/T*100).toFixed(2)+'%;background:'+alfa(c, al[i]||.2)+'" title="'+esc(x[0])+': '+miles(x[1])+'"></i>').join('');
   return '<div class="sl-bc"><div class="sl-b100">'+seg+'</div><div class="sl-bl">'+tit+l.map((x,i) => '<span><i style="background:'+alfa(c, al[i]||.2)+'"></i><b>'+Math.round(x[1]/T*100)+'%</b> '+esc(l.propios || /^[A-ZÁÉÍÓÚ]{2}/.test(x[0]) ? x[0] : x[0].charAt(0).toLowerCase()+x[0].slice(1)).replace('al Dif','al DIF')+'</span>').join('')+'</div></div>'; }
-const CUATRO = [['ing','Ingresos','reg','extranjeros que entraron'],['tram','Trámites','reg','trámites concluidos'],['resc','Rescatados','irr','rescates (eventos)'],['rep','Repatriados','usa','mexicanos desde EE. UU.']];
+const CUATRO = [['ing','Ingresos','reg','personas que entraron'],['tram','Trámites','reg','trámites concluidos'],['resc','Rescatados','irr','rescates (eventos)'],['rep','Repatriados','usa','mexicanos desde EE. UU.']];
 function panoramaSala(F, t, dur){
   const P = perfilSala(), el = $('sl-tri'), l = P.pan.filter(x => x[5] ? x[5].ok(F) : (F.nd==null || IND[x[0]].nat));
   el.classList.toggle('dos', !!P.dos);
@@ -2104,14 +2106,14 @@ const DOCS_ITEM = { ok:F => !!D.docs && (F.nd==null || !Array.isArray(F.nd)), va
 const PERFILES = {
   pulso:{ nom:'Pulso migratorio', ctx:'Panorama: regular, irregular y desde EE. UU.', inds:IND_SALA, pan:CUATRO, orden:ORDEN_SALA, cam:['ing','tram','resc','can','rep'] },
   control:{ nom:'Control migratorio', ctx:'Panorama: quienes llegan y quienes son rescatados', dos:true, puntoIng:true, orden:['ing','resc','rech','pres','can','ret'], cam:['ing','rech','resc','pres','can','ret'],
-    inds:[['', 'Resumen', 'Panorama', 'Llegadas y rescates en un vistazo'], ['ing', 'Regular · llegan', 'Ingresos', 'Extranjeros que entraron al país'], ['rech', 'Regular · llegan', 'Rechazos', 'Negados en segunda revisión'],
+    inds:[['', 'Resumen', 'Panorama', 'Llegadas y rescates en un vistazo'], ['ing', 'Regular · llegan', 'Ingresos', 'Extranjeros y mexicanos que entraron'], ['rech', 'Regular · llegan', 'Rechazos', 'Negados en segunda revisión'],
           ['resc', 'Irregular · rescate y destino', 'Rescatados', 'Rescates (eventos) según las O.R.'], ['pres', 'Irregular · rescate y destino', 'Presentados', 'Ante una estación migratoria (sistema)'],
           ['can', 'Irregular · rescate y destino', 'Canalizados', 'NNA y acompañantes al DIF'], ['ret', 'Irregular · rescate y destino', 'Retornados', 'Asistidos o deportados a su país']],
-    pan:[['ing','Ingresos','reg','extranjeros que entraron','Regular · llegan y son revisados'],['rech','Rechazos','reg','en segunda revisión','Regular · llegan y son revisados'],
+    pan:[['ing','Ingresos','reg','personas que entraron','Regular · llegan y son revisados'],['rech','Rechazos','reg','en segunda revisión','Regular · llegan y son revisados'],
          ['resc','Rescatados','irr','rescates (eventos)','Irregular · rescate y destino'],['pres','Presentados','irr','en estación (sistema)','Irregular · rescate y destino'],
          ['can','Canalizados','irr','NNA y acompañantes al DIF','Irregular · rescate y destino'],['ret','Retornados','irr','a su país','Irregular · rescate y destino']],
     frase:(F, ent, v) => { const r = rechazoExt(F.ss, F.nd), d = compSala('resc_des', F);
-      return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' entraron <b>'+v('ing')+' extranjeros</b> y se rechazó a <b>'+v('rech')+'</b>'+(r[1] ? ' ('+(r[0]/r[1]*100).toFixed(2)+'% de quienes llegan por aire o tierra)' : '')+
+      return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' entraron <b>'+v('ing')+' personas</b>'+partIng(F.ss, F.nd)+' y se rechazó a <b>'+v('rech')+'</b>'+(r[1] ? ' ('+(r[0]/r[1]*100).toFixed(2)+'% de los extranjeros que llegan por aire o tierra)' : '')+
         '. Hubo <b>'+v('resc')+' rescates</b>'+(d[0]+d[1] ? ': '+Math.round(d[0]/(d[0]+d[1]+d[2])*100)+'% a estación migratoria y '+Math.round(d[1]/(d[0]+d[1]+d[2])*100)+'% al DIF' : '')+', según el reporte de las O.R.'; } }
 };
 PERFILES.regulacion = { nom:'Regulación migratoria', ctx:'Panorama: trámites del periodo y documentos vigentes', dos:true, mapa:'tram', solo:true, orden:['tram'], cam:['tram'],
@@ -2133,7 +2135,7 @@ function frasePanorama0(F){
       return '<b>'+cortoK(b)+' '+x[3]+'</b>'+(a>0 ? ' ('+((b/a-1)*100<0 ? '−' : '+')+Math.abs((b/a-1)*100).toFixed(0)+'%)' : ''); }).join(', ').replace(/, ([^,]*)$/, ' y $1')+' vs. '+A+'.'; }
   const v = x => cortoK(valAcum(x, F.ss, nFde(x, F)));
   if (P.frase) return P.frase(F, ent, v);
-  return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' entraron <b>'+v('ing')+' extranjeros</b>, se concluyeron <b>'+v('tram')+' trámites</b>, hubo <b>'+v('resc')+' rescates</b>'+
+  return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' entraron <b>'+v('ing')+' personas</b>'+partIng(F.ss, F.nd)+', se concluyeron <b>'+v('tram')+' trámites</b>, hubo <b>'+v('resc')+' rescates</b>'+
     (F.nd==null ? ' y <b>'+v('rep')+' mexicanos</b> fueron repatriados desde EE. UU.' : '.');
 }
 // Abajo a la derecha en Panorama: lo que más cambió (del análisis automático; al comparar, entre los dos periodos)
@@ -2196,7 +2198,7 @@ function fraseSala(k, F, nF, pa, pb, otros){
   if (k==='co'){ const v = valAcum(k, F.ss, nF), dt = docTram(F), T = dt ? dt.tar+dt.co+dt.sin : 0;
     return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+ent+' <b>'+cortoK(v)+' trámites no expidieron tarjeta</b>'+(T ? ': el '+Math.round(v/T*100)+'% de los trámites concluidos (constancias, oficios, permisos o sin documento).' : '.'); }
   const v = valAcum(k, F.ss, nF), top = AVISOS.find(a => relevante(a) && a.k===k) || AVISOS.find(relevante);
-  return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+' se registraron <b>'+cortoK(v)+' '+PALABRA[k]+ent+'</b>.'+(top && S.dia>=ND ? ' Lo que más cambió ('+ventanaCmp()+'): '+textoAviso(top).replace(/\s*\([^)]*\)\.?$/, '.') : '');
+  return (S.dia>=ND ? 'En el periodo' : 'Al '+fechaLarga(S.dia-1))+' se registraron <b>'+cortoK(v)+' '+PALABRA[k]+ent+'</b>'+(k==='ing' ? partIng(F.ss, nF) : '')+'.'+(top && S.dia>=ND ? ' Lo que más cambió ('+ventanaCmp()+'): '+textoAviso(top).replace(/\s*\([^)]*\)\.?$/, '.') : '');
 }
 // Barras verticales: en un periodo, los 8 con más registros; al comparar, el cambio por día de cada uno.
 // Con un país elegido se reparte por estado (O.R.); si no, por nacionalidad. Repatriados siempre por estado.
@@ -2323,8 +2325,8 @@ function ayudaHerramientas(){
 // Repatriados por punto entre los días a y b de las bases completas (los puntos traen semanas)
 function puntoRango(pt, a, b){ const w = D0.wks.find(o => o.obj===pt); if (!w) return 0; const E0 = D0.ends; let t = 0;
   for (let i=0; i<E0.length; i++){ const wa = i ? E0[i-1] : 0, wb = E0[i], x = Math.max(wa,a), y = Math.min(wb,b); if (y>x) t += w.wk[i]*(y-x)/(wb-wa); } return t*sinMxPunto(pt); }
-// Los puntos de internación cuentan a todos; para «ingresos de extranjeros» se quita la parte de mexicanos de ese punto (exacto en el periodo completo)
-function sinMxPunto(pt){ if (pt.mx==null) return 1; const w = D0.wks.find(o => o.obj===pt), T = w ? w.wk.reduce((a,x) => a+x, 0) : 0; return T ? Math.max(0, 1 - pt.mx/T) : 1; }
+// Los puntos de internación cuentan a todos, igual que «Ingresos» (extranjeros + mexicanos): no se descuenta nada
+function sinMxPunto(pt){ return 1; }
 // Ficha anclada: al elegir un país o un estado, una ventanita translúcida con sus datos clave, unida por una línea al lugar
 function fichaDatos(){
   const sel = S.sel; if (!sel || (sel.t!=='n' && sel.t!=='e')) return null;

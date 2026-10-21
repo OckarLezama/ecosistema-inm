@@ -18,7 +18,7 @@ console.log('combinaciones', n, 'con problemas', errs.length); errs.slice(0, 20)
 (async()=>{ const b = await chromium.launch({executablePath:process.env.CHROMIUM || undefined}); const p = await (await b.newContext({viewport:{width:1366,height:900}})).newPage();
   p.on('pageerror', e => errs.push(e.message)); await p.route('**/*', r => r.request().url().startsWith('file://') ? r.continue() : r.abort());
   await p.goto('file://'+dir+'/index.html'); await p.waitForTimeout(1500); await p.click('#b-consulta'); await p.waitForSelector('#cq-q', {timeout:120000});
-  for (const [escribe, espera] of [['ingreso quintana ro','quintana roo'], ['repatriados tul','tulum'], ['rescatados países ba','países bajos'], ['ingreso','ingresos de extranjeros'], ['rechazos nuevo le','nuevo leon']]){
+  for (const [escribe, espera] of [['ingreso quintana ro','quintana roo'], ['repatriados tul','tulum'], ['rescatados países ba','países bajos'], ['ingreso','ingresos'], ['rechazos nuevo le','nuevo leon']]){
     await p.fill('#cq-q', ''); await p.type('#cq-q', escribe, {delay:15}); await p.waitForTimeout(250);
     if (await p.isVisible('#cq-sug')) await p.keyboard.press('Enter'); const val = await p.inputValue('#cq-q');
     await p.keyboard.press('Enter'); await p.waitForTimeout(400); const av = await p.evaluate(() => document.getElementById('cq-av').textContent);

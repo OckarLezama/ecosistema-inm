@@ -312,6 +312,7 @@ function calcula(D, x, pk){ const M = window.IANAMI_MOTOR, I = M.INDK[x.k], B = 
   const p = lag ? Object.assign({}, p0, { b:fb, cb:p0.cb ? sum(p0.cb, -lag) : null }) : p0;
   const dimE = x.k==='cbp' ? 'sec' : 'e', lista = (d, a, b) => B.dims[d] ? M.porDim(o(a, b), d).filter(z => z[1]>0).sort((u, v) => v[1]-u[1]).map(([i, v]) => [B.dims[d].vals[i], v]) : [];
   const r = { T:M.total(o(p.a, p.b)), W:p.ca ? M.total(o(p.ca, p.cb)) : null };
+  if (x.k==='ing' && M.INDK.ingmx) r.MX = M.total({ ind:M.INDK.ingmx, d0:p.a, d1:p.b, filtros:{} });   // ingresos = extranjeros + mexicanos: se dice cuántos de cada uno
   const N = x.k==='rep' ? [] : lista('n', p.a, p.b), E = lista(dimE, p.a, p.b);
   r.n5 = N.slice(0, 5); r.e5 = E.slice(0, 5); r.nl = N; r.el = x.k==='cbp' ? [] : E; r.ea = x.k==='cbp' ? null : E;
   if (x.k!=='rep'){ r.na = Object.fromEntries(N); if (p.ca) r.naW = Object.fromEntries(lista('n', p.ca, p.cb)); }
@@ -448,8 +449,8 @@ function menuPer(){ const anios = Object.keys(D.per).filter(k => k[0]==='y').map
 let ORD = [], HI = 0, HT = null, MAN = false;
 const mov = x => { const s0 = V(x).s.filter(z => !z[2]); return s0.length>1 && s0[0][1] ? Math.abs(s0[s0.length-1][1]/s0[0][1]-1) : 0; };
 function orden(){ ORD = DATA.map((x, i) => i).filter(i => !V(DATA[i]).W || V(DATA[i]).W>=300); ORD.sort((a, b) => PD().ca ? Math.abs(r(DATA[b]))-Math.abs(r(DATA[a])) : mov(DATA[b])-mov(DATA[a])); ORD = ORD.slice(0, 5); }
-function titular(x){ const [a, b] = corto(V(x).T), rr = r(x), v = VB[x.k];
-  return enPer()+' '+v[0]+' <span class="num" data-cu="'+V(x).T+'">'+a+(b ? ' '+b : '')+'</span> '+v[1]+(rr==null ? '.' : ', '+(Math.abs(rr)<0.01 ? 'casi igual '+vsTxt() : '<em>'+Math.abs(rr*100).toFixed(Math.abs(rr)<0.1 ? 1 : 0)+'% '+(rr>0 ? 'más' : 'menos')+'</em> '+vsTxt())+'.'); }
+function titular(x){ const [a, b] = corto(V(x).T), rr = r(x), v = VB[x.k], mx = V(x).MX, T = V(x).T;
+  return enPer()+' '+v[0]+' <span class="num" data-cu="'+V(x).T+'">'+a+(b ? ' '+b : '')+'</span> '+v[1]+(mx!=null && T ? ' ('+Math.round((T-mx)/T*100)+'% extranjeros y '+Math.round(mx/T*100)+'% mexicanos)' : '')+(rr==null ? '.' : ', '+(Math.abs(rr)<0.01 ? 'casi igual '+vsTxt() : '<em>'+Math.abs(rr*100).toFixed(Math.abs(rr)<0.1 ? 1 : 0)+'% '+(rr>0 ? 'más' : 'menos')+'</em> '+vsTxt())+'.'); }
 // línea del periodo: se dibuja de izquierda a derecha cada vez que cambia el titular o el periodo
 function linea(x){ const s0 = V(x).s.filter(z => !z[2]), y = s0.map(z => z[1]); if (y.length<3) return ''; const me = y.reduce((a, b) => a+b, 0)/y.length, cv = Math.sqrt(y.reduce((a, b) => a+(b-me)*(b-me), 0)/y.length)/(me || 1); if (cv<0.12 && Math.abs(y[y.length-1]/(y[0] || 1)-1)<0.2) return ''; const W = 300, H = 44, mx = Math.max(...y), mn = Math.min(...y, 0);
   const P = y.map((v, i) => [(i/(y.length-1)*W).toFixed(1), (H-3-(v-mn)/((mx-mn) || 1)*(H-8)).toFixed(1)]), d = 'M'+P.map(p => p.join(',')).join('L'), Lp = Math.round(W*2.2);
@@ -482,7 +483,7 @@ function abrir(i){ CUR = i; clearTimeout(HT); const x = DATA[i], c = GC[x.g], T 
   else { const p0 = s[0][1], p1 = s[s.length-1][1], dl = p1/p0-1; fm = Math.abs(dl)<0.15 ? 'Se mantiene: <b>'+cc(p1).join(' ')+' al mes</b>, parecido al inicio del periodo.' : (dl<0 ? 'Bajó ' : 'Subió ')+'<b>'+Math.round(Math.abs(dl)*100)+'%</b>: de '+cc(p0).join(' ')+' al mes a <b>'+cc(p1).join(' ')+'</b>.'; }
   const body = { res:'<div class="unit">'+cap(PD().lab)+' · '+dd(PD().a)+' – '+dd(PD().b)+(PD().ca ? '' : ' · total acumulado')+'</div><div class="big num" data-n="'+v.T+'">'+(v.T<5 ? 'menos de 5' : '0')+'</div><div class="unit">'+U[x.k]+'</div><div class="ks">'+
       (v.W ? '<div><span>Contra '+PD().cl+'</span><b>'+(chip(rr) || '—')+'</b><em>'+fp(v.W)+' entonces</em></div>' : '<div><span>'+gS+'</span><b>'+cc(mxS[1]).join(' ')+'</b><em>'+mesA(mxS[0])+'</em></div>')+
-      '<div><span>Promedio por día</span><b>'+fp(v.T/dias())+'</b><em>en el periodo</em></div></div>',
+      '<div><span>Promedio por día</span><b>'+fp(v.T/dias())+'</b><em>en el periodo</em></div>'+(v.MX!=null && v.T ? '<div><span>Extranjeros · mexicanos</span><b>'+cc(v.T-v.MX).join(' ')+' · '+cc(v.MX).join(' ')+'</b><em>'+Math.round((v.T-v.MX)/v.T*100)+'% · '+Math.round(v.MX/v.T*100)+'%</em></div>' : '')+'</div>',
     mes:'<div class="fr">'+fm+'</div><div class="gr" data-g="mes"></div>',
     nat:nats(x).length ? '<div class="fr"><b>'+nats(x)[0][0]+'</b> va primero: '+Math.round(nats(x)[0][1]/v.T*100)+' de cada 100.</div>'+lista(nats(x), v.T) : '',
     edo:edos(x).length ? '<div class="fr"><b>'+edos(x)[0][0]+'</b> concentra '+Math.round(edos(x)[0][1]/v.T*100)+' de cada 100.</div>'+lista(edos(x), v.T) : '' };

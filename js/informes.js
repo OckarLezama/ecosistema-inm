@@ -64,7 +64,7 @@ const dimA = s => CK[s.k].A[s.iA || 0] || null, dimB = s => CK[s.k].B[s.iB || 0]
 function filtros(s, faOver){ const o = {}, a = dimA(s), b = dimB(s), fa = faOver!==undefined ? faOver : s.fa;
   if (a && fa!=null) o[a] = indices(s.k, a, fa); if (b && s.fb!=null) o[b] = indices(s.k, b, s.fb); return o; }
 const T_ = (k, a, b, fl) => total({ ind:INDK[k], d0:a, d1:b, filtros:fl || {} });
-function porNom(k, d, a, b, fl){ const m = new Map(); porDim({ ind:INDK[k], d0:a, d1:b, filtros:fl || {} }, d).forEach(([i, v]) => { const g = grp(d, base(k).dims[d].vals[i]); m.set(g, (m.get(g) || 0)+v); }); return m; }
+function porNom(k, d, a, b, fl){ const m = new Map(); porDim({ ind:INDK[k], d0:a, d1:b, filtros:fl || {}, conMx:true }, d).forEach(([i, v]) => { const g = grp(d, base(k).dims[d].vals[i]); m.set(g, (m.get(g) || 0)+v); }); return m; }
 function serieK(k, a, b, fl, Cb){ return serie({ ind:INDK[k], d0:a, d1:b, filtros:fl || {} }, Cb); }
 const gCub = (a, b) => { const n = dif(a, b)+1; return n<=15 ? 'd' : n<=95 ? 's' : 'm'; };
 function cub(a, b){ const C = cubetas(a, b, gCub(a, b)); C.l.forEach((q, i) => { const d = f0(q.a); q.lab = C.g==='m' ? MS[d.getUTCMonth()]+(d.getUTCMonth()===0 || i===0 ? ' '+String(d.getUTCFullYear()).slice(2) : '') : d.getUTCDate()+' '+MS[d.getUTCMonth()]; }); return C; }
@@ -125,7 +125,8 @@ function render(host, s, inter){
   const FnoA = filtros(s, null), FnoB = Object.assign({}, F); if (db) delete FnoB[db];
   const mA = da ? porNom(k, da, a, b, Object.assign({}, F, { [da]:[] })) : null, mA2 = da && cm && !cn ? porNom(k, da, ca, cb, Object.assign({}, F, { [da]:[] })) : null;
   const mB = db ? porNom(k, db, a, b, FnoB) : null, mB2 = db && cm ? (cn ? porNom(k, db, a, b, Object.assign(filtros(s, cm.fa), { [db]:[] })) : porNom(k, db, ca, cb, FnoB)) : null;
-  const ord = m => [...m.entries()].filter(x => x[1]>0).sort((x, y) => y[1]-x[1]), sm = m => [...m.values()].reduce((x, y) => x+y, 0);
+  // ingresos: México (mexicanos que regresan) cuenta en el total (sm) pero no entra al ranking de países (ord)
+  const fuera = n => k==='ing' && n==='México', ord = m => [...m.entries()].filter(x => x[1]>0 && !fuera(x[0])).sort((x, y) => y[1]-x[1]), sm = m => [...m.values()].reduce((x, y) => x+y, 0);
   const Cb = cub(a, b); let C1 = Cb, y1 = serieK(k, a, b, F, Cb), y2 = null, disp = false;
   if (cm){ if (cn) y2 = serieK(k, a, b, filtros(s, cm.fa), Cb);
     else if (porDia){ C1 = cub(ca<a ? ca : a, cb>b ? cb : b); const t1 = serieK(k, a, b, F, C1), t2 = serieK(k, ca, cb, F, C1); y1 = C1.l.map((q,i) => q.b<a || q.a>b ? null : t1[i]); y2 = C1.l.map((q,i) => q.b<ca || q.a>cb ? null : t2[i]); }
@@ -134,7 +135,7 @@ function render(host, s, inter){
     return C1.g==='m' ? 'en '+ML[d.getUTCMonth()]+(C1.l.some(z => f0(z.a).getUTCFullYear()!==d.getUTCFullYear()) ? ' '+d.getUTCFullYear() : '') : C1.g==='s' ? 'la semana del '+d.getUTCDate()+' '+MS[d.getUTCMonth()] : 'el '+d.getUTCDate()+' '+MS[d.getUTCMonth()]; };
   const ys1 = y1.filter(z => z!=null), ys2 = y2 ? y2.filter(z => z!=null) : null, gl = { d:'por día', s:'por semana', m:'por mes' }[C1.g];
   if (y2 && !porDia && !cn && Math.max(...ys2)>Math.max(...ys1)*3.5) disp = true;
-  const mover = (m1, m2) => { if (!m2) return null; const s2 = sm(m2); let best = null; m1.forEach((v, n) => { const o = m2.get(n) || 0; if (n==='Otros' || o<s2*0.02) return; const d = (v/(porDia ? dias : 1))/(o/(porDia ? cd : 1))-1; if (!best || Math.abs(d)>Math.abs(best[1])) best = [n, d]; }); return best; };
+  const mover = (m1, m2) => { if (!m2) return null; const s2 = sm(m2); let best = null; m1.forEach((v, n) => { const o = m2.get(n) || 0; if (n==='Otros' || fuera(n) || o<s2*0.02) return; const d = (v/(porDia ? dias : 1))/(o/(porDia ? cd : 1))-1; if (!best || Math.abs(d)>Math.abs(best[1])) best = [n, d]; }); return best; };
   const mvA = mA && mA2 && s.fa==null ? mover(mA, mA2) : null, mvB = mB && mB2 && !cn && s.fb==null ? mover(mB, mB2) : null;
   const tA = mA ? ord(mA)[0] : null, tB = mB ? ord(mB)[0] : null;
   // Frase-conclusión
@@ -152,6 +153,9 @@ function render(host, s, inter){
   const u = nota ? '<abbr title="'+esc(nota)+'">'+c.u+' ⓘ</abbr>' : c.u;
   kpi('ks', 'Total', kc('sum', 'Total · '+esc(cn ? s.fa : P.lab+(P.sub ? ' ('+P.sub+')' : '')), f(V), cm && W ? chip(V/W-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">'+u+'</span>',
     cm && W ? esc(ref)+': <b>'+f(W)+'</b> · '+(V-W<0 ? '−' : '+')+f(Math.abs(V-W)) : '', mspk(ys1, ys2 && !disp ? ys2 : null, '#2F6657')));
+  // Ingresos (sin filtro de país): cuántos son extranjeros y cuántos mexicanos que regresan
+  const Fx = Object.assign({}, F); delete Fx.n; const mxV = k==='ing' && !(F.n && F.n.length) && INDK.ingmx ? T_('ingmx', a, b, Fx) : null;
+  if (mxV!=null && V) kpi('kx', 'Extranjeros y mexicanos', kc('sum', 'Extranjeros y mexicanos', f(V-mxV)+' · '+f(mxV), '<span class="ar-dvs">'+Math.round((V-mxV)/V*100)+'% extranjeros · '+Math.round(mxV/V*100)+'% mexicanos que regresan</span>', '', ''));
   kpi('kd', 'Promedio por día', kc('day', 'Promedio por día', f(V/dias), cm && W ? chip((V/dias)/(W/cd)-1)+'<span class="ar-dvs">'+(cn ? 'frente a ' : 'que ')+esc(lab2)+'</span>' : '<span class="ar-dvs">máximo '+f(Math.max(...ys1, 0))+' '+cuandoMax()+'</span>',
     cm && W ? esc(ref)+': <b>'+f(W/cd)+'</b> por día' : '', mbar(ys1, '#8F7F2E')));
   const share = (m, m2, sel, D_, lado, sel2) => { if (!m) return ''; const o = ord(m), s1 = sm(m); if (!o.length || !s1) return '';
@@ -210,7 +214,7 @@ function render(host, s, inter){
        ...(y2 && !disp ? [{ name:lab2, type:'line', data:y2, smooth:0.2, symbolSize:bg ? 7 : 4, lineStyle:{ width:2, color:'#BDB6A6', type:'dashed' }, itemStyle:{ color:'#BDB6A6', borderColor:'#fff', borderWidth:1.5 }, label:{ show:bg, position:porDia ? 'top' : 'bottom', fontSize:9.5, color:'#8A857A', formatter:q => q.value==null ? '' : f(q.value) }, labelLayout:{ hideOverlap:true } }] : [])] }); }
   const d1 = porDia ? dias : 1, d2 = porDia ? cd : 1;
   const bars = (el, m1, m2, sel, dim) => { const h = el.clientHeight || 260, cap = Math.max(2, Math.min(10, Math.floor((h-(m2 ? 16 : 2))/(m2 ? 32 : 26))));
-    let o = ord(m1).filter(x => x[0]!=='Otros').map(x => x[0]); if (m2) [...m2.keys()].forEach(n => { if (n!=='Otros' && !o.includes(n) && m2.get(n)>0) o.push(n); }); o = o.slice(0, cap);
+    let o = ord(m1).filter(x => x[0]!=='Otros').map(x => x[0]); if (m2) [...m2.keys()].forEach(n => { if (n!=='Otros' && !fuera(n) && !o.includes(n) && m2.get(n)>0) o.push(n); }); o = o.slice(0, cap);
     if (sel!=null && !o.includes(sel)) o[o.length-1] = sel; const s1 = sm(m1);
     const rowH = (h-(m2 ? 16 : 2))/Math.max(o.length, 1), bw = m2 ? Math.max(7, Math.min(13, rowH*0.32)) : Math.max(9, Math.min(20, rowH*0.55));
     const dif_ = m2 ? o.map(n => { const nv = Math.round((m1.get(n) || 0)/d1), ov = Math.round((m2.get(n) || 0)/(cn ? 1 : d2)), d = nv-ov; return (d<0 ? '{n|▼ ' : '{p|▲ ')+f(Math.abs(d))+(ov ? '  '+(d<0 ? '' : '+')+Math.round(d/ov*100)+'%' : '')+'}'; }) : null;
@@ -234,6 +238,7 @@ function render(host, s, inter){
   if (cn) hz.push(esc(s.fa)+' suma <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+'; '+esc(lab2)+', <b>'+f(W)+'</b>: '+(V>=W ? '<b>'+(V/W).toFixed(1)+' veces</b> más' : 'equivale al <b>'+pctT(V/W)+'%</b>')+'.');
   else if (cm && W) hz.push('Suman <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+': '+(Math.abs(r)<0.01 ? 'prácticamente igual que' : '<b>'+pc(r)+'% '+(r<0 ? 'menos' : 'más')+'</b>'+(porDia ? ' por día' : '')+' que')+' '+esc(lab2)+' ('+f(W)+'; '+cuan(V-W)+').');
   else hz.push('Suman <b>'+f(V)+'</b> '+c.u+' en '+esc(P.lab)+'.');
+  if (mxV!=null && V) hz.push('De ellas, <b>'+f(V-mxV)+'</b> fueron de extranjeros ('+Math.round((V-mxV)/V*100)+'%) y <b>'+f(mxV)+'</b> de mexicanos que regresan ('+Math.round(mxV/V*100)+'%).');
   hz.push('En promedio son <b>'+f(V/dias)+'</b> por día'+(cm && W ? '; '+esc(ref)+' tuvo <b>'+f(W/cd)+'</b>' : '')+'.');
   // tendencia: el último periodo completo contra el promedio de los tres anteriores
   const iv = C1.l.map((q, i) => i).filter(i => y1[i]!=null && !C1.l[i].inc);
@@ -246,7 +251,7 @@ function render(host, s, inter){
     const t3 = o.slice(0, 3), p3 = Math.round(t3.reduce((x, y) => x+y[1], 0)/t*100);
     hz.push('Por '+D.tipo+', <b>'+esc(o[0][0])+'</b> va primero con <b>'+dc(m, o[0])+' de cada 100</b>'+(o.length>3 ? '; los tres primeros ('+t3.map(x => esc(x[0])).join(', ')+') suman <b>'+p3+' de cada 100</b>' : '')+'.'); };
   const movs = (m1, m2, D, sel) => { if (!m1 || !m2 || sel!=null || cn) return; const k1 = d1 => porDia ? d1 : 1; let up = null, dn = null;
-    const s1_ = sm(m1), s2_ = sm(m2); new Set([...m1.keys(), ...m2.keys()]).forEach(n => { if (n==='Otros' || ((m1.get(n) || 0)<s1_*0.01 && (m2.get(n) || 0)<s2_*0.01)) return; const v = (m1.get(n) || 0)/(porDia ? dias : 1), o = (m2.get(n) || 0)/(porDia ? cd : 1), d = v-o;
+    const s1_ = sm(m1), s2_ = sm(m2); new Set([...m1.keys(), ...m2.keys()]).forEach(n => { if (n==='Otros' || fuera(n) || ((m1.get(n) || 0)<s1_*0.01 && (m2.get(n) || 0)<s2_*0.01)) return; const v = (m1.get(n) || 0)/(porDia ? dias : 1), o = (m2.get(n) || 0)/(porDia ? cd : 1), d = v-o;
       if (d>0 && (!up || d>up[1])) up = [n, d, o]; if (d<0 && (!dn || d<dn[1])) dn = [n, d, o]; });
     const tx = x => '<b>'+esc(x[0])+'</b> ('+cuan(x[1])+(x[2] ? ', '+(x[1]<0 ? '' : '+')+Math.round(x[1]/x[2]*100)+'%' : '')+')';
     if (up || dn) hz.push('Por '+D.tipo+', '+(up ? 'lo que más creció fue '+tx(up) : '')+(up && dn ? ' y ' : '')+(dn ? 'lo que más cayó, '+tx(dn) : '')+(porDia ? ' por día' : '')+'.'); };

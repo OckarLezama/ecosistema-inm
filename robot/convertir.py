@@ -710,10 +710,11 @@ def main():
                       f"se cuenta hasta el {fin_can.date()} ({int(B[k].loc[extra, 'v'].sum()):,} registros posteriores quedan fuera hasta que llegue la otra base)")
     can = pd.concat([B["can_nna"][["DIA", "s", "n", "v"]], B["can_ad"][["DIA", "s", "n", "v"]]])
     can = can[can["DIA"] <= fin_can]
-    # Ingresos: el tablero cuenta extranjeros; los mexicanos que regresan van aparte (ing_mx) para mostrar el total completo
-    ing_ext, ing_mx = B["ing"][B["ing"]["n"] != MEXICO], B["ing"][B["ing"]["n"] == MEXICO]
-    BX = dict(B, ing=ing_ext, seg=seg_ext, can_nna=B["can_nna"][B["can_nna"]["DIA"] <= fin_can], can_ad=B["can_ad"][B["can_ad"]["DIA"] <= fin_can])
-    indicadores = {"ing": ing_ext, "ing_mx": ing_mx, "rech": rech, "tram": B["tram"], "resc": B["resc"], "pres": B["pres"],
+    # Ingresos: el total completo (extranjeros + mexicanos que regresan, oct 2026). La parte de mexicanos va también aparte
+    # (ing_mx) para decir siempre cuántos son extranjeros y cuántos mexicanos; rechazos y segunda revisión siguen siendo solo extranjeros.
+    ing_mx = B["ing"][B["ing"]["n"] == MEXICO]
+    BX = dict(B, seg=seg_ext, can_nna=B["can_nna"][B["can_nna"]["DIA"] <= fin_can], can_ad=B["can_ad"][B["can_ad"]["DIA"] <= fin_can])
+    indicadores = {"ing": B["ing"], "ing_mx": ing_mx, "rech": rech, "tram": B["tram"], "resc": B["resc"], "pres": B["pres"],
                    "can": can, "ret": B["ret"], "recib": B["recib"], "rep": B["rep"]}
     salida = {"inicio": inicio.date().isoformat(), "corte": fin.date().isoformat(), "dias": dias,
               "generado": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),

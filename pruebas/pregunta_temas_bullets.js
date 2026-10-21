@@ -3,7 +3,7 @@
 // «trámites concluidos» completo, vista Bullets (texto para WhatsApp) y Compartir en celular (menú del teléfono) y en computadora (WhatsApp Web + descarga).
 const { chromium } = require('playwright'); const path=require('path'); const dir=path.resolve(__dirname,'..');
 const Q = [['encuentros CBP','cbp'],['encuentros de mexicanos por sector','cbp'],['caravanas 2025','carn'],['personas en caravanas','carp'],['validaciones del registro civil','va'],['actas de matrimonio pendientes','va'],
-  ['documento vigente Venezuela','dv'],['documentos vigentes por estado','dv'],['mexicanos que ingresaron','ingmx'],['todos los ingresos por vía','ingall'],['perú trámites concluidos','tram'],['rescatados de Venezuela en diciembre','resc']];
+  ['documento vigente Venezuela','dv'],['documentos vigentes por estado','dv'],['mexicanos que ingresaron','ingmx'],['todos los ingresos por vía','ing'],['ingresos de extranjeros','ingext'],['extranjeros que ingresaron en 2026','ingext'],['perú trámites concluidos','tram'],['rescatados de Venezuela en diciembre','resc']];
 (async()=>{ const b=await chromium.launch({executablePath:process.env.CHROMIUM || undefined}); const errs=[];
   for (const [vw,vh,movil] of [[1366,900,false],[400,860,true]]){
     const ctx = await b.newContext({viewport:{width:vw,height:vh}, isMobile:movil, hasTouch:movil, acceptDownloads:true});

@@ -30,7 +30,7 @@ const PV = (() => { const c = new Float64Array(NP*3); for (let i=0;i<ING.N;i++) 
 function agg(T, key, nk, o){
   o = o || {}; const out = new Float64Array(nk), d0 = o.d0!=null ? o.d0 : Q.d0, d1 = o.d1!=null ? o.d1 : Q.d1, v = o.v ? T[o.v] : T.v;
   const ns = (o.nats!==undefined ? o.nats : Q.nats), es = (o.ests!==undefined ? o.ests : Q.ests), sn = ns && ns.length && T.n ? new Set(ns) : null, se = es && es.length && T.e ? new Set(es) : null;
-  const pto = o.pto!==undefined ? o.pto : Q.pto, conP = pto>=0 && T.p, sinMx = T.n && (T===ING || T===SEG) && !o.soloMx, soloMx = o.soloMx && T.n, ex = o.ex;
+  const pto = o.pto!==undefined ? o.pto : Q.pto, conP = pto>=0 && T.p, sinMx = T.n && T===SEG && !o.soloMx, soloMx = o.soloMx && T.n, ex = o.ex;
   const via = o.via!==undefined ? o.via : Q.via, cls = o.cls!==undefined ? o.cls : Q.cls, conV = via>=0 && (T===ING || T===SEG), conC = cls>=0 && T===NNA;
   for (let i=0;i<T.N;i++){ const d = T.d[i]; if (d<d0 || d>=d1) continue;
     if (sinMx && T.n[i]===MX) continue; if (soloMx && T.n[i]!==MX) continue; if (sn && !sn.has(T.n[i])) continue; if (se && !se.has(T.e[i])) continue; if (conP && T.p[i]!==pto) continue; if (conV && (T===ING ? T.vi[i] : PV[T.p[i]])!==via) continue; if (conC && T.c[i]!==cls) continue; if (ex && !ex(i)) continue;
@@ -38,7 +38,7 @@ function agg(T, key, nk, o){
   return out;
 }
 const tot = (T, o) => agg(T, null, 1, o)[0];
-const llegada = i => ING.vi[i]!==2;          // el % de rechazo se mide sobre llegadas por aire y tierra: los cruceros no pasan por la misma revisión
+const llegada = i => ING.vi[i]!==2 && ING.n[i]!==MX;   // el % de rechazo se mide sobre extranjeros que llegan por aire y tierra: a un mexicano no se le rechaza y los cruceros no pasan por la misma revisión
 const VIAS = ['Aérea','Terrestre','Marítima (cruceros)'], COLV = ['#2F6657','#8F7F2E','#778E88'];
 const rech = i => SEG.r[i]===1;
 
@@ -293,8 +293,8 @@ function panelP(c){
     (r ? ' · <button class="cv-lnk" data-csel>ver todo el periodo</button>' : ' · toca un punto de la gráfica para ver ese día, semana o mes');
   if (!T){ $(c.body).innerHTML = '<p class="mini">Sin registros con estos filtros.</p>'; return; }
   $(c.body).innerHTML = (c.pre ? c.pre(o, ant) : '')+c.secciones.map(s => { const x = agg(s.T, s.key, s.nk, Object.assign({}, s.quita, o)), xa = ant ? agg(s.T, s.key, s.nk, Object.assign({}, s.quita, ant)) : null;
-    // el % se calcula sobre el total de la propia lista: si la sección quita un filtro (p. ej. nacionalidad), su base también lo quita
-    let base = 0; for (let k=0;k<x.length;k++) if (k!==s.sin) base += x[k];
+    // el % se calcula sobre el total de la sección: si quita un filtro (p. ej. nacionalidad), su base también lo quita
+    let base = 0; for (let k=0;k<x.length;k++) base += x[k];          // en ingresos, sobre el total (extranjeros + mexicanos), aunque México no salga en la lista
     return '<h4>'+s.tit+(ant ? '<small>cambio contra el anterior</small>' : '')+'</h4>'+listaD(top(x, s.n || 6, s.sin).map(y => [y[0], y[1], s.nom(y[0]), xa ? y[1]-xa[y[0]] : null]), base || T, s.col || '#2B2926', s.attr, s.sel); }).join('');
 }
 
@@ -305,20 +305,20 @@ function tablaRech(dim){
   const l = agg(ING, key(ING), nk, Object.assign({ ex:llegada }, o)), r = agg(SEG, key(SEG), nk, Object.assign({ ex:rech }, o)), s = agg(SEG, key(SEG), nk, o);
   const out = []; for (let k=0;k<nk;k++) if ((l[k] || r[k]) && k!==(dim==='n' ? MX : -1)) out.push({ k:k, l:l[k], r:r[k], s:s[k], ll:l[k]+r[k], t:tasa(r[k], l[k]) }); return out;
 }
-// Total del país = extranjeros (lo que mide Control) + mexicanos que regresan; con el periodo y filtros elegidos (no aplica al elegir nacionalidad)
-function totalPais(){ if (Q.nats.length) return ''; const ext = tot(ING, {}), mx = tot(ING, { soloMx:true }), T = ext+mx; if (!T) return '';
+// Ingresos = extranjeros + mexicanos que regresan; aquí se dice cuántos son de cada uno (no aplica al elegir nacionalidad)
+function totalPais(){ if (Q.nats.length) return ''; const T = tot(ING, {}), mx = tot(ING, { soloMx:true }), ext = T-mx; if (!T) return '';
   return '<p class="cv-totpais"><span>Ingresaron al país <b>'+cifraKpi(T)+'</b> = extranjeros <b>'+cifraKpi(ext)+'</b> ('+(ext/T*100).toFixed(1)+'%) + mexicanos que regresan <b>'+cifraKpi(mx)+'</b> ('+(mx/T*100).toFixed(1)+'%)</span>'+
-    '<i class="cv-tpb" aria-hidden="true"><i style="width:'+(ext/T*100).toFixed(1)+'%"></i></i><span class="mini">Las tarjetas y gráficas de esta sección cuentan solo extranjeros.</span></p>'; }
+    '<i class="cv-tpb" aria-hidden="true"><i style="width:'+(ext/T*100).toFixed(1)+'%"></i></i><span class="mini">Ingresos cuenta a todos; el % rechazado se mide solo sobre extranjeros que llegan por aire o tierra.</span></p>'; }
 function pintarInt(){
   const b = $('cv-body'), w = ventanas(), crucero = Q.via===2;
   const L = tot(ING, {ex:llegada}), R = tot(SEG, {ex:rech}), base = tasa(R, L);
   const tv = (k, nom, sub, ic) => tarjeta(nom, sub, ic, k<0 ? '#2B2926' : COLV[k], ING, {via:k}, ' data-cvia="'+k+'" aria-pressed="'+(Q.via===k)+'"', null, Q.via===k);
   b.innerHTML = '<section class="kpis rg-kpis" id="cv-kpis" data-modo="'+(Q.compacto?'compacto':'tarjetas')+'">'+
-      '<div class="kg" style="flex:4 1 0;--g:#2B2926"><div class="eti">Ingresos de extranjeros · toca una vía para filtrar</div><div>'+
+      '<div class="kg" style="flex:4 1 0;--g:#2B2926"><div class="eti">Ingresos (extranjeros y mexicanos) · toca una vía para filtrar</div><div>'+
         tv(-1, 'Todas las vías', 'ingresos', IC.tot)+tv(0, 'Aérea', '', IC.avion)+tv(1, 'Terrestre', '', IC.tierra)+tv(2, 'Marítima', 'pasajeros de crucero', IC.barco)+'</div></div>'+
       '<div class="kg g-irr" style="flex:3 1 0;--g:'+ROJO+'"><div class="eti">Segunda revisión · aire y tierra</div><div>'+
         tarjeta('Casos', 'en segunda revisión', IC.lupa, OCRE, SEG, {})+tarjeta('Rechazos', 'no se internaron', IC.no, ROJO, SEG, {ex:rech})+
-        kc({ nom:'% rechazado', sub:'de quienes llegan', ic:IC.no, col:VINO, val:crucero ? '—' : tasaTxt(base), d: crucero ? '<span class="kc-d">no aplica a cruceros</span>' : w ? chipD(tasa(tot(SEG, {ex:rech, d0:w[0][0], d1:w[0][1]}), tot(ING, {ex:llegada, d0:w[0][0], d1:w[0][1]}))*1e3, tasa(tot(SEG, {ex:rech, d0:w[1][0], d1:w[1][1]}), tot(ING, {ex:llegada, d0:w[1][0], d1:w[1][1]}))*1e3) : '' })+'</div></div>'+plegar()+'</section>'+
+        kc({ nom:'% rechazado', sub:'de los extranjeros que llegan', ic:IC.no, col:VINO, val:crucero ? '—' : tasaTxt(base), d: crucero ? '<span class="kc-d">no aplica a cruceros</span>' : w ? chipD(tasa(tot(SEG, {ex:rech, d0:w[0][0], d1:w[0][1]}), tot(ING, {ex:llegada, d0:w[0][0], d1:w[0][1]}))*1e3, tasa(tot(SEG, {ex:rech, d0:w[1][0], d1:w[1][1]}), tot(ING, {ex:llegada, d0:w[1][0], d1:w[1][1]}))*1e3) : '' })+'</div></div>'+plegar()+'</section>'+
     totalPais()+'<div class="rg-hz" id="cv-hz"></div>'+
     '<div class="rg-g rg-g21 fila-par">'+cajaTend('cv-tr', 'tr')+'<div class="caja"><h2><span id="cv-tp-t"></span>'+info('tp')+'</h2><span class="q" id="cv-tp-q"></span><div id="cv-tp"></div></div></div>'+
     (crucero ? '<p class="cv-cal" style="background:var(--panel2);color:var(--ink2)">Los pasajeros de crucero no pasan por segunda revisión. Quita el filtro de vía marítima para ver los rechazos.</p>' :
@@ -329,7 +329,7 @@ function pintarInt(){
     (crucero ? '' : '<div class="rg-g rg-g2">'+cajaTend('cv-sem', 'sem')+
       '<div class="caja"><h2><span>Rechazos por punto</span>'+info('pto')+pil('data-crk', Q.rk, [['r','Rechazos'],['t','De cada 1,000']])+'</h2><span class="q" id="cv-pto-q"></span><div class="cv-scroll cv-fill"><div id="cv-pto"></div></div></div></div>')+'</div>';
   const tn = crucero ? [] : tablaRech('n'), tp = crucero ? [] : tablaRech('p'), prom = tasa(tot(SEG, {ex:rech, nats:null, pto:-1, via:-1}), tot(ING, {ex:llegada, nats:null, pto:-1, via:-1})), hz = [];
-  if (w){ const a = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), c0 = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]}), cuenta = k => k!==MX && (!Q.nats.length || Q.nats.indexOf(k)>=0);   // sin mexicanos, igual que las tarjetas; con nacionalidades elegidas, solo ellas
+  if (w){ const a = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[0][0], d1:w[0][1]}), c0 = agg(ING, i => ING.n[i], NN, {nats:null, d0:w[1][0], d1:w[1][1]}), cuenta = k => !Q.nats.length || Q.nats.indexOf(k)>=0;   // todos (extranjeros y mexicanos), igual que las tarjetas; con nacionalidades elegidas, solo ellas
     let ta = 0, tc = 0; for (let k=0;k<NN;k++) if (cuenta(k)){ ta += a[k]; tc += c0[k]; }
     let m = -1, dm = 0; if (Q.nats.length<2) for (let k=0;k<NN;k++){ const dl = a[k]-c0[k]; if (k!==MX && !Q.nats.length && Math.abs(dl)>Math.abs(dm)){ dm = dl; m = k; } }
     if (tc) hz.push({ cl:ta>=tc ? 'u' : 'd', ic:ta>=tc ? '▲' : '▼', h:'Ingresos '+(ta>=tc ? 'suben ' : 'bajan ')+Math.abs((ta/tc-1)*100).toFixed(1)+'% '+txtCmp()+(Q.via>=0 ? ' por vía '+VIAS[Q.via].toLowerCase() : ''), t:corto(tc)+' → '+corto(ta)+haceUnAnio((d0, d1) => tot(ING, {d0:d0, d1:d1}), w[0][0], w[0][1], w[1][0], w[1][1])+(m>=0 ? ' · lo que más cambió: '+esc(nomN(m))+' ('+(dm>0 ? '+' : '')+corto(dm)+') · filtrar ›' : ''), act:m>=0 ? ' data-cn="'+m+'"' : '' }); }
@@ -338,7 +338,7 @@ function pintarInt(){
   $('cv-hz').innerHTML = hz.map(titular).join('')+info('hz');
   pintarTr(); pintarTp();
   totales({ ch:'cv-tt', q:'cv-tt-q', pil:'cv-tt-sel', attr:'data-ctot', val:Q.tot, unidad:'ingresos', ops:[['n','Por nacionalidad'],['e','Por O.R.'],['p','Por punto']],
-    dim:{ n:{ T:ING, key:i => ING.n[i], nk:NN, nom:nomN, quita:{nats:null}, sel:Q.nats },
+    dim:{ n:{ T:ING, key:i => ING.n[i], nk:MX, nom:nomN, quita:{nats:null}, sel:Q.nats },        // nk:MX: México (el último) va aparte, no en el ranking de países
           p:{ T:ING, key:i => ING.p[i], nk:NP, nom:nomP, corto:k => nomP(k).replace(/^Aerop\. /,''), quita:{pto:-1}, sel:Q.pto>=0 ? [Q.pto] : [] },
           e:{ T:ING, key:i => ING.e[i], nk:NE, nom:nomE, corto:k => abr(nomE(k)), quita:{ests:null}, sel:Q.ests } },
     elegir:k => { if (Q.tot==='n') alternar(Q.nats, k); else if (Q.tot==='p') Q.pto = Q.pto===k ? -1 : k; else alternar(Q.ests, k); cuerpo(); } });
@@ -701,10 +701,10 @@ const INFO = {
   cp:'<b>Composición del periodo:</b> cómo concluyó la canalización (motivo de salida), nacionalidades y O.R., y su cambio contra el periodo anterior de la misma duración.',
   cor:'<b>O.R. que canalizan</b>, de mayor a menor, divididas por condición de los NNA (acompañados, no acompañados o separados) o por sexo de los adultos.',
   rec:'<b>Extranjeros que EE. UU. entregó a México</b>, adultos y menores, según el reporte de las O.R. de la frontera norte (DGCOR). Es otra fuente: no se suma a los canalizados de SIRENNA.',
-  tr:'<b>Ingresos legales de extranjeros</b> por día, semana o mes, en total o por vía, nacionalidad u O.R. La franja marca el rango habitual (calculado fuera de vacaciones) y la sombra gris, las temporadas vacacionales. No incluye mexicanos.',
-  tp:'<b>Quién entra en el periodo:</b> el reparto por vía (aérea, terrestre y marítima), las 10 nacionalidades, los estados (O.R.) y los puntos de internación con más ingresos.',
+  tr:'<b>Ingresos</b> (extranjeros y mexicanos que regresan) por día, semana o mes, en total o por vía, nacionalidad u O.R. La franja marca el rango habitual (calculado fuera de vacaciones) y la sombra gris, las temporadas vacacionales. «Por nacionalidad» muestra solo países extranjeros.',
+  tp:'<b>Quién entra en el periodo:</b> el reparto por vía (aérea, terrestre y marítima), las 10 nacionalidades extranjeras (su % es sobre todos los ingresos, mexicanos incluidos), los estados (O.R.) y los puntos de internación con más ingresos.',
   ctend:'<b>Canalizados en el tiempo</b> (SIRENNA), en total o por motivo de salida, condición, nacionalidad u O.R. La línea punteada son los NNA que las O.R. reportan como canalizados al DIF tras un rescate (DGCOR): es otra fuente y no se suma.',
-  tot:'<b>Ingresos por nacionalidad, O.R. o punto</b>, de mayor a menor: las 30 principales y el resto sumado en «Otras». No incluye mexicanos.',
+  tot:'<b>Ingresos por nacionalidad, O.R. o punto</b>, de mayor a menor: las 30 principales y el resto sumado en «Otras». Por O.R. y punto cuentan a todos; por nacionalidad, solo países extranjeros (los mexicanos están en el total de arriba).',
   tote:'<b>Totales por nacionalidad, O.R. o estación</b>, de mayor a menor: las 30 principales y el resto sumado en «Otras».',
   perfil:'<b>Qué parte del total nacional corresponde a cada O.R.</b> en ingresos, rechazos, presentados, retornos y canalizados. Muestra el perfil de cada O.R.: una frontera sur concentra presentados y NNA; un aeropuerto, internaciones y rechazos.',
   disp:'<b>Llegadas y rechazos por nacionalidad o punto.</b> Cada círculo es una nacionalidad o un punto de internación: hacia la derecha, más llegadas; hacia arriba, mayor % de rechazo; el tamaño es el número de rechazos. Rojo: arriba del promedio nacional; verde: abajo. Las escalas son logarítmicas para comparar volúmenes grandes y chicos. Llegadas = internados + rechazados, por aire y tierra.',

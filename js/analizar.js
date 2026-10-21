@@ -424,6 +424,10 @@ function analisis(A){
   // narrativa: cuánto fue, cómo cambió, quién pesa más, cuándo fue el máximo y quién encabeza
   const hz = [];
   act.forEach(s => hz.push('<b>'+esc(s.corto)+'</b>: <b>'+miles(s.t)+'</b>, '+miles(s.prom)+' por día'+(s.vs ? '; '+cuanto(pct(s.vs.b, s.vs.a)-100).replace(' contra', '')+' '+esc(s.vs.txt) : '')+'.'));
+  // ingresos = extranjeros + mexicanos: siempre se dice cuántos de cada uno (sin filtro de país ni parte)
+  act.forEach(s => { if (s.c.k!=='ing' || s.c.p || !INDK.ingmx || !s.t || (s.f && s.f.n && s.f.n.length)) return; const fx = Object.assign({}, s.f || {}); delete fx.n;
+    const mx = total({ ind:INDK.ingmx, d0:s.per.a, d1:s.per.b, filtros:fx });
+    hz.push('De '+esc(s.corto.toLowerCase())+', <b>'+miles(s.t-mx)+'</b> fueron de extranjeros ('+pc(s.t-mx, s.t)+') y <b>'+miles(mx)+'</b> de mexicanos que regresan ('+pc(mx, s.t)+').'); });
   if (claves.length>1){ const o = act.slice().sort((a,b) => b.t-a.t); if (o.length>1 && o[1].t){ const r = o[0].t/o[1].t; hz.push('<b>'+esc(o[0].corto)+'</b> '+(r>=2 ? 'es <b>'+r.toFixed(1)+' veces</b>' : 'supera en <b>'+pc(o[0].t-o[1].t, o[1].t)+'</b> a')+(r>=2 ? ' ' : ' ')+esc(o[1].corto)+'.'); } }
   act.forEach(s => { const v = s.ser.v.map(x => x || 0), i = v.indexOf(Math.max(...v)); if (v.length>2 && v[i]) hz.push('El punto más alto de '+esc(s.corto)+' fue '+(g==='m' ? MESL[f0(s.ser.C.l[i].a).getMonth()]+' de '+f0(s.ser.C.l[i].a).getFullYear() : (g==='s' ? 'la semana del ' : 'el ')+fxa(s.ser.C.l[i].a))+', con <b>'+miles(v[i])+'</b>.'); });
   if (dimD && top.length) hz.push('Por '+nomD(dimD)+', <b>'+esc(top[0])+'</b> concentra '+pc(des[iB].get(top[0]), SD[iB].t)+' de '+esc(SD[iB].corto)+(top[1] ? ', seguido de '+esc(top[1])+' ('+pc(des[iB].get(top[1]), SD[iB].t)+')' : '')+'.');

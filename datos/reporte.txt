@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-20 16:34
+Generado: 2026-10-20 19:59
 Periodo de las bases: 2024-10-01 a 2026-10-19 (749 días)
 
 == Ingresos  ·  DGCVM INGRESOS 13oct2026.xlsx, DGCVM INGRESOS 14 al 19 oct 2026.xlsx, DGCVM INGRESOS.xlsx  ·  cargado 2026-10-20
@@ -7,7 +7,7 @@ Periodo de las bases: 2024-10-01 a 2026-10-19 (749 días)
    Días sin datos: 0
    En «Otras» nacionalidades: 2,171 (0.0%)
    · 46 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Navidad, Islas Cocos, Timor-Leste, Islas Reunion, Islas Malvinas, Islas Azores, Islas Faroe, anto Tomé y Príncipe….
-   · Solo 44 de 180 puntos de internación tienen ubicación para dibujarse en el mapa (concentran el 96% de los ingresos). Los demás sí se cuentan en todas las cifras; solo no aparecen como punto en el mapa.
+   · Solo 44 de 181 puntos de internación tienen ubicación para dibujarse en el mapa (concentran el 97% de los ingresos). Los demás sí se cuentan en todas las cifras; solo no aparecen como punto en el mapa.
    · DGCVM INGRESOS.xlsx es una entrega anterior: sus 742 días del periodo que cubre DGCVM INGRESOS 13oct2026.xlsx se tomaron de ese archivo. No se suma nada dos veces.
 
 == Segunda revisión  ·  DGCVM SEGUNDA REVISION 14 al 19 oct 2026.xlsx, DGCVM SEGUNDA REVISION_ 13oct2026.xlsx, DGCVM SEGUNDA REVISION_.xlsx  ·  cargado 2026-10-20
