@@ -1697,7 +1697,8 @@ function irA(v){ PREP++;
 // (datos/datos.js → bases; datos/observaciones.js → lo que anotó cada robot). Nada se captura a mano.
 function obsDe(b){ const l = (b.obs || []).slice(), O = window.IANAMI_OBS || {};
   Object.keys(O).filter(r => r[0]!=='_').forEach(r => (O[r][b.n] || []).forEach(x => { if (l.indexOf(x)<0) l.push(x); })); return l; }
-// Estado de cada base contra el día de la consulta: lo esperado es que las de envío diario lleguen al menos a ayer.
+// Estado de cada base contra el corte de la carga: las bases se cargan una vez por semana y el corte es el último día que trae
+// la base más reciente; se marcan las que se quedaron antes de ese día. Aparte, si la última carga ya tiene más de 7 días, se avisa.
 // Las periódicas (validación de actas, vuelos comerciales, Guatemala-Honduras, documentos vigentes, caravanas) no se cuentan como atrasadas.
 const DGS = [['DGCVM','Dirección General de Control y Verificación Migratoria'], ['DGCOR','Dirección General de Coordinación de Oficinas de Representación'], ['DGRAM','Dirección General de Regulación y Archivo Migratorio'],
   ['DGPMV','Dirección General de Protección al Migrante y Vinculación'], ['CBP','Oficina de Aduanas y Protección Fronteriza de EE. UU. (fuente externa)'], ['—','Registro propio']];
@@ -1710,39 +1711,40 @@ function bitacoraBases(){ const L = (window.IANAMI_BITACORA || []).filter(e => e
     '<td><span class="bs-est '+(e.tipo==='corrección' ? 'n' : 'at')+'">'+esc(e.tipo==='corrección' ? 'Corrección' : 'Cambió lo ya cargado')+'</span></td>'+
     '<td>'+(e.meses || []).map(m => '<b>'+mes(m[0])+'</b>: '+m[1]+' '+(m[1]===1 ? 'día' : 'días')+', '+miles(Math.round(m[2]))+' → '+miles(Math.round(m[3]))+' ('+dif(m[2], m[3])+')').join('<br>')+
     (e.quitados ? '<br><span class="mini">'+e.quitados+' '+(e.quitados===1 ? 'día quedó' : 'días quedaron')+' en cero (no venían en la entrega más reciente)</span>' : '')+'</td></tr>';
-  return '<div class="caja bs-bit"><h2><span>Cambios en los datos</span></h2><p class="mini">Cada carga se compara con la anterior: aquí queda qué días cambiaron, cuánto había y cuánto hay ahora, y qué archivo lo cambió. Sirve para explicar por qué una cifra ya presentada es distinta hoy.</p>'+
+  return '<details class="caja bs-bit bs-dg"><summary><span class="bs-dg-n"><b>Cambios en los datos</b> <span>qué cambió en cada carga</span></span><span class="bs-dg-r">'+(U.length ? U.length+' '+(U.length===1 ? 'registro' : 'registros') : 'sin cambios')+'</span></summary><p class="mini">Cada carga se compara con la anterior: aquí queda qué días cambiaron, cuánto había y cuánto hay ahora, y qué archivo lo cambió. Sirve para explicar por qué una cifra ya presentada es distinta hoy.</p>'+
     (U.length ? '<div class="tb-w"><table class="tb bs"><thead><tr><th>Carga</th><th>Base y archivo</th><th>Tipo</th><th>Qué cambió</th></tr></thead><tbody>'+U.slice(0, 60).map(fila).join('')+'</tbody></table></div>'
-      : '<p>Sin cambios en días ya cargados'+(N.length ? ': las últimas cargas solo agregaron días nuevos.' : '. La bitácora empieza a llenarse con la próxima carga.')+'</p>')+'</div>'; }
+      : '<p>Sin cambios en días ya cargados'+(N.length ? ': las últimas cargas solo agregaron días nuevos.' : '. La bitácora empieza a llenarse con la próxima carga.')+'</p>')+'</details>'; }
 function vistaBases(){
   const P = (window.IANAMI_OBS || {})._periodos || {}, hoy = new Date(), ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()-1), iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'), AY = iso(ayer);
   const dif = (a, b) => Math.round((new Date(a+'T00:00:00') - new Date(b+'T00:00:00'))/864e5);
   const B = (D.bases || []).map(b => Object.assign({}, b, P[b.n] && !b.hasta ? { desde:P[b.n].desde, hasta:P[b.n].hasta, filas:b.filas!=null ? b.filas : P[b.n].filas, pendiente:false } : {}));
   Object.keys(P).forEach(n => { if (!B.some(b => b.n===n)) B.push({ n:n, archivo:P[n].archivo, desde:P[n].desde, hasta:P[n].hasta, filas:P[n].filas, cargado:null }); });
-  B.forEach(b => { b.area = (DGS.find(a => a[0]!=='—' && new RegExp('(^|, )'+a[0]+' ').test(b.archivo || '')) || DGS[5])[0]; b.per = PERIODICAS.test(b.n); b.atraso = b.hasta && !b.per ? Math.max(0, dif(AY, b.hasta)) : null; });
-  const diarias = B.filter(b => b.hasta && !b.per), atras = diarias.filter(b => b.atraso>0).sort((a,b) => b.atraso-a.atraso);
+  B.forEach(b => { b.area = (DGS.find(a => a[0]!=='—' && new RegExp('(^|, )'+a[0]+' ').test(b.archivo || '')) || DGS[5])[0]; b.per = PERIODICAS.test(b.n); });
+  const diarias = B.filter(b => b.hasta && !b.per), CORTE = diarias.reduce((m, b) => b.hasta>m ? b.hasta : m, ''), CARGA = String(D.generado || '').slice(0, 10), viejo = CARGA ? dif(iso(hoy), CARGA) : 0;
+  diarias.forEach(b => { b.atraso = Math.max(0, dif(CORTE, b.hasta)); }); const atras = diarias.filter(b => b.atraso>0).sort((a,b) => b.atraso-a.atraso);
   const estado = b => !b.hasta ? (b.pendiente ? '<span class="bs-est n">Pendiente</span>' : '<span class="bs-est n">Conteo a una fecha</span>')
     : b.per ? '<span class="bs-est n" title="No se envía cada día">Periódica</span><br><span class="mini">último dato: '+fechaISO(b.hasta)+'</span>'
-    : b.atraso===0 ? '<span class="bs-est ok">Al día</span>' : '<span class="bs-est '+(b.atraso>7 ? 'mal' : 'at')+'">'+b.atraso+' '+(b.atraso===1 ? 'día' : 'días')+' de atraso</span>';
+    : b.atraso===0 ? '<span class="bs-est ok">Llega al corte</span>' : '<span class="bs-est '+(b.atraso>7 ? 'mal' : 'at')+'">'+b.atraso+' '+(b.atraso===1 ? 'día' : 'días')+' antes del corte</span>';
   const periodo = b => b.hasta ? '<b>'+fechaISO(b.desde)+'</b><span class="bs-a">→</span><b>'+fechaISO(b.hasta)+'</b>'
     : b.pendiente ? '—' : b.k==='car' ? '<span class="mini">Registro de eventos, sin días</span>' : '<span class="mini">No trae días: es un conteo a una fecha'+(b.cargado ? '. Archivo del '+fechaISO(b.cargado) : '')+'</span>';
   const fila = b => { const ob = obsDe(b), arch = String(b.archivo || '').split(', ');
     return '<tr'+(b.pendiente ? ' class="bs-pend"' : '')+'><td><b>'+esc(b.n)+'</b><br><span class="mini">'+arch.map(esc).join('<br>')+'</span></td>'+
       '<td class="x bs-per">'+periodo(b)+'</td><td>'+estado(b)+'</td>'+
       '<td class="x">'+(b.filas!=null ? miles(b.filas) : '—')+'</td><td class="x">'+(b.faltan!=null ? miles(b.faltan) : '—')+'</td>'+
-      '<td class="bs-obs">'+(ob.length ? '<ul>'+ob.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul>' : '<span class="mini">Sin observaciones</span>')+'</td></tr>'; };
-  const resumen = atras.length===0
-    ? '<div class="bs-sem ok"><b>Todas las bases de envío diario están al día:</b> llegan al menos a ayer, '+fechaISO(AY)+'.</div>'
-    : '<div class="bs-sem '+(atras.length===diarias.length ? 'at' : 'mal')+'"><b>'+(atras.length===diarias.length ? 'Ninguna de las '+diarias.length+' bases de envío diario llega' : (diarias.length-atras.length)+' de '+diarias.length+' bases de envío diario llegan')+' a ayer, '+fechaISO(AY)+'.</b> '+
-      'Lo esperado es que cada una llegue, como mínimo, al día anterior a la consulta.'+
-      '<div class="bs-sem-g">'+[...new Set(atras.map(b => b.atraso))].map(n => { const l = atras.filter(b => b.atraso===n);
-        return '<p><b>'+n+' '+(n===1 ? 'día' : 'días')+' de atraso</b> <small>(llegan al '+fechaISO(l[0].hasta)+')</small>: '+l.map(b => esc(b.n)+' <small>'+b.area+'</small>').join(' · ')+'</p>'; }).join('')+'</div>'+
-      '<p class="bs-sem-n">Las bases periódicas (validación de actas, vuelos comerciales, Guatemala y Honduras, documentos vigentes y caravanas) no se envían cada día y no se cuentan aquí.</p></div>';
+      '<td class="bs-obs">'+(ob.length ? '<details><summary>'+ob.length+' '+(ob.length===1 ? 'observación' : 'observaciones')+'</summary><ul>'+ob.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul></details>' : '<span class="mini">Sin observaciones</span>')+'</td></tr>'; };
+  const fc = d => fechaISO(d), vj = viejo>7 ? ' <span class="bs-est mal">La última carga fue hace '+viejo+' días: toca actualizar.</span>' : '';
+  const resumen = !diarias.length ? '' : atras.length===0
+    ? '<div class="bs-sem ok"><b>Datos al '+fc(CORTE)+'</b>'+(CARGA ? ' (carga del '+fc(CARGA)+')' : '')+': las '+diarias.length+' bases que se envían por día llegan a esa fecha.'+vj+'</div>'
+    : '<div class="bs-sem at"><b>Datos al '+fc(CORTE)+'</b>'+(CARGA ? ' (carga del '+fc(CARGA)+')' : '')+': '+(diarias.length-atras.length)+' de '+diarias.length+' bases que se envían por día llegan a esa fecha.'+vj+
+      ' Se quedaron antes:<div class="bs-sem-g">'+[...new Set(atras.map(b => b.atraso))].map(n => { const l = atras.filter(b => b.atraso===n);
+        return '<p><b>'+n+' '+(n===1 ? 'día' : 'días')+' antes</b> <small>(llegan al '+fc(l[0].hasta)+')</small>: '+l.map(b => esc(b.n)+' <small>'+b.area+'</small>').join(' · ')+'</p>'; }).join('')+'</div>'+
+      '<p class="bs-sem-n">En el tablero, los días que le faltan a una base se marcan como pendientes y no entran en las comparaciones. Las periódicas (validación de actas, vuelos comerciales, Guatemala y Honduras, documentos vigentes y caravanas) no se cuentan aquí.</p></div>';
   const grupo = a => { const l = B.filter(b => b.area===a[0]).sort((x,y) => (x.per?1:0)-(y.per?1:0) || (y.atraso||0)-(x.atraso||0) || x.n.localeCompare(y.n)); if (!l.length) return '';
     const d = l.filter(b => b.hasta && !b.per), al = d.filter(b => b.atraso===0).length, at = d.length-al, pe = l.length-d.length;
-    return '<details class="bs-dg" open><summary><span class="bs-dg-n"><b>'+a[0]+'</b> <span>'+esc(a[1])+'</span></span><span class="bs-dg-r">'+l.length+' '+(l.length===1 ? 'base' : 'bases')+
-      (d.length ? ' · <span class="bs-est '+(at ? 'at' : 'ok')+'">'+(at ? at+' con atraso' : 'todas al día')+'</span>' : '')+(pe ? ' · '+pe+' periódica'+(pe>1 ? 's' : '') : '')+'</span></summary>'+
-      '<div class="tb-w"><table class="tb bs"><thead><tr><th>Base y archivos</th><th>Periodo<br><small>primer día → último día con datos</small></th><th>¿Al día?<br><small>contra ayer</small></th><th>Renglones</th><th>Días sin datos<br><small>dentro del periodo</small></th><th>Observaciones</th></tr></thead><tbody>'+l.map(fila).join('')+'</tbody></table></div></details>'; };
-  return '<h1>Bases</h1><p>Qué trae cada base, del primer al último día con datos, y si está al día, agrupadas por dirección general. Toca el nombre de una dirección para mostrarla u ocultarla. Última conversión: '+esc(D.generado)+'.</p>'+resumen+
+    return '<details class="bs-dg"><summary><span class="bs-dg-n"><b>'+a[0]+'</b> <span>'+esc(a[1])+'</span></span><span class="bs-dg-r">'+l.length+' '+(l.length===1 ? 'base' : 'bases')+
+      (d.length ? ' · <span class="bs-est '+(at ? 'at' : 'ok')+'">'+(at ? at+' antes del corte' : 'todas al corte')+'</span>' : '')+(pe ? ' · '+pe+' periódica'+(pe>1 ? 's' : '') : '')+'</span></summary>'+
+      '<div class="tb-w"><table class="tb bs"><thead><tr><th>Base y archivos</th><th>Periodo<br><small>primer día → último día con datos</small></th><th>¿Llega al corte?<br><small>'+(CORTE ? fc(CORTE) : '')+'</small></th><th>Renglones</th><th>Días sin datos<br><small>dentro del periodo</small></th><th>Observaciones</th></tr></thead><tbody>'+l.map(fila).join('')+'</tbody></table></div></details>'; };
+  return '<h1>Bases</h1><p>Qué trae cada base, del primer al último día con datos, y si llega al corte de la carga, agrupadas por dirección general. Toca una dirección para ver sus bases, y «observaciones» para leerlas. Última conversión: '+esc(D.generado)+'.</p>'+resumen+
     '<div class="caja bs-c">'+DGS.map(grupo).join('')+'<span class="nota">«Días sin datos»: días entre el primero y el último en que el archivo no trae ningún renglón (por ejemplo, fines de semana sin atención). «Periódica»: base que no se envía cada día. Cada base puede venir en varios archivos (histórico, envíos diarios y correcciones): gana la entrega más reciente y cada archivo manda en todo su periodo, así que nada se suma dos veces. Una corrección se nombra «… CORRECCION 2026-09.xlsx» y reemplaza el mes completo. Las observaciones las escribe el proceso al leer cada archivo; lo que haya que corregir se corrige en el archivo que entrega la dirección.</span></div>'+bitacoraBases();
 }
 // El mapa ocupa el alto que queda de la pantalla, dejando asomar la franja de cajas.
