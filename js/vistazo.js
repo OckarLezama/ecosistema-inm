@@ -410,7 +410,8 @@ function capas(x, modo){ limpia(); const col = GC[x.g][0], N = nats(x).filter(z 
   const dur = mover(pts ? bbDe(pts) : modo==='edo' && x.k==='cbp' ? BB_FN : modo==='edo' ? BB_MX : [-121, 10, -78, 37]); capas.t = setTimeout(() => sube(1), dur ? dur+120 : 350); }
 
 /* ---------- informe de la última semana completa (lunes a domingo) ---------- */
-const INF = D.per.sem; $('inft').parentNode.title = 'Informe migratorio de la semana '+dd(INF.a)+' – '+dd(INF.b);
+const INF = (() => { const t = new Date(), b = new Date(t.getFullYear(), t.getMonth(), t.getDate()-1); while (b.getDay()!==0) b.setDate(b.getDate()-1);   // informe: siempre la semana pasada (lunes a domingo), según el calendario
+  const a = new Date(b.getFullYear(), b.getMonth(), b.getDate()-6), iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); return { a:iso(a), b:iso(b) }; })(); $('inft').parentNode.title = 'Informe migratorio de la semana '+dd(INF.a)+' – '+dd(INF.b);
 /* ---------- alerta: lo que se sale de lo normal (contra sus semanas previas) ---------- */
 let ALR = [];
 // hace un año en estas fechas: la misma semana (52 semanas antes) contra sus 11 semanas previas; null si no hay datos

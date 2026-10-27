@@ -39,8 +39,11 @@ const dSem = s => (f0(s).getDay()+6)%7;
 const minS = l => l.filter(Boolean).sort()[0], maxS = l => l.filter(Boolean).sort().slice(-1)[0];
 // Corte común del informe: el último día que traen las bases semanales (CBP, rescates, repatriados y recibidos)
 const CORTE = minS(['cbp','resc','rep','rec'].map(fin));
-// Semanas completas de lunes a domingo que caben en el corte, de la más reciente a la más vieja
-function semanas(n){ let b = CORTE; while (dSem(b)!==6) b = sumaDias(b, -1); const l = []; for (let i=0;i<n;i++){ l.push([sumaDias(b, -6), b]); b = sumaDias(b, -7); } return l; }
+// Semanas de lunes a domingo, de la más reciente a la más vieja. La más reciente es siempre la semana pasada según el calendario
+// (hoy lunes 26 o jueves 29 de oct → 19 al 25 de oct), aunque alguna base todavía no llegue al domingo: se avisa cuál.
+const HOY = (t => t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'))(new Date());
+const FALTAN = b => [['cbp','Encuentros CBP'],['resc','Rescatados'],['rep','Repatriados'],['rec','Recibidos']].filter(([k]) => fin(k) && fin(k)<b).map(([k, n]) => n+' (datos al '+fx(fin(k))+')');
+function semanas(n){ let b = sumaDias(HOY, -1); while (dSem(b)!==6) b = sumaDias(b, -1); const l = []; for (let i=0;i<n;i++){ l.push([sumaDias(b, -6), b]); b = sumaDias(b, -7); } return l; }
 const REF = { trump:['Periodo Trump', '2025-01-20'], sheinbaum:['Periodo Sheinbaum', '2024-10-01'], anio:['En el año', null] };
 const refIni = (r, b) => r==='anio' ? f0(b).getFullYear()+'-01-01' : REF[r][1];
 const esSemana = (a, b) => dSem(a)===0 && difDias(a, b)===6;
@@ -380,10 +383,13 @@ function laminaNarrativa(L, X){ const g = L.filter(l => l.hz && l.hz.length);
 function informe(a, b, ref){
   const X = datosInforme(a, b, ref || 'trump');
   const L = [laminaCBP(X), laminaSectores(X), laminaRecibidos(X), laminaRetorno(X), laminaRescates(X), laminaCaravanas(X)].filter(Boolean);
+  // si una base no llega al último día del periodo, su lámina lo dice (no es cero: es que aún no llega)
+  const BK = { [IDX[0]]:'cbp', [IDX[1]]:'cbp', [IDX[2]]:'rec', [IDX[3]]:'rep', [IDX[4]]:'resc' };
+  L.forEach(l => { const k = BK[l.tit]; if (k && fin(k) && fin(k)<b) l.fte = (l.fte ? l.fte+' · ' : '')+'⚠ esta base llega al '+fxa(fin(k))+': faltan '+(difDias(fin(k), b))+' días del periodo'; });
   const todo = [laminaPortada(X)].concat(L, [laminaNarrativa(L, X)]);
   const u = new URL(location.href); u.search = '?informe='+a+'_'+b+'&ref='+X.ref; u.hash = '';
   const quita = h => h.replace(/<\/?b>/g, '*').replace(/<[^>]+>/g, ''), resumen = L.map(l => '• '+quita(l.hz[0])).join('\n');
-  abrirVisor({ titulo:'Informe migratorio', sub:(X.sem ? 'Semana del ' : 'Periodo personalizado ')+X.fch+' · contra el '+enPer(X), pie:'IA-NAMI · Informe migratorio · '+X.fch, laminas:todo, liga:/^https?:/.test(u.protocol) ? u.toString() : '', resumen, archivo:'Informe migratorio '+a+' a '+b });
+  abrirVisor({ titulo:'Informe migratorio', sub:(X.sem ? 'Semana del ' : 'Periodo personalizado ')+X.fch+' · contra el '+enPer(X)+(FALTAN(b).length ? ' · faltan datos de '+FALTAN(b).join(', ') : ''), pie:'IA-NAMI · Informe migratorio · '+X.fch, laminas:todo, liga:/^https?:/.test(u.protocol) ? u.toString() : '', resumen, archivo:'Informe migratorio '+a+' a '+b });
 }
 
 /* ==== [6] ANÁLISIS ================================================ */
@@ -471,7 +477,7 @@ function htmlPagina(){
       '<div class="an-pers" id="an-ip" hidden><label class="an-l">Del<input type="date" id="an-ia"></label><label class="an-l">al<input type="date" id="an-ib"></label></div>'+
       '<label class="an-l">Comparar con<select id="an-ref"><option value="trump">Periodo Trump (desde 20 ene 2025)</option><option value="sheinbaum">Periodo Sheinbaum (desde 1 oct 2024)</option><option value="anio">El año en curso</option></select></label>'+
       '<button class="an-go" data-angen>Generar informe <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
-      '<p class="an-nt">Datos al <b>'+fxa(CORTE)+'</b> (último día común de CBP, rescates, repatriados y recibidos).</p></section>'+
+      '<p class="an-nt">Semana más reciente: <b>'+rango(...semanas(1)[0])+'</b>. '+(f => f.length ? 'Aún no llegan completos: '+f.join(', ')+'.' : 'Todas las bases llegan al domingo.')(FALTAN(semanas(1)[0][1]))+'</p></section>'+
     '<section class="an-c an-an" hidden><div class="an-c-h"><span class="an-ic"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><h2>Análisis y comparaciones</h2><p>Escribe lo que quieres ver o arma la comparación: conceptos, nacionalidades o estados, y periodos.</p></div></div>'+
       '<form class="an-q" id="an-q"><input id="an-txt" type="text" autocomplete="off" placeholder="Por ejemplo: rescatados de Honduras y Guatemala 2026 contra 2025"><button type="submit">Analizar</button></form>'+
       '<div class="an-ej">'+['rescatados de Venezuela y Cuba este año','repatriados en vuelos PRIM','trámites de Guatemala en Chiapas','encuentros CBP mexicanos'].map(t => '<button type="button" data-anej="'+esc(t)+'">'+esc(t)+'</button>').join('')+'</div>'+
