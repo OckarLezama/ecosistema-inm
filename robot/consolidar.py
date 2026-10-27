@@ -71,10 +71,17 @@ def main():
         for f in l:
             t, _ = lector.tabla_de(os.path.join(a.origen, f), base, convertir.ACEPTA)
             partes.append((f, t))
-        orig = partes[0][1].attrs.get("orig") or list(partes[0][1].columns)
-        orig = [lector.ALIAS.get(lector.norm(c), c) for c in orig]
-        junto = lector.juntar(partes, base, origen=a.origen)
-        junto = junto[[c for c in partes[0][1].columns]]
+        # Columnas: las de todos los archivos, con el nombre de siempre (si una entrega trae otras nacionalidades, no se pierden)
+        cols, nom = [], {}
+        for _, p in partes:
+            o = p.attrs.get("orig") or list(p.columns)
+            for c, x in zip(p.columns, o):
+                if c not in nom:
+                    cols.append(c)
+                    x = lector.ALIAS.get(lector.norm(x), x)
+                    nom[c] = x if lector.norm(x) == c else c
+        junto = lector.juntar(partes, base, origen=a.origen).reindex(columns=cols)
+        orig = [nom[c] for c in cols]
         d0, d1 = pd.to_datetime(junto["DIA"]).min().date(), pd.to_datetime(junto["DIA"]).max().date()
         nombre = f"{prefijo(l)} consolidado {d0} a {d1} entregado {hoy}.xlsx"
         print(f"{base}: {len(l)} archivos → «{nombre}» ({len(junto):,} renglones, {d0} a {d1}).")
