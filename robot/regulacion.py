@@ -256,7 +256,9 @@ def _filas_va(ruta, base):
     sol = t["O.R. SOLICITANTE DE VALIDACIONES"].fillna("Sin dato").astype(str).str.strip()
     res = t["RESULTADO DE LA VALIDACION"].map(_resultado)
     tipo = t["TIPO DE TRAMITE MIGRATORIO"].astype(str).str.strip()
-    acto = t["TIPO DE ACTO REGISTRAL"].astype(str).str.strip().str.capitalize()
+    if "TIPO DE ACTO REGISTRAL" not in t.columns:                   # desde oct 2026 algunas entregas ya no traen esta columna
+        lector.avisar(base, os.path.basename(ruta)+": no trae «TIPO DE ACTO REGISTRAL»; esas solicitudes quedan como «Sin dato» en el tipo de acta.")
+    acto = t["TIPO DE ACTO REGISTRAL"].astype(str).str.strip().str.capitalize() if "TIPO DE ACTO REGISTRAL" in t.columns else pd.Series("Sin dato", index=t.index)
     filas = pd.DataFrame({"fs": fs, "fr": fr, "ofr": orr, "ent": ent, "n": t["NACIONALIDAD"].map(nacionalidad), "t": tipo, "acto": acto, "res": res, "sol": sol})
     filas = filas[filas["fs"].notna()]
     for k in ("ofr", "ent", "n", "t", "acto", "res", "sol"):

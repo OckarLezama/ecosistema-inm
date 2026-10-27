@@ -566,7 +566,8 @@ function comDibujar(){ const c = comDatos();
   semanalOtro(c.X, 'pm-cm-sem', 'pm-cm-sq', [{ name:'Personas', col:VERDE, f:() => true }]);
   burbujas('pm-cm-mapa', c.lp.filter(x => coord(c.X.dic.p[x[0]])).map(x => ({ k:x[0], nom:c.X.dic.p[x[0]], corto:c.nomA(x[0]), v:x[1], c:coord(c.X.dic.p[x[0]]) })), { caja:[[-118.6,33.2],[-86.4,14.3]], per:fechaA(c.X.d0)+' – '+fechaA(c.X.d1), T:c.V, etiq:7, max:40 }); }
 // Vuelos comerciales: arriba solo si su base está al día y cambiaron de verdad (±25% y al menos 100 personas, últimas 4 semanas contra las 4 anteriores)
-function comCambio(){ if (!OTROS.com || CV.dias-1-OTROS.com.d1>14) return null;   // base atrasada: «sus últimas 4 semanas» ya no es lo reciente const X = OTROS.com, T = X.T, b1 = X.d1+1, a0 = b1-28, p0 = a0-28; let A = 0, P = 0;
+function comCambio(){ if (!OTROS.com || CV.dias-1-OTROS.com.d1>14) return null;   // base atrasada: «sus últimas 4 semanas» ya no es lo reciente
+  const X = OTROS.com, T = X.T, b1 = X.d1+1, a0 = b1-28, p0 = a0-28; let A = 0, P = 0;
   for (let i=0;i<T.N;i++){ const d = T.d[i]; if (d>=a0 && d<b1) A += T.v[i]; else if (d>=p0 && d<a0) P += T.v[i]; }
   if (P<100 || Math.abs(A/P-1)<.25 || Math.abs(A-P)<100) return null;
   return { cl:A>=P ? 'u' : 'd', ic:A>=P ? '▲' : '▼', h:'Vuelos comerciales '+(A>=P ? 'suben ' : 'bajan ')+Math.abs((A/P-1)*100).toFixed(0)+'% en sus últimas 4 semanas', t:miles(P)+' → '+miles(A)+' · '+fecha(a0)+' – '+fecha(X.d1)+' · aparte del total · ver ›', act:' data-pcom' }; }

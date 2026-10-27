@@ -32,7 +32,11 @@ ALIAS = {"NACIONADLIDAD": "NACIONALIDAD", "NACIONALIDA": "NACIONALIDAD"}
 RENOMBRES = [("FECHA", "DIA", {"LOCATION", "CIUDAD EEUU", "TOTAL"}),                      # CBP desde oct 2026
            ("ENCUENTRO", "AGENCIA", {"LOCATION", "CIUDAD EEUU", "TOTAL"}),
            ("FECHA_REPATRIACION", "DIA", {"PUNTO_REPATRIACION", "MEXICANOS REPATRIADOS"}),   # DGPMV desde oct 2026
-           ("ESTADO", "O.R.", {"PUNTO_REPATRIACION", "MEXICANOS REPATRIADOS"})]
+           ("ESTADO", "O.R.", {"PUNTO_REPATRIACION", "MEXICANOS REPATRIADOS"}),
+           ("FECHA", "DIA", {"PUNTO DE INTERNACION", "TIPO", "NACIONALIDAD"}),                # DGCVM ingresos, oct 2026
+           ("OR", "O.R.", {"PUNTO DE INTERNACION", "TIPO", "NACIONALIDAD"}),
+           ("CONNACIONALES PROVENIENTES DE:", "PAIS", {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"}),   # DGPMV Guatemala-Honduras, oct 2026
+           ("CONNACIONALES PROVENIENTES DE", "PAIS", {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"})]
 AVISOS = {}          # nombre de la base → observaciones (sin repetir)
 PERIODOS = {}        # nombre de la base → {desde, hasta, archivo, filas}: lo que lee cada robot fuera de datos.js (página Bases)
 

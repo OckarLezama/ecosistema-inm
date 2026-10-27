@@ -44,7 +44,7 @@ Página principal (Pulso) y convertidor de bases.
    - Cada carga deja una huella por base y día (`datos/huella.json`) y la siguiente anota en `datos/bitacora.js` qué cambió (sección **Bases › Cambios en los datos**).
    - Todo se toma desde el 1 oct 2024; lo anterior se avisa y no se usa.
    - Las hojas ocultas o con otras columnas no se leen (se avisa).
-   - Encabezados que el área cambió de nombre se leen con el de siempre y se avisa: CBP «FECHA» y «Encuentro» (= «DIA» y «AGENCIA»), DGPMV «FECHA_REPATRIACION» y «ESTADO» (= «DIA» y «O.R.»). La lista está en `RENOMBRES` de `robot/lector.py`.
+   - Encabezados que el área cambió de nombre se leen con el de siempre y se avisa: CBP «FECHA» y «Encuentro» (= «DIA» y «AGENCIA»), DGPMV «FECHA_REPATRIACION» y «ESTADO» (= «DIA» y «O.R.»), DGCVM ingresos «FECHA» y «OR» (= «DIA» y «O.R.»), DGPMV Guatemala-Honduras «Connacionales Provenientes de:» (= «PAIS»). Validación del Registro Civil sin «Tipo de acto registral»: esas solicitudes quedan como «Sin dato» en el tipo de acta. La lista está en `RENOMBRES` de `robot/lector.py`.
    - Si una entrega nueva trae otras columnas de nacionalidad (CBP), se conservan las de las entregas anteriores.
    - Validación del Registro Civil: se juntan las entregas igual que las demás bases (cada una manda en su periodo de fechas de solicitud); sirve tanto la base completa como solo las solicitudes de la semana.
 2. Desde la raíz del repositorio:
