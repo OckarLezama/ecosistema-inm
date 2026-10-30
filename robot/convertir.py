@@ -291,10 +291,14 @@ def cargar_resc(t):
     t = preparar("resc", t)
     for c in ("TOTAL", "1RA VEZ", "REINCIDENTES", "PRESENTADOS EN ESTACIONES MIGRATORIAS", "CANALIZADOS AL DIF"):
         t[c] = entero(t[c])
+    # Si TOTAL no es 1RA VEZ + REINCIDENTES, se usa la suma: así la tarjeta (total) y su desglose (1.ª vez / reincidentes) dan lo mismo
+    mal = t["TOTAL"] != t["1RA VEZ"] + t["REINCIDENTES"]
+    if mal.any():
+        dif = int((t.loc[mal, "1RA VEZ"] + t.loc[mal, "REINCIDENTES"] - t.loc[mal, "TOTAL"]).sum())
+        ej = "; ".join(f"{pd.Timestamp(r.DIA).date()} {r['O.R.']} {r.NACIONALIDAD}: total {r.TOTAL}, 1.ª vez {r['1RA VEZ']}, reincidentes {r.REINCIDENTES}" for _, r in t[mal].head(3).iterrows())
+        avisar("resc", f"{int(mal.sum()):,} renglones donde TOTAL no es 1RA VEZ + REINCIDENTES (diferencia de {dif:+,}); se usa la suma. Ej.: {ej}. Corregir en el archivo.")
+        t.loc[mal, "TOTAL"] = t.loc[mal, "1RA VEZ"] + t.loc[mal, "REINCIDENTES"]
     t["v"] = t["TOTAL"]
-    no_cuadra = int((t["TOTAL"] != t["1RA VEZ"] + t["REINCIDENTES"]).sum())
-    if no_cuadra:
-        avisar("resc", f"{no_cuadra:,} renglones donde TOTAL no es 1RA VEZ + REINCIDENTES")
     repetidos = int(t.duplicated(["DIA", "O.R.", "NACIONALIDAD"]).sum())
     if repetidos:
         avisar("resc", f"{repetidos:,} renglones repetidos (mismo día, O.R. y nacionalidad)")

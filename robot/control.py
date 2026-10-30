@@ -170,6 +170,10 @@ def main():
     # Lo que reporta cada O.R. (archivo de rescates): rescatados, 1.ª vez, reincidentes y su destino
     r = res[(res["DIA"] >= ini) & (res["DIA"] <= fin)]
     cols = ["TOTAL", "1RA VEZ", "REINCIDENTES", "PRESENTADOS EN ESTACIONES MIGRATORIAS", "CANALIZADOS AL DIF"]
+    r = r.copy()
+    for c in cols:
+        r[c] = pd.to_numeric(r[c], errors="coerce").fillna(0)
+    r["TOTAL"] = r["1RA VEZ"] + r["REINCIDENTES"]          # igual que convertir.py: el total es 1.ª vez + reincidentes (si el archivo no cuadra, se avisa en Bases)
     g = r.assign(d=dia(r["DIA"]), e=r["O.R."].map(estado), n=r["NACIONALIDAD"].map(nacionalidad)).groupby(["d", "e", "n"], as_index=False)[cols].sum()
     g = g[g[cols].sum(axis=1) > 0]
     ORR = {"d": g["d"].tolist(), "e": [E(x) for x in g["e"]], "n": [N(x) for x in g["n"]], "v": g["TOTAL"].astype(int).tolist(), "pv": g["1RA VEZ"].astype(int).tolist(),

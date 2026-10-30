@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-10-26 18:28
+Generado: 2026-10-30 15:14
 Periodo de las bases: 2024-10-01 a 2026-10-25 (755 días)
 
 == Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, INGRESOS 2026  1 ene al 25 oct 26.xlsx  ·  cargado 2026-10-26
@@ -29,13 +29,13 @@ Periodo de las bases: 2024-10-01 a 2026-10-25 (755 días)
    · Entre los trámites concluidos, «Tipo de resolución» dice 31,498 «En proceso» y 19,625 «Cancelados»; 26,780 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
 
 == Rescates  ·  DGCOR RESCATES consolidado 2024-10-01 a 2026-10-25 entregado 2026-10-26.xlsx  ·  cargado 2026-10-26
-   54,121 renglones · total 902,807 · del 2024-10-01 al 2026-10-25
+   54,121 renglones · total 902,808 · del 2024-10-01 al 2026-10-25
    Días sin datos: 0
    En «Otras» nacionalidades: 31 (0.0%)
    · 6 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: VENEZUELA (REPÚBLICA BOLIVARIANA DE), REPÚBLICA DE KOSOVO.
-   · 1 renglones donde TOTAL no es 1RA VEZ + REINCIDENTES
+   · 1 renglones donde TOTAL no es 1RA VEZ + REINCIDENTES (diferencia de +1); se usa la suma. Ej.: 2026-09-26 VERACRUZ HONDURAS: total 0, 1.ª vez 0, reincidentes 1. Corregir en el archivo.
    · 1 renglones repetidos (mismo día, O.R. y nacionalidad)
-   · 156,472 rescatados sin destino registrado (ni estación ni DIF)
+   · 156,473 rescatados sin destino registrado (ni estación ni DIF)
 
 == Presentados  ·  DGCVM PRESENTADOS consolidado 2024-10-01 a 2026-10-25 entregado 2026-10-26.xlsx  ·  cargado 2026-10-26
    34,116 renglones · total 151,576 · del 2024-10-01 al 2026-10-25
