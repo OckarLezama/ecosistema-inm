@@ -719,7 +719,10 @@ def main():
     ing_mx = B["ing"][B["ing"]["n"] == MEXICO]
     BX = dict(B, seg=seg_ext, can_nna=B["can_nna"][B["can_nna"]["DIA"] <= fin_can], can_ad=B["can_ad"][B["can_ad"]["DIA"] <= fin_can])
     indicadores = {"ing": B["ing"], "ing_mx": ing_mx, "rech": rech, "tram": B["tram"], "resc": B["resc"], "pres": B["pres"],
-                   "can": can, "ret": B["ret"], "recib": B["recib"], "rep": B["rep"]}
+                   "can": can, "ret": B["ret"], "recib": B["recib"], "rep": B["rep"],
+                   # partes con la misma granularidad que las tarjetas (por día, estado y nacionalidad): así el desglose de la ayuda
+                   # (1.ª vez / reincidentes, con tarjeta / sin tarjeta) suma exactamente la tarjeta en cualquier periodo
+                   "resc_pv": B["resc"].assign(v=B["resc"]["1RA VEZ"]), "tram_tar": B["tram"][B["tram"]["exp"] == 0]}
     salida = {"inicio": inicio.date().isoformat(), "corte": fin.date().isoformat(), "dias": dias,
               "generado": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
               "nats": [list(n) for n in NAT] + [["Otras", 0, "OT"], ["México", 484, "NA"]],

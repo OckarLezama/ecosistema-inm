@@ -158,7 +158,9 @@ window.IANAMI_MEZCLA = function(el, c){ if (!el) return;
 // Cubo denso por indicador [semana][estado][nacionalidad] y sus dos resúmenes
 // Cubo semanal de todas las fechas (…0); CUBO, WS y WN son la vista del periodo elegido
 const CUBO0 = {}, WS0 = {}, WN0 = {}, CUBO = {}, WS = {}, WN = {};
-INDS.forEach(m => { const a = new Float32Array(NW*NS*NN), ws = new Float64Array(NW*NS), wn = new Float64Array(NW*NN), c = D.cube[m.k];
+// Partes que no son tarjeta pero se suman igual que ellas (1.ª vez de rescatados, trámites con tarjeta): mismo cubo y mismo recorte por periodo
+const PARTES = ['resc_pv','tram_tar'].filter(k => D.cube[k] && D.daily[k]).map(k => ({ k:k })), INDX = INDS.concat(PARTES);
+INDX.forEach(m => { const a = new Float32Array(NW*NS*NN), ws = new Float64Array(NW*NS), wn = new Float64Array(NW*NN), c = D.cube[m.k];
   for (let i=0;i<c.length;i+=4){ a[(c[i]*NS + c[i+1])*NN + c[i+2]] += c[i+3]; ws[c[i]*NS+c[i+1]] += c[i+3]; wn[c[i]*NN+c[i+2]] += c[i+3]; }
   CUBO0[m.k] = a; WS0[m.k] = ws; WN0[m.k] = wn; });
 const NCAT = {ing_via:3, rech_det:2, tram_se:16, tram_res:3, tram_exp:2, tram_plz:2, tram_tipo:(D.tramTipos||[]).length, resc_rei:2, resc_des:3, pres_est:D.estaciones.length, can_nna:12, can_ad:2, ret_tipo:2, recib_edad:2, rep_comp:8};
@@ -187,7 +189,7 @@ function aplicarPeriodo(p0, p1){
   const sem = [], E0 = D0.ends;
   for (let w=0; w<E0.length; w++){ const a = w ? E0[w-1] : 0, b = E0[w], x = Math.max(a,p0), y = Math.min(b,p1); if (y>x) sem.push([w, (y-x)/(b-a), y-p0]); }
   NW = sem.length; D.ends = sem.map(x => x[2]);
-  INDS.forEach(m => { const A = CUBO0[m.k], B = WS0[m.k], C = WN0[m.k], a = new Float32Array(NW*NS*NN), ws = new Float64Array(NW*NS), wn = new Float64Array(NW*NN), L = NS*NN;
+  INDX.forEach(m => { const A = CUBO0[m.k], B = WS0[m.k], C = WN0[m.k], a = new Float32Array(NW*NS*NN), ws = new Float64Array(NW*NS), wn = new Float64Array(NW*NN), L = NS*NN;
     sem.forEach((x,j) => { const w = x[0], f = x[1];
       for (let i=0;i<L;i++) a[j*L+i] = A[w*L+i]*f;
       for (let i=0;i<NS;i++) ws[j*NS+i] = B[w*NS+i]*f;
@@ -630,14 +632,17 @@ function totalPais(ext, mx){ const T = ext+mx || 1;
 function cbpMx(t, mx){ const T = t || 1;
   return '<span class="tip-tot">Encuentros <b>'+miles(t)+'</b>: otros países <b>'+miles(t-mx)+'</b> ('+((t-mx)/T*100).toFixed(1)+'%) + mexicanos <b>'+miles(mx)+'</b> ('+(mx/T*100).toFixed(1)+'%)'+
     '<i class="tip-b"><i style="width:'+((t-mx)/T*100).toFixed(1)+'%;background:'+colG('usa')+'"></i></i></span>'; }
+// 1.ª vez y reincidentes con la misma cuenta que la tarjeta: suman exactamente lo mismo en cualquier periodo, estado o nacionalidad
+const pvRei = (ss, n) => { const t = acum('resc', ss, n); if (!PARTES.some(p => p.k==='resc_pv')) return comp('resc_rei', ss, n); const p = acum('resc_pv', ss, n); return [p, Math.max(0, t-p)]; };
+const conTar = (ss, n) => { const t = acum('tram', ss, n); if (!PARTES.some(p => p.k==='tram_tar')) return comp('tram_exp', ss, n); const p = acum('tram_tar', ss, n); return [p, Math.max(0, t-p)]; };
 function tipKpi(el){
   const k = el.dataset.k, m = IND[k], F = filtro(), va = variacion(diario(k,F)), b = D.bases.find(x => x.k===BASE_IND[k]) || {};
   const tot = acum(k,F.ss,m.nat ? F.nd : null) || 1, tn = m.nat && F.n==null ? topNats(n => enRegion(n) ? acum(k,F.ss,n) : 0, 3) : [];
   return '<b>'+m.n+(nombreFiltro() ? ' · '+esc(nombreFiltro()) : '')+'</b><span>'+DEF_IND[k]+'</span>'+(k==='ing' && F.n==null ? (m => totalPais(acum('ing',F.ss,null) - m, m))(ingMx(F.ss)) : '')+(k==='cbp' && F.n==null ? cbpMx(acum('cbp',null,F.r ? F.nd : null), F.r ? 0 : acum('cbp',null,MX)) : '')+
     (va.ok ? '<span>'+(cmpFijo() ? 'Este periodo' : S.cmp==='sem' ? 'Última semana completa' : 'Últimos '+etiquetaN(S.cmp))+': <b>'+corto(va.a)+'</b> · '+(cmpFijo() ? refFija().txt : S.cmp==='sem' ? 'semana previa' : 'anteriores')+': '+corto(va.b)+' ('+(va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(1)+'%)</span>' : '')+
     (U => U>0 ? '<span>Promedio: <b>'+miles(suma(diario(k,F),0,U)/U)+'</b> al día · <b>'+miles(suma(diario(k,F),0,U)/U*7)+'</b> a la semana'+(U>=60 ? ' · <b>'+miles(suma(diario(k,F),0,U)/U*30.4)+'</b> al mes' : '')+'</span>' : '')(finDatos(k))+
-    (k==='tram' && D.comp.tram_exp ? (e => { const p = comp('tram_plz',F.ss,F.nd), te = e[0]+e[1], tp = p[0]+p[1]; return te ? '<span>Expiden tarjetas: <b>'+miles(e[0])+'</b> · no expiden: <b>'+miles(e[1])+'</b>'+(tp && p[1] ? ' · <b>'+pct(p[0], tp)+'%</b> dentro del plazo normativo' : '')+'</span>' : ''; })(comp('tram_exp',F.ss,F.nd)) : '')+
-    (k==='resc' ? (r => '<span>Eventos: <b>'+miles(r[0]+r[1])+'</b> · personas (1ra vez): <b>'+miles(r[0])+'</b> · reincidentes: '+miles(r[1])+'</span>')(comp('resc_rei',F.ss,F.nd)) : '')+
+    (k==='tram' && D.comp.tram_exp ? (e => { const p = comp('tram_plz',F.ss,F.nd), te = e[0]+e[1], tp = p[0]+p[1]; return te ? '<span>Expiden tarjetas: <b>'+miles(e[0])+'</b> · no expiden: <b>'+miles(e[1])+'</b>'+(tp && p[1] ? ' · <b>'+pct(p[0], tp)+'%</b> dentro del plazo normativo' : '')+'</span>' : ''; })(conTar(F.ss,F.nd)) : '')+
+    (k==='resc' ? (r => '<span>Eventos: <b>'+miles(r[0]+r[1])+'</b> · personas (1ra vez): <b>'+miles(r[0])+'</b> · reincidentes: '+miles(r[1])+'</span>')(pvRei(F.ss,F.nd)) : '')+
     (tn.length ? '<span>Principales: '+tn.map(r => esc(D.nats[r[0]][0])+' '+pct(r[1],tot)+'%').join(' · ')+'</span>' : '')+
     (finDatos(k)<ND ? '<span>Días pendientes: la base llega al '+fechaLarga(finDatos(k)-1)+'; la comparación se hace hasta ese día.</span>' : '')+
     '<small>'+(FUENTE[k] && FUENTE[k][1] ? 'Fuente: '+FUENTE[k][1]+' · ' : '')+'Base: '+esc(b.archivo || '')+(b.hasta ? ' · datos al '+fechaISO(b.hasta) : '')+(TACTIL ? '' : ' · clic para verlo en el mapa')+'</small>';
@@ -879,7 +884,7 @@ function pintarMapa(){
 function variaTxt(d){ const va = variacion(d); return va.ok && Math.abs(va.dl)>=1 ? (va.dl>=0?'▲ ':'▼ ')+Math.abs(va.dl).toFixed(0)+'%' : ''; }
 function notaPerfil(k, ss, n){                   // el dato que da contexto a cada indicador
   if (k==='rech'){ const t = rechazoExt(ss,n); return t[1] && t[0]/t[1] >= 0.0005 ? (t[0]/t[1]*100).toFixed(2)+'% de llegadas' : ''; }
-  if (k==='resc'){ const r = comp('resc_rei',ss,n); return r[1] ? pct(r[1],r[0]+r[1])+'% reincidentes' : ''; }
+  if (k==='resc'){ const r = pvRei(ss,n); return r[1] ? pct(r[1],r[0]+r[1])+'% reincidentes' : ''; }
   if (k==='can'){ const v = suma(comp('can_nna',ss,n),0,12); return v ? miles(v)+' NNA' : ''; }
   if (k==='ret'){ const v = comp('ret_tipo',ss,n); return v[1] ? pct(v[1],v[0]+v[1])+'% asistido' : ''; }
   if (k==='recib'){ const v = comp('recib_edad',ss,n); return v[1] ? pct(v[1],v[0]+v[1])+'% menores' : ''; }
@@ -1242,7 +1247,7 @@ function pintarAnalisis(){
 }
 const barrasNat = (l, color) => { const mx = l.length?l[0][1]:1; return l.map(r => '<button class="barra" data-n="'+r[0]+'"><span>'+(r[2] ? r[2]+'.º ' : '')+esc(D.nats[r[0]][0])+'</span><span class="b"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;background:'+color+'"></i></span><span class="x">'+corto(r[1])+'</span></button>').join(''); };
 function htmlBreve(n){                          // datos clave de una nacionalidad
-  const rr = comp('resc_rei',null,n), ts = comp('tram_se',null,n), H = suma(ts,0,8), M = suma(ts,8,16), nn = comp('can_nna',null,n), nna = suma(nn,0,12), na = nn.reduce((t,x,i)=>t+(i%3===1?x:0),0);
+  const rr = pvRei(null,n), ts = comp('tram_se',null,n), H = suma(ts,0,8), M = suma(ts,8,16), nn = comp('can_nna',null,n), nna = suma(nn,0,12), na = nn.reduce((t,x,i)=>t+(i%3===1?x:0),0);
   const tr = rechazoExt(null,n);
   return (rr[0]+rr[1] ? '<span class="mini"><b>'+pct(rr[1],rr[0]+rr[1])+' de cada 100</b> rescates son de reincidentes.</span>' : '')+
     (tr[1] ? '<span class="mini"><b>'+(tr[0]/tr[1]*100).toFixed(2)+'%</b> de los extranjeros que llegan por aire o tierra son rechazados.</span>' : '')+
@@ -1325,7 +1330,7 @@ function htmlComp(k, F){
     h = '<div class="pira"><div class="pira-c"><span><b class="num">'+pct(H,H+M)+'%</b>Hombres · '+corto(H)+'</span><span class="d"><b class="num">'+pct(M,H+M)+'%</b>Mujeres · '+corto(M)+'</span></div>'+
         ed.map((e,i)=>'<div class="pira-f" title="'+e+' años · hombres '+miles(v[i])+' · mujeres '+miles(v[8+i])+'"><em>'+corto(v[i])+'</em><span class="l"><i style="width:'+(v[i]/mx*100).toFixed(1)+'%;background:'+c2+'"></i></span><span class="e">'+e+'</span><span><i style="width:'+(v[8+i]/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><em class="d">'+corto(v[8+i])+'</em></div>').reverse().join('')+'</div>'+
         reparto('Resolución',[['Positiva',r[0],c],['Negativa',r[1],c2],['Otra',r[2],cssv('--line')]]); }
-  else if (k==='resc'){ const a = comp('resc_rei',s,n), d = comp('resc_des',s,n);
+  else if (k==='resc'){ const a = pvRei(s,n), d = comp('resc_des',s,n);
     h = elegible('Primera vez o reincidente','resc',[['Primera vez',a[0],c2],['Reincidente',a[1]]]) + grupo('Destino',[['Estación migr.',d[0]],['DIF',d[1]],['Sin destino',d[2],c2]]); }
   else if (k==='pres'){ const v = comp('pres_est',s,n).map((x,i)=>[i,x]).filter(r=>r[1]>0).sort((x,y)=>y[1]-x[1]).slice(0,TOP), mx = v.length ? v[0][1] : 1; sub = 'Estaciones con más presentados · clic para ver sus nacionalidades';
     return '<div class="caja"><h2><span>Estaciones con más presentados</span>'+infoP('Cómo se reparten las personas presentadas ante el INM, por estación o categoría.')+'</h2><span class="mini">'+sub+' · periodo completo</span>'+
@@ -2349,7 +2354,7 @@ function detalleFicha(k, sel, F){
     if (!nat){ const l = D.puntos.map((p,i) => [p, p.s===sel.i ? suma(p.wk,0,NW) : 0]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]); if (l[0]) pto = l[0][0].n; }
     return (via ? linea('Principal vía', via) : '')+(pto ? linea('Principal punto de internación', pto) : ''); }
   if (k==='tram'){ const v = comp('tram_tipo', ss, n).map((x,i) => [x, D.tramTipos[i]]).filter(x => x[1]!=='Otros').sort((a,b) => b[0]-a[0])[0]; return v && v[0]>0 ? linea('Trámite que más se hace', CORTO_TRAM(v[1])) : ''; }
-  if (k==='resc'){ const a = comp('resc_rei', ss, n), d = comp('resc_des', ss, n), T = a[0]+a[1], D2 = d[0]+d[1]+d[2];
+  if (k==='resc'){ const a = pvRei(ss, n), d = comp('resc_des', ss, n), T = a[0]+a[1], D2 = d[0]+d[1]+d[2];
     return T ? '<span class="fi-d">Reincidentes: <b>'+Math.round(a[1]/T*100)+'%</b>'+(D2 ? ' · a estación migratoria: <b>'+Math.round(d[0]/D2*100)+'%</b>' : '')+'</span>' : ''; }
   if (k==='can'){ const v = comp('can_nna', ss, n), N = v.reduce((a,x) => a+x, 0), na = v.reduce((a,x,i) => a+(i%3===1 ? x : 0), 0); return N ? linea('NNA no acompañados', Math.round(na/N*100)+'% de los NNA') : ''; }
   if (k==='rep' && !nat){ const l = D.repPuntos.map(p => [p, p.s===sel.i ? suma(p.wk,0,NW) : 0]).filter(x => x[1]>0).sort((a,b) => b[1]-a[1]); return l[0] ? linea('Principal punto de repatriación', l[0][0].n) : ''; }
