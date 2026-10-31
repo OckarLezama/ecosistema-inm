@@ -57,6 +57,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import catalogos as C  # noqa: E402
 import lector  # noqa: E402
+import revisiones  # noqa: E402
 
 warnings.filterwarnings("ignore")
 TIPOS_TRAM = []
@@ -223,16 +224,21 @@ def avisar(clave, texto):
     AVISOS.setdefault(clave, []).append(texto)
 
 
+def corregir(clave, texto):
+    """Lo que cambia una cifra y hay que pedir al área que corrija: la sección Bases lo pone en «Corregir con el área»."""
+    avisar(clave, lector.CORREGIR + texto)
+
+
 def preparar(clave, t, col_nat="NACIONALIDAD"):
     """Columnas comunes: DIA (fecha), s (estado), n (nacionalidad)."""
     t["DIA"] = fecha(t["DIA"])
     sin_fecha = int(t["DIA"].isna().sum())
     if sin_fecha:
-        avisar(clave, f"{sin_fecha:,} renglones sin fecha válida (no se cuentan)")
+        corregir(clave, f"{sin_fecha:,} renglones sin fecha válida (no se cuentan)")
     t["s"] = t["O.R."].map(idx_est)
     malos = t.loc[t["s"] < 0, "O.R."].astype(str).str.strip().value_counts()
     if len(malos):
-        avisar(clave, f"{int(malos.sum()):,} renglones con O.R. no reconocida (no se cuentan): " + ", ".join(malos.index[:6]))
+        corregir(clave, f"{int(malos.sum()):,} renglones con O.R. no reconocida (no se cuentan): " + ", ".join(malos.index[:6]))
     t["n"] = t[col_nat].map(idx_nat) if col_nat else MEXICO
     if col_nat:
         sin = t.loc[t["n"] == OTRAS, col_nat].astype(str).str.strip().value_counts()
@@ -296,12 +302,12 @@ def cargar_resc(t):
     if mal.any():
         dif = int((t.loc[mal, "1RA VEZ"] + t.loc[mal, "REINCIDENTES"] - t.loc[mal, "TOTAL"]).sum())
         ej = "; ".join(f"{pd.Timestamp(r.DIA).date()} {r['O.R.']} {r.NACIONALIDAD}: total {r.TOTAL}, 1.ª vez {r['1RA VEZ']}, reincidentes {r.REINCIDENTES}" for _, r in t[mal].head(3).iterrows())
-        avisar("resc", f"{int(mal.sum()):,} renglones donde TOTAL no es 1RA VEZ + REINCIDENTES (diferencia de {dif:+,}); se usa la suma. Ej.: {ej}. Corregir en el archivo.")
+        corregir("resc", f"{int(mal.sum()):,} renglones donde TOTAL no es 1RA VEZ + REINCIDENTES (diferencia de {dif:+,}); se usa la suma. Ej.: {ej}. Corregir en el archivo.")
         t.loc[mal, "TOTAL"] = t.loc[mal, "1RA VEZ"] + t.loc[mal, "REINCIDENTES"]
     t["v"] = t["TOTAL"]
     repetidos = int(t.duplicated(["DIA", "O.R.", "NACIONALIDAD"]).sum())
     if repetidos:
-        avisar("resc", f"{repetidos:,} renglones repetidos (mismo día, O.R. y nacionalidad)")
+        corregir("resc", f"{repetidos:,} renglones repetidos (mismo día, O.R. y nacionalidad)")
     sin_destino = int((t["TOTAL"] - t["PRESENTADOS EN ESTACIONES MIGRATORIAS"] - t["CANALIZADOS AL DIF"]).clip(lower=0).sum())
     if sin_destino:
         avisar("resc", f"{sin_destino:,} rescatados sin destino registrado (ni estación ni DIF)")
@@ -322,7 +328,7 @@ def cargar_can_nna(t):
     nacimiento = fecha(t["FECHA DE NACIMIENTO"])
     sin_edad = int(nacimiento.isna().sum())
     if sin_edad:
-        avisar("can_nna", f"{sin_edad:,} renglones sin fecha de nacimiento (se cuentan en el grupo 12 a 17)")
+        corregir("can_nna", f"{sin_edad:,} renglones sin fecha de nacimiento (se cuentan en el grupo 12 a 17)")
     anios = (t["DIA"] - nacimiento).dt.days / 365.25
     sexo = t["SEXO"].map(lambda x: 1 if norm(x).startswith("MUJ") else 0)
     grupo = np.where(anios < 12, 0, 1)
@@ -346,7 +352,7 @@ def cargar_ret(t):
     t["v"] = t["DEPORTADOS"] + t["RETORNOS ASISTIDOS"]
     dif = t["v"] != t["RETORNADOS A SU PAIS"]
     if dif.any():
-        avisar("ret", f"{int(dif.sum()):,} renglones donde deportados + retornos asistidos no da la columna «Retornados a su país» "
+        corregir("ret", f"{int(dif.sum()):,} renglones donde deportados + retornos asistidos no da la columna «Retornados a su país» "
                       f"(diferencia de {int((t['v'] - t['RETORNADOS A SU PAIS'])[dif].sum()):+,} personas). La plataforma usa la suma de deportados + retornos asistidos.")
     return t
 
@@ -762,6 +768,11 @@ def main():
                           "n": [int(x) for x in largo["n"]], "v": [int(x) for x in largo["v"]]}
     salida["caravanas"] = caravanas(tablas["car"]) if "car" in tablas else []
 
+    # -- Revisiones de la carga: repetidos, puntos que se quedan en cero y saltos (robot/revisiones.py)
+    for k, l in revisiones.revisar(B).items():
+        for x in l:
+            corregir(k, x)
+
     # -- Estado de cada base (para la sección Bases y el reporte)
     salida["bases"] = []
     lineas = ["IA-NAMI · REPORTE DE CONVERSIÓN", f"Generado: {salida['generado']}",
@@ -809,7 +820,7 @@ def main():
         f.write("\n".join(lineas) + "\n")
     print("\n".join(lineas))
     print(f"datos.js: {len(texto.encode('utf-8')) / 1e6:.2f} MB")
-    lector.guardar(a.destino, "convertir")
+    lector.guardar(a.destino, "convertir", {NOMBRES[k]: l for k, l in AVISOS.items() if k in NOMBRES})
 
 
 if __name__ == "__main__":

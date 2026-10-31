@@ -101,9 +101,9 @@ def main():
     sp = ing["PUNTO DE INTERNACION"].isna() | (ing["PUNTO DE INTERNACION"].astype(str).str.strip().isin(["", "nan"]))
     if sp.any():
         for _, r in ing[sp].head(5).iterrows():
-            lector.avisar("Ingresos", "Un renglón no trae punto de internación ({}, {}, {} personas). Se cuenta en el total como «Sin punto registrado».".format(r["DIA"].date(), r["O.R."], int(pd.to_numeric(r["TOTAL"], errors="coerce") or 0)))
+            lector.corregir("Ingresos", "Un renglón no trae punto de internación ({}, {}, {} personas). Se cuenta en el total como «Sin punto registrado».".format(r["DIA"].date(), r["O.R."], int(pd.to_numeric(r["TOTAL"], errors="coerce") or 0)))
         if sp.sum() > 5:
-            lector.avisar("Ingresos", "{:,} registros sin punto de internación en total.".format(int(sp.sum())))
+            lector.corregir("Ingresos", "{:,} registros sin punto de internación en total.".format(int(sp.sum())))
     seg, f_seg = leer(a.origen, {"DETERMINACION", "PUNTO DE INTERNACION"}, base="Segunda revisión")
     pre, f_pre = leer(a.origen, {"PRESENTADOS", "ESTACION O ESTANCIA MIGRATORIA"}, base="Presentados")
     ret, f_ret = leer(a.origen, {"RETORNADOS A SU PAIS", "DEPORTADOS"}, base="Retornados")
@@ -122,7 +122,7 @@ def main():
     mal = pn.str.contains("AEROPUERTO") & ~pn.str.contains("TERRESTRE") & (ing["vi"] != 0)
     if mal.sum():
         calidad.append("%d personas entraron por aeropuertos registrados como vía terrestre (por confirmar con el área)." % int(ing.loc[mal, "TOTAL"].sum()))
-        lector.avisar("Ingresos", "{:,} ingresos están registrados como vía terrestre en puntos que son aeropuertos. El tablero los cuenta como terrestres, tal como vienen; el área debe confirmar la vía.".format(int(ing.loc[mal, "TOTAL"].sum())))
+        lector.corregir("Ingresos", "{:,} ingresos están registrados como vía terrestre en puntos que son aeropuertos. El tablero los cuenta como terrestres, tal como vienen; el área debe confirmar la vía.".format(int(ing.loc[mal, "TOTAL"].sum())))
     g = ing.assign(d=dia(ing["DIA"]), e=ing["O.R."].map(estado), p=ing["PUNTO DE INTERNACION"].map(punto), n=ing["NACIONALIDAD"].map(nacionalidad)) \
            .groupby(["d", "e", "p", "vi", "n"], as_index=False)["TOTAL"].sum()
     ING = {"d": g["d"].tolist(), "e": [E(x) for x in g["e"]], "p": [P(x) for x in g["p"]], "vi": g["vi"].tolist(),
@@ -156,7 +156,7 @@ def main():
     mayores = int((nna["ge"] == 3).sum())
     if mayores:
         calidad.append("%d registros del archivo de NNA tienen 18 años o más a la fecha del evento; no se cuentan como NNA." % mayores)
-        lector.avisar("Canalizados NNA", "{:,} registros tienen 18 años o más a la fecha del evento. No se cuentan como NNA (niñas, niños y adolescentes son menores de 18).".format(mayores))
+        lector.corregir("Canalizados NNA", "{:,} registros tienen 18 años o más a la fecha del evento. No se cuentan como NNA (niñas, niños y adolescentes son menores de 18).".format(mayores))
     g = nna.assign(d=dia(nna["DIA"]), e=nna["O.R."].map(estado), n=nna["NACIONALIDAD"].map(nacionalidad), sx=nna["SEXO"].map(lambda x: 1 if norm(x) == "MUJER" else 0),
                    c=nna["CLASIFICACION"].map(lambda x: next((i for i, m in enumerate(CLASES) if norm(m) == norm(x)), 0)), m=nna["MOTIVO DE SALIDA"].map(motivo)) \
            .groupby(["d", "e", "n", "sx", "ge", "c", "m"], as_index=False).size()

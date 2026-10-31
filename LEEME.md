@@ -30,6 +30,7 @@ Página principal (Pulso) y convertidor de bases.
 | `robot/lector.py` | Lectura común de las bases: junta hojas y archivos (gana la entrega más reciente; correcciones de mes), corrige encabezados mal escritos, recorta al 1 oct 2024 y escribe `datos/observaciones.js`, `datos/bitacora.js` y `datos/huella.json` |
 | `robot/consolidar.py` | Consolidación periódica: un archivo por base y los originales a `DATA/_reemplazados/` |
 | `robot/prueba_correcciones.py` | Prueba automática de las reglas de carga con un mes corregido simulado |
+| `robot/revisiones.py` | Revisiones de cada carga que van a «Por corregir con el área» en Bases: renglones repetidos, puntos que traían datos casi diario y pasan 5 días o más sin nada, y días con más del triple o menos de un tercio de lo normal (bases con 100 o más por día). Solo mira los últimos 90 días |
 | `DATA/` | Bases en xlsx, tal como las entrega cada área |
 
 ## Actualizar los datos
@@ -62,7 +63,7 @@ Página principal (Pulso) y convertidor de bases.
    Consolidación periódica (cada 3 meses, o cuando una base pase de unos 10 archivos): `python robot/consolidar.py` dice qué haría; `python robot/consolidar.py --aplicar` junta los archivos de cada base en uno solo (con las mismas reglas) y guarda los originales en `DATA/_reemplazados/AAAA-MM-DD/`, que los robots no leen. Comprueba que el consolidado dé lo mismo por día antes de mover nada.
    Prueba de las reglas de carga: `python robot/prueba_correcciones.py` (también corre con las pruebas de la página).
 
-3. Revisar la sección **Bases** de la página (o `datos/reporte.txt`): periodo de cada base, días sin datos y observaciones. Subir todo lo de `datos/`.
+3. Revisar la sección **Bases** de la página (o `datos/reporte.txt`): arriba, «Por corregir con el área» dice qué apareció en esta carga (lo de cargas anteriores queda cerrado en una línea); luego el periodo de cada base, días sin datos y observaciones. Los avisos que cambian una cifra los marca el robot con `lector.corregir` (o `corregir` en convertir.py); las notas técnicas, con `avisar`. Subir todo lo de `datos/`.
 
 El periodo de la página se toma de las fechas que traen las bases.
 

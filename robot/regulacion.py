@@ -222,7 +222,7 @@ def validaciones(origen):
     ini = filas["fs"].min()
     poco = filas.groupby(filas["fs"].dt.to_period("M")).size()
     if len(poco) > 3 and poco.iloc[:4].sum() < 0.01 * len(filas):
-        lector.avisar(base, f"Hay {int(poco.iloc[:4].sum())} solicitudes antes de {str(poco.index[4])}; la base completa empieza en mayo de 2025 (revisar si son fechas mal capturadas).")
+        lector.corregir(base, f"Hay {int(poco.iloc[:4].sum())} solicitudes antes de {str(poco.index[4])}; la base completa empieza en mayo de 2025 (revisar si son fechas mal capturadas).")
     dic = {k: sorted(filas[k].dropna().unique().tolist()) for k in ("ofr", "ent", "n", "t", "acto", "res", "sol")}
     lector.periodo(base, ini.date(), filas["fs"].max().date(), ", ".join(usados), len(filas))
     print(f"Validación del Registro Civil: {len(filas):,} solicitudes del {ini.date()} al {filas['fs'].max().date()} · " +
@@ -244,12 +244,12 @@ def _filas_va(ruta, base):
     fr = pd.to_datetime(t["FECHA DE REGISTRO"], errors="coerce").dt.normalize()
     mala = fr.notna() & ((fr.dt.year < 1900) | (fr > fs))
     if mala.any():
-        lector.avisar(base, f"{int(mala.sum()):,} actas con fecha de registro imposible (antes de 1900, en el futuro o después de la solicitud); "
+        lector.corregir(base, f"{int(mala.sum()):,} actas con fecha de registro imposible (antes de 1900, en el futuro o después de la solicitud); "
                             "no entran en «matrimonio de 30 días o menos».")
         fr = fr.where(~mala)
     sinf = int(fs.isna().sum())
     if sinf:
-        lector.avisar(base, f"{sinf:,} solicitudes sin fecha de solicitud válida (no se cuentan).")
+        lector.corregir(base, f"{sinf:,} solicitudes sin fecha de solicitud válida (no se cuentan).")
     quita_or = lambda x: re.sub(r"^O\.?R\.?\s+", "", str(x).strip(), flags=re.I)
     ent = t["ENTIDAD FEDERATIVA DE REGISTRO"].map(lambda x: ESTADO.get(norm(str(x).replace("_", " ")), str(x).replace("_", " ").title()))
     orr = t["O.R. QUE REPORTA"].map(lambda x: ESTADO.get(norm(quita_or(x)), quita_or(x)))
@@ -257,7 +257,7 @@ def _filas_va(ruta, base):
     res = t["RESULTADO DE LA VALIDACION"].map(_resultado)
     tipo = t["TIPO DE TRAMITE MIGRATORIO"].astype(str).str.strip()
     if "TIPO DE ACTO REGISTRAL" not in t.columns:                   # desde oct 2026 algunas entregas ya no traen esta columna
-        lector.avisar(base, os.path.basename(ruta)+": no trae «TIPO DE ACTO REGISTRAL»; esas solicitudes quedan como «Sin dato» en el tipo de acta.")
+        lector.corregir(base, os.path.basename(ruta)+": no trae «TIPO DE ACTO REGISTRAL»; esas solicitudes quedan como «Sin dato» en el tipo de acta.")
     acto = t["TIPO DE ACTO REGISTRAL"].astype(str).str.strip().str.capitalize() if "TIPO DE ACTO REGISTRAL" in t.columns else pd.Series("Sin dato", index=t.index)
     filas = pd.DataFrame({"fs": fs, "fr": fr, "ofr": orr, "ent": ent, "n": t["NACIONALIDAD"].map(nacionalidad), "t": tipo, "acto": acto, "res": res, "sol": sol})
     filas = filas[filas["fs"].notna()]

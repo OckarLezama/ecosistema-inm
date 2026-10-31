@@ -58,6 +58,14 @@ def avisar(base, texto):
         l.append(texto)
 
 
+# Lo que cambia una cifra y hay que pedir al área que corrija lleva esta marca; la sección Bases lo separa de las notas técnicas
+CORREGIR = "[corregir] "
+
+
+def corregir(base, texto):
+    avisar(base, CORREGIR + texto)
+
+
 def fechas_del_nombre(nombre):
     """«… 2026-10-13 a 2026-10-19.xlsx» → (desde, hasta); «… al 2026-10-12» o «… 2025» también."""
     nombre = sin_entrega(nombre)
@@ -233,7 +241,7 @@ def juntar(partes, base, col_dia="DIA", origen=None):
         t["_D"] = dia(t[col_dia])
         sin = int(t["_D"].isna().sum())
         if sin:
-            avisar(base, f"{nombre}: {sin:,} renglones no traen una fecha válida y no se cuentan.")
+            corregir(base, f"{nombre}: {sin:,} renglones no traen una fecha válida y no se cuentan.")
         t = t[t["_D"].notna()]
         if not len(t):
             avisar(base, f"{nombre}: no trae renglones con fecha.")
@@ -275,13 +283,13 @@ def juntar(partes, base, col_dia="DIA", origen=None):
             bajos = [(dd.date(), int(n_viejo[dd]), filas.get(dd, 0)) for dd in rep if n_viejo[dd] >= 20 and filas.get(dd, 0) < 0.5 * n_viejo[dd]]
             nuevo_es_corr = any(q[2]["corr"] for q in tomados)
             if bajos and not nuevo_es_corr:
-                avisar(base, "Revisar: " + str(len(bajos)) + " días llegan en la entrega más reciente con menos de la mitad de renglones que en " + x["n"] +
+                corregir(base, "Revisar: " + str(len(bajos)) + " días llegan en la entrega más reciente con menos de la mitad de renglones que en " + x["n"] +
                        " (" + ", ".join(f"{a}: {nv:,} → {nn:,}" for a, nv, nn in bajos[:5]) + (" …" if len(bajos) > 5 else "") + "). Puede ser un envío incompleto.")
             quien = next(q[2]["n"] for q in tomados if ((d[tapado] >= q[0]) & (d[tapado] <= q[1])).any())
             avisar(base, f"{x['n']} es una entrega anterior: sus {len(rep):,} días del periodo que cubre {quien} se tomaron de ese archivo. No se suma nada dos veces.")
             vacios = [dd for dd in rep if dd not in filas]
             if vacios:
-                avisar(base, f"{len(vacios):,} días que traía {x['n']} no vienen en la entrega más reciente que cubre ese periodo; se cuentan en cero"
+                corregir(base, f"{len(vacios):,} días que traía {x['n']} no vienen en la entrega más reciente que cubre ese periodo; se cuentan en cero"
                              f" ({', '.join(str(v.date()) for v in vacios[:5])}{' …' if len(vacios) > 5 else ''}). Si faltan por error, pedir el archivo completo.")
             t = t[~tapado]
         for dd, n in t.groupby("_D").size().items():
@@ -353,7 +361,7 @@ def documentos_tramite(t):
         r = t[res].map(norm)
         ep, ca = r.str.startswith("EN PROCESO"), r.str.startswith("CANCELAD")
         if ep.any() or ca.any():
-            avisar("Trámites", f"Entre los trámites concluidos, «Tipo de resolución» dice {int(ep.sum()):,} «En proceso» y {int(ca.sum()):,} «Cancelados»; "
+            corregir("Trámites", f"Entre los trámites concluidos, «Tipo de resolución» dice {int(ep.sum()):,} «En proceso» y {int(ca.sum()):,} «Cancelados»; "
                    f"{int((ep & con).sum()):,} de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.")
     mult = X.sum(axis=1) > 1
     if mult.any():
@@ -368,7 +376,7 @@ def avisos_de(base):
     return AVISOS.get(base, [])
 
 
-def guardar(destino, robot):
+def guardar(destino, robot, extra=None):
     """Escribe las observaciones de este robot en datos/observaciones.js (cada robot reemplaza solo las suyas).
     La sección Bases de la página las muestra junto a cada base."""
     import json
@@ -381,6 +389,21 @@ def guardar(destino, robot):
         except ValueError:
             todo = {}
     todo[robot] = AVISOS
+    # Desde qué carga se avisa cada cosa por corregir: la sección Bases marca como «Nuevo» lo que aparece en esta carga
+    # (si cambia el texto, por ejemplo porque hay más renglones con el error, cuenta como nuevo)
+    import datetime
+    hoy = datetime.date.today().isoformat()
+    vistos = todo.setdefault("_vistos", {})
+    antes = {}
+    for r, d in vistos.items():
+        if isinstance(d, dict):
+            for k, fch in d.items():
+                antes[k] = min(antes.get(k, fch), fch)
+    todos = {b: list(l) for b, l in AVISOS.items()}
+    for b, l in (extra or {}).items():
+        todos.setdefault(b, []).extend(x for x in l if x not in todos[b])
+    vistos[robot] = {b + "|" + x: antes.get(b + "|" + x, hoy) for b, l in todos.items() for x in l if x.startswith(CORREGIR)}
+    vistos["_ultima"] = hoy
     bitacora(destino, robot)
     if PERIODOS:
         todo.setdefault("_periodos", {}).update(PERIODOS)

@@ -1935,3 +1935,16 @@ body.sala-compartida .sl-liga{margin-right:0}
 .cq-hoja.fv .cqc-map{height:100%;min-height:150px;max-height:230px}
 .cq-hoja .cqc-r{max-height:60px}
 .cq-hoja .cqc-fr{font-size:11px;color:#7E302B;margin-left:6px;font-weight:600}
+
+/* Bases · por corregir con el área */
+.bs-cor{background:#FBF1EF;border:1px solid #EBCFCB;color:#5E2622;border-radius:10px;padding:12px 16px;margin:0 0 14px;font-size:13.5px}
+.bs-cor.ok{background:#E3ECE8;border-color:#C9DBD3;color:#17382F}
+.bs-cor-t{font-size:14.5px}.bs-cor-s{margin:8px 0 2px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#A8443E}.bs-cor-s0{margin:6px 0 0;font-size:13px}
+.bs-cor-l{margin:0;padding:0;list-style:none}.bs-cor-l li{display:grid;grid-template-columns:210px 1fr;gap:12px;padding:5px 0;border-top:1px solid #EBCFCB;line-height:1.45}
+.bs-cor-b{font-weight:600}.bs-cor-b small{font-weight:400;opacity:.7;margin-left:4px}
+.bs-cor-v{margin-top:10px;border-top:1px solid #EBCFCB;padding-top:8px}.bs-cor-v summary,.bs-rev summary{cursor:pointer;color:#5C5952;font-size:13px}.bs-cor-v summary small{opacity:.85}.bs-cor-v .bs-cor-l{color:#5C5952;margin-top:6px}
+.bs-rev{margin-top:8px}.bs-rev summary{font-size:12px;text-decoration:underline}.bs-rev ul{margin:6px 0 0;padding-left:18px;color:#5C5952;font-size:12.5px}.bs-rev p{margin:6px 0 0;font-size:12px;color:#5C5952;max-width:none}
+.bs-oc{background:#F6E6E3;color:#7E302B;border-radius:8px;padding:6px 10px;margin-bottom:6px}.bs-oc b{font-size:12px}.bs-oc ul{margin:4px 0 0}
+.bs-on summary{color:#5C5952;font-weight:500;font-size:12px}
+.bs-nv{font-style:normal;font-size:10.5px;font-weight:700;background:#A8443E;color:#fff;border-radius:999px;padding:1px 7px;white-space:nowrap}
+@media (max-width:700px){.bs-cor-l li{grid-template-columns:1fr;gap:2px}}

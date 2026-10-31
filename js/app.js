@@ -1719,6 +1719,27 @@ function bitacoraBases(){ const L = (window.IANAMI_BITACORA || []).filter(e => e
   return '<details class="caja bs-bit bs-dg"><summary><span class="bs-dg-n"><b>Cambios en los datos</b> <span>qué cambió en cada carga</span></span><span class="bs-dg-r">'+(U.length ? U.length+' '+(U.length===1 ? 'registro' : 'registros') : 'sin cambios')+'</span></summary><p class="mini">Cada carga se compara con la anterior: aquí queda qué días cambiaron, cuánto había y cuánto hay ahora, y qué archivo lo cambió. Sirve para explicar por qué una cifra ya presentada es distinta hoy.</p>'+
     (U.length ? '<div class="tb-w"><table class="tb bs"><thead><tr><th>Carga</th><th>Base y archivo</th><th>Tipo</th><th>Qué cambió</th></tr></thead><tbody>'+U.slice(0, 60).map(fila).join('')+'</tbody></table></div>'
       : '<p>Sin cambios en días ya cargados'+(N.length ? ': las últimas cargas solo agregaron días nuevos.' : '. La bitácora empieza a llenarse con la próxima carga.')+'</p>')+'</details>'; }
+// Lo que cambia una cifra y hay que pedir al área que corrija: el robot lo marca con «[corregir] » (robot/lector.py) y anota desde
+// qué carga lo avisa (_vistos). Arriba de Bases se ve lo nuevo de esta carga; lo pendiente de antes queda cerrado en una línea.
+const MARCA = '[corregir] ', esCorr = x => x.indexOf(MARCA)===0, sinMarca = x => esCorr(x) ? x.slice(MARCA.length) : x;
+function esNuevo(n, x){ const V = (window.IANAMI_OBS || {})._vistos || {}; let f = null;
+  Object.keys(V).forEach(r => { const d = V[r], v = d && typeof d==='object' ? d[n+'|'+x] : null; if (v && (!f || v<f)) f = v; });
+  return !!f && f===V._ultima; }
+const REVISA = ['Totales que no dan la suma de sus partes (total contra 1.ª vez + reincidentes, adultos + menores, deportados + retornos asistidos…)',
+  'Renglones repetidos: mismo día y mismos datos', 'Puntos, O.R. o estaciones que traían datos casi a diario y pasan 5 días o más sin nada (últimos 90 días)',
+  'Días con más del triple o menos de un tercio de lo normal para ese día de la semana (últimas 4 semanas)', 'Fechas vacías o imposibles y O.R. que no se reconocen',
+  'Una entrega nueva que trae menos renglones que la anterior para los mismos días', 'Datos que se contradicen: vía terrestre en aeropuertos, NNA de 18 años o más, trámites «en proceso» que ya expidieron tarjeta'];
+function porCorregir(B){
+  const L = []; B.forEach(b => obsDe(b).filter(esCorr).forEach(x => L.push({ n:b.n, a:b.area, x:x, nuevo:esNuevo(b.n, x) })));
+  const rev = '<details class="bs-rev"><summary>¿Qué se revisa?</summary><ul>'+REVISA.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul><p>No se detecta una cifra mal capturada que no rompa ninguna de estas reglas (por ejemplo, 150 donde iba 105).</p></details>';
+  if (!L.length) return '<div class="bs-cor ok"><b>Sin inconsistencias en lo que se revisa.</b>'+rev+'</div>';
+  const N = L.filter(r => r.nuevo), V = L.filter(r => !r.nuevo), porB = {}; V.forEach(r => (porB[r.n] = porB[r.n] || { a:r.a, l:[] }).l.push(r.x));
+  const li = (n, a, xs) => '<li><span class="bs-cor-b">'+esc(n)+' <small>'+esc(a)+'</small></span><span>'+xs.map(x => esc(sinMarca(x))).join('<br>')+'</span></li>';
+  return '<div class="bs-cor"><b class="bs-cor-t">Por corregir con el área</b>'+
+    (N.length ? '<p class="bs-cor-s">Nuevo en esta carga</p><ul class="bs-cor-l">'+N.map(r => li(r.n, r.a, [r.x])).join('')+'</ul>' : '<p class="bs-cor-s0">Nada nuevo en esta carga.</p>')+
+    (V.length ? '<details class="bs-cor-v"><summary>'+V.length+' '+(V.length===1 ? 'sigue pendiente' : 'siguen pendientes')+' de cargas anteriores <small>· '+Object.keys(porB).map(k => esc(k)+' ('+porB[k].l.length+')').join(' · ')+'</small></summary>'+
+      '<ul class="bs-cor-l">'+Object.keys(porB).map(k => li(k, porB[k].a, porB[k].l)).join('')+'</ul></details>' : '')+rev+'</div>';
+}
 function vistaBases(){
   const P = (window.IANAMI_OBS || {})._periodos || {}, hoy = new Date(), ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()-1), iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'), AY = iso(ayer);
   const dif = (a, b) => Math.round((new Date(a+'T00:00:00') - new Date(b+'T00:00:00'))/864e5);
@@ -1736,7 +1757,10 @@ function vistaBases(){
     return '<tr'+(b.pendiente ? ' class="bs-pend"' : '')+'><td><b>'+esc(b.n)+'</b><br><span class="mini">'+arch.map(esc).join('<br>')+'</span></td>'+
       '<td class="x bs-per">'+periodo(b)+'</td><td>'+estado(b)+'</td>'+
       '<td class="x">'+(b.filas!=null ? miles(b.filas) : '—')+'</td><td class="x">'+(b.faltan!=null ? miles(b.faltan) : '—')+'</td>'+
-      '<td class="bs-obs">'+(ob.length ? '<details><summary>'+ob.length+' '+(ob.length===1 ? 'observación' : 'observaciones')+'</summary><ul>'+ob.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul></details>' : '<span class="mini">Sin observaciones</span>')+'</td></tr>'; };
+      '<td class="bs-obs">'+obsCelda(b, ob)+'</td></tr>'; };
+  const obsCelda = (b, ob) => { if (!ob.length) return '<span class="mini">Sin observaciones</span>'; const c = ob.filter(esCorr), n = ob.filter(x => !esCorr(x));
+    return (c.length ? '<div class="bs-oc"><b>Corregir con el área</b><ul>'+c.map(x => '<li>'+esc(sinMarca(x))+(esNuevo(b.n, x) ? ' <i class="bs-nv">Nuevo</i>' : '')+'</li>').join('')+'</ul></div>' : '')+
+      (n.length ? '<details class="bs-on"><summary>Para saber · '+n.length+'</summary><ul>'+n.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul></details>' : ''); };
   const fc = d => fechaISO(d), vj = viejo>7 ? ' <span class="bs-est mal">La última carga fue hace '+viejo+' días: toca actualizar.</span>' : '';
   const resumen = !diarias.length ? '' : atras.length===0
     ? '<div class="bs-sem ok"><b>Datos al '+fc(CORTE)+'</b>'+(CARGA ? ' (carga del '+fc(CARGA)+')' : '')+': las '+diarias.length+' bases que se envían por día llegan a esa fecha.'+vj+'</div>'
@@ -1745,12 +1769,12 @@ function vistaBases(){
         return '<p><b>'+n+' '+(n===1 ? 'día' : 'días')+' antes</b> <small>(llegan al '+fc(l[0].hasta)+')</small>: '+l.map(b => esc(b.n)+' <small>'+b.area+'</small>').join(' · ')+'</p>'; }).join('')+'</div>'+
       '<p class="bs-sem-n">En el tablero, los días que le faltan a una base se marcan como pendientes y no entran en las comparaciones. Las periódicas (validación de actas, vuelos comerciales, Guatemala y Honduras, documentos vigentes y caravanas) no se cuentan aquí.</p></div>';
   const grupo = a => { const l = B.filter(b => b.area===a[0]).sort((x,y) => (x.per?1:0)-(y.per?1:0) || (y.atraso||0)-(x.atraso||0) || x.n.localeCompare(y.n)); if (!l.length) return '';
-    const d = l.filter(b => b.hasta && !b.per), al = d.filter(b => b.atraso===0).length, at = d.length-al, pe = l.length-d.length;
+    const d = l.filter(b => b.hasta && !b.per), al = d.filter(b => b.atraso===0).length, at = d.length-al, pe = l.length-d.length, nc = l.reduce((s, b) => s+obsDe(b).filter(esCorr).length, 0);
     return '<details class="bs-dg"><summary><span class="bs-dg-n"><b>'+a[0]+'</b> <span>'+esc(a[1])+'</span></span><span class="bs-dg-r">'+l.length+' '+(l.length===1 ? 'base' : 'bases')+
-      (d.length ? ' · <span class="bs-est '+(at ? 'at' : 'ok')+'">'+(at ? at+' antes del corte' : 'todas al corte')+'</span>' : '')+(pe ? ' · '+pe+' periódica'+(pe>1 ? 's' : '') : '')+'</span></summary>'+
+      (d.length ? ' · <span class="bs-est '+(at ? 'at' : 'ok')+'">'+(at ? at+' antes del corte' : 'todas al corte')+'</span>' : '')+(pe ? ' · '+pe+' periódica'+(pe>1 ? 's' : '') : '')+(nc ? ' · <span class="bs-est mal">'+nc+' por corregir</span>' : '')+'</span></summary>'+
       '<div class="tb-w"><table class="tb bs"><thead><tr><th>Base y archivos</th><th>Periodo<br><small>primer día → último día con datos</small></th><th>¿Llega al corte?<br><small>'+(CORTE ? fc(CORTE) : '')+'</small></th><th>Renglones</th><th>Días sin datos<br><small>dentro del periodo</small></th><th>Observaciones</th></tr></thead><tbody>'+l.map(fila).join('')+'</tbody></table></div></details>'; };
-  return '<h1>Bases</h1><p>Qué trae cada base, del primer al último día con datos, y si llega al corte de la carga, agrupadas por dirección general. Toca una dirección para ver sus bases, y «observaciones» para leerlas. Última conversión: '+esc(D.generado)+'.</p>'+resumen+
-    '<div class="caja bs-c">'+DGS.map(grupo).join('')+'<span class="nota">«Días sin datos»: días entre el primero y el último en que el archivo no trae ningún renglón (por ejemplo, fines de semana sin atención). «Periódica»: base que no se envía cada día. Cada base puede venir en varios archivos (histórico, envíos diarios y correcciones): gana la entrega más reciente y cada archivo manda en todo su periodo, así que nada se suma dos veces. Una corrección se nombra «… CORRECCION 2026-09.xlsx» y reemplaza el mes completo. Las observaciones las escribe el proceso al leer cada archivo; lo que haya que corregir se corrige en el archivo que entrega la dirección.</span></div>'+bitacoraBases();
+  return '<h1>Bases</h1>'+porCorregir(B)+'<p>Qué trae cada base, del primer al último día con datos, y si llega al corte de la carga, agrupadas por dirección general. Toca una dirección para ver sus bases y sus observaciones. Última conversión: '+esc(D.generado)+'.</p>'+resumen+
+    '<div class="caja bs-c">'+DGS.map(grupo).join('')+'<span class="nota">«Días sin datos»: días entre el primero y el último en que el archivo no trae ningún renglón (por ejemplo, fines de semana sin atención). «Periódica»: base que no se envía cada día. Cada base puede venir en varios archivos (histórico, envíos diarios y correcciones): gana la entrega más reciente y cada archivo manda en todo su periodo, así que nada se suma dos veces. Una corrección se nombra «… CORRECCION 2026-09.xlsx» y reemplaza el mes completo. Las observaciones las escribe el proceso al leer cada archivo: «Corregir con el área» cambia una cifra y se corrige en el archivo que entrega la dirección; «Para saber» son notas de cómo se leyó.</span></div>'+bitacoraBases();
 }
 // El mapa ocupa el alto que queda de la pantalla, dejando asomar la franja de cajas.
 function ajustarAlto(){

@@ -94,10 +94,10 @@ def otros(origen, ini):
             t = t[t["d"] >= 0]
         m1 = (t["ADULTOS"] + t["MENORES"]) != t["MEXICANOS REPATRIADOS"]
         if m1.any():
-            lector.avisar(base, f"{int(m1.sum())} renglones donde adultos + menores no da el total del renglón; la plataforma usa el total tal como viene.")
+            lector.corregir(base, f"{int(m1.sum())} renglones donde adultos + menores no da el total del renglón; la plataforma usa el total tal como viene.")
         m2 = (t["NNA ACOMPANADOS"] + t["NNA NO ACOMPANADOS"]) != t["MENORES"]
         if m2.any():
-            lector.avisar(base, f"{int(m2.sum())} renglones donde NNA acompañados + no acompañados no da el total de menores; la plataforma usa cada columna tal como viene.")
+            lector.corregir(base, f"{int(m2.sum())} renglones donde NNA acompañados + no acompañados no da el total de menores; la plataforma usa cada columna tal como viene.")
         tab = {"d": t["d"].tolist(), "e": t["e"].tolist(), "p": t["p"].tolist(), "pa": t["pa"].tolist() if "PAIS" in t.columns else [0] * len(t)}
         for c, kk in cols.items():
             tab[kk] = t[c].tolist()
@@ -114,10 +114,11 @@ def main():
     ap.add_argument("--destino", default="datos")
     a = ap.parse_args()
     t, archivo = leer(a.origen)
-    calidad = []
+    calidad, arreglar = [], set()          # arreglar: lo que hay que pedir al área que corrija (sumas que no cuadran, repetidos)
     sin_fecha = int(t["DIA"].isna().sum())
     if sin_fecha:
         calidad.append(f"{sin_fecha} registros sin fecha válida no se incluyen.")
+        arreglar.add(calidad[-1])
     t = t[t["DIA"].notna()].copy()
     ini, fin = t["DIA"].min(), t["DIA"].max()
     for c in COLS:
@@ -136,6 +137,7 @@ def main():
         n = int(mal.sum())
         if n:
             calidad.append(f"{n} {'registro' if n == 1 else 'registros'}: {texto}.")
+            arreglar.add(calidad[-1])
     revisa(t["TOTAL ADULTOS"] + t["TOTAL MENORES"] != t["MEXICANOS REPATRIADOS"], "adultos + menores no da el total de repatriados del renglón; el tablero usa el total tal como viene")
     revisa(t["ADULTOS HOMBRES"] + t["ADULTOS MUJERES"] != t["TOTAL ADULTOS"], "hombres + mujeres no da el total de adultos; el tablero usa cada columna tal como viene")
     revisa(t["MENORES HOMBRES"] + t["MENORES MUJERES"] != t["TOTAL MENORES"], "niños + niñas no da el total de menores; el tablero usa cada columna tal como viene")
@@ -157,7 +159,7 @@ def main():
     print(f"proteccion.js: {len(t)} registros, {int(t['MEXICANOS REPATRIADOS'].sum()):,} repatriados, {ini:%d/%m/%Y} – {fin:%d/%m/%Y}")
     for x in calidad:
         print("  ·", x)
-        lector.avisar("Repatriados", x)
+        (lector.corregir if x in arreglar else lector.avisar)("Repatriados", x)
     lector.periodo("Repatriados", ini.date(), fin.date(), archivo, len(t))
     lector.guardar(a.destino, "proteccion")
 
