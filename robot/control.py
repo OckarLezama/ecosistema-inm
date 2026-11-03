@@ -110,7 +110,9 @@ def main():
     nna, f_nna = leer(a.origen, {"FECHA DE NACIMIENTO", "CLASIFICACION", "MOTIVO DE SALIDA"}, base="Canalizados NNA")
     adu, f_adu = leer(a.origen, {"SEXO", "MOTIVO DE SALIDA"}, {"FECHA DE NACIMIENTO"}, "Canalizados adultos")
     res, f_res = leer(a.origen, {"1RA VEZ", "REINCIDENTES", "CANALIZADOS AL DIF"}, base="Rescates")
-    tablas = (ing, seg, pre, ret, nna, adu)
+    rec, f_rec = leer(a.origen, {"EXTRANJEROS RECIBIDOS DE EE.UU.", "MENORES"}, base="Recibidos de EE. UU.")
+    # El periodo cubre todas las bases, también rescates y recibidos: si una llega un día más lejos que las demás, ese día no se recorta
+    tablas = (ing, seg, pre, ret, nna, adu, res, rec)
     ini, fin = min(t["DIA"].min() for t in tablas), max(t["DIA"].max() for t in tablas)
     dia = lambda s: (s - ini).dt.days.astype(int)
     E, N, P, S = Dic(), Dic(), Dic(), Dic()
@@ -180,7 +182,6 @@ def main():
            "rei": g["REINCIDENTES"].astype(int).tolist(), "pre": g["PRESENTADOS EN ESTACIONES MIGRATORIAS"].astype(int).tolist(), "can": g["CANALIZADOS AL DIF"].astype(int).tolist()}
 
     # Extranjeros recibidos de EE. UU. (reporte de las O.R.): adultos y menores
-    rec, f_rec = leer(a.origen, {"EXTRANJEROS RECIBIDOS DE EE.UU.", "MENORES"}, base="Recibidos de EE. UU.")
     rec = rec[(rec["DIA"] >= ini) & (rec["DIA"] <= fin)]
     g = rec.assign(d=dia(rec["DIA"]), e=rec["O.R."].map(estado), n=rec["NACIONALIDAD"].map(nacionalidad)).groupby(["d", "e", "n"], as_index=False)[["ADULTOS", "MENORES"]].sum()
     REC = {"d": g["d"].tolist(), "e": [E(x) for x in g["e"]], "n": [N(x) for x in g["n"]], "ad": g["ADULTOS"].astype(int).tolist(), "me": g["MENORES"].astype(int).tolist()}
