@@ -1731,8 +1731,8 @@ const ultimaCarga = () => ((window.IANAMI_OBS || {})._vistos || {})._ultima;
 function esNuevo(n, x){ const f = desdeDe(n, x); return !!f && f===ultimaCarga(); }
 // «pendiente desde el 26 oct 2026 · 2 semanas»
 function pendiente(n, x){ const f = desdeDe(n, x), u = ultimaCarga(); if (!f || !u || f===u) return '';
-  const sem = Math.max(1, Math.round((new Date(u+'T00:00:00') - new Date(f+'T00:00:00'))/(7*864e5)));
-  return 'pendiente desde el '+fechaISO(f)+' · '+sem+' '+(sem===1 ? 'semana' : 'semanas'); }
+  const dias = Math.round((new Date(u+'T00:00:00') - new Date(f+'T00:00:00'))/864e5), sem = Math.round(dias/7);
+  return 'pendiente desde el '+fechaISO(f)+' · '+(dias<7 ? dias+' '+(dias===1 ? 'día' : 'días') : sem+' '+(sem===1 ? 'semana' : 'semanas')); }
 const REVISA = ['Totales que no dan la suma de sus partes (total contra 1.ª vez + reincidentes, adultos + menores, deportados + retornos asistidos…)',
   'Renglones repetidos: mismo día y mismos datos', 'Un mismo punto escrito de dos formas distintas (se cuenta como uno solo y se avisa)', 'Puntos, O.R. o estaciones que traían datos casi a diario y pasan 5 días o más sin nada (últimos 90 días)',
   'Días con más del triple o menos de un tercio de lo normal para ese día de la semana (últimas 4 semanas)', 'Fechas vacías o imposibles y O.R. que no se reconocen',

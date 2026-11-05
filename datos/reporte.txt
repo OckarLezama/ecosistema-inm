@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-11-04 23:17
+Generado: 2026-11-05 06:41
 Periodo de las bases: 2024-10-01 a 2026-11-03 (764 días)
 
 == Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
@@ -28,18 +28,16 @@ Periodo de las bases: 2024-10-01 a 2026-11-03 (764 días)
    · 2,424 casos (1,777 renglones) vienen con nacionalidad mexicana; no se cuentan en segunda revisión ni en rechazos (igual que Control migratorio)
    · [corregir] «PUNTO DE INTERNACION» trae «Punto de Internación Mesa de Otay» desde el 24 ene 2026 (38 renglones) en lugar de «Punto de internación Mesa de Otay», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
 
-== Trámites  ·  DGRAM TRAMITES MIGRATORIOS 14 al 16 oct 26.xlsx, DGRAM TRAMITES MIGRATORIOS 19 al 30 oct 26.xlsx, DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx  ·  cargado 2026-11-03
-   961,104 renglones · total 961,105 · del 2024-10-02 al 2026-10-30
-   Días sin datos: 192 → 2024-10-01, 2024-10-13, 2024-10-19, 2024-10-20, 2024-10-26, 2024-10-27, 2024-11-02, 2024-11-03, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01, 2024-12-08, 2024-12-15 …
-   En «Otras» nacionalidades: 38,456 (4.0%)
+== Trámites  ·  DGRAM TRAMITES MIGRATORIOS 14 al 16 oct 26.xlsx, DGRAM TRAMITES MIGRATORIOS 19 oct al 3 nov 26.xlsx, DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx  ·  cargado 2026-11-04
+   963,331 renglones · total 963,331 · del 2024-10-02 al 2026-11-03
+   Días sin datos: 191 → 2024-10-01, 2024-10-13, 2024-10-19, 2024-10-20, 2024-10-26, 2024-10-27, 2024-11-02, 2024-11-03, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01, 2024-12-08, 2024-12-15 …
+   En «Otras» nacionalidades: 38,478 (4.0%)
    · 8 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Reunion, Timor-Leste, Islas Marianas.
-   · 3,882 renglones son de empleadores, no de personas (se cuentan en el total, sin nacionalidad)
-   · DGRAM TRAMITES MIGRATORIOS 19 al 30 oct 26.xlsx: las hojas «Hoja3», «Hoja2» no se usaron (están ocultas o no tienen las columnas de la base). Si traen datos que deben contar, pedir al área que los pase a la hoja principal.
+   · 3,904 renglones son de empleadores, no de personas (se cuentan en el total, sin nacionalidad)
    · 358,011 renglones son de antes del 1 oct 2024 (el más antiguo, del 2024-01-02). No se usan: la plataforma empieza el 1 oct 2024.
    · 595,460 trámites con tarjeta marcan también «Sin expedición de documento»; se cuentan solo con su tarjeta.
    · 48,689 trámites no marcan ningún documento: 45,636 terminaron con tarjeta (se cuentan como «Tarjeta sin tipo registrado») y 3,053 sin tarjeta (se cuentan como «Sin expedición»).
-   · [corregir] Entre los trámites concluidos, «Tipo de resolución» dice 33,379 «En proceso» y 19,829 «Cancelados»; 27,948 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
-   · 1 trámites marcan más de un documento; cuentan una vez por documento.
+   · [corregir] Entre los trámites concluidos, «Tipo de resolución» dice 33,088 «En proceso» y 19,891 «Cancelados»; 27,973 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
 
 == Rescates  ·  DGCOR RESCATES consolidado 2024-10-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
    54,442 renglones · total 903,850 · del 2024-10-01 al 2026-11-03
