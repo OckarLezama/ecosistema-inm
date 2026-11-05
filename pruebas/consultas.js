@@ -11,11 +11,12 @@ const MX = C.dic.n.indexOf('México'), n = x => C.dic.n.indexOf(x), e = x => C.d
 const iso = f => f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0')+'-'+String(f.getDate()).padStart(2,'0');
 const masD = (s, k) => { const f = new Date(s+'T00:00:00'); f.setDate(f.getDate()+k); return iso(f); };
 const finT = (T, ini, fin) => fin!=null ? masD(ini, fin) : masD(ini, Math.max(...T.d));
-const mesR = (m, fin) => { const F = new Date(fin+'T00:00:00'); let y = F.getFullYear(); if (new Date(y, m, 1) > F) y--; return [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))]; };
+// mes sin año = el más reciente que ya está completo en la base (con dia: completo hasta ese día, para «primera quincena»)
+const mesR = (m, fin, dia) => { const F = new Date(fin+'T00:00:00'); let y = F.getFullYear(); if ((dia ? new Date(y, m, dia) : new Date(y, m+1, 0)) > F) y--; return [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))]; };
 const ultMes = fin => { const F = new Date(fin+'T00:00:00'); let y = F.getFullYear(), m = F.getMonth(); if (iso(new Date(y, m+1, 0)) > fin){ m--; if (m<0){ m = 11; y--; } } return [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))]; };
 const antMes = r => { const a = new Date(r[0]+'T00:00:00'); return [iso(new Date(a.getFullYear(), a.getMonth()-1, 1)), iso(new Date(a.getFullYear(), a.getMonth(), 0))]; };
 const FC = k => finT(C[k], C.inicio, C.fin && C.fin[k]), FP = finT(P.rep, P.inicio), FG = masD(G.inicio, G.dias-1);
-const A = C.inicio, Z = FC('orr'), NOV = mesR(10, FC('ing')), NOVr = mesR(10, FP), NOVs = mesR(10, FC('seg')), DICg = mesR(11, FG);
+const A = C.inicio, Z = FC('orr'), NOV = mesR(10, FC('ing')), NOVr = mesR(10, FP), NOVq = mesR(10, FP, 15), NOVs = mesR(10, FC('seg')), DICg = mesR(11, FG);
 const UM = ultMes(FC('orr')), UMa = antMes(UM), DICi = mesR(11, FC('ing')), NOVi = mesR(10, FC('ing'));
 const T3 = (() => { const F = new Date(FC('nna')+'T00:00:00'); return [iso(new Date(F.getFullYear(), F.getMonth()-2, 1)), FC('nna')]; })();
 const orr = (f, col) => S(C.orr, i => enR(C.orr, C.inicio, A, Z)(i) && f(i), col);
@@ -69,7 +70,7 @@ const casos = [
  ['rescatados que más bajaron por O.R.', {ind:'resc', tipo:'cambio', desg:'e'}, { total:orr(i=>enR(C.orr, C.inicio, ...UM)(i)) }],
  ['rescatados últimos 30 días', {ind:'resc', d0:masD(Z,-29), d1:Z}, { total:orr(i=>enR(C.orr, C.inicio, masD(Z,-29), Z)(i)) }],
  ['NNA canalizados en el último trimestre', {ind:'nna', d0:T3[0], d1:T3[1]}, { total:S(C.nna, enR(C.nna, C.inicio, ...T3)) }],
- ['repatriados primera quincena de noviembre', {ind:'rep', partes:[], d0:NOVr[0], d1:masD(NOVr[0],14)}, { total:S(P.rep, i=>enR(P.rep, P.inicio, NOVr[0], masD(NOVr[0],14))(i)) }],
+ ['repatriados primera quincena de noviembre', {ind:'rep', partes:[], d0:NOVq[0], d1:masD(NOVq[0],14)}, { total:S(P.rep, i=>enR(P.rep, P.inicio, NOVq[0], masD(NOVq[0],14))(i)) }],
  ['por qué subieron los rescates', {ind:'resc', tipo:'cambio'}, { aviso:true }]
 ];
 (async()=>{ const b=await chromium.launch({executablePath:process.env.CHROMIUM || undefined}); const errs=[]; let ok=0, mal=0;

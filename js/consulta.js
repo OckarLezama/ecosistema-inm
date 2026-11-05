@@ -320,7 +320,9 @@ function entender0(txt){
   if (q.ind==='ing' && q.filtros.n && q.filtros.n.length===1 && q.filtros.n[0]===MXc && INDK.ingmx){ q.ind = 'ingmx'; delete q.filtros.n; q.partes = q.partes.filter(k => k!=='mx' && k!=='ext'); }    // «ingresos de mexicanos»: se responde como «mexicanos que ingresaron»
   // 5. periodo (uno o dos meses; con dos meses se comparan)
   const anio = t.match(/ (20\d\d) /), finB = fecha0(finBase(B)), ms = MES.map((m,i) => [i, t.indexOf(' '+m+' ')]).filter(x => x[1]>=0).sort((a,b) => a[1]-b[1]), mes = ms.length ? ms[0][0] : -1;
-  const rangoMes = m => { let y = anio ? +anio[1] : finB.getFullYear(); if (!anio && new Date(y, m, 1)>finB) y--; return [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))]; };
+  // mes sin año: el más reciente que ya está completo en la base (o su primera quincena, si eso se pregunta); con año, ese mismo
+  const rangoMes = m => { let y = anio ? +anio[1] : finB.getFullYear(); const hasta = y => quin && quin[1]==='primera' && ms.length<2 ? new Date(y, m, 15) : new Date(y, m+1, 0);
+    if (!anio && hasta(y)>finB) y--; return [iso(new Date(y, m, 1)), iso(new Date(y, m+1, 0))]; };
   if (ms.length>=2){ ms.forEach(x => toma(MES[x[0]])); if (anio) toma(anio[1]); const r2 = ms.slice(0,2).map(x => rangoMes(x[0])).sort((a,b) => a[0]<b[0] ? -1 : 1); q.cmpA = r2[0]; q.d0 = r2[1][0]; q.d1 = r2[1][1]; q.dir = 'ambos'; }
   else if (mes>=0){ toma(MES[mes]); if (anio) toma(anio[1]); const r1 = rangoMes(mes); q.d0 = r1[0]; q.d1 = r1[1];
     if (quin){ if (quin[1]==='primera') q.d1 = sumaDias(q.d0, 14); else q.d0 = sumaDias(q.d0, 15); } }

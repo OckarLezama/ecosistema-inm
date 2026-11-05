@@ -45,6 +45,7 @@ import datetime as dt
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import unicodedata
@@ -127,6 +128,7 @@ FIRMAS = [
     ("rep_com",    {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"}, {"PAIS"}),
     ("rep_gh",     {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION", "PAIS"}, set()),
     ("docs_cruce", {"OTROS PAISES"}, set()),
+    ("docs_cruce", {"O.R.", "TOTAL", "GUATEMALA"}, {"TOTAL GENERAL", "DIA"}),      # desde nov 2026 trae todos los países, sin «Otros países»
     ("docs_est",   {"O.R.", "TOTAL GENERAL"}, set()),
     ("docs_nat",   {"NACIONALIDAD", "TOTAL GENERAL"}, set()),
 ]
@@ -741,6 +743,11 @@ def main():
     salida["tramTipos"] = TIPOS_TRAM
     salida["puntos"], salida["repPuntos"], salida["emPuntos"], salida["ingPunto"], salida["rechPunto"] = puntos(BX, inicio, cortes)
     salida["docs"] = documentos(tablas, cargas)
+    # Documentos vigentes es una foto a una fecha: si el nombre del archivo la trae («… 2026-10-28.xlsx»), esa es su fecha
+    if salida["docs"]:
+        f = re.findall(r"(20\d\d-\d\d-\d\d)", " ".join(archivos.get(k, "") for k in ("docs_est", "docs_nat")))
+        if f:
+            salida["docs"]["corte"] = max(f)
     salida["cbp"] = None
     if "cbp" in tablas:
         B["cbp"], salida["cbp"] = encuentros(tablas["cbp"], inicio, dias, cortes)

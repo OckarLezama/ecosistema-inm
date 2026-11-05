@@ -36,7 +36,8 @@ RENOMBRES = [("FECHA", "DIA", {"LOCATION", "CIUDAD EEUU", "TOTAL"}),            
            ("FECHA", "DIA", {"PUNTO DE INTERNACION", "TIPO", "NACIONALIDAD"}),                # DGCVM ingresos, oct 2026
            ("OR", "O.R.", {"PUNTO DE INTERNACION", "TIPO", "NACIONALIDAD"}),
            ("CONNACIONALES PROVENIENTES DE:", "PAIS", {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"}),   # DGPMV Guatemala-Honduras, oct 2026
-           ("CONNACIONALES PROVENIENTES DE", "PAIS", {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"})]
+           ("CONNACIONALES PROVENIENTES DE", "PAIS", {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"}),
+           ("PAISES Y TERRITORIOS", "NACIONALIDAD", {"TOTAL GENERAL"})]                       # DGRAM documentos vigentes por país, nov 2026
 AVISOS = {}          # nombre de la base → observaciones (sin repetir)
 PERIODOS = {}        # nombre de la base → {desde, hasta, archivo, filas}: lo que lee cada robot fuera de datos.js (página Bases)
 
@@ -304,9 +305,39 @@ def juntar(partes, base, col_dia="DIA", origen=None):
         avisar(base, f"{int(antes.sum()):,} renglones son de antes del 1 oct 2024 (el más antiguo, del {t['_D'].min().date()}). "
                      "No se usan: la plataforma empieza el 1 oct 2024.")
         t = t[~antes]
+    unificar(t, "PUNTO DE INTERNACION", base)
     t[col_dia] = t["_D"]
     huella(base, t, "_D")
     return t.drop(columns="_D").reset_index(drop=True)
+
+
+MES3 = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+
+
+def unificar(t, col, base):
+    """Un mismo lugar escrito de dos formas («Punto de Internacion Sonoyta, Son» / «PUNTO DE INTERNACION SONOYTA, SON.»)
+    se cuenta como uno solo, con la forma que se usaba primero; y se avisa para que el área vuelva a escribirlo igual."""
+    if col not in t.columns:
+        return
+    s = t[col].astype(str).str.strip()
+    ok = t[col].notna() & ~s.isin(["", "nan"])
+    if not ok.any():
+        return
+    clave = s[ok].map(lambda x: " ".join(re.sub(r"[^\w ]", " ", norm(x)).split()))
+    primero = pd.DataFrame({"k": clave, "s": s[ok], "d": t.loc[ok, "_D"]}).groupby(["k", "s"])["d"].agg(["min", "max", "size"])
+    canon = {}
+    for k, g in primero.groupby(level=0):
+        if len(g) < 2:
+            continue
+        g = g.droplevel(0).sort_values("min")
+        c = g.index[0]
+        for v, r in g.iloc[1:].iterrows():
+            canon[v] = c
+            corregir(base, f"«{col}» trae «{v}» desde el {r['min'].day} {MES3[r['min'].month - 1]} {r['min'].year} ({int(r['size']):,} renglones) "
+                           f"en lugar de «{c}», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.")
+    if canon:
+        cambia = ok & s.isin(list(canon))
+        t.loc[cambia, col] = s[cambia].map(canon)
 
 
 def leer_por_columnas(origen, columnas, base, sin=frozenset()):
@@ -404,6 +435,15 @@ def guardar(destino, robot, extra=None):
         todos.setdefault(b, []).extend(x for x in l if x not in todos[b])
     vistos[robot] = {b + "|" + x: antes.get(b + "|" + x, hoy) for b, l in todos.items() for x in l if x.startswith(CORREGIR)}
     vistos["_ultima"] = hoy
+    # Desde cuándo sigue pendiente cada aviso, aunque cambie su número («76,900 ingresos…» → «77,195 ingresos…» es el mismo aviso)
+    sin_num = lambda k: re.sub(r"\d[\d,.]*", "#", k)
+    previo = {}
+    for r, d in list(todo.get("_desde", {}).items()) + [("", {sin_num(k): f for k, f in antes.items()})]:
+        if isinstance(d, dict):
+            for k, f in d.items():
+                previo[k] = min(previo.get(k, f), f)
+    desde = todo.setdefault("_desde", {})
+    desde[robot] = {sin_num(k): min(previo.get(sin_num(k), f), f) for k, f in vistos[robot].items()}
     bitacora(destino, robot)
     if PERIODOS:
         todo.setdefault("_periodos", {}).update(PERIODOS)

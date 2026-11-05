@@ -126,20 +126,25 @@ def vigentes(origen):
     o = {}
     for ruta in lector.por_entrega(glob.glob(os.path.join(origen, "*.xlsx")), origen):   # si hay varias entregas, la más reciente queda al final y manda
         fila0 = [norm(x) for x in lector.primera_fila(ruta)]
-        if not ("OTROS PAISES" in fila0 or (fila0 and fila0[0] in ("NACIONALIDAD", "O.R.") and "TOTAL GENERAL" in fila0)):
+        todos = fila0[:2] == ["O.R.", "TOTAL"] and "TOTAL GENERAL" not in fila0     # estado × país desde nov 2026: todos los países, sin «Otros países»
+        if fila0 and fila0[0] == "PAISES Y TERRITORIOS":
+            fila0[0] = "NACIONALIDAD"                                                    # documentos por país desde nov 2026
+        if not ("OTROS PAISES" in fila0 or todos or (fila0 and fila0[0] in ("NACIONALIDAD", "O.R.") and "TOTAL GENERAL" in fila0)):
             continue                                         # solo se abren completos los archivos de documentos vigentes
         t = pd.read_excel(ruta, header=None)
         fila0 = [norm(x) for x in t.iloc[0].tolist()]
-        if "OTROS PAISES" in fila0:
+        if fila0 and fila0[0] == "PAISES Y TERRITORIOS":
+            fila0[0] = "NACIONALIDAD"
+        if "OTROS PAISES" in fila0 or todos:
             t.columns = [str(x).strip() for x in t.iloc[0]]
             t = t.iloc[1:]
             t = t[t["O.R."].notna() & ~t["O.R."].astype(str).str.upper().str.contains("TOTAL")]
-            paises = [c for c in t.columns[4:]]
+            paises = [c for c in t.columns[4 if "OTROS PAISES" in fila0 else 2:]]
             o["dv_e"] = [ESTADO.get(norm(x), str(x).strip()) for x in t["O.R."]]
             o["dv_p"] = [nacionalidad(x) for x in paises]
             o["dv_m"] = [[int(pd.to_numeric(v, errors="coerce") or 0) for v in fila] for fila in t[paises].values.tolist()]
             o["dv_et"] = [int(x) for x in pd.to_numeric(t[t.columns[1]], errors="coerce").fillna(0)]
-            o["dv_otros"] = [int(x) for x in pd.to_numeric(t[t.columns[2]], errors="coerce").fillna(0)]
+            o["dv_otros"] = [int(x) for x in pd.to_numeric(t[t.columns[2]], errors="coerce").fillna(0)] if "OTROS PAISES" in fila0 else [0] * len(t)
         elif fila0 and fila0[0] == "NACIONALIDAD" and "TOTAL GENERAL" in fila0:
             hdr = pd.Series(t.iloc[0].tolist()).ffill().tolist()
             cuerpo = t.iloc[2:]

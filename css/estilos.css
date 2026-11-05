@@ -1948,3 +1948,4 @@ body.sala-compartida .sl-liga{margin-right:0}
 .bs-on summary{color:#5C5952;font-weight:500;font-size:12px}
 .bs-nv{font-style:normal;font-size:10.5px;font-weight:700;background:#A8443E;color:#fff;border-radius:999px;padding:1px 7px;white-space:nowrap}
 @media (max-width:700px){.bs-cor-l li{grid-template-columns:1fr;gap:2px}}
+.bs-pd{color:#8A5A20;font-weight:600;white-space:nowrap}

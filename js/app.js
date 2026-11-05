@@ -1722,11 +1722,19 @@ function bitacoraBases(){ const L = (window.IANAMI_BITACORA || []).filter(e => e
 // Lo que cambia una cifra y hay que pedir al área que corrija: el robot lo marca con «[corregir] » (robot/lector.py) y anota desde
 // qué carga lo avisa (_vistos). Arriba de Bases se ve lo nuevo de esta carga; lo pendiente de antes queda cerrado en una línea.
 const MARCA = '[corregir] ', esCorr = x => x.indexOf(MARCA)===0, sinMarca = x => esCorr(x) ? x.slice(MARCA.length) : x;
-function esNuevo(n, x){ const V = (window.IANAMI_OBS || {})._vistos || {}; let f = null;
-  Object.keys(V).forEach(r => { const d = V[r], v = d && typeof d==='object' ? d[n+'|'+x] : null; if (v && (!f || v<f)) f = v; });
-  return !!f && f===V._ultima; }
+// Desde cuándo está pendiente un aviso: el robot lo guarda sin números (si cambia la cifra, sigue siendo el mismo aviso)
+function desdeDe(n, x){ const O = window.IANAMI_OBS || {}, D = O._desde || {}, k = (n+'|'+x).replace(/\d[\d,.]*/g, '#'); let f = null;
+  Object.keys(D).forEach(r => { const v = D[r] && D[r][k]; if (v && (!f || v<f)) f = v; });
+  if (!f){ const V = O._vistos || {}; Object.keys(V).forEach(r => { const v = V[r] && typeof V[r]==='object' ? V[r][n+'|'+x] : null; if (v && (!f || v<f)) f = v; }); }
+  return f; }
+const ultimaCarga = () => ((window.IANAMI_OBS || {})._vistos || {})._ultima;
+function esNuevo(n, x){ const f = desdeDe(n, x); return !!f && f===ultimaCarga(); }
+// «pendiente desde el 26 oct 2026 · 2 semanas»
+function pendiente(n, x){ const f = desdeDe(n, x), u = ultimaCarga(); if (!f || !u || f===u) return '';
+  const sem = Math.max(1, Math.round((new Date(u+'T00:00:00') - new Date(f+'T00:00:00'))/(7*864e5)));
+  return 'pendiente desde el '+fechaISO(f)+' · '+sem+' '+(sem===1 ? 'semana' : 'semanas'); }
 const REVISA = ['Totales que no dan la suma de sus partes (total contra 1.ª vez + reincidentes, adultos + menores, deportados + retornos asistidos…)',
-  'Renglones repetidos: mismo día y mismos datos', 'Puntos, O.R. o estaciones que traían datos casi a diario y pasan 5 días o más sin nada (últimos 90 días)',
+  'Renglones repetidos: mismo día y mismos datos', 'Un mismo punto escrito de dos formas distintas (se cuenta como uno solo y se avisa)', 'Puntos, O.R. o estaciones que traían datos casi a diario y pasan 5 días o más sin nada (últimos 90 días)',
   'Días con más del triple o menos de un tercio de lo normal para ese día de la semana (últimas 4 semanas)', 'Fechas vacías o imposibles y O.R. que no se reconocen',
   'Una entrega nueva que trae menos renglones que la anterior para los mismos días', 'Datos que se contradicen: vía terrestre en aeropuertos, NNA de 18 años o más, trámites «en proceso» que ya expidieron tarjeta'];
 function porCorregir(B){
@@ -1734,7 +1742,7 @@ function porCorregir(B){
   const rev = '<details class="bs-rev"><summary>¿Qué se revisa?</summary><ul>'+REVISA.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul><p>No se detecta una cifra mal capturada que no rompa ninguna de estas reglas (por ejemplo, 150 donde iba 105).</p></details>';
   if (!L.length) return '<div class="bs-cor ok"><b>Sin inconsistencias en lo que se revisa.</b>'+rev+'</div>';
   const N = L.filter(r => r.nuevo), V = L.filter(r => !r.nuevo), porB = {}; V.forEach(r => (porB[r.n] = porB[r.n] || { a:r.a, l:[] }).l.push(r.x));
-  const li = (n, a, xs) => '<li><span class="bs-cor-b">'+esc(n)+' <small>'+esc(a)+'</small></span><span>'+xs.map(x => esc(sinMarca(x))).join('<br>')+'</span></li>';
+  const li = (n, a, xs) => '<li><span class="bs-cor-b">'+esc(n)+' <small>'+esc(a)+'</small></span><span>'+xs.map(x => esc(sinMarca(x))+(pendiente(n, x) ? ' <small class="bs-pd">'+pendiente(n, x)+'</small>' : '')).join('<br>')+'</span></li>';
   return '<div class="bs-cor"><b class="bs-cor-t">Por corregir con el área</b>'+
     (N.length ? '<p class="bs-cor-s">Nuevo en esta carga</p><ul class="bs-cor-l">'+N.map(r => li(r.n, r.a, [r.x])).join('')+'</ul>' : '<p class="bs-cor-s0">Nada nuevo en esta carga.</p>')+
     (V.length ? '<details class="bs-cor-v"><summary>'+V.length+' '+(V.length===1 ? 'sigue pendiente' : 'siguen pendientes')+' de cargas anteriores <small>· '+Object.keys(porB).map(k => esc(k)+' ('+porB[k].l.length+')').join(' · ')+'</small></summary>'+
@@ -1759,7 +1767,7 @@ function vistaBases(){
       '<td class="x">'+(b.filas!=null ? miles(b.filas) : '—')+'</td><td class="x">'+(b.faltan!=null ? miles(b.faltan) : '—')+'</td>'+
       '<td class="bs-obs">'+obsCelda(b, ob)+'</td></tr>'; };
   const obsCelda = (b, ob) => { if (!ob.length) return '<span class="mini">Sin observaciones</span>'; const c = ob.filter(esCorr), n = ob.filter(x => !esCorr(x));
-    return (c.length ? '<div class="bs-oc"><b>Corregir con el área</b><ul>'+c.map(x => '<li>'+esc(sinMarca(x))+(esNuevo(b.n, x) ? ' <i class="bs-nv">Nuevo</i>' : '')+'</li>').join('')+'</ul></div>' : '')+
+    return (c.length ? '<div class="bs-oc"><b>Corregir con el área</b><ul>'+c.map(x => '<li>'+esc(sinMarca(x))+(esNuevo(b.n, x) ? ' <i class="bs-nv">Nuevo</i>' : pendiente(b.n, x) ? ' <small class="bs-pd">'+pendiente(b.n, x)+'</small>' : '')+'</li>').join('')+'</ul></div>' : '')+
       (n.length ? '<details class="bs-on"><summary>Para saber · '+n.length+'</summary><ul>'+n.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul></details>' : ''); };
   const fc = d => fechaISO(d), vj = viejo>7 ? ' <span class="bs-est mal">La última carga fue hace '+viejo+' días: toca actualizar.</span>' : '';
   const resumen = !diarias.length ? '' : atras.length===0

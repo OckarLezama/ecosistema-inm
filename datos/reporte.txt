@@ -1,27 +1,36 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-11-03 06:49
-Periodo de las bases: 2024-10-01 a 2026-10-30 (760 días)
+Generado: 2026-11-04 23:17
+Periodo de las bases: 2024-10-01 a 2026-11-03 (764 días)
 
-== Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-10-30 entregado 2026-11-03.xlsx  ·  cargado 2026-11-03
-   1,106,295 renglones · total 101,065,483 · del 2024-10-01 al 2026-10-30
+== Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
+   1,112,752 renglones · total 101,636,069 · del 2024-10-01 al 2026-11-03
    Días sin datos: 0
    En «Otras» nacionalidades: 2,210 (0.0%)
    · 44 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Navidad, Islas Cocos, Timor-Leste, Islas Reunion, Islas Malvinas, Islas Azores, Islas Faroe, Islas Marianas….
-   · Solo 44 de 184 puntos de internación tienen ubicación para dibujarse en el mapa (concentran el 97% de los ingresos). Los demás sí se cuentan en todas las cifras; solo no aparecen como punto en el mapa.
+   · Solo 44 de 181 puntos de internación tienen ubicación para dibujarse en el mapa (concentran el 97% de los ingresos). Los demás sí se cuentan en todas las cifras; solo no aparecen como punto en el mapa.
    · [corregir] Sin datos hasta el 12 oct: Aeropuerto Internacional De Cozumel · Aeropuerto Internacional De Morelia · Aeropuerto Internacional De Oaxaca (desde el 1 oct); Aeropuerto Internacional De Mérida "A" (desde el 3 oct); Aeropuerto Internacional De San Luis Potosí (desde el 5 oct); Aeropuerto Internacional De Mazatlán (desde el 6 oct); Aeropuerto Internacional De Aguascalientes (desde el 7 oct). Antes y después sí traen; si esos días hubo movimiento, falta en el archivo.
-   · [corregir] Sin datos hasta el 30 oct, último día de la base: Puente Internacional Puerta De México, Matamoros, Tamaulipas · Punto De Internacion Sonoyta, Son (desde el 21 oct). Antes traían datos casi a diario; si sí hubo movimiento, falta en el archivo.
    · Encabezado «FECHA» leído como «DIA».
    · Encabezado «OR» leído como «O.R.».
+   · [corregir] «PUNTO DE INTERNACION» trae «GARITA KM. 21, NOGALES, SON.» desde el 21 oct 2026 (78 renglones) en lugar de «Garita Km. 21, Nogales, Son.», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
+   · [corregir] «PUNTO DE INTERNACION» trae «GARITA NOGALES I, SON.» desde el 21 oct 2026 (36 renglones) en lugar de «Garita Nogales I, Son.», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
+   · [corregir] «PUNTO DE INTERNACION» trae «LÁZARO CÁRDENAS» desde el 21 oct 2026 (98 renglones) en lugar de «LAZARO CÁRDENAS», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
+   · [corregir] «PUNTO DE INTERNACION» trae «Puente Internacional Puerta de México/Matamoros/ Tamaulipas» desde el 21 oct 2026 (55 renglones) en lugar de «Puente Internacional Puerta de México, Matamoros, Tamaulipas», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
+   · [corregir] «PUNTO DE INTERNACION» trae «PUNTO DE INTERNACION AGUA PRIETA, SON.» desde el 21 oct 2026 (32 renglones) en lugar de «Punto de Internacion Agua Prieta, Son.», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
+   · [corregir] «PUNTO DE INTERNACION» trae «Punto de Internación Mesa de Otay» desde el 23 ene 2026 (2,904 renglones) en lugar de «Punto de internación Mesa de Otay», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
+   · [corregir] «PUNTO DE INTERNACION» trae «PUNTO DE INTERNACION NACO, SON.» desde el 23 oct 2026 (5 renglones) en lugar de «Punto de Internacion Naco, Son», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
+   · [corregir] «PUNTO DE INTERNACION» trae «PUNTO DE INTERNACION SAN LUIS RIO COLORADO, SON.» desde el 21 oct 2026 (33 renglones) en lugar de «Punto de Internacion San Luis Rio Colorado, Son.», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
+   · [corregir] «PUNTO DE INTERNACION» trae «PUNTO DE INTERNACION SONOYTA, SON.» desde el 21 oct 2026 (33 renglones) en lugar de «Punto de Internacion Sonoyta, Son», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
 
-== Segunda revisión  ·  DGCVM SEGUNDA REVISION consolidado 2024-10-01 a 2026-10-30 entregado 2026-11-03.xlsx  ·  cargado 2026-11-03
-   41,284 renglones · total 111,819 · del 2024-10-01 al 2026-10-30
+== Segunda revisión  ·  DGCVM SEGUNDA REVISION consolidado 2024-10-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
+   41,300 renglones · total 111,838 · del 2024-10-01 al 2026-11-03
    Días sin datos: 3 → 2024-10-31, 2025-03-18, 2026-06-11
    En «Otras» nacionalidades: 2 (0.0%)
-   · 2,420 casos (1,774 renglones) vienen con nacionalidad mexicana; no se cuentan en segunda revisión ni en rechazos (igual que Control migratorio)
+   · 2,424 casos (1,777 renglones) vienen con nacionalidad mexicana; no se cuentan en segunda revisión ni en rechazos (igual que Control migratorio)
+   · [corregir] «PUNTO DE INTERNACION» trae «Punto de Internación Mesa de Otay» desde el 24 ene 2026 (38 renglones) en lugar de «Punto de internación Mesa de Otay», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
 
 == Trámites  ·  DGRAM TRAMITES MIGRATORIOS 14 al 16 oct 26.xlsx, DGRAM TRAMITES MIGRATORIOS 19 al 30 oct 26.xlsx, DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx  ·  cargado 2026-11-03
    961,104 renglones · total 961,105 · del 2024-10-02 al 2026-10-30
-   Días sin datos: 188 → 2024-10-01, 2024-10-13, 2024-10-19, 2024-10-20, 2024-10-26, 2024-10-27, 2024-11-02, 2024-11-03, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01, 2024-12-08, 2024-12-15 …
+   Días sin datos: 192 → 2024-10-01, 2024-10-13, 2024-10-19, 2024-10-20, 2024-10-26, 2024-10-27, 2024-11-02, 2024-11-03, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01, 2024-12-08, 2024-12-15 …
    En «Otras» nacionalidades: 38,456 (4.0%)
    · 8 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Reunion, Timor-Leste, Islas Marianas.
    · 3,882 renglones son de empleadores, no de personas (se cuentan en el total, sin nacionalidad)
@@ -32,65 +41,65 @@ Periodo de las bases: 2024-10-01 a 2026-10-30 (760 días)
    · [corregir] Entre los trámites concluidos, «Tipo de resolución» dice 33,379 «En proceso» y 19,829 «Cancelados»; 27,948 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
    · 1 trámites marcan más de un documento; cuentan una vez por documento.
 
-== Rescates  ·  DGCOR RESCATES consolidado 2024-10-01 a 2026-10-30 entregado 2026-11-03.xlsx  ·  cargado 2026-11-03
-   54,322 renglones · total 903,390 · del 2024-10-01 al 2026-10-30
+== Rescates  ·  DGCOR RESCATES consolidado 2024-10-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
+   54,442 renglones · total 903,850 · del 2024-10-01 al 2026-11-03
    Días sin datos: 0
-   En «Otras» nacionalidades: 40 (0.0%)
-   · 7 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: VENEZUELA (REPÚBLICA BOLIVARIANA DE), REPÚBLICA DE KOSOVO.
+   En «Otras» nacionalidades: 41 (0.0%)
+   · 8 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: VENEZUELA (REPÚBLICA BOLIVARIANA DE), REPÚBLICA DE KOSOVO.
    · [corregir] 1 renglones donde TOTAL no es 1RA VEZ + REINCIDENTES (diferencia de +1); se usa la suma. Ej.: 2026-09-26 VERACRUZ HONDURAS: total 0, 1.ª vez 0, reincidentes 1. Corregir en el archivo.
    · [corregir] 1 renglones repetidos (mismo día, O.R. y nacionalidad)
-   · 156,565 rescatados sin destino registrado (ni estación ni DIF)
+   · 156,616 rescatados sin destino registrado (ni estación ni DIF)
 
-== Presentados  ·  DGCVM PRESENTADOS consolidado 2024-10-01 a 2026-10-30 entregado 2026-11-03.xlsx  ·  cargado 2026-11-03
-   34,313 renglones · total 152,045 · del 2024-10-01 al 2026-10-30
+== Presentados  ·  DGCVM PRESENTADOS consolidado 2024-10-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
+   34,444 renglones · total 152,326 · del 2024-10-01 al 2026-11-03
    Días sin datos: 1 → 2025-11-12
    En «Otras» nacionalidades: 2 (0.0%)
    · [corregir] Sin datos del 21 al 25 sep en: Estación Migratoria Janos. Antes y después sí traen; si esos días hubo movimiento, falta en el archivo.
 
-== Canalizados NNA  ·  DGCVM CANALIZADOS_NNA consolidado 2024-10-01 a 2026-10-29 entregado 2026-11-03.xlsx  ·  cargado 2026-11-03
-   41,721 renglones · total 41,721 · del 2024-10-01 al 2026-10-29
-   Días sin datos: 2 → 2026-10-26, 2026-10-30
+== Canalizados NNA  ·  DGCVM CANALIZADOS_NNA consolidado 2024-10-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
+   41,829 renglones · total 41,829 · del 2024-10-01 al 2026-11-03
+   Días sin datos: 1 → 2026-10-26
    En «Otras» nacionalidades: 11 (0.0%)
    · 5 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: ISLAS VÍRGENES DE EE.UU..
    · [corregir] 15 renglones sin fecha de nacimiento (se cuentan en el grupo 12 a 17)
 
-== Canalizados adultos  ·  DGCVM CANALIZADOS_ADULTOS ACOMPAÑANTES consolidado 2024-10-01 a 2026-10-29 entregado 2026-11-03.xlsx  ·  cargado 2026-11-03
-   26,650 renglones · total 26,650 · del 2024-10-01 al 2026-10-29
-   Días sin datos: 2 → 2026-10-26, 2026-10-30
+== Canalizados adultos  ·  DGCVM CANALIZADOS_ADULTOS ACOMPAÑANTES consolidado 2024-10-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
+   26,719 renglones · total 26,719 · del 2024-10-01 al 2026-11-03
+   Días sin datos: 1 → 2026-10-26
    En «Otras» nacionalidades: 0 (0.0%)
 
-== Retornados  ·  DGCVM RETORNADOS A SU PAIS consolidado 2024-10-01 a 2026-10-30 entregado 2026-11-03.xlsx  ·  cargado 2026-11-03
-   6,442 renglones · total 29,724 · del 2024-10-01 al 2026-10-30
+== Retornados  ·  DGCVM RETORNADOS A SU PAIS consolidado 2024-10-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
+   6,483 renglones · total 29,906 · del 2024-10-01 al 2026-11-03
    Días sin datos: 16 → 2024-10-13, 2024-10-20, 2024-10-27, 2024-11-02, 2024-11-04, 2024-12-01, 2024-12-08, 2024-12-15, 2024-12-25, 2025-01-01, 2025-01-02, 2025-01-03, 2025-02-23, 2025-11-16 …
    En «Otras» nacionalidades: 0 (0.0%)
    · [corregir] 3 renglones donde deportados + retornos asistidos no da la columna «Retornados a su país» (diferencia de +8 personas). La plataforma usa la suma de deportados + retornos asistidos.
 
-== Recibidos de EE. UU.  ·  DGCOR RECIBIDOS consolidado 2024-10-02 a 2026-10-30 entregado 2026-11-03.xlsx  ·  cargado 2026-11-03
-   3,769 renglones · total 25,838 · del 2024-10-02 al 2026-10-30
-   Días sin datos: 115 → 2024-10-01, 2024-10-08, 2024-10-10, 2024-10-12, 2024-10-13, 2024-10-19, 2024-10-26, 2024-10-27, 2024-11-03, 2024-11-05, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01 …
+== Recibidos de EE. UU.  ·  DGCOR RECIBIDOS consolidado 2024-10-02 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
+   3,778 renglones · total 25,871 · del 2024-10-02 al 2026-11-03
+   Días sin datos: 116 → 2024-10-01, 2024-10-08, 2024-10-10, 2024-10-12, 2024-10-13, 2024-10-19, 2024-10-26, 2024-10-27, 2024-11-03, 2024-11-05, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01 …
    En «Otras» nacionalidades: 0 (0.0%)
    · [corregir] 3 renglones repetidos (mismo día y mismos datos: o.r., nacionalidad); se suman los dos. El más reciente, 31 ago 2026. Confirmar si es doble captura.
 
-== Repatriados  ·  DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-10-30 entregado 2026-11-03.xlsx  ·  cargado 2026-11-03
-   7,640 renglones · total 377,640 · del 2024-10-01 al 2026-10-30
+== Repatriados  ·  DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-03 entregado 2026-11-04.xlsx  ·  cargado 2026-11-04
+   7,675 renglones · total 379,872 · del 2024-10-01 al 2026-11-03
    Días sin datos: 0
    · Puntos de repatriación sin coordenadas: A.I San Luis Potosí, A.I. Morelia, Campeche, Mérida, San Luis Potosí, Tulum
 
-== Documentos vigentes por estado  ·  DGRAM Extranjerios_DocVigente_Estados.xlsx  ·  cargado 2026-10-13
+== Documentos vigentes por estado  ·  DGRAM Extranjerios_DocVigente_Estados 2026-10-28.xlsx  ·  cargado 2026-11-04
 
-== Documentos vigentes por país  ·  DGRAM Extranjerios_DocVigente_Paises.xlsx  ·  cargado 2026-10-13
+== Documentos vigentes por país  ·  DGRAM Extranjerios_DocVigente_Paises 2026-10-28.xlsx  ·  cargado 2026-11-04
 
-== Documentos vigentes estado × país  ·  DGRAM Extranjerios_DocVigente_EdosvsPaises.xlsx  ·  cargado 2026-10-13
+== Documentos vigentes estado × país  ·  DGRAM Extranjerios_DocVigente_EdosvsPaises 2026-10-28.xlsx  ·  cargado 2026-11-04
 
 == Encuentros CBP  ·  CBP ENCUENTROS consolidado 2024-10-01 a 2026-10-22 entregado 2026-10-26.xlsx  ·  cargado 2026-10-26
    10,220 renglones · total 576,551 · del 2024-10-01 al 2026-10-22
-   Días sin datos: 8 → 2026-10-23, 2026-10-24, 2026-10-25, 2026-10-26, 2026-10-27, 2026-10-28, 2026-10-29, 2026-10-30
+   Días sin datos: 12 → 2026-10-23, 2026-10-24, 2026-10-25, 2026-10-26, 2026-10-27, 2026-10-28, 2026-10-29, 2026-10-30, 2026-10-31, 2026-11-01, 2026-11-02, 2026-11-03
 
 == Caravanas  ·  CARAVANAS MIGRANTES.xlsx  ·  cargado 2026-10-13
    22 caravanas · del 2024-10-05 al 2026-09-22
    · Estos lugares no tienen ubicación en el catálogo, así que su recorrido no se dibuja en el mapa: Corazones, Oaxaca
 
-== Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES 29 sep al 29 oct 26.xlsx, DGPMV COMERCIALES.xlsx  ·  Se muestra en Protección al migrante › Vuelos comerciales. No está en el archivo de Repatriados: se suma aparte.
+== Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES 29 sep al 1 nov 26.xlsx, DGPMV COMERCIALES.xlsx  ·  Se muestra en Protección al migrante › Vuelos comerciales. No está en el archivo de Repatriados: se suma aparte.
 
 == Repatriados desde Guatemala y Honduras  ·  DGPMV GUATEMALA-HONDURAS 1 al 30 oct 26.xlsx, DGPMV GUATEMALA-HONDURAS 29 sep al 25 oct 26.xlsx, DGPMV GUATEMALA-HONDURAS.xlsx  ·  Mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras. Coincide día por día con el punto Ciudad Hidalgo de Repatriados: es el mismo flujo y no se suma otra vez.
 
