@@ -163,8 +163,18 @@ def tabla_de(ruta, base=None, acepta=None):
 #      cualquier otro es un envío de días nuevos y su rango es del primer al último día que trae.
 #   4. Cada corrida deja huella por base y día (renglones y total); la siguiente compara y anota en la bitácora
 #      qué cambió (datos/bitacora.js, sección Bases).
+def seriales(serie):
+    """Renglones cuya fecha viene como número de Excel (días desde 1899-12-30, p. ej. 46314 = 19 oct 2026)."""
+    num = pd.to_numeric(serie.where(serie.map(lambda x: isinstance(x, (int, float)) and not isinstance(x, bool))), errors="coerce")
+    return num.where(num.between(20000, 80000))
+
+
 def dia(serie):
-    return pd.to_datetime(serie, errors="coerce", dayfirst=True).dt.normalize()
+    num = seriales(serie)
+    d = pd.to_datetime(serie.where(num.isna()), errors="coerce", dayfirst=True)
+    if num.notna().any():
+        d = d.where(num.isna(), pd.Timestamp("1899-12-30") + pd.to_timedelta(num, unit="D"))
+    return d.dt.normalize()
 
 
 def es_correccion(nombre):
@@ -240,6 +250,12 @@ def juntar(partes, base, col_dia="DIA", origen=None):
     for nombre, t in partes:
         t = t.copy()
         t["_D"] = dia(t[col_dia])
+        ns = seriales(t[col_dia])
+        if ns.notna().any():
+            fs = t.loc[ns.notna(), "_D"]
+            corregir(base, f"{nombre}: {int(ns.notna().sum()):,} renglones traen «{col_dia}» como número (por ejemplo {int(ns.dropna().iloc[0])}) y no como fecha. "
+                           f"Se convierten a su fecha ({fs.min().date()} a {fs.max().date()}); pedir que la columna venga con formato de fecha.")
+        t[col_dia] = t["_D"]
         sin = int(t["_D"].isna().sum())
         if sin:
             corregir(base, f"{nombre}: {sin:,} renglones no traen una fecha válida y no se cuentan.")
