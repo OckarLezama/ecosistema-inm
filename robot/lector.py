@@ -256,6 +256,11 @@ def juntar(partes, base, col_dia="DIA", origen=None):
             corregir(base, f"{nombre}: {int(ns.notna().sum()):,} renglones traen «{col_dia}» como número (por ejemplo {int(ns.dropna().iloc[0])}) y no como fecha. "
                            f"Se convierten a su fecha ({fs.min().date()} a {fs.max().date()}); pedir que la columna venga con formato de fecha.")
         t[col_dia] = t["_D"]
+        imposible = (t["_D"] > pd.Timestamp.now().normalize()) | (t["_D"] < pd.Timestamp("2020-01-01"))
+        if imposible.any():
+            fx = sorted(set(t.loc[imposible, "_D"].dt.date))
+            corregir(base, f"{nombre}: {int(imposible.sum()):,} renglones traen en «{col_dia}» un año imposible ({', '.join(str(f) for f in fx[:6])}{' …' if len(fx) > 6 else ''}); no se cuentan. Pedir que se corrija el año.")
+            t = t[~imposible]
         sin = int(t["_D"].isna().sum())
         if sin:
             corregir(base, f"{nombre}: {sin:,} renglones no traen una fecha válida y no se cuentan.")
