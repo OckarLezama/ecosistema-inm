@@ -212,8 +212,10 @@ def validaciones(origen):
         if filas is None or not len(filas):
             continue
         if junto is not None:
-            a0, a1 = filas["fs"].min(), filas["fs"].max()
-            junto = junto[(junto["fs"] < a0) | (junto["fs"] > a1)]
+            # cada entrega manda solo en los días que trae: una entrega que junta dos semanas separadas
+            # no borra las semanas de en medio que llegaron antes
+            dias = set(filas["fs"].dt.normalize())
+            junto = junto[~junto["fs"].dt.normalize().isin(dias)]
             if not len(junto):
                 usados = []                                     # la entrega nueva trae todo: reemplaza a las anteriores
         junto = filas if junto is None else pd.concat([junto, filas], ignore_index=True)
@@ -221,6 +223,18 @@ def validaciones(origen):
     if junto is None:
         return {}
     filas = junto.reset_index(drop=True)                     # en el orden de los archivos (como antes)
+    habiles = pd.bdate_range(filas["fs"].max() - pd.Timedelta(days=90), filas["fs"].max())
+    con = set(filas["fs"].dt.normalize())
+    hueco, huecos = [], []
+    for d in list(habiles) + [None]:
+        if d is not None and d not in con:
+            hueco.append(d)
+            continue
+        if len(hueco) >= 5:
+            huecos.append(hueco)
+        hueco = []
+    for h in huecos:
+        lector.corregir(base, f"No hay solicitudes del {h[0].date()} al {h[-1].date()} ({len(h)} días hábiles). Pedir esa semana a DGRAM.")
     ruta = usados[-1]
     if len(usados) > 1:
         lector.avisar(base, "Se juntaron " + str(len(usados)) + " entregas: " + ", ".join(usados) + " (cada una manda en su periodo de fechas de solicitud).")
