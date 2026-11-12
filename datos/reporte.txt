@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-11-11 15:24
+Generado: 2026-11-12 13:59
 Periodo de las bases: 2024-10-01 a 2026-11-09 (770 días)
 
 == Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-09 entregado 2026-11-11.xlsx  ·  cargado 2026-11-11
@@ -98,7 +98,7 @@ Periodo de las bases: 2024-10-01 a 2026-11-09 (770 días)
    · CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-01 entregado 2026-11-05.xlsx: las hojas «Hoja2» no se usaron (están ocultas o no tienen las columnas de la base). Si traen datos que deben contar, pedir al área que los pase a la hoja principal.
 
 == Caravanas  ·  CARAVANAS MIGRANTES.xlsx  ·  cargado 2026-10-08
-   22 caravanas · del 2024-10-05 al 2026-09-22
+   24 caravanas · del 2024-10-05 al 2026-11-06
    · Estos lugares no tienen ubicación en el catálogo, así que su recorrido no se dibuja en el mapa: Corazones, Oaxaca
 
 == Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES 29 sep al 5 nov 26.xlsx, DGPMV COMERCIALES.xlsx  ·  Se muestra en Protección al migrante › Vuelos comerciales. No está en el archivo de Repatriados: se suma aparte.
