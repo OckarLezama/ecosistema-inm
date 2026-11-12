@@ -1949,3 +1949,52 @@ body.sala-compartida .sl-liga{margin-right:0}
 .bs-nv{font-style:normal;font-size:10.5px;font-weight:700;background:#A8443E;color:#fff;border-radius:999px;padding:1px 7px;white-space:nowrap}
 @media (max-width:700px){.bs-cor-l li{grid-template-columns:1fr;gap:2px}}
 .bs-pd{color:#8A5A20;font-weight:600;white-space:nowrap}
+/* Por año: barras chicas dentro de cada tarjeta del perfil y franja de años en caravanas */
+.t-perfil .pa{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:calc(.5*var(--u));height:calc(5.2*var(--u));margin:calc(.3*var(--u)) 0 calc(.35*var(--u));padding-top:calc(.35*var(--u));border-top:1px solid rgba(0,0,0,.06)}
+.t-perfil .pa-c{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;justify-items:center;align-items:end;min-width:0}
+.t-perfil .pa-v{font-size:calc(.8*var(--u));font-weight:600;color:#2B2926;line-height:1.1}
+.t-perfil .pa-b{display:block;width:62%;max-width:calc(2.6*var(--u));border-radius:3px 3px 0 0;align-self:end}
+.t-perfil .pa-c.inc .pa-b{opacity:.5}
+.t-perfil .pa-y{font-size:calc(.78*var(--u));font-weight:600;color:#5E5A52;line-height:1.2;margin-top:2px}
+.t-perfil .pa-s{font-size:calc(.68*var(--u));color:#8D877C;line-height:1.1;white-space:nowrap}
+.cq-hw.vert .t-perfil .pa{height:calc(4*var(--u))}.cq-hw.vert .t-perfil .pa-s{display:none}
+/* Por año · horizontal: dentro de la tarjeta oscura del total */
+.cq-kc.con-a{flex:1.8;grid-template-columns:minmax(0,auto) minmax(0,1fr);column-gap:calc(1.2*var(--u))}
+.cq-kc.con-a>.n,.cq-kc.con-a>.v,.cq-kc.con-a>.d{grid-column:1}
+.cq-kc.con-a .kc-a{grid-column:2;grid-row:1/4;align-self:stretch;border-left:1px solid rgba(244,242,234,.16);padding-left:calc(1.1*var(--u))}
+.cq-kc .kc-a{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:calc(.6*var(--u));min-height:calc(5.4*var(--u))}
+.cq-kc .kc-a .pa-c{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto auto;justify-items:center;align-items:end;min-width:0}
+.cq-kc .kc-a .pa-v{font-size:calc(.85*var(--u));font-weight:600;color:#2B2926;line-height:1.1}
+.cq-kc .kc-a .pa-b{display:block;width:56%;max-width:calc(2.6*var(--u));border-radius:3px 3px 0 0}
+.cq-kc .kc-a .pa-c.inc .pa-b{opacity:.45}
+.cq-kc .kc-a .pa-y{font-size:calc(.8*var(--u));font-weight:600;color:#2B2926;margin-top:2px;line-height:1.2}
+.cq-kc .kc-a .pa-s{font-size:calc(.68*var(--u));color:#8A857A;white-space:nowrap;line-height:1.15}
+.cq-kc.con-a .kc-a .pa-v,.cq-kc.con-a .kc-a .pa-y{color:#F4F2EA}.cq-kc.con-a .kc-a .pa-s{color:#B9B4A8}
+.cq-kc.con-a .kc-a .pa-b{background:#E8E2D2!important}.cq-kc.con-a .kc-a .pa-c.inc .pa-b{opacity:.5}
+/* Por año · vertical: su propia tarjeta junto al total */
+.cq-kc.ka{grid-template-rows:auto minmax(0,1fr)}.cq-hw.vert .cq-kc.ka{flex:1 1 40%}
+/* Caravanas · horizontal: franja por año en la tarjeta derecha */
+.cq-hoja .cqc-an{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:12px;margin:-6px 0 12px;padding-bottom:12px;border-bottom:1px solid #EFEBE2}
+.cq-hoja .cqc-ay{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cq-hoja .cqc-ay .y{font-size:11px;font-weight:700;color:#2B2926}.cq-hoja .cqc-ay .y em{font-style:normal;font-weight:400;color:#8A857A}
+.cq-hoja .cqc-ay b{font-size:15px;color:#7E302B;line-height:1.15}
+.cq-hoja .cqc-ay .bar{display:block;height:6px;border-radius:99px;background:#F1ECE2;overflow:hidden}.cq-hoja .cqc-ay .bar i{display:block;height:100%;border-radius:99px;background:#C4605A}
+.cq-hoja .cqc-ay.inc .bar i{background:rgba(196,96,90,.5)}
+.cq-hoja .cqc-ay .p{font-size:10.5px;color:#6B665C}
+.cq-hw.vert .t-perfil .pc:has(.pa) .pc-sp{display:none}
+.cq-hoja.fv .cq-kpis:has(.ka) ~ .cq-cuerpo .cqc-map{min-height:110px}
+/* Por año en datos (vertical) */
+.ta{display:grid;gap:calc(.35*var(--u));margin-top:calc(.3*var(--u))}
+.ta-r{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;column-gap:calc(.7*var(--u));padding-top:calc(.3*var(--u));border-top:1px solid rgba(0,0,0,.06)}
+.ta-y{font-size:calc(.85*var(--u));font-weight:600;color:#2B2926;white-space:nowrap}.ta-y em{font-style:normal;font-weight:400;color:#8A857A;font-size:calc(.75*var(--u))}
+.ta-r b{font:700 calc(1.15*var(--u))/1.1 var(--f-num);font-variant-numeric:tabular-nums;text-align:right;color:#2B2926}
+.ta-m{font-size:calc(.78*var(--u));color:#6B665C;text-align:right;white-space:nowrap}
+.t-perfil .ta-r{grid-template-columns:minmax(0,1fr) auto;row-gap:0}.t-perfil .ta-r .ta-m{grid-column:1/-1;text-align:left}
+.t-perfil .ta-r b{font-size:calc(1*var(--u))}
+.cq-kc .kc-a .pa-v small{font-size:.8em;font-weight:400;opacity:.75;margin-left:1px}
+.t-perfil .tc,.cq-kc.ka .tc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(.4*var(--u));margin:calc(.35*var(--u)) 0 calc(.25*var(--u));padding-top:calc(.35*var(--u));border-top:1px solid rgba(0,0,0,.06)}
+.t-perfil .tc span,.cq-kc.ka .tc span{display:flex;flex-direction:column;min-width:0}
+.t-perfil .tc i,.cq-kc.ka .tc i{font-style:normal;font-size:calc(.72*var(--u));color:#8A857A;line-height:1.1}
+.t-perfil .tc b,.cq-kc.ka .tc b{font:700 calc(1*var(--u))/1.15 var(--f-num);color:#2B2926;font-variant-numeric:tabular-nums}
+.t-perfil .tc em,.cq-kc.ka .tc em{font-style:normal;font-size:calc(.7*var(--u));color:#6B665C;line-height:1.1;white-space:nowrap}
+.pa-s.pa-m{color:#5E5A52;font-weight:600}.cq-kc.con-a .kc-a .pa-s.pa-m{color:#E8E2D2}

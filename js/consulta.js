@@ -327,6 +327,8 @@ function entender0(txt){
   else if (mes>=0){ toma(MES[mes]); if (anio) toma(anio[1]); const r1 = rangoMes(mes); q.d0 = r1[0]; q.d1 = r1[1];
     if (quin){ if (quin[1]==='primera') q.d1 = sumaDias(q.d0, 14); else q.d0 = sumaDias(q.d0, 15); } }
   else if (anio){ toma(anio[1]); q.d0 = anio[1]+'-01-01'; q.d1 = anio[1]+'-12-31'; }
+  // «desde octubre 2024», «de octubre 2024 a la fecha», «a partir de enero»: del inicio de ese mes al último dato
+  if (mes>=0 && ms.length<2 && !quin && (/ (desde|partir) /.test(t) || / (a la fecha|hasta la fecha|hasta hoy|a hoy|al dia de hoy|a la actualidad|hasta ahora) /.test(t))){ q.d1 = finBase(B); ['partir','fecha','hoy','actualidad','ahora','dia'].forEach(w => { if (t.indexOf(' '+w+' ')>=0) toma(w); }); }
   if (toma('sheinbaum')){ q.d0 = '2024-10-01'; }
   if (/ ultim[oa] mes /.test(t)){ tomaRaiz('ultim'); toma('mes'); q.d0 = iso(new Date(fecha0(FIN).getFullYear(), fecha0(FIN).getMonth(), 1)); }
   if (/ ultima semana /.test(t)){ tomaRaiz('ultim'); toma('semana'); q.d0 = sumaDias(FIN, -6); }
@@ -409,9 +411,9 @@ function docsPF(dim, nom){ const D = window.IANAMI_DATOS; if (!D || !D.docs) ret
   if (dim==='n'){ const i = idxNom(D.nats.map(x => x[0]), nom), r = i>=0 && D.docs.nat ? D.docs.nat[i] : null; return r ? { tot:r[0], h:r[1], m:r[2] } : null; }
   const i = idxNom(D.ests, nom); return i>=0 && D.docs.est ? { tot:D.docs.est[i] } : null; }
 function perfil(q){
-  const dim = q.perfil.dim, nom = q.perfil.nom, cz = q.perfil.cz, C = cubetas(q.d0, q.d1, 's'), cp = comparacionPF(q.d0, q.d1), g = [];
+  const dim = q.perfil.dim, nom = q.perfil.nom, cz = q.perfil.cz, C = cubetas(q.d0, q.d1, 's'), cp = comparacionPF(q.d0, q.d1), g = [], YS = aniosDe(q.d0, q.d1);
   PFD().forEach(([gn, col, l]) => { const cs = []; l.forEach(([k, n, ks]) => { if (k==='docs'){ const d = cz ? null : docsPF(dim, nom); if (d && d.tot) cs.push(Object.assign({ k:k, nom:n }, d)); return; }
-      const m = medirPF(ks, dim, nom, q.d0, q.d1, C, cp && cp.M, cz); if (m && m.tot>0) cs.push(Object.assign({ k:k, nom:n, ir:IR_PF[k] || k }, m)); });
+      const m = medirPF(ks, dim, nom, q.d0, q.d1, C, cp && cp.M, cz); if (m && m.tot>0){ if (YS.length>1) m.anios = (YS.map(Y => Object.assign({ v:(medirPF(ks, dim, nom, Y.a, Y.b, cubetas(Y.a, Y.b, 'm'), null, cz) || { tot:0 }).tot }, Y))); cs.push(Object.assign({ k:k, nom:n, ir:IR_PF[k] || k }, m)); } });
     g.push({ nom:gn, col:col, cs:cs }); });
   const todas = [].concat(...g.map(x => x.cs)), de = k => todas.find(c => c.k===k), ing = de('ing'), res = de('resc'), nat = dim==='n';
   const vac = c => c.k==='tram' && cp && cp.B && cp.B[0].slice(5,7)==='12';      // el INM cierra oficinas a fin de año
@@ -425,6 +427,15 @@ function perfil(q){
   if (cz) resp = resp.replace(/personas de [^<]+<\/b> por puntos de internación/, 'personas de '+esc(nom)+'</b> por '+esc(cz.nom)).replace('No hay registros de '+esc(nom), 'No hay registros de '+esc(nom)+' en '+esc(cz.nom));
   return { q:q, ind:ind, B:BASES[ind.b], tipo:'perfil', pf:{ dim:dim, nom:cz ? nom+' en '+cz.nom : nom, nomN:nom, cz:cz, g:g, cp:cp, C:C, dias:difDias(q.d0, q.d1)+1, fin:fin }, total:todas.reduce((s,c) => s+c.tot, 0), resp:'', frasePF:resp, avisos:(q.avisos || []).slice(), listas:[], partes:[], nomF:nom };
 }
+// Por año: parte el periodo en años de calendario; los años incompletos dicen qué meses cubren
+function aniosDe(d0, d1){ const y0 = +d0.slice(0,4), y1 = +d1.slice(0,4), l = [], ini = f => { const x = fecha0(f); return x.getDate()===1 ? MESC[x.getMonth()] : x.getDate()+' '+MESC[x.getMonth()]; }, finT = f => { const x = fecha0(f); return fecha0(sumaDias(f, 1)).getDate()===1 ? MESC[x.getMonth()] : x.getDate()+' '+MESC[x.getMonth()]; };
+  for (let y = y0; y<=y1; y++){ const a = y===y0 ? d0 : y+'-01-01', b = y===y1 ? d1 : y+'-12-31', ent = a.slice(5)==='01-01' && b.slice(5)==='12-31'; l.push({ y:y, a:a, b:b, ent:ent, sub:ent ? 'año completo' : ini(a)+'–'+finT(b) }); }
+  return l; }
+function barrasAnio(A, col, nna, sinMeses){ const pm = A[0].pm!=null, mx = Math.max(...A.map(x => pm ? x.pm : x.v), 1), c = v => nna && v>0 && v<5 ? '<5' : corto(v), cm = v => v>0 && v<1 ? '<1' : c(v);
+  return '<div class="pa" aria-label="Por año">'+A.map(x => '<div class="pa-c'+(x.ent ? '' : ' inc')+'"><span class="pa-v">'+(x.et || c(x.v))+'</span><span class="pa-b" style="height:'+Math.max((pm ? x.pm : x.v) ? 4 : 0, (pm ? x.pm : x.v)/mx*100).toFixed(1)+'%;background:'+col+'"></span><span class="pa-y">'+x.y+'</span>'+(sinMeses ? '' : '<span class="pa-s">'+x.sub+'</span>')+(pm ? '<span class="pa-s pa-m">'+cm(x.pm)+'/mes</span>' : x.ex ? '<span class="pa-s">'+x.ex+'</span>' : '')+'</div>').join('')+'</div>'; }
+// En vertical: solo datos, un renglón por año (total y promedio por mes)
+function datosAnio(A, nna, car){ const c = v => nna && v>0 && v<5 ? 'menos de 5' : miles(v);
+  return '<div class="ta">'+A.map(x => '<div class="ta-r'+(x.ent ? '' : ' inc')+'"><span class="ta-y">'+x.y+' <em>'+x.sub+'</em></span>'+(car ? '<b>'+x.v+' caravana'+(x.v===1 ? '' : 's')+'</b><span class="ta-m">'+x.ex+'</span>' : '<b>'+c(x.v)+'</b>')+'</div>').join('')+'</div>'; }
 function sparkPF(s, col){ if (s.length<3) return ''; const mx = Math.max(...s, 1), W = 200, H = 24, p = s.map((v,i) => (i/(s.length-1)*W).toFixed(1)+','+(H-2-v/mx*(H-4)).toFixed(1)).join(' ');
   return '<svg class="pc-sp" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,'+H+' '+p+' '+W+','+H+'" fill="'+col+'" fill-opacity=".13"/><polyline points="'+p+'" fill="none" stroke="'+col+'" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>'; }
 function hojaPF(r, fmt){
@@ -433,7 +444,7 @@ function hojaPF(r, fmt){
   const carta = (c, col) => c.k==='docs'
     ? '<div class="pc pc-al"><span class="pc-n">'+esc(c.nom)+'</span><b class="pc-v'+(miles(c.tot).length>8 ? ' lg' : '')+'">'+miles(c.tot)+'</b><span class="pc-d">al último corte · no sigue al periodo</span>'+(c.h!=null ? '<span class="pc-t">Hombres <b>'+deCien(c.h, c.tot)+'%</b> · mujeres <b>'+deCien(c.m, c.tot)+'%</b></span>' : '<span class="pc-t">Por sexo: sin dato por O.R.</span>')+'</div>'
     : '<button type="button" class="pc" data-cqind="'+c.ir+'" title="Ver solo '+esc(minus(c.nom))+'">'+(P.cp ? flecha(c) : '')+'<span class="pc-n">'+esc(c.nom)+'</span><b class="pc-v'+(miles(c.tot).length>8 ? ' lg' : '')+'">'+miles(c.tot)+'</b><span class="pc-d">'+(c.dia<1 ? 'menos de 1' : miles(c.dia))+' por día</span>'+
-      sparkPF(c.sem.filter((x,i) => sem[i]), col)+(c.top ? '<span class="pc-t">Encabeza <b>'+esc(c.top[0])+'</b> '+c.top[1]+'%</span>' : '')+'</button>';
+      sparkPF(c.sem.filter((x,i) => sem[i]), col)+(c.anios ? (fmt==='v' ? '<div class="tc">'+c.anios.map(x => '<span class="'+(x.ent ? '' : 'inc')+'"><i>'+x.y+'</i><b>'+(c.k==='can' && x.v>0 && x.v<5 ? '<5' : corto(x.v))+'</b><em>'+x.sub+'</em></span>').join('')+'</div>' : barrasAnio(c.anios, col, c.k==='can')) : '')+(c.top ? '<span class="pc-t">Encabeza <b>'+esc(c.top[0])+'</b> '+c.top[1]+'%</span>' : '')+'</button>';
   const grupos = P.g.map(x => '<section class="pg'+(x.nom==='Desde EE. UU.' ? ' uno' : '')+'" style="--c:'+x.col+'"><h3>'+x.nom+'</h3>'+(x.cs.length ? '<div class="pg-cs">'+x.cs.map(c => carta(c, x.col)).join('')+'</div>' : '<p class="pg-0">Sin registros '+(nat ? 'de '+esc(P.nom) : 'en esta O.R.')+'</p>')+'</section>').join('');
   const fte = 'DGCVM, DGCOR, SIRENNA y DGRAM'+(nat ? '' : ' · DGPMV');
   const html = '<article class="cq-hoja f'+fmt+' t-perfil">'+
@@ -608,6 +619,11 @@ function opBarrasV(l, nna, col){ return { grid:{ left:46, right:10, top:24, bott
   xAxis:eje({ type:'category', data:l.map(x => x[0]), axisLabel:{ interval:0, fontSize:10.5, color:'#2B2926', lineHeight:12, formatter:v => partir(v, 11) } }),
   yAxis:eje({ type:'value', axisLabel:{ formatter:v => corto(v) } }),
   series:[{ type:'bar', barMaxWidth:34, data:l.map(x => x[1]), itemStyle:{ color:col || VERDE, borderRadius:[3,3,0,0] }, label:{ show:true, position:'top', fontSize:10.5, color:'#2B2926', formatter:p => etiq(p.value, nna) } }] }; }
+// Por año: una barra por año; los incompletos más claros y con los meses que cubren
+function opAnio(A, nna){ return { grid:{ left:8, right:8, top:20, bottom:34 }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => { const x = A[p[0].dataIndex]; return '<b>'+x.y+'</b> · '+x.sub+'<br>'+cifra(x.v, nna); } },
+  xAxis:eje({ type:'category', data:A.map(x => String(x.y)), axisLabel:{ interval:0, fontSize:10.5, color:'#2B2926', lineHeight:13, formatter:(v, i) => '{a|'+v+'}\n{b|'+A[i].sub+'}', rich:{ a:{ fontSize:11, fontWeight:600, color:'#2B2926' }, b:{ fontSize:9.5, color:'#8A857A' } } } }),
+  yAxis:{ type:'value', show:false, splitLine:{ show:false } },
+  series:[{ type:'bar', barMaxWidth:46, barCategoryGap:'38%', data:A.map(x => ({ value:x.v, itemStyle:{ color:x.ent ? VERDE : 'rgba(47,102,87,.42)', borderRadius:[3,3,0,0] } })), label:{ show:true, position:'top', fontSize:10.5, fontWeight:600, color:'#2B2926', formatter:p => etiq(p.value, nna) } }] }; }
 // Barras horizontales de mayor a menor (listas cortas y celular)
 function opBarrasH(l, nna, col, T){ return { grid:{ left:8, right:T ? 130 : 54, top:6, bottom:6, containLabel:true }, tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:p => '<b>'+esc(l[p[0].dataIndex][0])+'</b><br>'+cifra(p[0].value, nna) },
   xAxis:eje({ type:'value', axisLabel:{ show:false } }), yAxis:eje({ type:'category', inverse:true, data:l.map(x => x[0]), axisLabel:{ color:'#2B2926', fontSize:11, formatter:v => v.length>22 ? v.slice(0,21)+'…' : v } }),
@@ -695,7 +711,7 @@ function hojaCar(r, fmt){
   // Sin caravanas en el periodo: la ficha no queda en blanco, muestra todas desde oct 2024 como contexto y dice cuánto duró la pausa
   const X0 = datosCar(r), vac = !X0.L.length && X0.A.length>0, rq = vac ? Object.assign({}, r.q, { d0:DD.inicio, d1:finBase(r.B) }) : r.q;
   const X = vac ? datosCar(Object.assign({}, r, { q:rq })) : X0, L = X.L, rec = X.rec, big = X.big, ahora = new Date(), ch = [], mk = op => { ch.push(op); return 'c'+(ch.length-1); };
-  const fte = 'DGCVM, registro de caravanas', tit = X0.titulo, N = 6, otras = Math.max(0, L.length-N);
+  const fte = 'DGCVM, registro de caravanas', tit = X0.titulo, N = fmt==='v' && aniosDe(rq.d0, rq.d1).length>1 ? 5 : 6, otras = Math.max(0, L.length-N);
   const pie = '<footer class="cq-pie"><span>— sin lugar de llegada reportado · personas estimadas al salir · nombres repetidos son caravanas distintas</span><span class="fte">Fuente: <b>'+fte+'</b><br>Datos al '+fechaTxt(finBase(r.B))+' · generado '+fechaTxt(iso(ahora))+' '+String(ahora.getHours()).padStart(2,'0')+':'+String(ahora.getMinutes()).padStart(2,'0')+'</span></footer>';
   const top = '<header class="cq-top"><div><div class="cq-ceja">IA-NAMI · Pulso · Caravanas</div><h2 class="cq-tit">'+esc(tit)+'</h2></div><div class="cq-meta"><b>'+rangoTxt(r.q.d0, r.q.d1)+'</b>'+fte+'</div></header>';
   if (!L.length) return { html:'<article class="cq-hoja f'+fmt+' t-car">'+top+'<div class="cq-hall"><b>No salieron caravanas '+esc(X.per)+'.</b> La más reciente registrada '+(X.A.length ? 'es «'+esc(X.A.slice().sort((a, b) => b.f.localeCompare(a.f))[0].n)+'», del '+fechaTxt(X.A.slice().sort((a, b) => b.f.localeCompare(a.f))[0].f)+'.' : 'no existe.')+'</div><div class="cq-cuerpo"></div>'+pie+'</article>', ch:[] };
@@ -742,17 +758,24 @@ function hojaCar(r, fmt){
       ...(X.corte<=rq.d1 && X.corte>=rq.d0 ? [{ type:'line', data:[[X.corte, 0]], symbol:'none', markLine:{ silent:true, symbol:'none', data:[{ xAxis:X.corte }], lineStyle:{ color:'#2B2926', type:[3,3] }, label:{ formatter:'hoy', position:'end', fontSize:9, color:'#2B2926', distance:1 } } }] : [])] });
   const lista = L.slice(0, N).map((c, i) => '<div class="cqc-r'+(i===0 ? ' nw' : '')+'"><span class="f"><b>'+fCor(c.f)+'</b><em>hace '+X.hace(c)+' d</em></span><span class="t"><b>'+esc(c.n)+'</b><i>'+esc(lugCor(c.s))+' → '+(c.d ? esc(c.d.split(',')[0]) : '—')+'</i></span><span class="v">≈'+miles(c.p)+'</span></div>').join('')+
     (otras ? '<div class="cqc-mas">y '+otras+' caravana'+(otras>1 ? 's' : '')+' más '+(vac ? 'desde oct 2024' : X.perCorto.replace('de ', 'en ').replace('del periodo', 'en el periodo'))+' · la lista completa va en Bullets</div>' : '');
-  const html = '<article class="cq-hoja f'+fmt+' t-car">'+top+'<div class="cq-kpis"><div class="cq-eti">Caravanas</div><div class="cq-kr">'+kpis+'</div></div>'+
+  const html = '<article class="cq-hoja f'+fmt+' t-car">'+top+'<div class="cq-kpis"><div class="cq-eti">Caravanas</div><div class="cq-kr">'+kpis+(vac || fmt!=='v' ? '' : anioCar(L, rq))+'</div></div>'+
     '<div class="cq-hall cqc-hall"><b>'+(vac ? 'No salieron caravanas '+esc(X0.per)+(pAnt && pSig ? ': entre '+nomCar(pAnt)+' ('+fCor(pAnt.f)+') y '+nomCar(pSig)+' ('+fCor(pSig.f)+') pasaron '+difDias(pAnt.f, pSig.f)+' días.' : pAnt ? ': la última fue '+nomCar(pAnt)+', hace '+X.hace(pAnt)+' días.' : '.') : hallCar(X))+'</b></div>'+
     '<div class="cq-cuerpo cqc-cu"><div class="cq-card"><h3>Recorrido</h3><span class="q">'+(vac ? 'sin caravanas '+esc(X0.per)+' · se muestran todas desde oct 2024' : hist.length ? 'rojo: '+(X.filt || fkUsa(r) || /^desde/.test(X.per) ? 'esta consulta' : esc(X.per.replace(/^(en|del) /, '')))+' · gris: las demás desde oct 2024 · ' : '')+(vac ? '' : 'ruta probable por la carretera costera')+(!vac && dest.length>1 ? ' · '+rutas.length+' con lugar de llegada' : '')+'</span><div class="cqc-map" data-ch="'+mapa+'"></div></div>'+
-    '<div class="cqc-der"><div class="cq-card"><h3>'+(vac ? 'Todas desde oct 2024 <small class="cqc-fr">▢ '+esc(X0.per.replace(/^(en|del) /, ''))+'</small>' : 'Las caravanas '+esc(X.perCorto))+'</h3><span class="q">'+(vac ? 'la franja marca '+esc(X0.per.replace(/^(en|del) /, '')) : 'de la más reciente a la más antigua')+'</span><div class="cqc-tl" data-ch="'+tl+'"></div><div class="cqc-ls">'+lista+'</div></div></div></div>'+pie+'</article>';
+    '<div class="cqc-der"><div class="cq-card"><h3>'+(vac ? 'Todas desde oct 2024 <small class="cqc-fr">▢ '+esc(X0.per.replace(/^(en|del) /, ''))+'</small>' : 'Las caravanas '+esc(X.perCorto))+'</h3><span class="q">'+(vac ? 'la franja marca '+esc(X0.per.replace(/^(en|del) /, '')) : 'de la más reciente a la más antigua')+'</span><div><div class="cqc-tl" data-ch="'+tl+'"></div>'+(fmt==='v' || vac ? '' : franjaCar(L, rq))+'</div><div class="cqc-ls">'+lista+'</div></div></div></div>'+pie+'</article>';
   return { html:html, ch:ch }; }
+function anioCar(L, rq){ const YS = aniosDe(rq.d0, rq.d1); if (YS.length<2) return '';
+  const A = YS.map(Y => { const l = L.filter(c => c.f>=Y.a && c.f<=Y.b), p = l.reduce((s,c) => s+c.p, 0); return Object.assign({ v:l.length, et:l.length+' car.', ex:'≈'+miles(p)+' pers.' }, Y); });
+  return '<div class="cq-kc ka" style="--c:#7E302B"><span class="n">Por año<small>caravanas y personas al salir</small></span>'+'<div class="tc">'+A.map(x => '<span class="'+(x.ent ? '' : 'inc')+'"><i>'+x.y+' · '+x.sub+'</i><b>'+x.v+' caravana'+(x.v===1 ? '' : 's')+'</b><em>'+x.ex+'</em></span>').join('')+'</div></div>'; }
+function franjaCar(L, rq){ const YS = aniosDe(rq.d0, rq.d1); if (YS.length<2) return '';
+  const A = YS.map(Y => { const l = L.filter(c => c.f>=Y.a && c.f<=Y.b); return Object.assign({ n:l.length, p:l.reduce((s,c) => s+c.p, 0) }, Y); }), mx = Math.max(...A.map(x => x.p), 1);
+  return '<div class="cqc-an">'+A.map(x => '<div class="cqc-ay'+(x.ent ? '' : ' inc')+'"><span class="y">'+x.y+' <em>'+x.sub+'</em></span><b>'+x.n+' caravana'+(x.n===1 ? '' : 's')+'</b><span class="bar"><i style="width:'+(x.p/mx*100).toFixed(1)+'%"></i></span><span class="p">≈'+miles(x.p)+' personas</span></div>').join('')+'</div>'; }
 function bulletsCar(r){ const X = datosCar(r), L = X.L, b = x => '<b>'+x+'</b>', l = [], q = r.q, n = L.length;
   const out = { tit:X.titulo, per:rangoTxt(q.d0, q.d1), l:l, nota:'Personas estimadas al salir.', fte:'DGCVM, registro de caravanas', fin:finBase(r.B) };
   if (!n){ l.push('Sin caravanas del '+rangoTxt(q.d0, q.d1).replace(' – ', ' al ')+'.'); return out; }
   const rec = X.rec, big = X.big, sa = Object.keys(X.sal).sort((a, c) => X.sal[c].n-X.sal[a].n || X.sal[c].p-X.sal[a].p), pc = k => '('+Math.round(X.sal[k].n/n*100)+'%) ';
   l.push(b(n+' caravana'+(n>1 ? 's' : ''))+' del '+rangoTxt(q.d0, q.d1).replace(' – ', ' al ')+', con '+b(mesa(X.tot))+' personas.');
   if (X.ritmo) l.push('Una cada '+b(X.ritmo)+' días.');
+  { const YS = aniosDe(q.d0, q.d1); if (YS.length>1) l.push('Por año: '+lineaAnios(YS.map(Y => { const k = L.filter(c => c.f>=Y.a && c.f<=Y.b); return Object.assign({ n:k.length, p:k.reduce((t, c) => t+(c.p || 0), 0) }, Y); }), x => b(x.n)+' caravana'+(x.n===1 ? '' : 's')+' (≈'+mesa(x.p)+' personas)')+'.'); }
   const fb = f => q.d0.slice(0,4)!==q.d1.slice(0,4) ? fechaTxt(f) : fCor(f);
   l.push('Más reciente: '+nomCar(rec)+', '+fb(rec.f)+(X.hace(rec)<=90 ? ' (hace '+X.hace(rec)+' días)' : '')+', '+esc(lugCor(rec.s))+' · '+b(mesa(rec.p))+' personas.');
   if (n>1 && big!==rec) l.push('Más grande: '+nomCar(big)+', '+fb(big.f)+' · '+b(mesa(big.p))+' personas.');
@@ -773,12 +796,17 @@ function hoja(r, fmt, angosta){
   let kpis = '', eti = '', cuerpo = '', una = false;
   const PLU = { 'O.R.':'O.R.', 'Nacionalidad':'nacionalidades', 'Punto de internación':'puntos', 'Punto de repatriación':'puntos', 'Estación':'estaciones', 'Documento':'documentos', 'Estado':'estados', 'Oficina':'oficinas', 'Tipo de trámite':'tipos de trámite' };
   const tot = tarjeta(cap(r.ind.nom), r.B.fuente, cifra(T, nna), r.antes!=null && r.antes>=30 ? (T>=r.antes ? '▲ ' : '▼ ')+Math.abs((T/r.antes-1)*100).toFixed(1)+'% contra el periodo anterior' : (L1 && PLU[L1.nom] ? 'en '+L1.filas.length+' '+PLU[L1.nom] : ''), '#2B2926', true);
+  // Por año: si el periodo abarca más de un año, el total lleva sus barras por año (los años incompletos, más claros)
+  const YS = !T || r.B.foto || /^(cambio|comp)$/.test(r.tipo) ? [] : aniosDe(q.d0 > r.B.inicio ? q.d0 : r.B.inicio, q.d1 < finBase(r.B) ? q.d1 : finBase(r.B));
+  const A = YS.length>1 ? (YS.map(Y => Object.assign({ v:total(Object.assign({}, r.base, { d0:Y.a, d1:Y.b })) }, Y))) : null;
+  const totA = !A ? tot : fmt==='v' ? tot+'<div class="cq-kc ka" style="--c:#2B2926"><span class="n">Por año<small>total de cada año</small></span>'+datosAnio(A, nna)+'</div>'
+    : tot.replace('class="cq-kc on"', 'class="cq-kc on con-a"').replace(/<\/div>$/, barrasAnio(A, '#F4F2EA', nna).replace('class="pa"', 'class="pa kc-a"')+'</div>');
   // tendencia chica por semana para el lado de la hoja
   function semanal(){ const C = cubetas(q.d0, q.d1, 'auto'); if (C.l.length<3) return ''; return tarjetaCh(mk(opLinea(C, [{ nom:cap(r.ind.nom), v:serie(r.base, C), col:VERDE }], nna, true)), 'En el tiempo', 'por '+{d:'día',s:'semana',m:'mes'}[C.g]+' · franja: rango habitual'); }
   if (!T){ cuerpo = '<div class="cq-vacio">No hay registros con esta combinación en el periodo. Quita un filtro o amplía las fechas.</div>'; una = true; }
   else if (r.tipo==='prop'){
     eti = cap(r.ind.nom)+(fraseFiltros(q) ? ' '+fraseFiltros(q) : '');
-    kpis = tot+r.partes.map(x => tarjeta(x.p.nom, '', cifra(x.v, nna), T>=30 ? '<b>'+deCien(x.v,T)+'</b> de cada 100' : 'de '+cifra(T, nna), x.col)).join('');
+    kpis = totA+r.partes.map(x => tarjeta(x.p.nom, '', cifra(x.v, nna), T>=30 ? '<b>'+deCien(x.v,T)+'</b> de cada 100' : 'de '+cifra(T, nna), x.col)).join('');
     const nP = fmt==='v' ? 5 : 6;
     cuerpo = (L1 ? tarjetaCh(mk(opCien(r, L1.filas.slice(0,nP))), 'De cada 100, por '+min(L1.nom), r.partes.map(x => minus(x.p.nom)).join(' y ')+' · las '+Math.min(nP, L1.filas.length)+' con más '+r.ind.nom) : '')+
              (L2 ? tarjetaCh(mk(opCien(r, L2.filas.slice(0,nP))), 'De cada 100, por '+min(L2.nom), r.partes.map(x => minus(x.p.nom)).join(' y ')+' · las '+Math.min(nP, L2.filas.length)+' con más '+r.ind.nom) : '');
@@ -787,7 +815,7 @@ function hoja(r, fmt, angosta){
   else if (r.tipo==='tiempo'){
     const s = r.serie, C = r.C, n = s.length, prom = s.reduce((a,b) => a+b, 0)/Math.max(1,n), mk2 = s.indexOf(Math.max(...s)), u = { d:'día', s:'semana', m:'mes' }[C.g];
     eti = cap(r.ind.nom)+(fraseFiltros(q) ? ' '+fraseFiltros(q) : '');
-    kpis = tot+tarjeta('Promedio por '+u, '', cifra(prom, nna), n+' '+(u==='mes' ? 'meses' : u+'s'), SALVIA)+tarjeta('Más alto', '', cifra(s[mk2], nna), nomCub(C, mk2), OCRE);
+    kpis = totA+tarjeta('Promedio por '+u, '', cifra(prom, nna), n+' '+(u==='mes' ? 'meses' : u+'s'), SALVIA)+tarjeta('Más alto', '', cifra(s[mk2], nna), nomCub(C, mk2), OCRE);
     cuerpo = tarjetaCh(mk(opLinea(C, [{ nom:cap(r.ind.nom), v:s, col:VERDE }], nna, true)), cap(r.ind.nom)+' por '+u, 'franja: rango habitual · punto hueco: periodo incompleto')+
              (L1 ? tarjetaCh(mk(opBarrasH(top(L1, 5), nna)), 'Por '+min(L1.nom), 'las 5 principales del periodo') : '');
     una = !L1;
@@ -817,7 +845,7 @@ function hoja(r, fmt, angosta){
   else if (r.tipo==='fuentes'){
     eti = 'Rescatados'+(fraseFiltros(q) ? ' '+fraseFiltros(q) : '')+' · reporte de las O.R. comparado con el sistema';
     const sir = r.sis.nna+r.sis.adu;
-    kpis = tot+tarjeta('Presentados', 'O.R. → sistema DGCVM', miles(r.v.pre)+' → '+miles(r.sis.pre), 'el sistema registra <b>'+deCien(r.sis.pre, r.v.pre)+'</b> por cada 100', VERDE)+
+    kpis = totA+tarjeta('Presentados', 'O.R. → sistema DGCVM', miles(r.v.pre)+' → '+miles(r.sis.pre), 'el sistema registra <b>'+deCien(r.sis.pre, r.v.pre)+'</b> por cada 100', VERDE)+
                 tarjeta('Canalizados', 'O.R. → SIRENNA', miles(r.v.can)+' → '+miles(sir), 'SIRENNA registra <b>'+deCien(sir, r.v.can)+'</b> por cada 100', ROJO);
     cuerpo = tarjetaCh(mk(opIndice(r.fl[0].filas.slice(0,6))), 'Presentados por O.R.', 'cuántos registra el sistema por cada 100 que reporta la O.R. · rojo: menos de 20')+
              tarjetaCh(mk(opIndice(r.fl[1].filas.slice(0,6))), 'Presentados por nacionalidad', 'cuántos registra el sistema por cada 100 que reporta la O.R.');
@@ -825,7 +853,7 @@ function hoja(r, fmt, angosta){
   else {   // ranking
     eti = cap(r.ind.nom)+(fraseFiltros(q) ? ' '+fraseFiltros(q) : '');
     const ch2 = r.ind.k==='ing' && !(r.q.filtros.n || []).length ? null : dimChica(r), Td = ch2 ? ch2.l.reduce((s,x) => s+x[1], 0) : 0, pg = !ch2 && r.ind.partes ? r.ind.partes.filter(p => p.g===1).slice(0,3) : [];
-    kpis = tot+(ch2 ? ch2.l.slice(0,3).map(([k,v],j) => tarjeta(r.B.dims[ch2.dim].vals[k], '', cifra(v, nna), nna && v>0 && v<5 ? 'cifra protegida' : '<b>'+deCien(v, Td)+'</b> de cada 100', [SALVIA, ROJO, OCRE][j])).join('')
+    kpis = totA+(ch2 ? ch2.l.slice(0,3).map(([k,v],j) => tarjeta(r.B.dims[ch2.dim].vals[k], '', cifra(v, nna), nna && v>0 && v<5 ? 'cifra protegida' : '<b>'+deCien(v, Td)+'</b> de cada 100', [SALVIA, ROJO, OCRE][j])).join('')
       : pg.length ? pg.map((p,j) => { const v = total(Object.assign({}, r.base, medParte(r.ind, p))); return tarjeta(p.nom, '', cifra(v, nna), T>=30 ? '<b>'+deCien(v, T)+'</b> de cada 100' : '', [VERDE, ROJO, OCRE][j]); }).join('')
       : [L1, L2].filter(L => L && L.filas.length>=2).map((L,j) => tarjeta(L.filas[0].nom, 'principal '+(PLU[L.nom] ? 'entre '+L.filas.length+' '+PLU[L.nom] : 'por '+min(L.nom)), cifra(L.filas[0].v, nna), T>=30 ? '<b>'+deCien(L.filas[0].v, T)+'</b> de cada 100' : '', [VERDE, OCRE][j])).join('')+
         (() => { const C = cubetas(q.d0, q.d1, 'auto'); if (C.l.length<3) return ''; const s = serie(r.base, C), c = C.l.filter(x => !x.inc).length || s.length, u = { d:'día', s:'semana', m:'mes' }[C.g];
@@ -836,6 +864,10 @@ function hoja(r, fmt, angosta){
              (L2 && !(ch2 && ch2.dim===L2.dim) && !(/^ing/.test(r.ind.k) && (q.filtros.e || q.filtros.n)) ? tarjetaCh(mk(opBarrasH(top(L2, 5), nna, OCRE, T)), 'Por '+min(L2.nom), 'las 5 principales') : semanal());
     if (!cuerpo && r.B.foto){ cuerpo = '<div class="cq-vacio">Con estos filtros juntos la base no trae más desglose. Quita uno para ver el reparto.</div>'; una = true; } else una = false;
   }
+  if (false && A && fmt!=='v' && /^(rank|tiempo|prop)$/.test(r.tipo) && cuerpo.indexOf('cq-vacio')<0){
+    const cA = tarjetaCh(mk(opAnio(A, nna)), 'Por año', 'total de cada año del periodo · barra clara: año incompleto'), i = cuerpo.indexOf('<div class="cq-card">', 1);
+    if (i>0) (cuerpo.slice(i).match(/data-ch="c(\d+)"/g) || []).forEach(m => { const o = ch[+m.match(/\d+/)[0]]; [].concat(o && o.yAxis || []).forEach(y => { y.splitNumber = 2; }); });   // en media altura, menos rayas en el eje
+    cuerpo = i<0 ? cuerpo+cA : cuerpo.slice(0, i)+'<div class="cq-col">'+cA+cuerpo.slice(i)+'</div>'; una = false; }
   const html = '<article class="cq-hoja f'+fmt+' t-'+r.tipo+(una ? ' una' : '')+'">'+
     '<header class="cq-top"><div><div class="cq-ceja">IA-NAMI · '+esc(r.ind.proc)+'</div><h2 class="cq-tit">'+esc(titulo(r))+'</h2></div><div class="cq-meta"><b>'+(r.B.foto ? 'Al '+fechaTxt(r.B.inicio) : rangoTxt(q.d0, q.d1))+'</b>'+esc(fte)+'</div></header>'+
     (kpis ? '<div class="cq-kpis"><div class="cq-eti">'+esc(eti)+'</div><div class="cq-kr">'+kpis+'</div></div>' : '')+
@@ -854,11 +886,13 @@ const pcB = (a, T, nna) => { if (!T || (nna && a>0 && a<5)) return ''; const x =
 const flB = x => (x>=0 ? '▲ ' : '▼ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%';
 const GRUPO_IND = { ing:'r', ingmx:'r', ingext:'r', seg:'r', rech:'r', tram:'r', dv:'r', va:'r', resc:'i', pres:'i', ret:'i', nna:'i', adu:'i', carp:'i', carn:'i', rec:'u', rep:'u', cbp:'u' };
 const colInd = r => r.tipo==='perfil' ? '#2B2926' : ({ r:VERDE, i:ROJO, u:OCRE })[GRUPO_IND[r.ind.k]] || VERDE;
+// «Por año: 2024 (oct–dic) 280 MIL 260 · 2025 216 MIL 932 · …»
+const lineaAnios = (A, f) => A.map(x => x.y+(x.ent ? '' : ' ('+x.sub+')')+' '+f(x)).join(' · ');
 function bullets(r){
   if (r.ind.k==='carn' || r.ind.k==='carp') return bulletsCar(r);
   const q = r.q, b = x => '<b>'+x+'</b>', l = [];
   if (r.tipo==='perfil'){ const P = r.pf;
-    P.g.forEach(g => g.cs.forEach(c => l.push(b(mesa(c.tot))+' '+esc(minus(c.nom))+(c.k==='docs' ? ', al último corte' : '')+(c.cam!=null && P.cp ? ' ('+flB(c.cam)+' '+P.cp.corto+')' : '')+(c.top ? '; encabeza '+esc(c.top[0])+' ('+c.top[1]+'%)' : '')+'.')));
+    P.g.forEach(g => g.cs.forEach(c => l.push(b(mesa(c.tot))+' '+esc(minus(c.nom))+(c.k==='docs' ? ', al último corte' : '')+(c.cam!=null && P.cp ? ' ('+flB(c.cam)+' '+P.cp.corto+')' : '')+(c.top ? '; encabeza '+esc(c.top[0])+' ('+c.top[1]+'%)' : '')+'.'+(c.anios ? ' Por año: '+lineaAnios(c.anios, x => b(mesa(x.v, c.k==='can')))+'.' : ''))));
     if (!l.length) l.push('Sin registros de '+esc(P.nom)+' en el periodo.');
     return { tit:'Todo de '+(P.dim==='e' ? 'O.R. ' : '')+P.nom, per:rangoTxt(q.d0, q.d1), l:l, nota:'Las cifras no se suman entre sí: una persona puede contar en varios indicadores.', fte:'DGCVM, DGCOR, SIRENNA, DGRAM'+(P.dim==='n' ? ' y CBP' : ' y DGPMV'), fin:P.fin }; }
   const B = r.B, foto = B.foto, nna = r.ind.nna, T = r.total, nf = esc(r.nomF), dias = difDias(q.d0, q.d1)+1;
@@ -882,6 +916,8 @@ function bullets(r){
   l.push(b(mesa(T, nna))+' '+nf+' '+per+'.');
   if (r.antes!=null && r.antes>=30) l.push(flB((T/r.antes-1)*100)+' contra los '+dias+' días anteriores ('+b(mesa(r.antes, nna))+', '+r.antesTxt+').');
   if (!foto && !r.ind.pocos && dias>1) l.push('Promedio: '+b(mesa(T/dias, nna))+' por día.');
+  if (!foto && /^(rank|tiempo|prop)$/.test(r.tipo)){ const YS = aniosDe(q.d0 > B.inicio ? q.d0 : B.inicio, q.d1 < finBase(B) ? q.d1 : finBase(B));
+    if (YS.length>1) l.push('Por año: '+lineaAnios(YS.map(Y => Object.assign({ v:total(Object.assign({}, r.base, { d0:Y.a, d1:Y.b })) }, Y)), x => b(mesa(x.v, nna)))+'.'); }
   const ch = r.partes.length || (r.ind.k==='ing' && !(r.q.filtros.n || []).length) ? null : dimChica(r);
   if (!r.partes.length && r.ind.k==='ing' && !(r.q.filtros.n || []).length) l.push(r.ind.partes.filter(p => p.g===1).map(p => { const v = total(Object.assign({}, r.base, medParte(r.ind, p))); return pcB(v, T)+' '+b(mesa(v))+' '+esc(minus(p.nom)); }).join(' + ')+'.');
   if (r.partes.length) r.partes.forEach(x => l.push((pcB(x.v, T, nna)+' '+b(mesa(x.v, nna))+' '+esc(minus(x.p.nom))).trim()+'.'));
