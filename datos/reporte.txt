@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-11-13 09:51
+Generado: 2026-11-13 10:55
 Periodo de las bases: 2024-10-01 a 2026-11-11 (772 días)
 
 == Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-11 entregado 2026-11-13.xlsx  ·  cargado 2026-11-13
@@ -17,7 +17,7 @@ Periodo de las bases: 2024-10-01 a 2026-11-11 (772 días)
    En «Otras» nacionalidades: 2 (0.0%)
    · 1,970 casos (1,401 renglones) vienen con nacionalidad mexicana; no se cuentan en segunda revisión ni en rechazos (igual que Control migratorio)
 
-== Trámites  ·  DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx  ·  cargado 2026-10-13
+== Trámites  ·  DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx  ·  cargado 2026-11-13
    976,055 renglones · total 976,055 · del 2024-10-02 al 2026-11-11
    Días sin datos: 193 → 2024-10-01, 2024-10-13, 2024-10-19, 2024-10-20, 2024-10-26, 2024-10-27, 2024-11-02, 2024-11-03, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01, 2024-12-08, 2024-12-15 …
    En «Otras» nacionalidades: 38,665 (4.0%)
@@ -78,12 +78,9 @@ Periodo de las bases: 2024-10-01 a 2026-11-11 (772 días)
 
 == Documentos vigentes estado × país  ·  DGRAM Extranjerios_DocVigente_EdosvsPaises 2026-10-28.xlsx  ·  cargado 2026-11-05
 
-== Encuentros CBP  ·  CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-01 entregado 2026-11-05.xlsx  ·  cargado 2026-11-05
-   10,350 renglones · total 580,027 · del 2024-10-01 al 2026-11-01
-   Días sin datos: 10 → 2026-11-02, 2026-11-03, 2026-11-04, 2026-11-05, 2026-11-06, 2026-11-07, 2026-11-08, 2026-11-09, 2026-11-10, 2026-11-11
-   · Encabezado «FECHA» leído como «DIA».
-   · Encabezado «ENCUENTRO» leído como «AGENCIA».
-   · CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-01 entregado 2026-11-05.xlsx: las hojas «Hoja2» no se usaron (están ocultas o no tienen las columnas de la base). Si traen datos que deben contar, pedir al área que los pase a la hoja principal.
+== Encuentros CBP  ·  CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-09 entregado 2026-11-13.xlsx  ·  cargado 2026-11-13
+   10,454 renglones · total 582,965 · del 2024-10-01 al 2026-11-09
+   Días sin datos: 2 → 2026-11-10, 2026-11-11
 
 == Caravanas  ·  CARAVANAS MIGRANTES.xlsx  ·  cargado 2026-11-12
    24 caravanas · del 2024-10-05 al 2026-11-06
