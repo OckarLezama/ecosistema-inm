@@ -286,7 +286,7 @@ def cargar_tram(t):
     edades = {"00": 0, "12": 1, "18": 2, "25": 3, "35": 4, "45": 5, "55": 6, "65": 7}
     t["edad"] = t["RANGOS DE EDAD"].map(lambda x: edades.get(str(x).strip()[:2], -1))
     # Expiden / no expiden tarjeta («Tipo de conclusión») y dentro / fuera del plazo normativo
-    t["exp"] = t["TIPO DE CONCLUSION"].map(lambda x: 0 if norm(x).startswith("CON EXPEDICION") else 1) if "TIPO DE CONCLUSION" in t.columns else 0
+    t["exp"] = (~lector.con_tarjeta(t)).astype(int) if {"TIPO DE CONCLUSION", "TIPO DE MODALIDAD"} & set(t.columns) else 0
     t["plz"] = t["DENTRO O FUERA DEL PLAZO NORMATIVO"].map(lambda x: 1 if "FUERA" in norm(x) else 0) if "DENTRO O FUERA DEL PLAZO NORMATIVO" in t.columns else 0
     t["res"] = t["TIPO DE RESOLUCION ESPECIFICA"].map(lambda x: {"POSITIVOS": 0, "NEGATIVOS": 1}.get(norm(x), 2))
     empleador = int((t["PAIS / EMPLEADOR"].map(norm) == "EMPLEADOR").sum())

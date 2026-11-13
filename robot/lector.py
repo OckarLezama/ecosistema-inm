@@ -382,6 +382,16 @@ DOC = ("CONSTANCIA", "OFICIO", "PERMISO", "SIN EXPEDICION", "TARJETA")
 SIN_TIPO = "TARJETA SIN TIPO REGISTRADO"
 
 
+def con_tarjeta(t):
+    """Trámites que terminaron con tarjeta. Hasta oct 2026 venía en «Tipo de conclusión» («Con expedición de tarjeta…»);
+    desde nov 2026 DGRAM lo llama «Tipo de modalidad» («Tarjetas migratorias…» / «Expedición de otros documentos…»)."""
+    if "TIPO DE CONCLUSION" in t.columns:
+        return t["TIPO DE CONCLUSION"].map(norm).str.startswith("CON EXPEDICION")
+    if "TIPO DE MODALIDAD" in t.columns:
+        return t["TIPO DE MODALIDAD"].map(norm).str.startswith("TARJETA")
+    return pd.Series(False, index=t.index)
+
+
 def documentos_tramite(t):
     """Desde 2026 la base de DGRAM trae un renglón por trámite y marca con 1 cada documento. Trae dos errores
     de captura que aquí se corrigen y se avisan: trámites con tarjeta que también marcan «Sin expedición»
@@ -393,7 +403,7 @@ def documentos_tramite(t):
     if X.values.max(initial=0) > 1:                          # formato agrupado (conteos): se usa tal cual
         t[docs] = X
         return t, docs
-    con = t["TIPO DE CONCLUSION"].map(norm).str.startswith("CON EXPEDICION") if "TIPO DE CONCLUSION" in t.columns else pd.Series(False, index=t.index)
+    con = con_tarjeta(t)
     tarj = X[[c for c in docs if c.startswith("TARJETA")]].sum(axis=1) > 0
     if sin:
         doble = con & tarj & (X[sin] > 0)

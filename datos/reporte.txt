@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-11-13 09:02
+Generado: 2026-11-13 09:51
 Periodo de las bases: 2024-10-01 a 2026-11-11 (772 días)
 
 == Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-11 entregado 2026-11-13.xlsx  ·  cargado 2026-11-13
@@ -17,16 +17,14 @@ Periodo de las bases: 2024-10-01 a 2026-11-11 (772 días)
    En «Otras» nacionalidades: 2 (0.0%)
    · 1,970 casos (1,401 renglones) vienen con nacionalidad mexicana; no se cuentan en segunda revisión ni en rechazos (igual que Control migratorio)
 
-== Trámites  ·  DGRAM TRAMITES MIGRATORIOS 14 al 16 oct 26.xlsx, DGRAM TRAMITES MIGRATORIOS 19 oct al 6 nov 26.xlsx, DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx  ·  cargado 2026-11-11
-   969,530 renglones · total 969,530 · del 2024-10-02 al 2026-11-06
-   Días sin datos: 196 → 2024-10-01, 2024-10-13, 2024-10-19, 2024-10-20, 2024-10-26, 2024-10-27, 2024-11-02, 2024-11-03, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01, 2024-12-08, 2024-12-15 …
-   En «Otras» nacionalidades: 38,584 (4.0%)
-   · 8 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Reunion, Timor-Leste, Islas Marianas.
-   · 4,010 renglones son de empleadores, no de personas (se cuentan en el total, sin nacionalidad)
+== Trámites  ·  DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx  ·  cargado 2026-10-13
+   976,055 renglones · total 976,055 · del 2024-10-02 al 2026-11-11
+   Días sin datos: 193 → 2024-10-01, 2024-10-13, 2024-10-19, 2024-10-20, 2024-10-26, 2024-10-27, 2024-11-02, 2024-11-03, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01, 2024-12-08, 2024-12-15 …
+   En «Otras» nacionalidades: 38,665 (4.0%)
+   · 10 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Reunion, Timor-Leste, De las Islas Ultramarinas de Estados Unidos, Islas Marianas.
+   · 38,513 renglones son de empleadores, no de personas (se cuentan en el total, sin nacionalidad)
    · 358,011 renglones son de antes del 1 oct 2024 (el más antiguo, del 2024-01-02). No se usan: la plataforma empieza el 1 oct 2024.
-   · 595,460 trámites con tarjeta marcan también «Sin expedición de documento»; se cuentan solo con su tarjeta.
-   · 48,689 trámites no marcan ningún documento: 45,636 terminaron con tarjeta (se cuentan como «Tarjeta sin tipo registrado») y 3,053 sin tarjeta (se cuentan como «Sin expedición»).
-   · [corregir] Entre los trámites concluidos, «Tipo de resolución» dice 33,989 «En proceso» y 20,042 «Cancelados»; 28,573 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
+   · [corregir] Entre los trámites concluidos, «Tipo de resolución» dice 25,493 «En proceso» y 0 «Cancelados»; 22,634 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
 
 == Rescates  ·  DGCOR RESCATES consolidado 2024-10-01 a 2026-11-11 entregado 2026-11-13.xlsx  ·  cargado 2026-11-13
    54,751 renglones · total 905,108 · del 2024-10-01 al 2026-11-11
@@ -70,7 +68,6 @@ Periodo de las bases: 2024-10-01 a 2026-11-11 (772 días)
 == Repatriados  ·  DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-11 entregado 2026-11-13.xlsx  ·  cargado 2026-11-13
    7,775 renglones · total 385,240 · del 2024-10-01 al 2026-11-11
    Días sin datos: 0
-   · Puntos de repatriación sin coordenadas: A. I. de Mérida, A.I San Luis Potosí, A.I Tulum, A.I. Tapachula, Campeche
    · [corregir] Revisar el 20 oct: 199, menos de un tercio de lo normal para ese día de la semana (≈832). Puede faltar parte del archivo.
    · [corregir] Revisar el 29 oct: 47, menos de un tercio de lo normal para ese día de la semana (≈667). Puede faltar parte del archivo.
    · [corregir] Revisar el 7 nov: 57, menos de un tercio de lo normal para ese día de la semana (≈411). Puede faltar parte del archivo.

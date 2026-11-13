@@ -206,7 +206,13 @@ PUNTOS_REPATRIACION = {'Punto de Internación El Chaparral, B.C.': ('El Chaparra
  'Aeropuerto Internacional de Campeche': ('Campeche (vuelos)', -90.5, 19.82),
  'A. I. San Luis Potosí': ('San Luis Potosí (vuelos)', -100.93, 22.25),
  'A. I. Guadalajara': ('Guadalajara (vuelos)', -103.31, 20.52),
- 'A. I. Monterrey': ('Monterrey (vuelos)', -100.11, 25.78)}
+ 'A. I. Monterrey': ('Monterrey (vuelos)', -100.11, 25.78),
+ # nov 2026: la base de DGPMV escribe así algunos aeropuertos
+ 'A.I Tulum': ('Tulum (vuelos)', -87.61, 20.09),
+ 'A. I. de Mérida': ('Mérida (vuelos)', -89.66, 20.94),
+ 'A.I San Luis Potosí': ('San Luis Potosí (vuelos)', -100.93, 22.25),
+ 'A.I. Tapachula': ('Tapachula (vuelos)', -92.37, 14.79),
+ 'Campeche': ('Campeche (vuelos)', -90.5, 19.82)}
 
 # estación o estancia: (longitud, latitud)
 ESTACIONES = {'Estación Migratoria Tuxtla Gutiérrez': (-93.12, 16.75),
