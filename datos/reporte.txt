@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-11-13 10:55
+Generado: 2026-11-13 11:44
 Periodo de las bases: 2024-10-01 a 2026-11-11 (772 días)
 
 == Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-11 entregado 2026-11-13.xlsx  ·  cargado 2026-11-13
@@ -72,11 +72,11 @@ Periodo de las bases: 2024-10-01 a 2026-11-11 (772 días)
    · [corregir] Revisar el 29 oct: 47, menos de un tercio de lo normal para ese día de la semana (≈667). Puede faltar parte del archivo.
    · [corregir] Revisar el 7 nov: 57, menos de un tercio de lo normal para ese día de la semana (≈411). Puede faltar parte del archivo.
 
-== Documentos vigentes por estado  ·  DGRAM Extranjerios_DocVigente_Estados 2026-10-28.xlsx  ·  cargado 2026-11-05
+== Documentos vigentes por estado  ·  DGRAM Extranjerios_DocVigente_Estados 2026-11-10.xlsx  ·  cargado 2026-11-13
 
-== Documentos vigentes por país  ·  DGRAM Extranjerios_DocVigente_Paises 2026-10-28.xlsx  ·  cargado 2026-11-05
+== Documentos vigentes por país  ·  DGRAM Extranjerios_DocVigente_Paises 2026-11-10.xlsx  ·  cargado 2026-11-13
 
-== Documentos vigentes estado × país  ·  DGRAM Extranjerios_DocVigente_EdosvsPaises 2026-10-28.xlsx  ·  cargado 2026-11-05
+== Documentos vigentes estado × país  ·  DGRAM Extranjerios_DocVigente_EdosvsPaises 2026-11-10.xlsx  ·  cargado 2026-11-13
 
 == Encuentros CBP  ·  CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-09 entregado 2026-11-13.xlsx  ·  cargado 2026-11-13
    10,454 renglones · total 582,965 · del 2024-10-01 al 2026-11-09

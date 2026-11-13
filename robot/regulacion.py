@@ -126,6 +126,8 @@ def vigentes(origen):
     o = {}
     for ruta in lector.por_entrega(glob.glob(os.path.join(origen, "*.xlsx")), origen):   # si hay varias entregas, la más reciente queda al final y manda
         fila0 = [norm(x) for x in lector.primera_fila(ruta)]
+        if fila0 and fila0[0] == "ENTIDADES FEDERATIVAS":
+            fila0[0] = "O.R."                                                            # estado × país desde el 10 nov 2026
         todos = fila0[:2] == ["O.R.", "TOTAL"] and "TOTAL GENERAL" not in fila0     # estado × país desde nov 2026: todos los países, sin «Otros países»
         if fila0 and fila0[0] == "PAISES Y TERRITORIOS":
             fila0[0] = "NACIONALIDAD"                                                    # documentos por país desde nov 2026
@@ -137,7 +139,7 @@ def vigentes(origen):
             fila0[0] = "NACIONALIDAD"
         if "OTROS PAISES" in fila0 or todos:
             t.columns = [str(x).strip() for x in t.iloc[0]]
-            t = t.iloc[1:]
+            t = t.rename(columns={t.columns[0]: "O.R."}).iloc[1:]
             t = t[t["O.R."].notna() & ~t["O.R."].astype(str).str.upper().str.contains("TOTAL")]
             paises = [c for c in t.columns[4 if "OTROS PAISES" in fila0 else 2:]]
             o["dv_e"] = [ESTADO.get(norm(x), str(x).strip()) for x in t["O.R."]]

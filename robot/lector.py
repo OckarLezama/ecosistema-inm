@@ -37,7 +37,8 @@ RENOMBRES = [("FECHA", "DIA", {"LOCATION", "CIUDAD EEUU", "TOTAL"}),            
            ("OR", "O.R.", {"PUNTO DE INTERNACION", "TIPO", "NACIONALIDAD"}),
            ("CONNACIONALES PROVENIENTES DE:", "PAIS", {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"}),   # DGPMV Guatemala-Honduras, oct 2026
            ("CONNACIONALES PROVENIENTES DE", "PAIS", {"MEXICANOS REPATRIADOS", "PUNTO INTERNACION"}),
-           ("PAISES Y TERRITORIOS", "NACIONALIDAD", {"TOTAL GENERAL"})]                       # DGRAM documentos vigentes por país, nov 2026
+           ("PAISES Y TERRITORIOS", "NACIONALIDAD", {"TOTAL GENERAL"}),                       # DGRAM documentos vigentes por país, nov 2026
+           ("ENTIDADES FEDERATIVAS", "O.R.", {"TOTAL", "GUATEMALA"})]                        # DGRAM documentos vigentes estado × país, 10 nov 2026                       # DGRAM documentos vigentes por país, nov 2026
 AVISOS = {}          # nombre de la base → observaciones (sin repetir)
 PERIODOS = {}        # nombre de la base → {desde, hasta, archivo, filas}: lo que lee cada robot fuera de datos.js (página Bases)
 
