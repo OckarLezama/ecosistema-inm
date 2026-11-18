@@ -261,8 +261,8 @@ def _filas_va(ruta, base):
     t = t[[c for c in t.columns if not str(c).startswith("Unnamed")]]
     t.columns = [norm(c).replace("OR SOLICITANTE", "O.R. SOLICITANTE") for c in t.columns]
     t = t[t["FECHA DE SOLICITUD"].notna() | t["RESULTADO DE LA VALIDACION"].notna()]
-    fs = pd.to_datetime(t["FECHA DE SOLICITUD"], errors="coerce").dt.normalize()
-    fr = pd.to_datetime(t["FECHA DE REGISTRO"], errors="coerce").dt.normalize()
+    fs = lector.dia(t["FECHA DE SOLICITUD"])                                         # acepta fechas y números de Excel (nov 2026)
+    fr = lector.dia(t["FECHA DE REGISTRO"])
     mala = fr.notna() & ((fr.dt.year < 1900) | (fr > fs))
     if mala.any():
         lector.corregir(base, f"{int(mala.sum()):,} actas con fecha de registro imposible (antes de 1900, en el futuro o después de la solicitud); "
