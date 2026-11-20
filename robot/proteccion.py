@@ -85,7 +85,8 @@ def otros(origen, ini):
         E, P, PA = Dic(), Dic(), Dic()
         quita = lambda x: re.sub(r"^(OFICINA DE REPRESENTACION EN|O\.?R\.?)\s+", "", norm(x))
         t["e"] = t["O.R."].map(lambda x: estado(quita(x))).map(E)
-        t["p"] = t["PUNTO INTERNACION"].map(lambda x: re.sub(r"^A\.\s*I\.?\s*(de\s+)?", "A. I. ", " ".join(str(x).split()), flags=re.I)).map(P)
+        aerop = lambda x: re.sub(r"^A\.\s*I\.?\s*(de\s+)?", "A. I. ", " ".join(str(x).split()), flags=re.I)
+        t["p"] = t["PUNTO INTERNACION"].map(aerop).map(lambda x: "A. I. " + x[6:].title() if x.startswith("A. I. ") and x[6:].isupper() else x).map(P)   # «A.I. MONTERREY» = «A. I. Monterrey» (nov 2026)
         t["pa"] = t["PAIS"].map(lambda x: " ".join(str(x).split()).title()).map(PA) if "PAIS" in t.columns else 0
         t["d"] = (t["DIA"] - ini).dt.days.astype(int)
         antes = int((t["d"] < 0).sum())
