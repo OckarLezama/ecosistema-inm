@@ -326,10 +326,10 @@ function laminaRecibidos(X){
     graf:[{ id:'g-rec', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Mexicanos','Extranjeros']), tooltip:tip(u), xAxis:ejeX(u, lw), yAxis:ejeY(u),
       series:[barra(u, 'Total', st, C.arena, { barMaxWidth:u*1.3, label:{ show:false } }), linea(u, 'Mexicanos', marcas(smx.v, u, C.verde), C.verde), linea(u, 'Extranjeros', sex.v, C.vino)] }) }].concat(OR ? [{ id:'g-orig', op:u => { mapaMx(); const el = document.querySelector('.inf-sl #g-orig'), ab = el && el.closest('.ex-on');
       // sin ampliar: barras planas de los 32 estados (sin cuadrícula, por el espacio chico); ampliada: el mapa
-      if (!ab) return { grid:{ left:u*0.2, right:u*0.2, top:u*0.4, bottom:u*0.1, containLabel:true },
+      if (!ab) return { grid:{ left:0, right:0, top:u*0.2, bottom:0, containLabel:true },
         tooltip:Object.assign(tip(u), { confine:false, appendToBody:true, axisPointer:{ type:'shadow', shadowStyle:{ color:'rgba(47,102,87,.06)' } }, formatter:q => '<b>'+esc(orL[q[0].dataIndex][1])+'</b><br>'+m5(q[0].value)+' repatriados<br>'+pc(q[0].value, orT)+' del total · lugar '+(q[0].dataIndex+1) }),
         xAxis:{ type:'category', data:orL.map(x => x[0]), axisTick:{ show:false }, splitLine:{ show:false }, axisLine:{ lineStyle:{ color:'#D6D1C2' } }, axisLabel:{ color:C.ink3, fontSize:u*0.48, interval:0, rotate:90, margin:u*0.3 } },
-        yAxis:{ type:'value', show:false, splitLine:{ show:false } },
+        yAxis:{ type:'value', show:false, max:v => v.max, splitLine:{ show:false } },
         series:[{ name:'Repatriados', type:'bar', barCategoryGap:'22%', data:orL.map((x,i) => ({ value:x[2], itemStyle:{ color:i<3 ? C.verde : '#B9CFC6', borderRadius:[u*0.15,u*0.15,0,0] } })), label:{ show:false }, animationDelay:i => i*12,
           emphasis:{ focus:'self', itemStyle:{ color:C.verde, shadowBlur:u*0.4, shadowColor:'rgba(43,41,38,.25)' } }, blur:{ itemStyle:{ opacity:0.35 } } }] };
       return {
@@ -337,7 +337,7 @@ function laminaRecibidos(X){
       tooltip:{ trigger:'item', confine:false, appendToBody:true, backgroundColor:'rgba(255,255,255,.97)', borderColor:'#E2DED0', textStyle:{ fontSize:Math.max(12, u*0.78), color:C.ink },
         formatter:q => q.value==null || isNaN(q.value) ? esc(q.name) : '<b>'+esc(q.name)+'</b><br>'+m5(q.value)+' repatriados<br>'+pc(q.value, orT)+' del total · lugar '+(orL.findIndex(x => x[1]===q.name)+1) },
       visualMap:{ show:false, min:0, max:orL[0][2], inRange:{ color:['#EEF2EE', '#B9CFC6', '#6E9A8C', '#2F6657', '#1E4A3E'] } },
-      series:[{ type:'map', map:'inf-mx', nameProperty:'nom', roam:false, layoutCenter:['50%','50%'], layoutSize:'100%', selectedMode:false, animationDurationUpdate:400,
+      series:[{ type:'map', map:'inf-mx', nameProperty:'nom', roam:false, aspectScale:0.93, layoutCenter:['50%','50%'], layoutSize:'100%', selectedMode:false, animationDurationUpdate:400,
         itemStyle:{ borderColor:'#FBFAF6', borderWidth:Math.max(0.6, u*0.06) }, label:{ show:false },
         emphasis:{ itemStyle:{ areaColor:'#C9A64A', borderColor:'#fff', borderWidth:Math.max(1, u*0.1), shadowBlur:u*0.5, shadowColor:'rgba(43,41,38,.3)' }, label:{ show:false } },
         data:orL.map(x => ({ name:x[1], value:x[2] })) }] }; } }] : []) };
@@ -378,7 +378,11 @@ function laminaRescates(X){
       caja('Por mes', X.fchR+' · barras: total · líneas: primera vez y reincidencia', '<div id="g-res" class="inf-gr"></div>', 'inf-c-alta')+
       '<p class="inf-fr">En '+ua.y+' se han rescatado <b>'+miles(ua.t)+'</b> extranjeros: '+miles(ua.pv)+' por primera vez y '+miles(ua.re)+' reincidencias.</p>',
     graf:[{ id:'g-res', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Primera vez','Reincidencia']), tooltip:tip(u), xAxis:ejeX(u, lm), yAxis:ejeY(u),
-      series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2 }), linea(u, 'Primera vez', spv.v, C.verde), linea(u, 'Reincidencia', sre.v, C.vino)] }) }] };
+      series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2, markArea:{ silent:true, data:anos.map((a, k) => { const ix = sm.C.l.map((c,i) => c.a.slice(0,4)===String(a.y) ? i : -1).filter(i => i>=0);
+          return [{ xAxis:ix[0], itemStyle:{ color:k%2 ? 'rgba(143,127,46,.07)' : 'rgba(0,0,0,0)' }, label:{ show:true, position:'insideTop', distance:u*0.2, formatter:'{y|'+a.y+'}\n{v|'+pc(a.pv, a.t)+' primera vez}\n{r|'+pc(a.re, a.t)+' reincidencia}', backgroundColor:'rgba(255,255,255,.92)', borderColor:'#E2DED0', borderWidth:1, borderRadius:u*0.2, padding:[u*0.3, u*0.6],
+            rich:{ y:{ fontSize:u*0.62, color:C.ink3, fontWeight:600, lineHeight:u*1 }, v:{ fontSize:u*0.78, color:C.verde, fontWeight:700, lineHeight:u*1.05 }, r:{ fontSize:u*0.78, color:C.vino, fontWeight:700, lineHeight:u*1.05 } } } }, { xAxis:ix[ix.length-1] }]; }) }
+        }),
+        linea(u, 'Primera vez', spv.v, C.verde), linea(u, 'Reincidencia', sre.v, C.vino)] }) }] };
 }
 // Lámina 6: caravanas (registro de caravanas: nombre, salida y personas estimadas)
 // recorrido por la carretera costera de Chiapas y Oaxaca (la 200), de Tapachula hacia el norte: la línea va por tierra hasta donde se disolvió
