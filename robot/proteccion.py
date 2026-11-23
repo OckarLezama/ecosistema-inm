@@ -108,6 +108,64 @@ def otros(origen, ini):
     return out
 
 
+# Estados de origen (DGPMV): un renglón por día con los repatriados de cada estado. Solo lo usa el informe migratorio.
+# Debe cuadrar con Repatriados día por día; mientras no cuadre se avisa en el reporte de carga, mes por mes.
+ESTADOS = {"AGUASCALIENTES": ("Aguascalientes", "AGS"), "BAJA CALIFORNIA": ("Baja California", "BC"), "BAJA CALIFORNIA SUR": ("Baja California Sur", "BCS"),
+           "CAMPECHE": ("Campeche", "CAMP"), "CHIAPAS": ("Chiapas", "CHIS"), "CHIHUAHUA": ("Chihuahua", "CHIH"), "CIUDAD DE MEXICO": ("Ciudad de México", "CDMX"),
+           "COAHUILA": ("Coahuila", "COAH"), "COLIMA": ("Colima", "COL"), "DURANGO": ("Durango", "DGO"), "GUANAJUATO": ("Guanajuato", "GTO"), "GUERRERO": ("Guerrero", "GRO"),
+           "HIDALGO": ("Hidalgo", "HGO"), "JALISCO": ("Jalisco", "JAL"), "MEXICO": ("México", "MEX"), "MICHOACAN": ("Michoacán", "MICH"), "MORELOS": ("Morelos", "MOR"),
+           "NAYARIT": ("Nayarit", "NAY"), "NUEVO LEON": ("Nuevo León", "NL"), "OAXACA": ("Oaxaca", "OAX"), "PUEBLA": ("Puebla", "PUE"), "QUERETARO": ("Querétaro", "QRO"),
+           "QUINTANA ROO": ("Quintana Roo", "QROO"), "SAN LUIS POTOSI": ("San Luis Potosí", "SLP"), "SINALOA": ("Sinaloa", "SIN"), "SONORA": ("Sonora", "SON"),
+           "TABASCO": ("Tabasco", "TAB"), "TAMAULIPAS": ("Tamaulipas", "TAMPS"), "TLAXCALA": ("Tlaxcala", "TLAX"), "VERACRUZ": ("Veracruz", "VER"),
+           "YUCATAN": ("Yucatán", "YUC"), "ZACATECAS": ("Zacatecas", "ZAC")}
+
+
+def origen(origen, rep):
+    base = "Repatriados por estado de origen"
+    t, archivos = lector.leer_por_columnas(origen, {"FECHA", "CHIAPAS", "GUANAJUATO", "TOTAL"}, base)
+    if t is None or not len(t):
+        return None
+    t["FECHA"] = lector.dia(t["FECHA"])
+    t = t[t["FECHA"].notna()].copy()
+    faltan = [k for k in ESTADOS if k not in t.columns]
+    if faltan:
+        lector.corregir(base, "Faltan las columnas de " + ", ".join(faltan) + "; esos estados se cuentan en cero.")
+    for c in list(ESTADOS) + ["NATURALIZADO", "TOTAL"]:
+        t[c] = pd.to_numeric(t[c], errors="coerce").fillna(0).astype(int) if c in t.columns else 0
+    rep_dia = t["FECHA"].duplicated(keep=False)
+    if rep_dia.any():
+        lector.corregir(base, f"{int(rep_dia.sum())} renglones con la fecha repetida; se suman.")
+    t = t.groupby("FECHA", as_index=False).sum(numeric_only=True)
+    ini, fin = t["FECHA"].min(), t["FECHA"].max()
+    cal = pd.date_range(ini, fin)
+    hueco = len(cal) - len(t)
+    if hueco:
+        lector.avisar(base, f"{hueco} días sin renglón entre el {ini:%d/%m/%Y} y el {fin:%d/%m/%Y}; se cuentan como cero.")
+    t = t.set_index("FECHA").reindex(cal, fill_value=0)
+    suma = t[list(ESTADOS)].sum(axis=1) + t["NATURALIZADO"]
+    mal = suma != t["TOTAL"]
+    if mal.any():
+        lector.corregir(base, f"{int(mal.sum())} días donde la suma de los estados no da el TOTAL; el informe usa la suma de los estados.")
+    t["TOTAL"] = suma
+    # cuadre con Repatriados, mes por mes, en los días que tienen las dos bases
+    r = rep.groupby("DIA")["MEXICANOS REPATRIADOS"].sum()
+    dd = pd.concat([t["TOTAL"].rename("o"), r.rename("r")], axis=1).dropna()
+    dd = dd[(dd.index >= max(ini, r.index.min())) & (dd.index <= min(fin, r.index.max()))]
+    dm = (dd["o"] - dd["r"]).groupby(dd.index.to_period("M")).sum()
+    dm = dm[dm != 0]
+    MES = "ene feb mar abr may jun jul ago sep oct nov dic".split()
+    if len(dm):
+        lector.corregir(base, "No cuadra con Repatriados (" + f"{int(dd['o'].sum()):,} contra {int(dd['r'].sum()):,}" + "): " +
+                        ", ".join(f"{MES[p.month - 1]} {p.year % 100:02d} {int(v):+,}" for p, v in dm.items()) +
+                        ". DGPMV debe confirmar cuál archivo tiene el día correcto; el informe migratorio usa este archivo.")
+    else:
+        lector.avisar(base, "Cuadra día por día con Repatriados.")
+    print(f"{base}: {len(t)} días, {int(t['TOTAL'].sum()):,} personas, {ini:%d/%m/%Y} – {fin:%d/%m/%Y}, " + ("no cuadra con Repatriados en " + str(len(dm)) + " meses" if len(dm) else "cuadra con Repatriados"))
+    lector.periodo(base, ini.date(), fin.date(), ", ".join(archivos), len(t))
+    return {"archivo": ", ".join(archivos), "inicio": ini.strftime("%Y-%m-%d"), "dias": len(t), "est": [list(v) for v in ESTADOS.values()],
+            "v": [t[k].astype(int).tolist() for k in ESTADOS], "nat": t["NATURALIZADO"].astype(int).tolist()}
+
+
 # ==== [3] TABLA ===================================================
 def main():
     ap = argparse.ArgumentParser()
@@ -153,7 +211,7 @@ def main():
 
     # ==== [5] SALIDA ==============================================
     out = {"inicio": ini.strftime("%Y-%m-%d"), "dias": dias, "archivo": archivo,
-           "dic": {"e": E.l, "p": P.l}, "rep": tabla, "calidad": calidad, "otros": otros(a.origen, ini)}
+           "dic": {"e": E.l, "p": P.l}, "rep": tabla, "calidad": calidad, "otros": otros(a.origen, ini), "orig": origen(a.origen, t)}
     os.makedirs(a.destino, exist_ok=True)
     with open(os.path.join(a.destino, "proteccion.js"), "w", encoding="utf-8") as f:
         f.write("window.IANAMI_PMV=" + json.dumps(out, ensure_ascii=False, separators=(",", ":")) + ";\n")

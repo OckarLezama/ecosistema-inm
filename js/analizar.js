@@ -29,6 +29,12 @@ function V(k, p, a, b, f){ const ind = INDK[k]; if (!ind) return 0; return total
 function S(k, p, a, b, g, f){ const ind = INDK[k], Cb = cubetas(a, b, g); return { C:Cb, v:ind ? serie(Object.assign({ ind:ind, d0:a, d1:b, filtros:f || {} }, p ? medParte(ind, parteDe(ind, p)) : {}), Cb) : Cb.l.map(() => 0) }; }
 function D(k, p, a, b, dim, f){ const ind = INDK[k]; if (!ind || !BASES[ind.b].dims[dim]) return []; return porDim(Object.assign({ ind:ind, d0:a, d1:b, filtros:f || {} }, p ? medParte(ind, parteDe(ind, p)) : {}), dim).map(([i,v]) => [BASES[ind.b].dims[dim].vals[i], v]); }
 const fin = k => INDK[k] ? finBase(BASES[INDK[k].b]) : null, ini = k => INDK[k] ? BASES[INDK[k].b].inicio : null;
+// Estados de origen (DGPMV): solo para el informe. Suma de a a b por estado; sin el archivo, el informe usa Repatriados.
+const ORG = window.IANAMI_PMV && window.IANAMI_PMV.orig, orgFin = ORG ? sumaDias(ORG.inicio, ORG.dias-1) : null;
+function orgSuma(a, b){ const i0 = Math.max(0, difDias(ORG.inicio, a)), i1 = Math.min(ORG.dias-1, difDias(ORG.inicio, b)), sm = v => { let x = 0; for (let i = i0; i<=i1; i++) x += v[i]; return x; };
+  const l = ORG.est.map(([n, ab], k) => [ab, n, sm(ORG.v[k])]).sort((x, y) => y[2]-x[2]), nat = sm(ORG.nat); return { l, nat, tot:l.reduce((x, y) => x+y[2], 0)+nat }; }
+const m5 = v => v>0 && v<5 ? 'menos de 5' : miles(v);
+const orgMx = (a, b) => ORG ? orgSuma(a, b).tot : V('rep', null, a, b);
 
 /* ==== [2] FECHAS ================================================== */
 const MESC = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'], MESL = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -99,9 +105,15 @@ function dibujar(){ const V0 = VISOR; V0.ch.forEach(c => c.dispose()); V0.ch = [
   V0.o.laminas.forEach((l, i) => (l.graf || []).forEach(g => { const el = V0.el.querySelector('.inf-sl[data-i="'+i+'"] #'+g.id); if (!el) return;
     const ch = echarts.init(el, null, { devicePixelRatio:Math.max(2, window.devicePixelRatio || 1) }); ch.setOption(opcion(g, V0.U)); V0.ch.push(ch); V0.gr.push({ ch, g, i }); })); }
 // al llegar a una lámina sus gráficas se vuelven a dibujar con su animación
-function animar(i){ const V0 = VISOR; if (!V0 || V0.el.classList.contains('imprimiendo')) return; (V0.gr || []).filter(x => x.i===i).forEach(x => { x.ch.clear(); x.ch.setOption(opcion(x.g, V0.U)); }); }
+function animar(i){ const V0 = VISOR; if (!V0 || V0.el.classList.contains('imprimiendo')) return; (V0.gr || []).filter(x => x.i===i).forEach(x => { if (x.g.id==='g-orig') x.ch.resize(); x.ch.clear(); x.ch.setOption(opcion(x.g, V0.U)); }); }
 // ampliar una tarjeta: crece suave hasta todo el ancho mientras la otra se recoge; otro toque la regresa
 function ampliar(b){ const card = b.closest('.inf-c'), par = card.parentElement, on = !card.classList.contains('ex-on'), sl = b.closest('.inf-sl');
+  // dentro de la columna izquierda la tarjeta crece hacia arriba: la de arriba se recoge y la gráfica gana su alto
+  if (par.classList.contains('inf-col')){ const o = card.previousElementSibling;
+    if (o){ o.style.maxHeight = o.scrollHeight+'px'; o.offsetHeight; o.classList.toggle('ex-v', on); o.style.maxHeight = on ? '0px' : o.scrollHeight+'px'; if (!on) setTimeout(() => { o.style.maxHeight = ''; }, 520); }
+    card.classList.toggle('ex-on', on); const x = card.querySelector('[data-infex]'); x.innerHTML = on ? ICO.red : ICO.amp; x.title = on ? 'Regresar' : 'Ampliar';
+    const i = +sl.dataset.i, gr = (VISOR.gr || []).filter(g => g.i===i), t0 = performance.now(), paso = t => { gr.forEach(g => g.ch.resize()); if (t-t0<700) requestAnimationFrame(paso); }; requestAnimationFrame(paso);
+    setTimeout(() => gr.filter(g => card.contains(g.ch.getDom())).forEach(g => { g.ch.resize(); g.ch.clear(); g.ch.setOption(opcion(g.g, VISOR.U)); }), 520); return; }
   const cols = [...par.children].filter(c => !c.classList.contains('inf-sec-k'));
   par.classList.toggle('ex', on); cols.forEach(c => { c.classList.toggle('ex-on', on && c===card); c.classList.toggle('ex-off', on && c!==card); });
   par.style.gridTemplateColumns = on ? cols.map(c => c===card ? '1fr' : '0fr').join(' ') : '';
@@ -251,6 +263,7 @@ function laminaCBP(X){
 // Lámina 2: sectores de la CBP con el estado mexicano con el que colindan
 const SECTOR = { 'San Diego':[[-117.0,32.6],'Baja California'], 'El Centro':[[-115.55,32.75],'Baja California'], 'Yuma':[[-114.6,32.55],'Sonora'], 'Tucson':[[-110.95,31.45],'Sonora'], 'El Paso':[[-106.5,31.75],'Chihuahua'],
   'Big Bend':[[-103.6,29.6],'Chihuahua y Coahuila'], 'Del Rio':[[-100.9,29.4],'Coahuila'], 'Laredo':[[-99.5,27.5],'Coahuila, N. León y Tamaulipas'], 'Rio Grande':[[-98.2,26.2],'Tamaulipas'] };
+function mapaMx(){ if (echarts.getMap('inf-mx') || !window.IANAMI_GEO) return; echarts.registerMap('inf-mx', { type:'FeatureCollection', features:window.IANAMI_GEO.features.filter(f => f.properties.t==='m') }); }
 function mapaRegion(){ if (echarts.getMap('inf-region')) return true; const G = window.IANAMI_GEO; if (!G) return false;
   const CA = new Set(['P_320','P_340','P_222','P_084','P_558','P_188','P_591']);
   echarts.registerMap('inf-region', { type:'FeatureCollection', features:G.features.filter(f => f.properties.t==='m' || f.properties.t==='u' || CA.has(f.properties.key)) }); return true; }
@@ -284,28 +297,50 @@ function laminaSectores(X){
 }
 // Lámina 3: personas que EE. UU. entrega a México (mexicanos repatriados + extranjeros recibidos)
 function laminaRecibidos(X){
-  const mx = V('rep', null, X.a, X.b), ex = V('rec', null, X.a, X.b), t = mx+ex, tp = V('rep', null, X.pa, X.pb)+V('rec', null, X.pa, X.pb);
-  const MX = V('rep', null, X.r0, X.b), EX = V('rec', null, X.r0, X.b), T = MX+EX;
-  const aer = V('rep', 'aer', X.a, X.b), ter = mx-aer, pa = BASES.rep.dims.p.vals, AE = pa.map((n,i) => /vuelos/.test(n) ? i : -1).filter(i => i>=0);
+  // mexicanos: de Estados de origen (la misma base del informe oficial); aérea y terrestre siguen en Repatriados, la única que trae el punto
+  const mx = orgMx(X.a, X.b), ex = V('rec', null, X.a, X.b), t = mx+ex, tp = orgMx(X.pa, X.pb)+V('rec', null, X.pa, X.pb);
+  const MX = orgMx(X.r0, X.b), EX = V('rec', null, X.r0, X.b), T = MX+EX, mxR = V('rep', null, X.a, X.b);
+  const aer = V('rep', 'aer', X.a, X.b), ter = mxR-aer, pa = BASES.rep.dims.p.vals, AE = pa.map((n,i) => /vuelos/.test(n) ? i : -1).filter(i => i>=0);
   // vuelos PRIM: días con llegada y personas por aeropuerto (el archivo no trae número de vuelos)
   const prim = AE.map(i => { const nom = pa[i].replace(/\s*\(vuelos.*$/,''), Cb = cubetas(X.a, X.b, 'd'), s = serie(Object.assign({ ind:INDK.rep, d0:X.a, d1:X.b, filtros:{ p:[i] } }, medParte(INDK.rep, parteDe(INDK.rep, 'aer'))), Cb);
     return { nom, v:s.reduce((x,y)=>x+y,0), d:s.filter(Boolean).length }; }).filter(x => x.v).sort((a,b) => b.v-a.v);
   const ghF = fin('gh'), ghOk = INDK.gh && ghF>=X.b, ghS = INDK.gh ? V('gh', null, X.a, X.b) : 0, ghL = INDK.gh ? D('gh', null, ini('gh'), ghF, 'pa') : [], ghT = ghL.reduce((x,y) => x+y[1], 0);
-  const smx = S('rep', null, X.w0, X.b, 's'), sex = S('rec', null, X.w0, X.b, 's'), lw = etiq(smx.C), st = smx.v.map((v,i) => v+sex.v[i]), hz = [];
+  const smx = ORG ? (C0 => ({ C:C0, v:C0.l.map(c => orgSuma(c.a, c.b).tot) }))(cubetas(X.w0, X.b, 's')) : S('rep', null, X.w0, X.b, 's'), sex = S('rec', null, X.w0, X.b, 's'), lw = etiq(smx.C), st = smx.v.map((v,i) => v+sex.v[i]), hz = [];
   hz.push('EE. UU. entregó a México <b>'+miles(t)+'</b> personas'+(tp ? '; '+cuanto(pct(t, tp)-100)+' '+X.ant : '')+'. Casi todas son mexicanas (<b>'+pc(mx, t)+'</b>).');
-  hz.push('La vía aérea domina: <b>'+pc(aer, mx)+'</b> de los mexicanos llegó en vuelos PRIM ('+miles(aer)+') y '+pc(ter, mx)+' por garitas y puentes ('+miles(ter)+').');
+  hz.push('La vía aérea domina: <b>'+pc(aer, mxR)+'</b> de los mexicanos llegó en vuelos PRIM ('+miles(aer)+') y '+pc(ter, mxR)+' por garitas y puentes ('+miles(ter)+').');
   if (prim.length) hz.push('<b>'+esc(prim[0].nom)+'</b> fue el aeropuerto con más llegadas: '+miles(prim[0].v)+' personas en '+prim[0].d+' '+(prim[0].d===1 ? 'día' : 'días')+' con vuelo'+(prim[1] ? ', seguido de '+esc(prim[1].nom)+' ('+miles(prim[1].v)+')' : '')+'.');
   hz.push('Los extranjeros recibidos sumaron <b>'+miles(ex)+'</b> ('+pc(ex, t)+'); en el '+esc(enPer(X))+' representan '+pc(EX, T)+'.');
   const cajaAer = caja('<b>'+miles(aer)+'</b> por vía aérea', 'vuelos PRIM · días con llegada y personas', prim.length ? '<ul class="inf-ls">'+prim.map(p => '<li><span>'+esc(p.nom)+'</span><small>'+p.d+' '+(p.d===1 ? 'día' : 'días')+'</small><b>'+miles(p.v)+'</b></li>').join('')+'</ul>' : '<p class="inf-nt">Sin llegadas aéreas en el periodo.</p>', 'inf-c-k');
   const cajaTer = caja('<b>'+miles(ter + (ghOk ? ghS : 0))+'</b> por vía terrestre', X.fch, '<div class="inf-dos"><div><b class="num">'+miles(ter)+'</b><span>Frontera norte<small>garitas y puentes</small></span></div><div><b class="num">'+(ghOk ? miles(ghS) : '—')+'</b><span>Frontera sur<small>'+(ghOk ? 'Guatemala y Honduras' : 'último dato: '+fx(ghF))+'</small></span></div></div>', 'inf-c-k');
   const cajaGH = INDK.gh ? caja('<b>'+miles(ghT)+'</b> enviados a otros países', 'mexicanos que EE. UU. mandó a Guatemala u Honduras · '+rango(ini('gh'), ghF), '<div class="inf-dos">'+ghL.map(([n,v]) => '<div><b class="num">'+miles(v)+'</b><span>'+esc(n)+'</span></div>').join('')+'</div>', 'inf-c-k') : '';
-  return { tit:IDX[2], fte:'Fuente: DGPMV (repatriados; Guatemala y Honduras) y DGCOR (extranjeros recibidos) · la frontera sur ya está contada en Repatriados (Ciudad Hidalgo) · el archivo no trae número de vuelos', hz:hz,
+  // estado de origen de los mexicanos repatriados en el periodo de referencia (barras de mayor a menor; los tres primeros resaltados)
+  const OR = ORG ? orgSuma(X.r0, X.b) : null, orT = OR ? OR.tot : 0, orL = OR ? OR.l : [], or3 = orL.slice(0,3);
+  const cajaOr = OR ? caja('<b>'+miles(orT)+'</b> repatriados por estado de origen', 'mexicanos devueltos por EE. UU. · '+rango(X.r0, minS([X.b, orgFin])),
+    '<p class="inf-or3">'+or3.map(x => '<b>'+esc(x[1])+'</b> '+miles(x[2])).join(' · ')+' — juntos '+pc(or3.reduce((a,x) => a+x[2], 0), orT)+'</p><div class="inf-or"><div id="g-orig" class="inf-gr"></div><ol class="inf-or-l">'+or3.map(x => '<li><b class="num">'+miles(x[2])+'</b><span>'+esc(x[1])+'<small>'+pc(x[2], orT)+' del total</small></span></li>').join('')+
+    '<li class="r"><b>'+pc(orT-or3.reduce((a,x) => a+x[2], 0), orT)+'</b><span>los otros 29 estados'+(OR.nat ? ' y '+miles(OR.nat)+' naturalizados' : '')+'</span></li><li class="esc"><span>menos</span><i></i><span>más repatriados</span></li></ol></div>', 'inf-c-k inf-c-or') : '';
+  return { tit:IDX[2], fte:'Fuente: DGPMV (mexicanos: '+(ORG ? 'estados de origen; aérea y terrestre: repatriados' : 'repatriados')+'; Guatemala y Honduras) y DGCOR (extranjeros recibidos) · la frontera sur ya está contada en Repatriados (Ciudad Hidalgo) · el archivo no trae número de vuelos', hz:hz,
     html:enc('Mexicanos y extranjeros', 'recibidos de EE. UU.', 'Informe migratorio · lámina 3')+'<div class="inf-cfs">'+
       cifra({ eti:X.eti, fechas:X.fch, n:t, uni:'recibidos', prom:t/X.dias, chip:chip(t, tp, 'vs '+X.ant.replace(/^(la|el) /, '')), rp:[{ nom:'Mexicanos', v:mx, c:C.verde }, { nom:'Extranjeros', v:ex, c:C.vino }], tono:'a' })+
       cifra({ eti:X.etR, fechas:X.fchR, n:T, uni:'recibidos', prom:T/X.dR, rp:[{ nom:'Mexicanos', v:MX, c:C.verde }, { nom:'Extranjeros', v:EX, c:C.vino }], tono:'b' })+'</div>'+
-      '<div class="inf-g12"><div class="inf-col">'+cajaAer+cajaTer+cajaGH+'</div>'+caja('Personas devueltas por EE. UU., por semana', f0(X.b).getFullYear(), '<div id="g-rec" class="inf-gr"></div>')+'</div>',
+      '<div class="inf-g12"><div class="inf-col">'+cajaAer+cajaTer+cajaGH+cajaOr+'</div>'+caja('Personas devueltas por EE. UU., por semana', f0(X.b).getFullYear(), '<div id="g-rec" class="inf-gr"></div>')+'</div>',
     graf:[{ id:'g-rec', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Mexicanos','Extranjeros']), tooltip:tip(u), xAxis:ejeX(u, lw), yAxis:ejeY(u),
-      series:[barra(u, 'Total', st, C.arena, { barMaxWidth:u*1.3, label:{ show:false } }), linea(u, 'Mexicanos', marcas(smx.v, u, C.verde), C.verde), linea(u, 'Extranjeros', sex.v, C.vino)] }) }] };
+      series:[barra(u, 'Total', st, C.arena, { barMaxWidth:u*1.3, label:{ show:false } }), linea(u, 'Mexicanos', marcas(smx.v, u, C.verde), C.verde), linea(u, 'Extranjeros', sex.v, C.vino)] }) }].concat(OR ? [{ id:'g-orig', op:u => { mapaMx(); const el = document.querySelector('.inf-sl #g-orig'), ab = el && el.closest('.ex-on');
+      // sin ampliar: barras planas de los 32 estados (sin cuadrícula, por el espacio chico); ampliada: el mapa
+      if (!ab) return { grid:{ left:u*0.2, right:u*0.2, top:u*0.4, bottom:u*0.1, containLabel:true },
+        tooltip:Object.assign(tip(u), { confine:false, appendToBody:true, axisPointer:{ type:'shadow', shadowStyle:{ color:'rgba(47,102,87,.06)' } }, formatter:q => '<b>'+esc(orL[q[0].dataIndex][1])+'</b><br>'+m5(q[0].value)+' repatriados<br>'+pc(q[0].value, orT)+' del total · lugar '+(q[0].dataIndex+1) }),
+        xAxis:{ type:'category', data:orL.map(x => x[0]), axisTick:{ show:false }, splitLine:{ show:false }, axisLine:{ lineStyle:{ color:'#D6D1C2' } }, axisLabel:{ color:C.ink3, fontSize:u*0.48, interval:0, rotate:90, margin:u*0.3 } },
+        yAxis:{ type:'value', show:false, splitLine:{ show:false } },
+        series:[{ name:'Repatriados', type:'bar', barCategoryGap:'22%', data:orL.map((x,i) => ({ value:x[2], itemStyle:{ color:i<3 ? C.verde : '#B9CFC6', borderRadius:[u*0.15,u*0.15,0,0] } })), label:{ show:false }, animationDelay:i => i*12,
+          emphasis:{ focus:'self', itemStyle:{ color:C.verde, shadowBlur:u*0.4, shadowColor:'rgba(43,41,38,.25)' } }, blur:{ itemStyle:{ opacity:0.35 } } }] };
+      return {
+      // mapa de los 32 estados: más oscuro, más repatriados; al pasar el cursor o tocar, el estado se resalta con su cifra
+      tooltip:{ trigger:'item', confine:false, appendToBody:true, backgroundColor:'rgba(255,255,255,.97)', borderColor:'#E2DED0', textStyle:{ fontSize:Math.max(12, u*0.78), color:C.ink },
+        formatter:q => q.value==null || isNaN(q.value) ? esc(q.name) : '<b>'+esc(q.name)+'</b><br>'+m5(q.value)+' repatriados<br>'+pc(q.value, orT)+' del total · lugar '+(orL.findIndex(x => x[1]===q.name)+1) },
+      visualMap:{ show:false, min:0, max:orL[0][2], inRange:{ color:['#EEF2EE', '#B9CFC6', '#6E9A8C', '#2F6657', '#1E4A3E'] } },
+      series:[{ type:'map', map:'inf-mx', nameProperty:'nom', roam:false, layoutCenter:['50%','50%'], layoutSize:'100%', selectedMode:false, animationDurationUpdate:400,
+        itemStyle:{ borderColor:'#FBFAF6', borderWidth:Math.max(0.6, u*0.06) }, label:{ show:false },
+        emphasis:{ itemStyle:{ areaColor:'#C9A64A', borderColor:'#fff', borderWidth:Math.max(1, u*0.1), shadowBlur:u*0.5, shadowColor:'rgba(43,41,38,.3)' }, label:{ show:false } },
+        data:orL.map(x => ({ name:x[1], value:x[2] })) }] }; } }] : []) };
 }
 // Lámina 4: repatriados por tipo de retorno (garitas y puentes contra vuelos PRIM), por semana y por año
 function laminaRetorno(X){
@@ -317,7 +352,7 @@ function laminaRetorno(X){
   const k1 = st.C.l.findIndex((c,i) => i>0 && sa.v[i]>ster[i] && sa.v[i-1]<=ster[i-1]); if (k1>0) hz.push('Desde la semana del <b>'+fxa(st.C.l[k1].a)+'</b> llegan más mexicanos en vuelos PRIM que por garitas y puentes.');
   const sem = st.v[st.v.length-1], semA = sa.v[sa.v.length-1]; if (sem) hz.push('En la última semana fueron <b>'+miles(sem)+'</b> repatriados; '+pc(semA, sem)+' en vuelos PRIM.');
   const mx = st.v.indexOf(Math.max(...st.v)); if (mx>=0) hz.push('La semana con más repatriados del periodo fue la del <b>'+fxa(st.C.l[mx].a)+'</b>, con '+miles(st.v[mx])+'.');
-  return { tit:IDX[3], fte:'Fuente: DGPMV, Repatriados · aérea = vuelos PRIM · semanas de lunes a domingo', hz:hz,
+  return { tit:IDX[3], fte:'Fuente: DGPMV, Repatriados · aérea = vuelos PRIM · semanas de lunes a domingo'+(ORG ? ' · el total puede diferir del de la lámina 3, que usa el archivo de estados de origen: DGPMV aún no hace cuadrar sus dos archivos' : ''), hz:hz,
     html:enc('Mexicanos repatriados', 'por tipo de retorno', 'Informe migratorio · lámina 4')+
       '<div class="inf-rt">'+kk(esc(X.etR)+' · '+X.fchR, miles(T), 'mexicanos repatriados')+kk('Terrestre', miles(T-A), pc(T-A, T)+' · garitas y puentes', 'o')+kk('Aérea', miles(A), pc(A, T)+' · vuelos PRIM', 'v')+'</div>'+
       caja('Por semana', 'barras: total · líneas: terrestre y aérea', '<div id="g-ret" class="inf-gr"></div>', 'inf-c-alta')+
