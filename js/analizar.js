@@ -288,7 +288,7 @@ function laminaSectores(X){
       '<div class="inf-c inf-sec-m inf-mapa"><button class="inf-ex flota" data-infex title="Ampliar" aria-label="Ampliar o regresar">'+ICO.amp+'</button><div id="g-sec" class="inf-gr"></div>'+
         '<div class="inf-mapa-d solo-ex"><span class="inf-ey">Encuentros por sector · '+esc(X.etR)+'</span><ol>'+fil.map(f => '<li><b>'+f.r+'. '+esc(f.n)+'</b><span><em style="color:'+C.verde+'">'+pc(f.mx, f.v)+' mex.</em> · <em style="color:'+C.vino+'">'+pc(f.ex, f.v)+' ext.</em> · semana '+miles(f.s)+'</span><i>'+miles(f.v)+'</i></li>').join('')+'</ol></div></div><div class="inf-c inf-sec-t">'+tabla+'</div></div>',
     graf:[{ id:'g-sec', op:u => { if (!mapaRegion()) return {}; const mv = Math.max(1, ...fil.map(f => f.v));
-      return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, emphasis:{ disabled:true }, select:{ disabled:true }, tooltip:{ show:false }, boundingCoords:[[-118.6,33.6],[-96.4,25.0]], aspectScale:0.86, layoutCenter:['50%','52%'], layoutSize:'112%',
+      return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, emphasis:{ disabled:true }, select:{ disabled:true }, tooltip:{ show:false }, boundingCoords:[[-118.6,33.6],[-96.4,25.0]], aspectScale:0.86, layoutCenter:['39%','54%'], layoutSize:'142%',
           itemStyle:{ areaColor:'#F6F4EE', borderColor:'#D3CEC0', borderWidth:0.6 }, regions:window.IANAMI_GEO.features.filter(f => f.properties.t==='m').map(f => ({ name:f.properties.key, itemStyle:{ areaColor:'#FDFCF9', borderColor:'#C6C0B1' }, emphasis:{ disabled:true } })) },
         tooltip:{ confine:true, textStyle:{ fontSize:Math.max(12, u*0.78) }, formatter:p => '<b>'+esc(p.data.n)+'</b><br>'+miles(p.data.v)+' encuentros · '+pc(p.data.mx, p.data.v)+' mexicanos' },
         series:[{ type:'scatter', coordinateSystem:'geo', data:fil.filter(f => SECTOR[f.n]).map(f => ({ n:f.n, v:f.v, mx:f.mx, value:SECTOR[f.n][0].concat(f.v) })),
@@ -338,7 +338,7 @@ function laminaRecibidos(X){
       tooltip:{ trigger:'item', confine:false, appendToBody:true, backgroundColor:'rgba(255,255,255,.97)', borderColor:'#E2DED0', textStyle:{ fontSize:Math.max(12, u*0.78), color:C.ink },
         formatter:q => q.value==null || isNaN(q.value) ? esc(q.name) : '<b>'+esc(q.name)+'</b><br>'+m5(q.value)+' repatriados<br>'+pc(q.value, orT)+' del total · lugar '+(orL.findIndex(x => x[1]===q.name)+1) },
       visualMap:{ show:false, min:0, max:orL[0][2], inRange:{ color:['#EEF2EE', '#B9CFC6', '#6E9A8C', '#2F6657', '#1E4A3E'] } },
-      series:[{ type:'map', map:'inf-mx', nameProperty:'nom', roam:false, aspectScale:0.93, layoutCenter:['50%','52%'], layoutSize:'112%', selectedMode:false, animationDurationUpdate:400,
+      series:[{ type:'map', map:'inf-mx', nameProperty:'nom', roam:false, aspectScale:0.93, layoutCenter:['39%','54%'], layoutSize:'142%', selectedMode:false, animationDurationUpdate:400,
         itemStyle:{ borderColor:'#FBFAF6', borderWidth:Math.max(0.6, u*0.06) }, label:{ show:false },
         emphasis:{ itemStyle:{ areaColor:'#C9A64A', borderColor:'#fff', borderWidth:Math.max(1, u*0.1), shadowBlur:u*0.5, shadowColor:'rgba(43,41,38,.3)' }, label:{ show:false } },
         data:orL.map(x => ({ name:x[1], value:x[2] })) }] }; } }] : []) };
@@ -380,8 +380,8 @@ function laminaRescates(X){
       '<p class="inf-fr">En '+ua.y+' se han rescatado <b>'+miles(ua.t)+'</b> extranjeros: '+miles(ua.pv)+' por primera vez y '+miles(ua.re)+' reincidencias.</p>',
     graf:[{ id:'g-res', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Primera vez','Reincidencia']), tooltip:tip(u), xAxis:ejeX(u, lm), yAxis:ejeY(u),
       series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2, markArea:{ silent:true, data:anos.map((a, k) => { const ix = sm.C.l.map((c,i) => c.a.slice(0,4)===String(a.y) ? i : -1).filter(i => i>=0);
-          return [{ xAxis:ix[0], itemStyle:{ color:k%2 ? 'rgba(143,127,46,.07)' : 'rgba(0,0,0,0)' }, label:{ show:true, position:'insideTop', distance:u*0.2, formatter:'{y|'+a.y+'}\n{v|'+pc(a.pv, a.t)+' primera vez}\n{r|'+pc(a.re, a.t)+' reincidencia}', backgroundColor:'rgba(255,255,255,.92)', borderColor:'#E2DED0', borderWidth:1, borderRadius:u*0.2, padding:[u*0.4, u*0.8],
-            rich:{ y:{ fontSize:u*0.78, color:C.ink3, fontWeight:600, lineHeight:u*1.2 }, v:{ fontSize:u*1.02, color:C.verde, fontWeight:700, lineHeight:u*1.35 }, r:{ fontSize:u*1.02, color:C.vino, fontWeight:700, lineHeight:u*1.35 } } } }, { xAxis:ix[ix.length-1] }]; }) }
+          return [{ xAxis:ix[0], itemStyle:{ color:k%2 ? 'rgba(143,127,46,.07)' : 'rgba(0,0,0,0)' }, label:{ show:true, position:'insideTop', distance:u*0.2, formatter:'{y|'+a.y+'}\n{v|'+pc(a.pv, a.t)+' primera vez}\n{r|'+pc(a.re, a.t)+' reincidencia}', backgroundColor:'rgba(255,255,255,.92)', borderColor:'#E2DED0', borderWidth:1, borderRadius:u*0.2, padding:[u*0.5, u*1],
+            rich:{ y:{ fontSize:u*0.95, color:C.ink3, fontWeight:600, lineHeight:u*1.45 }, v:{ fontSize:u*1.35, color:C.verde, fontWeight:700, lineHeight:u*1.75 }, r:{ fontSize:u*1.35, color:C.vino, fontWeight:700, lineHeight:u*1.75 } } } }, { xAxis:ix[ix.length-1] }]; }) }
         }),
         linea(u, 'Primera vez', spv.v, C.verde), linea(u, 'Reincidencia', sre.v, C.vino)] }) }] };
 }
@@ -405,7 +405,7 @@ function laminaCaravanas(X){
         '<div class="inf-mapa-w"><div id="g-carm" class="inf-gr"></div><div class="inf-mapa-d"><span class="inf-ey">Caravanas recientes</span><ol>'+L.slice(-8).reverse().map(c => '<li class="'+(c.f>=X.r0 ? 'r' : '')+'"><b>«'+esc(c.n)+'»</b><span>'+fxa(c.f)+' · '+esc(String(c.s).split(',').slice(-2)[0].trim())+(c.d ? ' → '+esc(String(c.d).split(',')[0]) : '')+'</span><i>'+miles(c.p || 0)+'</i></li>').join('')+'</ol></div></div></div></div>',
     graf:[{ id:'g-carm', op:u => { if (!mapaRegion()) return {}; const sal = new Map(); L.forEach(c => { if (!c.sx) return; const k = c.sx.join(','); if (!sal.has(k)) sal.set(k, { c:c.sx, s:c.s, n:0, p:0 }); const x = sal.get(k); x.n++; x.p += c.p || 0; });
         const nomL = s => String(s).split(',').slice(-2)[0].trim(), mxS = Math.max(1, ...[...sal.values()].map(x => x.n)), rut = L.filter(c => c.sx && c.dx);
-        return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, emphasis:{ disabled:true }, select:{ disabled:true }, tooltip:{ show:false }, boundingCoords:[[-98.6,18.2],[-86.0,13.2]], aspectScale:0.96, layoutCenter:['50%','52%'], layoutSize:'112%',
+        return { backgroundColor:'#EAE7DE', geo:{ map:'inf-region', nameProperty:'key', roam:false, silent:true, emphasis:{ disabled:true }, select:{ disabled:true }, tooltip:{ show:false }, boundingCoords:[[-98.6,18.2],[-86.0,13.2]], aspectScale:0.96, layoutCenter:['39%','54%'], layoutSize:'142%',
             itemStyle:{ areaColor:'#F6F4EE', borderColor:'#D3CEC0', borderWidth:0.6 }, regions:window.IANAMI_GEO.features.filter(f => f.properties.t==='m').map(f => ({ name:f.properties.key, itemStyle:{ areaColor:'#FDFCF9', borderColor:'#C6C0B1' }, emphasis:{ disabled:true } })) },
           tooltip:{ confine:true, textStyle:{ fontSize:Math.max(12, u*0.78) } },
           series:[{ type:'lines', coordinateSystem:'geo', zlevel:1, polyline:true, data:rut.map(c => ({ n:c.n, coords:ruta(c.sx, c.dx), lineStyle:{ color:c.f>=X.r0 ? '#7E302B' : '#9A958A', width:u*0.08+Math.sqrt((c.p||0)/mxp)*u*0.3, opacity:0.65 } })),
