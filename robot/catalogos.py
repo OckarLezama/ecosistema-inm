@@ -212,6 +212,7 @@ PUNTOS_REPATRIACION = {'Punto de Internación El Chaparral, B.C.': ('El Chaparra
  'A. I. de Mérida': ('Mérida (vuelos)', -89.66, 20.94),
  'A.I San Luis Potosí': ('San Luis Potosí (vuelos)', -100.93, 22.25),
  'A.I. Tapachula': ('Tapachula (vuelos)', -92.37, 14.79),
+ 'A. I. Tapachula': ('Tapachula (vuelos)', -92.37, 14.79),   # así llegó el 21 nov 2026
  'Campeche': ('Campeche (vuelos)', -90.5, 19.82)}
 
 # estación o estancia: (longitud, latitud)

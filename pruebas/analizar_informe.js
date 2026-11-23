@@ -8,6 +8,11 @@ for (const f of ['datos.js','control.js','proteccion.js','regulacion.js','vocabu
 require(dir+'/js/consulta.js'); const M = window.IANAMI_MOTOR;
 const V = (k, p, a, b) => { const ind = M.INDK[k]; return M.total(Object.assign({ ind, d0:a, d1:b }, p ? M.medParte(ind, M.parteDe(ind, p)) : {})); };
 const miles = n => Math.round(n).toLocaleString('en-US');
+// mexicanos del informe: Estados de origen hasta su último día y Repatriados después (como js/analizar.js)
+const OG = window.IANAMI_PMV && window.IANAMI_PMV.orig, dia = (s, n) => { const d = new Date(s+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
+const MXI = (a, b) => { if (!OG) return V('rep', null, a, b); const f = dia(OG.inicio, OG.dias-1), b1 = b<f ? b : f; let t = 0;
+  for (let d = a; d<=b1; d = dia(d, 1)){ const i = Math.round((new Date(d+'T00:00:00Z')-new Date(OG.inicio+'T00:00:00Z'))/864e5); if (i>=0) t += OG.v.reduce((x, v) => x+v[i], 0)+OG.nat[i]; }
+  if (b>f) t += V('rep', null, a>f ? a : dia(f, 1), b); return t; };
 (async () => { const b = await chromium.launch({ executablePath:process.env.CHROMIUM || undefined }); const errs = []; let mal = 0; const ok = (c, t) => { if (!c){ mal++; console.log('  MAL: '+t); } };
   for (const [w,h] of [[1600,900],[1180,820],[400,860]]){
     const p = await (await b.newContext({ viewport:{ width:w, height:h } })).newPage(); p.on('pageerror', e => errs.push(w+': '+e.message));
@@ -22,7 +27,7 @@ const miles = n => Math.round(n).toLocaleString('en-US');
     const txt = await p.$eval('.inf-sl[data-i="1"]', e => e.innerText), cbp = V('cbp', null, a, z), mx = V('cbp', 'mx', a, z);
     ok(txt.indexOf(miles(cbp))>=0 && txt.indexOf(miles(mx))>=0, w+' encuentros CBP de la semana = base ('+miles(cbp)+', MEX '+miles(mx)+')');
     const t5 = await p.$eval('.inf-sl[data-i="5"]', e => e.innerText); ok(t5.indexOf(miles(V('resc', 'pv', a, z)))>=0 && t5.indexOf(miles(V('resc', 'rei', a, z)))>=0, w+' rescates primera vez y reincidencia = base');
-    const t3 = await p.$eval('.inf-sl[data-i="3"]', e => e.innerText); ok(t3.indexOf(miles(V('rep', null, a, z)+V('rec', null, a, z)))>=0, w+' recibidos de EE. UU. = repatriados + extranjeros recibidos');
+    const t3 = await p.$eval('.inf-sl[data-i="3"]', e => e.innerText); ok(t3.indexOf(miles(MXI(a, z)+V('rec', null, a, z)))>=0, w+' recibidos de EE. UU. = mexicanos (estados de origen y después repatriados) + extranjeros recibidos');
     ok(await p.evaluate(() => [...document.querySelectorAll('.inf-gr')].every(e => echarts.getInstanceByDom(e))), w+' todas las gráficas dibujadas');
     await p.keyboard.press('ArrowRight'); await p.waitForTimeout(700); ok(await p.$eval('.inf-sl.activa', e => e.dataset.i)==='1', w+' flecha del teclado avanza');
     const st = await (await p.$('#inf-st')).boundingBox(); await p.mouse.move(st.x+st.width*0.75, st.y+st.height/2); await p.mouse.down(); await p.mouse.move(st.x+st.width*0.25, st.y+st.height/2, { steps:6 }); await p.mouse.up(); await p.waitForTimeout(700);

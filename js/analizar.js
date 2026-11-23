@@ -34,7 +34,8 @@ const ORG = window.IANAMI_PMV && window.IANAMI_PMV.orig, orgFin = ORG ? sumaDias
 function orgSuma(a, b){ const i0 = Math.max(0, difDias(ORG.inicio, a)), i1 = Math.min(ORG.dias-1, difDias(ORG.inicio, b)), sm = v => { let x = 0; for (let i = i0; i<=i1; i++) x += v[i]; return x; };
   const l = ORG.est.map(([n, ab], k) => [ab, n, sm(ORG.v[k])]).sort((x, y) => y[2]-x[2]), nat = sm(ORG.nat); return { l, nat, tot:l.reduce((x, y) => x+y[2], 0)+nat }; }
 const m5 = v => v>0 && v<5 ? 'menos de 5' : miles(v);
-const orgMx = (a, b) => ORG ? orgSuma(a, b).tot : V('rep', null, a, b);
+// mexicanos: Estados de origen hasta su último día; si Repatriados llega más lejos, los días que faltan salen de Repatriados
+const orgMx = (a, b) => { if (!ORG) return V('rep', null, a, b); const b1 = minS([b, orgFin]); let t = a<=b1 ? orgSuma(a, b1).tot : 0; if (b>orgFin) t += V('rep', null, maxS([a, sumaDias(orgFin, 1)]), b); return t; };
 
 /* ==== [2] FECHAS ================================================== */
 const MESC = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'], MESL = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -305,7 +306,7 @@ function laminaRecibidos(X){
   const prim = AE.map(i => { const nom = pa[i].replace(/\s*\(vuelos.*$/,''), Cb = cubetas(X.a, X.b, 'd'), s = serie(Object.assign({ ind:INDK.rep, d0:X.a, d1:X.b, filtros:{ p:[i] } }, medParte(INDK.rep, parteDe(INDK.rep, 'aer'))), Cb);
     return { nom, v:s.reduce((x,y)=>x+y,0), d:s.filter(Boolean).length }; }).filter(x => x.v).sort((a,b) => b.v-a.v);
   const ghF = fin('gh'), ghOk = INDK.gh && ghF>=X.b, ghS = INDK.gh ? V('gh', null, X.a, X.b) : 0, ghL = INDK.gh ? D('gh', null, ini('gh'), ghF, 'pa') : [], ghT = ghL.reduce((x,y) => x+y[1], 0);
-  const smx = ORG ? (C0 => ({ C:C0, v:C0.l.map(c => orgSuma(c.a, c.b).tot) }))(cubetas(X.w0, X.b, 's')) : S('rep', null, X.w0, X.b, 's'), sex = S('rec', null, X.w0, X.b, 's'), lw = etiq(smx.C), st = smx.v.map((v,i) => v+sex.v[i]), hz = [];
+  const smx = ORG ? (C0 => ({ C:C0, v:C0.l.map(c => orgMx(c.a, c.b)) }))(cubetas(X.w0, X.b, 's')) : S('rep', null, X.w0, X.b, 's'), sex = S('rec', null, X.w0, X.b, 's'), lw = etiq(smx.C), st = smx.v.map((v,i) => v+sex.v[i]), hz = [];
   hz.push('EE. UU. entregó a México <b>'+miles(t)+'</b> personas'+(tp ? '; '+cuanto(pct(t, tp)-100)+' '+X.ant : '')+'. Casi todas son mexicanas (<b>'+pc(mx, t)+'</b>).');
   hz.push('La vía aérea domina: <b>'+pc(aer, mxR)+'</b> de los mexicanos llegó en vuelos PRIM ('+miles(aer)+') y '+pc(ter, mxR)+' por garitas y puentes ('+miles(ter)+').');
   if (prim.length) hz.push('<b>'+esc(prim[0].nom)+'</b> fue el aeropuerto con más llegadas: '+miles(prim[0].v)+' personas en '+prim[0].d+' '+(prim[0].d===1 ? 'día' : 'días')+' con vuelo'+(prim[1] ? ', seguido de '+esc(prim[1].nom)+' ('+miles(prim[1].v)+')' : '')+'.');
@@ -319,7 +320,7 @@ function laminaRecibidos(X){
   const cajaOr = OR ? caja('<b>'+miles(orT)+'</b> repatriados por estado de origen', 'mexicanos devueltos por EE. UU. · '+rango(X.r0, minS([X.b, orgFin])),
     '<p class="inf-or3">'+or3.map(x => '<b>'+esc(x[1])+'</b> '+miles(x[2])).join(' · ')+'</p><div class="inf-or"><div id="g-orig" class="inf-gr"></div><ol class="inf-or-l">'+or3.map(x => '<li><b class="num">'+miles(x[2])+'</b><span>'+esc(x[1])+'</span></li>').join('')+
     '<li class="esc"><span>menos</span><i></i><span>más repatriados</span></li></ol></div>', 'inf-c-k inf-c-or') : '';
-  return { tit:IDX[2], fte:'Fuente: DGPMV (mexicanos: '+(ORG ? 'estados de origen; aérea y terrestre: repatriados' : 'repatriados')+'; Guatemala y Honduras) y DGCOR (extranjeros recibidos) · frontera sur = Ciudad Hidalgo en Repatriados · el archivo no trae número de vuelos', hz:hz,
+  return { tit:IDX[2], fte:'Fuente: DGPMV (mexicanos: '+(ORG ? 'estados de origen'+(fin('rep')>orgFin && X.b>orgFin ? ' al '+fx(orgFin)+', luego repatriados' : '')+'; aérea y terrestre: repatriados' : 'repatriados')+'; Guatemala y Honduras) y DGCOR (extranjeros recibidos) · sin número de vuelos', hz:hz,
     html:enc('Mexicanos y extranjeros', 'recibidos de EE. UU.', 'Informe migratorio · lámina 3')+'<div class="inf-cfs">'+
       cifra({ eti:X.eti, fechas:X.fch, n:t, uni:'recibidos', prom:t/X.dias, chip:chip(t, tp, 'vs '+X.ant.replace(/^(la|el) /, '')), rp:[{ nom:'Mexicanos', v:mx, c:C.verde }, { nom:'Extranjeros', v:ex, c:C.vino }], tono:'a' })+
       cifra({ eti:X.etR, fechas:X.fchR, n:T, uni:'recibidos', prom:T/X.dR, rp:[{ nom:'Mexicanos', v:MX, c:C.verde }, { nom:'Extranjeros', v:EX, c:C.vino }], tono:'b' })+'</div>'+
