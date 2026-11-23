@@ -317,8 +317,8 @@ function laminaRecibidos(X){
   // estado de origen de los mexicanos repatriados en el periodo de referencia (barras de mayor a menor; los tres primeros resaltados)
   const OR = ORG ? orgSuma(X.r0, X.b) : null, orT = OR ? OR.tot : 0, orL = OR ? OR.l : [], or3 = orL.slice(0,3);
   const cajaOr = OR ? caja('<b>'+miles(orT)+'</b> repatriados por estado de origen', 'mexicanos devueltos por EE. UU. · '+rango(X.r0, minS([X.b, orgFin])),
-    '<p class="inf-or3">'+or3.map(x => '<b>'+esc(x[1])+'</b> '+miles(x[2])).join(' · ')+' — juntos '+pc(or3.reduce((a,x) => a+x[2], 0), orT)+'</p><div class="inf-or"><div id="g-orig" class="inf-gr"></div><ol class="inf-or-l">'+or3.map(x => '<li><b class="num">'+miles(x[2])+'</b><span>'+esc(x[1])+'<small>'+pc(x[2], orT)+' del total</small></span></li>').join('')+
-    '<li class="r"><b>'+pc(orT-or3.reduce((a,x) => a+x[2], 0), orT)+'</b><span>los otros 29 estados'+(OR.nat ? ' y '+miles(OR.nat)+' naturalizados' : '')+'</span></li><li class="esc"><span>menos</span><i></i><span>más repatriados</span></li></ol></div>', 'inf-c-k inf-c-or') : '';
+    '<p class="inf-or3">'+or3.map(x => '<b>'+esc(x[1])+'</b> '+miles(x[2])).join(' · ')+'</p><div class="inf-or"><div id="g-orig" class="inf-gr"></div><ol class="inf-or-l">'+or3.map(x => '<li><b class="num">'+miles(x[2])+'</b><span>'+esc(x[1])+'</span></li>').join('')+
+    '<li class="esc"><span>menos</span><i></i><span>más repatriados</span></li></ol></div>', 'inf-c-k inf-c-or') : '';
   return { tit:IDX[2], fte:'Fuente: DGPMV (mexicanos: '+(ORG ? 'estados de origen; aérea y terrestre: repatriados' : 'repatriados')+'; Guatemala y Honduras) y DGCOR (extranjeros recibidos) · frontera sur = Ciudad Hidalgo en Repatriados · el archivo no trae número de vuelos', hz:hz,
     html:enc('Mexicanos y extranjeros', 'recibidos de EE. UU.', 'Informe migratorio · lámina 3')+'<div class="inf-cfs">'+
       cifra({ eti:X.eti, fechas:X.fch, n:t, uni:'recibidos', prom:t/X.dias, chip:chip(t, tp, 'vs '+X.ant.replace(/^(la|el) /, '')), rp:[{ nom:'Mexicanos', v:mx, c:C.verde }, { nom:'Extranjeros', v:ex, c:C.vino }], tono:'a' })+
@@ -380,8 +380,8 @@ function laminaRescates(X){
       '<p class="inf-fr">En '+ua.y+' se han rescatado <b>'+miles(ua.t)+'</b> extranjeros: '+miles(ua.pv)+' por primera vez y '+miles(ua.re)+' reincidencias.</p>',
     graf:[{ id:'g-res', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Primera vez','Reincidencia']), tooltip:tip(u), xAxis:ejeX(u, lm), yAxis:ejeY(u),
       series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2, markArea:{ silent:true, data:anos.map((a, k) => { const ix = sm.C.l.map((c,i) => c.a.slice(0,4)===String(a.y) ? i : -1).filter(i => i>=0);
-          return [{ xAxis:ix[0], itemStyle:{ color:k%2 ? 'rgba(143,127,46,.07)' : 'rgba(0,0,0,0)' }, label:{ show:true, position:'insideTop', distance:u*0.2, formatter:'{y|'+a.y+'}\n{v|'+pc(a.pv, a.t)+' primera vez}\n{r|'+pc(a.re, a.t)+' reincidencia}', backgroundColor:'rgba(255,255,255,.92)', borderColor:'#E2DED0', borderWidth:1, borderRadius:u*0.2, padding:[u*0.3, u*0.6],
-            rich:{ y:{ fontSize:u*0.62, color:C.ink3, fontWeight:600, lineHeight:u*1 }, v:{ fontSize:u*0.78, color:C.verde, fontWeight:700, lineHeight:u*1.05 }, r:{ fontSize:u*0.78, color:C.vino, fontWeight:700, lineHeight:u*1.05 } } } }, { xAxis:ix[ix.length-1] }]; }) }
+          return [{ xAxis:ix[0], itemStyle:{ color:k%2 ? 'rgba(143,127,46,.07)' : 'rgba(0,0,0,0)' }, label:{ show:true, position:'insideTop', distance:u*0.2, formatter:'{y|'+a.y+'}\n{v|'+pc(a.pv, a.t)+' primera vez}\n{r|'+pc(a.re, a.t)+' reincidencia}', backgroundColor:'rgba(255,255,255,.92)', borderColor:'#E2DED0', borderWidth:1, borderRadius:u*0.2, padding:[u*0.4, u*0.8],
+            rich:{ y:{ fontSize:u*0.78, color:C.ink3, fontWeight:600, lineHeight:u*1.2 }, v:{ fontSize:u*1.02, color:C.verde, fontWeight:700, lineHeight:u*1.35 }, r:{ fontSize:u*1.02, color:C.vino, fontWeight:700, lineHeight:u*1.35 } } } }, { xAxis:ix[ix.length-1] }]; }) }
         }),
         linea(u, 'Primera vez', spv.v, C.verde), linea(u, 'Reincidencia', sre.v, C.vino)] }) }] };
 }
