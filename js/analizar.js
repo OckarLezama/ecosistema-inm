@@ -19,7 +19,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const miles = n => Math.round(n).toLocaleString('en-US');
 const corto = n => { const a = Math.abs(n); return a>=1e6 ? (n/1e6).toFixed(2)+' M' : a>=1e4 ? (n/1e3).toFixed(1)+' mil' : miles(n); };
-const pct = (a, b) => b ? a/b*100 : 0, pc = (a, b) => Math.round(pct(a, b))+'%';
+const pct = (a, b) => b ? a/b*100 : 0, pc = (a, b) => Math.round(pct(a, b))+'%', pc1 = (a, b) => pct(a, b).toFixed(1)+'%';
 const flecha = x => (x>=0 ? '▲ ' : '▼ ')+Math.abs(x).toFixed(Math.abs(x)<10 ? 1 : 0)+'%';
 const cap = s => s ? s[0].toUpperCase()+s.slice(1) : s;
 const C = { ink3:'#8A857A', verde:'#2F6657', vino:'#7E302B', rojo:'#C4605A', ocre:'#8F7F2E', ink:'#2B2926', ink2:'#5C5952', gris:'#9A958A', arena:'#DDD5BE', arena2:'#EDE8D8', linea:'#E2DED0', fondo:'#FCFBF7', salvia:'#778E88' };
@@ -305,13 +305,16 @@ function laminaRecibidos(X){
   // vuelos PRIM: días con llegada y personas por aeropuerto (el archivo no trae número de vuelos)
   const prim = AE.map(i => { const nom = pa[i].replace(/\s*\(vuelos.*$/,''), Cb = cubetas(X.a, X.b, 'd'), s = serie(Object.assign({ ind:INDK.rep, d0:X.a, d1:X.b, filtros:{ p:[i] } }, medParte(INDK.rep, parteDe(INDK.rep, 'aer'))), Cb);
     return { nom, v:s.reduce((x,y)=>x+y,0), d:s.filter(Boolean).length }; }).filter(x => x.v).sort((a,b) => b.v-a.v);
-  const ghF = fin('gh'), ghOk = INDK.gh && ghF>=X.b, ghS = INDK.gh ? V('gh', null, X.a, X.b) : 0, ghL = INDK.gh ? D('gh', null, ini('gh'), ghF, 'pa') : [], ghT = ghL.reduce((x,y) => x+y[1], 0);
+  const ghF = INDK.gh ? minS([fin('gh'), X.b]) : X.b, ghL = INDK.gh ? D('gh', null, ini('gh'), ghF, 'pa') : [], ghT = ghL.reduce((x,y) => x+y[1], 0);
   const smx = ORG ? (C0 => ({ C:C0, v:C0.l.map(c => orgMx(c.a, c.b)) }))(cubetas(X.w0, X.b, 's')) : S('rep', null, X.w0, X.b, 's'), sex = S('rec', null, X.w0, X.b, 's'), lw = etiq(smx.C), st = smx.v.map((v,i) => v+sex.v[i]), hz = [];
   hz.push('EE. UU. entregó a México <b>'+miles(t)+'</b> personas'+(tp ? '; '+cuanto(pct(t, tp)-100)+' '+X.ant : '')+'. Casi todas son mexicanas (<b>'+pc(mx, t)+'</b>).');
   hz.push('La vía aérea domina: <b>'+pc(aer, mxR)+'</b> de los mexicanos llegó en vuelos PRIM ('+miles(aer)+') y '+pc(ter, mxR)+' por garitas y puentes ('+miles(ter)+').');
   if (prim.length) hz.push('<b>'+esc(prim[0].nom)+'</b> fue el aeropuerto con más llegadas: '+miles(prim[0].v)+' personas en '+prim[0].d+' '+(prim[0].d===1 ? 'día' : 'días')+' con vuelo'+(prim[1] ? ', seguido de '+esc(prim[1].nom)+' ('+miles(prim[1].v)+')' : '')+'.');
+  const coS = INDK.com ? V('com', null, X.a, X.b) : 0, coT = INDK.com ? V('com', null, ini('com'), X.b) : 0, coP = INDK.com ? V('com', null, X.pa, X.pb) : 0;
+  if (INDK.com) hz.push('En vuelos comerciales regresaron <b>'+miles(coS)+'</b> mexicanos'+(coP ? ' ('+miles(coP)+' '+X.ant+')' : '')+'; suman '+miles(coT)+' desde el '+fxa(ini('com'))+'.');
   hz.push('Los extranjeros recibidos sumaron <b>'+miles(ex)+'</b> ('+pc(ex, t)+'); en el '+esc(enPer(X))+' representan '+pc(EX, T)+'.');
-  const cajaAer = caja('<b>'+miles(aer)+'</b> por vía aérea', 'vuelos PRIM · días con llegada y personas', prim.length ? '<ul class="inf-ls">'+prim.map(p => '<li><span>'+esc(p.nom)+'</span><small>'+p.d+' '+(p.d===1 ? 'día' : 'días')+'</small><b>'+miles(p.v)+'</b></li>').join('')+'</ul>' : '<p class="inf-nt">Sin llegadas aéreas en el periodo.</p>', 'inf-c-k');
+  const coLi = INDK.com ? '<li class="inf-ls-co"><span>Vuelos comerciales<small>'+miles(coT)+' desde el '+fxa(ini('com'))+'</small></span><small>semana</small><b>'+miles(coS)+'</b></li>' : '';
+  const cajaAer = caja('<b>'+miles(aer)+'</b> por vía aérea', 'vuelos PRIM · días con llegada y personas'+(INDK.com ? ' · y vuelos comerciales' : ''), prim.length ? '<ul class="inf-ls">'+prim.map(p => '<li><span>'+esc(p.nom)+'</span><small>'+p.d+' '+(p.d===1 ? 'día' : 'días')+'</small><b>'+miles(p.v)+'</b></li>').join('')+coLi+'</ul>' : '<p class="inf-nt">Sin llegadas aéreas en el periodo.</p>', 'inf-c-k');
   // terrestre: todo lo que no llegó en avión según Repatriados; la frontera sur es Ciudad Hidalgo (mismo archivo), para no contarla dos veces
   const cajaTer = caja('<b>'+miles(ter)+'</b> por vía terrestre', X.fch, '<div class="inf-dos"><div><b class="num">'+miles(norte)+'</b><span>Frontera norte<small>garitas y puentes</small></span></div><div><b class="num">'+miles(ch)+'</b><span>Frontera sur<small>Ciudad Hidalgo, Chis.</small></span></div></div>', 'inf-c-k');
   const cajaGH = INDK.gh ? caja('<b>'+miles(ghT)+'</b> enviados a otros países', 'mexicanos que EE. UU. mandó a Guatemala u Honduras · '+rango(ini('gh'), ghF), '<div class="inf-dos">'+ghL.map(([n,v]) => '<div><b class="num">'+miles(v)+'</b><span>'+esc(n)+'</span></div>').join('')+'</div>', 'inf-c-k') : '';
@@ -320,7 +323,7 @@ function laminaRecibidos(X){
   const cajaOr = OR ? caja('<b>'+miles(orT)+'</b> repatriados por estado de origen', 'mexicanos devueltos por EE. UU. · '+rango(X.r0, minS([X.b, orgFin])),
     '<p class="inf-or3">'+or3.map(x => '<b>'+esc(x[1])+'</b> '+miles(x[2])).join(' · ')+'</p><div class="inf-or"><div id="g-orig" class="inf-gr"></div><ol class="inf-or-l">'+or3.map(x => '<li><b class="num">'+miles(x[2])+'</b><span>'+esc(x[1])+'</span></li>').join('')+
     '<li class="esc"><span>menos</span><i></i><span>más repatriados</span></li></ol></div>', 'inf-c-k inf-c-or') : '';
-  return { tit:IDX[2], fte:'Fuente: DGPMV (mexicanos: '+(ORG ? 'estados de origen'+(fin('rep')>orgFin && X.b>orgFin ? ' al '+fx(orgFin)+', luego repatriados' : '')+'; aérea y terrestre: repatriados' : 'repatriados')+'; Guatemala y Honduras) y DGCOR (extranjeros recibidos) · sin número de vuelos', hz:hz,
+  return { tit:IDX[2], fte:'Fuente: DGPMV (mexicanos: '+(ORG ? 'estados de origen'+(fin('rep')>orgFin && X.b>orgFin ? ' al '+fx(orgFin)+', luego repatriados' : '')+'; aérea y terrestre: repatriados' : 'repatriados')+'; Guatemala y Honduras; vuelos comerciales) y DGCOR (extranjeros recibidos) · sin número de vuelos', hz:hz,
     html:enc('Mexicanos y extranjeros', 'recibidos de EE. UU.', 'Informe migratorio · lámina 3')+'<div class="inf-cfs">'+
       cifra({ eti:X.eti, fechas:X.fch, n:t, uni:'recibidos', prom:t/X.dias, chip:chip(t, tp, 'vs '+X.ant.replace(/^(la|el) /, '')), rp:[{ nom:'Mexicanos', v:mx, c:C.verde }, { nom:'Extranjeros', v:ex, c:C.vino }], tono:'a' })+
       cifra({ eti:X.etR, fechas:X.fchR, n:T, uni:'recibidos', prom:T/X.dR, rp:[{ nom:'Mexicanos', v:MX, c:C.verde }, { nom:'Extranjeros', v:EX, c:C.vino }], tono:'b' })+'</div>'+
@@ -368,17 +371,19 @@ function laminaRescates(X){
   const R = (p, a, b) => V('resc', p, a, b), t = R(null, X.a, X.b), pv = R('pv', X.a, X.b), rei = R('rei', X.a, X.b), T = R(null, X.r0, X.b), PV = R('pv', X.r0, X.b), REI = R('rei', X.r0, X.b), tp = R(null, X.pa, X.pb);
   const sm = S('resc', null, X.r0, X.b, 'm'), spv = S('resc', 'pv', X.r0, X.b, 'm'), sre = S('resc', 'rei', X.r0, X.b, 'm'), lm = etiq(sm.C);
   const anos = []; for (let y = f0(X.r0).getFullYear(); y<=f0(X.b).getFullYear(); y++){ const a = maxS([X.r0, y+'-01-01']), b = minS([X.b, y+'-12-31']); anos.push({ y, t:R(null, a, b), pv:R('pv', a, b), re:R('rei', a, b) }); }
-  const ua = anos[anos.length-1], hz = [], nat = D('resc', null, X.a, X.b, 'n');
+  const ua = anos[anos.length-1], hz = [], nat = D('resc', null, X.a, X.b, 'n'), natT = D('resc', null, X.r0, X.b, 'n').slice(0, 3);
   hz.push('El INM rescató a <b>'+miles(t)+'</b> extranjeros'+(tp ? '; '+cuanto(pct(t, tp)-100)+' '+X.ant+' ('+miles(tp)+')' : '')+'.');
   hz.push('<b>'+cap(deCada(pct(pv, t)))+'</b> fueron rescatados por primera vez ('+pc(pv, t)+'); en el '+esc(enPer(X))+', '+pc(PV, T)+'.');
   if (anos.length>1){ const p = anos[anos.length-2], baja = ua.re/ua.t<=p.re/p.t; hz.push('La reincidencia '+(baja ? 'bajó' : 'subió')+' de <b>'+pc(p.re, p.t)+'</b> en '+p.y+' a <b>'+pc(ua.re, ua.t)+'</b> en '+ua.y+': '+(baja ? 'cada vez más rescates son de personas nuevas' : 'crece la proporción de personas rescatadas más de una vez')+'.'); }
+  if (natT.length) hz.push('En el '+esc(enPer(X))+' las nacionalidades con más rescatados son '+natT.map(n => '<b>'+esc(n[0])+'</b> ('+miles(n[1])+')').reduce((x, n, i, l) => x+(i ? (i===l.length-1 ? ' y ' : ', ') : '')+n, '')+'.');
   if (nat.length) hz.push('<b>'+esc(nat[0][0])+'</b> es la nacionalidad con más rescatados ('+miles(nat[0][1])+', '+pc(nat[0][1], t)+')'+(nat[1] ? ', seguida de '+esc(nat[1][0])+' ('+miles(nat[1][1])+')' : '')+'.');
   const eq = (eti, fch, a, b, c, tono) => '<div class="inf-eq '+tono+'"><div class="inf-cf-e"><b>'+eti+'</b><span>'+fch+'</span></div><div class="inf-eq-f">'+
     '<div><b class="num v">'+miles(a)+'</b><small>primera vez</small></div><i>+</i><div><b class="num r">'+miles(b)+'</b><small>reincidencias</small></div><i>=</i><div><b class="num">'+miles(a+b)+'</b><small>rescatados · '+miles(c)+' por día</small></div></div></div>';
   return { tit:IDX[4], fte:'Fuente: DGCOR, reporte de rescates de las O.R. · semanas de lunes a domingo', hz:hz,
     html:enc('Extranjeros rescatados', 'por el INM', 'Informe migratorio · lámina 5')+'<div class="inf-cfs">'+eq(X.eti, X.fch, pv, rei, t/X.dias, 'a')+eq(X.etR, X.fchR, PV, REI, T/X.dR, 'b')+'</div>'+
       caja('Por mes', X.fchR+' · barras: total · líneas: primera vez y reincidencia', '<div id="g-res" class="inf-gr"></div>', 'inf-c-alta')+
-      '<p class="inf-fr">En '+ua.y+' se han rescatado <b>'+miles(ua.t)+'</b> extranjeros: '+miles(ua.pv)+' por primera vez y '+miles(ua.re)+' reincidencias.</p>',
+      '<p class="inf-fr">En '+ua.y+' se han rescatado <b>'+miles(ua.t)+'</b> extranjeros: '+miles(ua.pv)+' por primera vez y '+miles(ua.re)+' reincidencias.</p>'+
+      (natT.length ? '<p class="inf-fr">Principales nacionalidades en el '+esc(enPer(X))+': '+natT.map(n => '<b>'+esc(n[0])+'</b> '+pc1(n[1], T)+' ('+miles(n[1])+')').join(' · ')+'.</p>' : ''),
     graf:[{ id:'g-res', op:u => ({ grid:{ left:u*3, right:u*1.6, top:u*2.6, bottom:u*1.8 }, legend:ley(u, ['Total','Primera vez','Reincidencia']), tooltip:tip(u), xAxis:ejeX(u, lm), yAxis:ejeY(u),
       series:[barra(u, 'Total', sm.v, C.arena, { barMaxWidth:u*2.2, markArea:{ silent:true, data:anos.map((a, k) => { const ix = sm.C.l.map((c,i) => c.a.slice(0,4)===String(a.y) ? i : -1).filter(i => i>=0);
           return [{ xAxis:ix[0], itemStyle:{ color:k%2 ? 'rgba(143,127,46,.07)' : 'rgba(0,0,0,0)' }, label:{ show:true, position:'insideTop', distance:u*0.2, formatter:'{y|'+a.y+'}\n{v|'+pc(a.pv, a.t)+' primera vez}\n{r|'+pc(a.re, a.t)+' reincidencia}', backgroundColor:'rgba(255,255,255,.92)', borderColor:'#E2DED0', borderWidth:1, borderRadius:u*0.2, padding:[u*0.5, u*1],

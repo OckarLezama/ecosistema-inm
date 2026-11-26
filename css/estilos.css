@@ -1555,6 +1555,7 @@ body.en-inf{overflow:hidden}
 .inf-ls{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 calc(var(--u)*1.4)}
 .inf-ls li{display:grid;grid-template-columns:1fr auto auto;gap:calc(var(--u)*.5);align-items:baseline;font-size:calc(var(--u)*.74);padding:calc(var(--u)*.1) 0;border-bottom:1px solid #F1EEE6}
 .inf-ls span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.inf-ls small{color:#8A857A;font-size:calc(var(--u)*.66)}.inf-ls b{font:600 calc(var(--u)*.9) var(--f-num)}
+.inf-ls .inf-ls-co span{color:#7E302B}.inf-ls .inf-ls-co span small{display:block;font-size:.85em;color:#8A857A;margin-top:.05em}.inf-ls .inf-ls-co b{color:#7E302B}
 .inf-nt{margin:calc(var(--u)*.3) 0 0;font-size:calc(var(--u)*.68);color:#8A857A}
 .inf-dos{display:flex;gap:calc(var(--u)*2)}
 .inf-dos>div{display:flex;align-items:center;gap:calc(var(--u)*.55)}
