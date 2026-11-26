@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-11-25 17:47
+Generado: 2026-11-25 18:42
 Periodo de las bases: 2024-10-01 a 2026-11-24 (785 días)
 
 == Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-23 entregado 2026-11-24.xlsx, DGCVM INGRESOS 24 nov 26.xlsx  ·  cargado 2026-11-25
@@ -70,12 +70,11 @@ Periodo de las bases: 2024-10-01 a 2026-11-24 (785 días)
    En «Otras» nacionalidades: 0 (0.0%)
    · [corregir] 3 renglones repetidos (mismo día y mismos datos: o.r., nacionalidad); se suman los dos. El más reciente, 31 ago 2026. Confirmar si es doble captura.
 
-== Repatriados  ·  DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-24 entregado 2026-11-25.xlsx  ·  cargado 2026-11-25
-   7,920 renglones · total 392,546 · del 2024-10-01 al 2026-11-24
+== Repatriados  ·  DGPMV REPATRIADOS CORRECCION 2026-01-01 a 2026-11-24 entregado 2026-11-25.xlsx, DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-24 entregado 2026-11-25.xlsx  ·  cargado 2026-11-25
+   7,909 renglones · total 392,419 · del 2024-10-01 al 2026-11-24
    Días sin datos: 0
-   · [corregir] Revisar el 29 oct: 47, menos de un tercio de lo normal para ese día de la semana (≈667). Puede faltar parte del archivo.
-   · [corregir] Revisar el 7 nov: 57, menos de un tercio de lo normal para ese día de la semana (≈411). Puede faltar parte del archivo.
-   · [corregir] Revisar el 16 nov: 30, menos de un tercio de lo normal para ese día de la semana (≈608). Puede faltar parte del archivo.
+   · [corregir] Revisar el 16 nov: 30, menos de un tercio de lo normal para ese día de la semana (≈696). Puede faltar parte del archivo.
+   · DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-24 entregado 2026-11-25.xlsx es una entrega anterior: sus 328 días del periodo que cubre DGPMV REPATRIADOS CORRECCION 2026-01-01 a 2026-11-24 entregado 2026-11-25.xlsx se tomaron de ese archivo. No se suma nada dos veces.
 
 == Documentos vigentes por estado  ·  DGRAM Extranjerios_DocVigente_Estados 2026-11-23.xlsx  ·  cargado 2026-11-25
 
@@ -83,16 +82,20 @@ Periodo de las bases: 2024-10-01 a 2026-11-24 (785 días)
 
 == Documentos vigentes estado × país  ·  DGRAM Extranjerios_DocVigente_EdosvsPaises 2026-11-23.xlsx  ·  cargado 2026-11-25
 
-== Encuentros CBP  ·  CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-24
-   10,623 renglones · total 588,039 · del 2024-10-01 al 2026-11-23
-   Días sin datos: 2 → 2026-11-19, 2026-11-24
+== Encuentros CBP  ·  CBP ENCUENTROS CORRECCION 2025-01-20 a 2026-11-23 entregado 2026-11-25.xlsx, CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-25
+   10,623 renglones · total 588,063 · del 2024-10-01 al 2026-11-22
+   Días sin datos: 2 → 2026-11-23, 2026-11-24
+   · Encabezado «FECHA» leído como «DIA».
+   · Encabezado «ENCUENTRO» leído como «AGENCIA».
+   · CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx es una entrega anterior: sus 672 días del periodo que cubre CBP ENCUENTROS CORRECCION 2025-01-20 a 2026-11-23 entregado 2026-11-25.xlsx se tomaron de ese archivo. No se suma nada dos veces.
+   · [corregir] 1 días que traía CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx no vienen en la entrega más reciente que cubre ese periodo; se cuentan en cero (2026-11-23). Si faltan por error, pedir el archivo completo.
 
 == Caravanas  ·  CARAVANAS MIGRANTES.xlsx  ·  cargado 2026-11-12
    24 caravanas · del 2024-10-05 al 2026-11-06
    · Estos lugares no tienen ubicación en el catálogo, así que su recorrido no se dibuja en el mapa: Corazones, Oaxaca
 
-== Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES 29 sep al 24 nov 26.xlsx, DGPMV COMERCIALES.xlsx  ·  Se muestra en Protección al migrante › Vuelos comerciales. No está en el archivo de Repatriados: se suma aparte.
+== Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES 13 may al 24 nov 26.xlsx  ·  Se muestra en Protección al migrante › Vuelos comerciales. No está en el archivo de Repatriados: se suma aparte.
 
-== Repatriados desde Guatemala y Honduras  ·  DGPMV GUATEMALA-HONDURAS 1 oct al 24 nov 26.xlsx, DGPMV GUATEMALA-HONDURAS 29 sep al 25 oct 26.xlsx, DGPMV GUATEMALA-HONDURAS.xlsx  ·  Mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras. Coincide día por día con el punto Ciudad Hidalgo de Repatriados: es el mismo flujo y no se suma otra vez.
+== Repatriados desde Guatemala y Honduras  ·  DGPMV GUATEMALA-HONDURAS 19 abr al 24 nov 26.xlsx  ·  Mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras. Coincide día por día con el punto Ciudad Hidalgo de Repatriados: es el mismo flujo y no se suma otra vez.
 
 Archivos que no se reconocieron: DGPMV REPATRIADOS ESTADOS DE ORIGEN consolidado 2024-10-01 a 2026-11-19 entregado 2026-11-23.xlsx, DGRAM VALIDACION DOCUMENTOS REGISTRO CIVIL 17 al 20 nov 26.xlsx, DGRAM VALIDACION DOCUMENTOS REGISTRO CIVIL 2 may 25 al 15 nov 26.xlsx
