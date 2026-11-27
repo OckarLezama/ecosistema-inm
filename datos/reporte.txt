@@ -1,5 +1,5 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-11-26 18:06
+Generado: 2026-11-26 18:20
 Periodo de las bases: 2024-10-01 a 2026-11-25 (786 días)
 
 == Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-23 entregado 2026-11-24.xlsx, DGCVM INGRESOS 24 nov 26.xlsx, DGCVM INGRESOS 25 nov 26.xlsx  ·  cargado 2026-11-26
@@ -70,9 +70,9 @@ Periodo de las bases: 2024-10-01 a 2026-11-25 (786 días)
    En «Otras» nacionalidades: 0 (0.0%)
    · [corregir] 3 renglones repetidos (mismo día y mismos datos: o.r., nacionalidad); se suman los dos. El más reciente, 31 ago 2026. Confirmar si es doble captura.
 
-== Repatriados  ·  DGPMV REPATRIADOS CORRECCION 2026-01-01 a 2026-11-24 entregado 2026-11-25.xlsx, DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-24 entregado 2026-11-25.xlsx  ·  cargado 2026-11-25
-   7,909 renglones · total 392,419 · del 2024-10-01 al 2026-11-24
-   Días sin datos: 1 → 2026-11-25
+== Repatriados  ·  DGPMV REPATRIADOS 25 nov 26.xlsx, DGPMV REPATRIADOS CORRECCION 2026-01-01 a 2026-11-24 entregado 2026-11-25.xlsx, DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-24 entregado 2026-11-25.xlsx  ·  cargado 2026-11-26
+   7,923 renglones · total 392,989 · del 2024-10-01 al 2026-11-25
+   Días sin datos: 0
    · [corregir] Revisar el 16 nov: 30, menos de un tercio de lo normal para ese día de la semana (≈696). Puede faltar parte del archivo.
    · DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-24 entregado 2026-11-25.xlsx es una entrega anterior: sus 328 días del periodo que cubre DGPMV REPATRIADOS CORRECCION 2026-01-01 a 2026-11-24 entregado 2026-11-25.xlsx se tomaron de ese archivo. No se suma nada dos veces.
 
@@ -91,7 +91,7 @@ Periodo de las bases: 2024-10-01 a 2026-11-25 (786 días)
    · [corregir] 1 días que traía CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx no vienen en la entrega más reciente que cubre ese periodo; se cuentan en cero (2026-11-23). Si faltan por error, pedir el archivo completo.
 
 == Caravanas  ·  CARAVANAS MIGRANTES.xlsx  ·  cargado 2026-11-12
-   24 caravanas · del 2024-10-05 al 2026-11-06
+   25 caravanas · del 2024-10-05 al 2026-11-20
    · Estos lugares no tienen ubicación en el catálogo, así que su recorrido no se dibuja en el mapa: Corazones, Oaxaca
 
 == Repatriados en vuelos comerciales  ·  DGPMV COMERCIALES 13 may al 24 nov 26.xlsx  ·  Se muestra en Protección al migrante › Vuelos comerciales. No está en el archivo de Repatriados: se suma aparte.
