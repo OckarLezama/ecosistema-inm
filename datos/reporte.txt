@@ -1,78 +1,78 @@
 IA-NAMI · REPORTE DE CONVERSIÓN
-Generado: 2026-11-25 18:42
-Periodo de las bases: 2024-10-01 a 2026-11-24 (785 días)
+Generado: 2026-11-26 18:06
+Periodo de las bases: 2024-10-01 a 2026-11-25 (786 días)
 
-== Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-23 entregado 2026-11-24.xlsx, DGCVM INGRESOS 24 nov 26.xlsx  ·  cargado 2026-11-25
-   1,146,132 renglones · total 104,727,878 · del 2024-10-01 al 2026-11-24
+== Ingresos  ·  DGCVM INGRESOS 2024-10-01 a 2024-12-31 entregado 2026-10-26.xlsx, DGCVM INGRESOS 2025.xlsx, DGCVM INGRESOS 2026-01-01 a 2026-11-23 entregado 2026-11-24.xlsx, DGCVM INGRESOS 24 nov 26.xlsx, DGCVM INGRESOS 25 nov 26.xlsx  ·  cargado 2026-11-26
+   1,147,905 renglones · total 104,924,765 · del 2024-10-01 al 2026-11-25
    Días sin datos: 0
    En «Otras» nacionalidades: 2,211 (0.0%)
    · 45 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Navidad, Islas Cocos, Timor-Leste, Islas Reunion, Islas Malvinas, Islas Azores, Islas Faroe, Islas Marianas….
    · Solo 44 de 180 puntos de internación tienen ubicación para dibujarse en el mapa (concentran el 97% de los ingresos). Los demás sí se cuentan en todas las cifras; solo no aparecen como punto en el mapa.
-   · [corregir] Sin datos hasta el 24 nov, último día de la base: Aeropuerto Internacional De Tampico (desde el 18 nov). Antes traían datos casi a diario; si sí hubo movimiento, falta en el archivo.
+   · [corregir] Sin datos hasta el 25 nov, último día de la base: Aeropuerto Internacional De Tampico (desde el 18 nov). Antes traían datos casi a diario; si sí hubo movimiento, falta en el archivo.
    · Encabezado «FECHA» leído como «DIA».
    · Encabezado «OR» leído como «O.R.».
 
-== Segunda revisión  ·  DGCVM SEGUNDA REVISION consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-24
-   40,449 renglones · total 111,460 · del 2024-10-01 al 2026-11-23
+== Segunda revisión  ·  DGCVM SEGUNDA REVISION 25 nov 26.xlsx, DGCVM SEGUNDA REVISION consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-26
+   40,454 renglones · total 111,465 · del 2024-10-01 al 2026-11-25
    Días sin datos: 4 → 2024-10-31, 2025-03-18, 2026-06-11, 2026-11-24
    En «Otras» nacionalidades: 2 (0.0%)
    · 1,979 casos (1,408 renglones) vienen con nacionalidad mexicana; no se cuentan en segunda revisión ni en rechazos (igual que Control migratorio)
    · [corregir] «PUNTO DE INTERNACION» trae «Punto de Internación Mesa de Otay» desde el 20 nov 2026 (1 renglones) en lugar de «Punto de internación Mesa de Otay», como se escribía antes. Se cuenta como el mismo punto; pedir que se escriba igual.
 
-== Trámites  ·  DGRAM TRAMITES MIGRATORIOS 14 al 17 nov 26.xlsx, DGRAM TRAMITES MIGRATORIOS 18 al 19 nov 26.xlsx, DGRAM TRAMITES MIGRATORIOS 20 nov 26.xlsx, DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx, DGRAM TRAMITES MIGRATORIOS 23 al 24 nov 26.xlsx  ·  cargado 2026-11-25
-   995,075 renglones · total 995,075 · del 2024-10-02 al 2026-11-24
+== Trámites  ·  DGRAM TRAMITES MIGRATORIOS 14 al 17 nov 26.xlsx, DGRAM TRAMITES MIGRATORIOS 18 al 19 nov 26.xlsx, DGRAM TRAMITES MIGRATORIOS 20 al 25 nov 26.xlsx, DGRAM TRAMITES MIGRATORIOS 2024.xlsx, DGRAM TRAMITES MIGRATORIOS 2025.xlsx, DGRAM TRAMITES MIGRATORIOS 2026.xlsx  ·  cargado 2026-11-26
+   997,203 renglones · total 997,203 · del 2024-10-02 al 2026-11-25
    Días sin datos: 195 → 2024-10-01, 2024-10-13, 2024-10-19, 2024-10-20, 2024-10-26, 2024-10-27, 2024-11-02, 2024-11-03, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01, 2024-12-08, 2024-12-15 …
-   En «Otras» nacionalidades: 38,922 (3.9%)
+   En «Otras» nacionalidades: 38,965 (3.9%)
    · 10 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: Islas Reunion, Timor-Leste, De las Islas Ultramarinas de Estados Unidos, Islas Marianas.
-   · 38,769 renglones son de empleadores, no de personas (se cuentan en el total, sin nacionalidad)
+   · 38,812 renglones son de empleadores, no de personas (se cuentan en el total, sin nacionalidad)
    · [corregir] Revisar el 16 nov: 342, menos de un tercio de lo normal para ese día de la semana (≈2,052). Puede faltar parte del archivo.
    · 358,011 renglones son de antes del 1 oct 2024 (el más antiguo, del 2024-01-02). No se usan: la plataforma empieza el 1 oct 2024.
    · 99 trámites no marcan ningún documento: 99 terminaron con tarjeta (se cuentan como «Tarjeta sin tipo registrado») y 0 sin tarjeta (se cuentan como «Sin expedición»).
-   · [corregir] Entre los trámites concluidos, «Tipo de resolución» dice 29,639 «En proceso» y 0 «Cancelados»; 25,125 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
+   · [corregir] Entre los trámites concluidos, «Tipo de resolución» dice 29,854 «En proceso» y 0 «Cancelados»; 25,304 de los «En proceso» ya dicen «Con expedición de tarjeta». Se cuentan por «Tipo de conclusión»; confirmar con el área.
    · Columnas nuevas que todavía no se usan: 2026-11-19 00:00:00.
 
-== Rescates  ·  DGCOR RESCATES 24 nov 26.xlsx, DGCOR RESCATES consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-25
-   55,282 renglones · total 907,206 · del 2024-10-01 al 2026-11-24
+== Rescates  ·  DGCOR RESCATES 24 nov 26.xlsx, DGCOR RESCATES 25 nov 26.xlsx, DGCOR RESCATES consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-26
+   55,329 renglones · total 907,437 · del 2024-10-01 al 2026-11-25
    Días sin datos: 0
    En «Otras» nacionalidades: 48 (0.0%)
    · 8 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: VENEZUELA (REPÚBLICA BOLIVARIANA DE), REPÚBLICA DE KOSOVO.
    · [corregir] 2 renglones repetidos (mismo día, O.R. y nacionalidad)
-   · 156,914 rescatados sin destino registrado (ni estación ni DIF)
+   · 156,925 rescatados sin destino registrado (ni estación ni DIF)
 
-== Presentados  ·  DGCVM PRESENTADOS 24 nov 26.xlsx, DGCVM PRESENTADOS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-25
-   35,326 renglones · total 154,891 · del 2024-10-01 al 2026-11-24
+== Presentados  ·  DGCVM PRESENTADOS 24 nov 26.xlsx, DGCVM PRESENTADOS 25 nov 26.xlsx, DGCVM PRESENTADOS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-26
+   35,377 renglones · total 155,080 · del 2024-10-01 al 2026-11-25
    Días sin datos: 1 → 2025-11-12
    En «Otras» nacionalidades: 2 (0.0%)
    · [corregir] Sin datos del 21 al 25 sep en: Estación Migratoria Janos. Antes y después sí traen; si esos días hubo movimiento, falta en el archivo.
    · [corregir] Sin datos del 4 al 16 nov en: Estación Migratoria Los Cabos. Antes y después sí traen; si esos días hubo movimiento, falta en el archivo.
    · [corregir] Revisar el 16 nov: 31, menos de un tercio de lo normal para ese día de la semana (≈110). Puede faltar parte del archivo.
 
-== Canalizados NNA  ·  DGCVM CANALIZADOS_NNA 24 nov 26.xlsx, DGCVM CANALIZADOS_NNA consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-25
-   42,307 renglones · total 42,307 · del 2024-10-01 al 2026-11-24
+== Canalizados NNA  ·  DGCVM CANALIZADOS_NNA 24 nov 26.xlsx, DGCVM CANALIZADOS_NNA 25 nov 26.xlsx, DGCVM CANALIZADOS_NNA consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-26
+   42,324 renglones · total 42,324 · del 2024-10-01 al 2026-11-25
    Días sin datos: 1 → 2026-10-26
    En «Otras» nacionalidades: 11 (0.0%)
    · 5 renglones traen países que no están en el catálogo de la plataforma; se cuentan en «Otras nacionalidades»: ISLAS VÍRGENES DE EE.UU..
    · [corregir] 15 renglones sin fecha de nacimiento (se cuentan en el grupo 12 a 17)
 
-== Canalizados adultos  ·  DGCVM CANALIZADOS_ADULTOS ACOMPAÑANTES 24 nov 26.xlsx, DGCVM CANALIZADOS_ADULTOS ACOMPAÑANTES consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-25
-   27,079 renglones · total 27,079 · del 2024-10-01 al 2026-11-24
+== Canalizados adultos  ·  DGCVM CANALIZADOS_ADULTOS ACOMPAÑANTES 24 nov 26.xlsx, DGCVM CANALIZADOS_ADULTOS ACOMPAÑANTES 25 nov 26.xlsx, DGCVM CANALIZADOS_ADULTOS ACOMPAÑANTES consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-26
+   27,091 renglones · total 27,091 · del 2024-10-01 al 2026-11-25
    Días sin datos: 1 → 2026-10-26
    En «Otras» nacionalidades: 0 (0.0%)
 
-== Retornados  ·  DGCVM RETORNADOS A SU PAIS 24 nov 26.xlsx, DGCVM RETORNADOS A SU PAIS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-25
-   6,733 renglones · total 30,986 · del 2024-10-01 al 2026-11-24
+== Retornados  ·  DGCVM RETORNADOS A SU PAIS 24 nov 26.xlsx, DGCVM RETORNADOS A SU PAIS 25 nov 26.xlsx, DGCVM RETORNADOS A SU PAIS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-26
+   6,744 renglones · total 31,047 · del 2024-10-01 al 2026-11-25
    Días sin datos: 16 → 2024-10-13, 2024-10-20, 2024-10-27, 2024-11-02, 2024-11-04, 2024-12-01, 2024-12-08, 2024-12-15, 2024-12-25, 2025-01-01, 2025-01-02, 2025-01-03, 2025-02-23, 2025-11-16 …
    En «Otras» nacionalidades: 0 (0.0%)
 
-== Recibidos de EE. UU.  ·  DGCOR RECIBIDOS consolidado 2024-10-02 a 2026-11-24 entregado 2026-11-25.xlsx  ·  cargado 2026-11-25
-   3,847 renglones · total 26,088 · del 2024-10-02 al 2026-11-24
+== Recibidos de EE. UU.  ·  DGCOR RECIBIDOS 25 nov 26.xlsx, DGCOR RECIBIDOS consolidado 2024-10-02 a 2026-11-24 entregado 2026-11-25.xlsx  ·  cargado 2026-11-26
+   3,849 renglones · total 26,095 · del 2024-10-02 al 2026-11-25
    Días sin datos: 116 → 2024-10-01, 2024-10-08, 2024-10-10, 2024-10-12, 2024-10-13, 2024-10-19, 2024-10-26, 2024-10-27, 2024-11-03, 2024-11-05, 2024-11-10, 2024-11-24, 2024-11-30, 2024-12-01 …
    En «Otras» nacionalidades: 0 (0.0%)
    · [corregir] 3 renglones repetidos (mismo día y mismos datos: o.r., nacionalidad); se suman los dos. El más reciente, 31 ago 2026. Confirmar si es doble captura.
 
 == Repatriados  ·  DGPMV REPATRIADOS CORRECCION 2026-01-01 a 2026-11-24 entregado 2026-11-25.xlsx, DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-24 entregado 2026-11-25.xlsx  ·  cargado 2026-11-25
    7,909 renglones · total 392,419 · del 2024-10-01 al 2026-11-24
-   Días sin datos: 0
+   Días sin datos: 1 → 2026-11-25
    · [corregir] Revisar el 16 nov: 30, menos de un tercio de lo normal para ese día de la semana (≈696). Puede faltar parte del archivo.
    · DGPMV REPATRIADOS consolidado 2024-10-01 a 2026-11-24 entregado 2026-11-25.xlsx es una entrega anterior: sus 328 días del periodo que cubre DGPMV REPATRIADOS CORRECCION 2026-01-01 a 2026-11-24 entregado 2026-11-25.xlsx se tomaron de ese archivo. No se suma nada dos veces.
 
@@ -84,7 +84,7 @@ Periodo de las bases: 2024-10-01 a 2026-11-24 (785 días)
 
 == Encuentros CBP  ·  CBP ENCUENTROS CORRECCION 2025-01-20 a 2026-11-23 entregado 2026-11-25.xlsx, CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx  ·  cargado 2026-11-25
    10,623 renglones · total 588,063 · del 2024-10-01 al 2026-11-22
-   Días sin datos: 2 → 2026-11-23, 2026-11-24
+   Días sin datos: 3 → 2026-11-23, 2026-11-24, 2026-11-25
    · Encabezado «FECHA» leído como «DIA».
    · Encabezado «ENCUENTRO» leído como «AGENCIA».
    · CBP ENCUENTROS consolidado 2024-10-01 a 2026-11-23 entregado 2026-11-24.xlsx es una entrega anterior: sus 672 días del periodo que cubre CBP ENCUENTROS CORRECCION 2025-01-20 a 2026-11-23 entregado 2026-11-25.xlsx se tomaron de ese archivo. No se suma nada dos veces.
@@ -98,4 +98,4 @@ Periodo de las bases: 2024-10-01 a 2026-11-24 (785 días)
 
 == Repatriados desde Guatemala y Honduras  ·  DGPMV GUATEMALA-HONDURAS 19 abr al 24 nov 26.xlsx  ·  Mexicanos que EE. UU. envió a Guatemala u Honduras; se muestra en Protección al migrante › Guatemala y Honduras. Coincide día por día con el punto Ciudad Hidalgo de Repatriados: es el mismo flujo y no se suma otra vez.
 
-Archivos que no se reconocieron: DGPMV REPATRIADOS ESTADOS DE ORIGEN consolidado 2024-10-01 a 2026-11-19 entregado 2026-11-23.xlsx, DGRAM VALIDACION DOCUMENTOS REGISTRO CIVIL 17 al 20 nov 26.xlsx, DGRAM VALIDACION DOCUMENTOS REGISTRO CIVIL 2 may 25 al 15 nov 26.xlsx
+Archivos que no se reconocieron: DGPMV REPATRIADOS ESTADOS DE ORIGEN consolidado 2024-10-01 a 2026-11-24 entregado 2026-11-25.xlsx, DGRAM VALIDACION DOCUMENTOS REGISTRO CIVIL 17 al 20 nov 26.xlsx, DGRAM VALIDACION DOCUMENTOS REGISTRO CIVIL 2 may 25 al 15 nov 26.xlsx
